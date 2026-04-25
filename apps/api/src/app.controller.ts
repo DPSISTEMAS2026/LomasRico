@@ -12,6 +12,17 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('api/health')
+  healthCheck() {
+    return {
+      status: 'ok',
+      service: 'lo-mas-rico-api',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+    };
+  }
+
   // Helper for assets (Approved to keep valid image selector)
   @Get('assets/list')
   getAssets() {

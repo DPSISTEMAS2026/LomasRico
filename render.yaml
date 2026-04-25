@@ -1,103 +1,124 @@
+# ══════════════════════════════════════════════════════════
+# Lo Más Rico V3 — Render Blueprint
+# 3 servicios en plan Free para pruebas
+# ══════════════════════════════════════════════════════════
+
 services:
   # --------------------------------------------------------
-  # API BACKEND (NestJS)
+  # 1. API BACKEND (NestJS + Prisma)
   # --------------------------------------------------------
   - type: web
     name: pro-lomasrico-api
-    env: node
+    runtime: node
     plan: free
     region: oregon
     rootDir: .
     autoDeploy: true
-    buildCommand: npm install && npm run generate --workspace=@lomasrico/database && npm run build --workspace=@lomasrico/database && npm run build --workspace=api
-    startCommand: export NODE_ENV=production && npm run start:prod --workspace=api
+    buildCommand: >
+      npm install &&
+      npx prisma generate --schema=packages/database/prisma/schema.prisma &&
+      npm run build --workspace=api
+    startCommand: npm run start:prod --workspace=api
+    healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
-        sync: false # Setear manualmente en Render Dashboard con la URL de Supabase Transaction Pooler
       - key: NODE_VERSION
-        value: 20.9.0
+        value: "20"
+      - key: PORT
+        value: "10000"
+      - key: NODE_ENV
+        value: production
+      # --- Database (Supabase Transaction Pooler) ---
+      - key: DATABASE_URL
+        sync: false
+      # --- Auth ---
       - key: JWT_SECRET
         generateValue: true
-      - key: PORT
-        value: 10000
-      - key: GOOGLE_CLIENT_ID
+      # --- Supabase Storage ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # --- Payments ---
       - key: MERCADOPAGO_ACCESS_TOKEN
         sync: false
-      - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: pro-lomasrico-web
-          property: host
-      - key: API_URL
-        fromService:
-          type: web
-          name: pro-lomasrico-api
-          property: host
-      # --- NUEVAS VARIABLES DE PRODUCCIÓN ---
-      - key: ALLOWED_ORIGINS
-        value: "https://pro-lomasrico-web.onrender.com,https://pro-lomasrico-panels.onrender.com"
-      - key: SKIP_SEED
-        value: "true"
+      # --- Google Auth ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # --- PedidosYa Envíos ---
       - key: PEDIDOSYA_TOKEN
         sync: false
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
+      # --- URLs (se resuelven con los nombres de Render) ---
+      - key: FRONTEND_URL
+        value: "https://pro-lomasrico-web.onrender.com"
+      - key: API_URL
+        value: "https://pro-lomasrico-api.onrender.com"
+      # --- CORS ---
+      - key: ALLOWED_ORIGINS
+        value: "https://pro-lomasrico-web.onrender.com,https://pro-lomasrico-panels.onrender.com"
+      # --- Misc ---
+      - key: SKIP_SEED
+        value: "true"
 
   # --------------------------------------------------------
-  # PANELS APP (Next.js) - Panel Unificado (Owner, POS, Kitchen)
-  # --------------------------------------------------------
-  - type: web
-    name: pro-lomasrico-panels
-    env: node
-    plan: free
-    region: oregon
-    rootDir: .
-    autoDeploy: true
-    buildCommand: npm install && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=panels
-    startCommand: npm run start --workspace=panels
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: pro-lomasrico-api
-          property: host
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
-      - key: NODE_VERSION
-        value: 20.9.0
-
-  # --------------------------------------------------------
-  # WEB APP (Next.js) - Cliente Final
+  # 2. WEB STOREFRONT (Next.js — Cliente Final)
   # --------------------------------------------------------
   - type: web
     name: pro-lomasrico-web
-    env: node
+    runtime: node
     plan: free
     region: oregon
     rootDir: .
     autoDeploy: true
-    buildCommand: npm install && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=web
-    startCommand: npm run start --workspace=web
+    buildCommand: >
+      npm install &&
+      npm run build --workspace=@lomasrico/shared-types &&
+      npm run build --workspace=web
+    startCommand: PORT=$PORT npm run start --workspace=web
     envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # --- API URL (build-time + runtime) ---
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: pro-lomasrico-api
-          property: host
+        value: "https://pro-lomasrico-api.onrender.com"
+      # --- Supabase (Storage de imágenes) ---
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      # --- MercadoPago (checkout público) ---
       - key: NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
         sync: false
+      # --- Google Auth ---
       - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
         sync: false
+
+  # --------------------------------------------------------
+  # 3. ADMIN PANEL (Next.js — POS, Kitchen, Owner)
+  # --------------------------------------------------------
+  - type: web
+    name: pro-lomasrico-panels
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: true
+    buildCommand: >
+      npm install &&
+      npm run build --workspace=@lomasrico/shared-types &&
+      npm run build --workspace=panels
+    startCommand: PORT=$PORT npm run start --workspace=panels
+    envVars:
       - key: NODE_VERSION
-        value: 20.9.0
+        value: "20"
+      # --- API URL (build-time + runtime) ---
+      - key: NEXT_PUBLIC_API_URL
+        value: "https://pro-lomasrico-api.onrender.com"
+      # --- Supabase (Storage de imágenes) ---
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
