@@ -53,19 +53,54 @@ export class RecipeResolverService {
             const dynamicProteins: string[] = [];
             const dynamicRemoved: string[] = [];
 
+            // Normalizar dynamicSelections: el bot envía {modifierGroupId, selectedOptionIds}
+            // pero el resolver espera {groupName, selectedOptions: [{id, name}]}
+            const normalizedSelections = [];
             for (const selection of modifiers.dynamicSelections) {
-                const groupName = selection.groupName.toLowerCase();
-                
+                let groupName = selection.groupName || '';
+                let selectedOptions = selection.selectedOptions || [];
+
+                // Si viene en formato bot (solo IDs), resolver nombres desde la DB
+                if (!groupName && (selection as any).modifierGroupId) {
+                    const group = await this.prisma.modifierGroup.findUnique({
+                        where: { id: (selection as any).modifierGroupId },
+                        include: { options: true }
+                    });
+                    if (group) {
+                        groupName = group.displayName || group.name;
+                        const optionIds = (selection as any).selectedOptionIds || [];
+                        selectedOptions = group.options
+                            .filter((o: any) => optionIds.includes(o.id))
+                            .map((o: any) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0 }));
+                    }
+                }
+
+                normalizedSelections.push({
+                    groupId: (selection as any).modifierGroupId || selection.groupId || '',
+                    groupName,
+                    selectedOptions: selectedOptions.map((o: any) => ({
+                        id: o.id,
+                        name: o.name,
+                        price: o.price || o.priceAdjustment || 0
+                    }))
+                });
+
+                if (!groupName) continue;
+                const gn = groupName.toLowerCase();
+
                 // 1. Extraer proteínas (para lógica de SOP)
-                if (groupName.includes('proteina')) {
-                    selection.selectedOptions.forEach(opt => dynamicProteins.push(opt.id));
+                if (gn.includes('proteina') || gn.includes('proteína')) {
+                    selectedOptions.forEach((opt: any) => dynamicProteins.push(opt.name));
                 }
 
                 // 2. Extraer ingredientes eliminables (ej: "Sin Cebolla")
-                if (groupName.includes('quitar') || groupName.includes('remover') || groupName.includes('sin ')) {
-                   selection.selectedOptions.forEach(opt => dynamicRemoved.push(opt.name));
+                if (gn.includes('quitar') || gn.includes('remover') || gn.includes('sin ')) {
+                   selectedOptions.forEach((opt: any) => dynamicRemoved.push(opt.name));
                 }
             }
+
+            // Reemplazar con las selecciones normalizadas para uso posterior
+            effectiveModifiers.dynamicSelections = normalizedSelections;
 
             // Union de legacy + dynamic
             effectiveModifiers.selectedProteins = [
@@ -182,9 +217,10 @@ export class RecipeResolverService {
         if (weightFromProduct) weightsFound.push(weightFromProduct);
 
         // 2. Pesos en los modificadores dinámicos (Paso 1: Formato, Paso 3: Agrandar, etc.)
-        if (modifiers.dynamicSelections) {
-            for (const selection of modifiers.dynamicSelections) {
-                for (const opt of selection.selectedOptions) {
+        if (effectiveModifiers.dynamicSelections) {
+            for (const selection of effectiveModifiers.dynamicSelections) {
+                const opts = selection.selectedOptions || [];
+                for (const opt of opts) {
                     const weightFromModifier = extractWeight(opt.name);
                     if (weightFromModifier) {
                         weightsFound.push(weightFromModifier);
@@ -331,10 +367,12 @@ export class RecipeResolverService {
         // a menos que estén en la receta. Pero podemos extenderlo aquí.
         if (effectiveModifiers.dynamicSelections) {
             for (const selection of effectiveModifiers.dynamicSelections) {
-                const groupName = selection.groupName.toLowerCase();
+                const groupName = (selection.groupName || '').toLowerCase();
+                if (!groupName) continue;
                 // Si es un grupo de EXTRAS (no proteínas, no removed)
                 if (groupName.includes('extra') || groupName.includes('adicional')) {
-                    for (const opt of selection.selectedOptions) {
+                    const opts = selection.selectedOptions || [];
+                    for (const opt of opts) {
                         // Intentar buscar el item en inventario por nombre
                         const searchTerm = normalizeString(opt.name);
                         const invItem = await this.prisma.inventoryItem.findFirst({

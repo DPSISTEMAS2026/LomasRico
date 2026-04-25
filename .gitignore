@@ -108,3 +108,8 @@ start.bat
 
 # === LOCK FILES (regenerables) ===
 # package-lock.json se mantiene para builds reproducibles
+# Heavy assets (stored in Supabase)
+*.mp4
+*.psd
+_MG_*
+

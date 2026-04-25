@@ -294,17 +294,29 @@ export class SalesService {
         let discountValue = 0;
         if (discount && discount > 0) {
             if (discountType === 'PERCENT') {
-                discountValue = totalAmount * (discount / 100); // descuento solo sobre productos
+                discountValue = totalAmount * (discount / 100);
             } else {
                 discountValue = discount;
             }
             totalAmount = Math.max(0, totalAmount - discountValue);
         }
 
-        // Sumar envío DESPUÉS del descuento para no descontar sobre el despacho
+        // --- LOYALTY POINTS REDEMPTION (1 punto = $1 CLP) ---
+        const subtotalBeforePoints = totalAmount; // Guardamos para calcular puntos ganados
+        const { pointsToRedeem } = createSaleDto as any;
+        let pointsRedeemed = 0;
+        if (pointsToRedeem && pointsToRedeem > 0 && userId) {
+            const customer = await this.prisma.user.findUnique({ where: { id: userId } });
+            if (customer && (customer as any).loyaltyPoints >= pointsToRedeem) {
+                pointsRedeemed = Math.min(pointsToRedeem, totalAmount); // No puede exceder el total
+                totalAmount = Math.max(0, totalAmount - pointsRedeemed);
+            }
+        }
+
+        // Sumar envío DESPUÉS del descuento y puntos para no descontar sobre el despacho
         totalAmount += computedShippingCost;
 
-        // Transaction
+        // Transaction (timeout extendido para pedidos con modificadores dinámicos)
         return this.prisma.$transaction(async (tx: any) => {
             let finalShiftId = shiftId;
 
@@ -459,8 +471,39 @@ export class SalesService {
                 });
             }
 
+            // === LOYALTY POINTS ENGINE ===
+            // Solo procesar puntos si hay un usuario identificado
+            if (userId) {
+                // 1) Descontar puntos redimidos
+                if (pointsRedeemed > 0) {
+                    await tx.user.update({
+                        where: { id: userId },
+                        data: {
+                            loyaltyPoints: { decrement: pointsRedeemed },
+                            pointsUsed: { increment: pointsRedeemed }
+                        }
+                    });
+                }
+
+                // 2) Acreditar 4% de puntos sobre subtotal de productos (solo ventas confirmadas)
+                if (!isPending) {
+                    const pointsToCredit = Math.floor(subtotalBeforePoints * 0.04);
+                    if (pointsToCredit > 0) {
+                        await tx.user.update({
+                            where: { id: userId },
+                            data: {
+                                loyaltyPoints: { increment: pointsToCredit },
+                                pointsEarned: { increment: pointsToCredit },
+                                historicalOrders: { increment: 1 },
+                                historicalSpent: { increment: subtotalBeforePoints }
+                            }
+                        });
+                    }
+                }
+            }
+
             return sale;
-        });
+        }, { maxWait: 10000, timeout: 30000 });
     }
 
     async findAll() {

@@ -48,7 +48,11 @@ export class BotService {
                 name: newUser.name,
                 phone: newUser.phone,
                 addresses: [],
-                lastOrder: null
+                lastOrder: null,
+                loyaltyPoints: 0,
+                customerTag: null,
+                historicalOrders: 0,
+                historicalSpent: 0
             };
         }
 
@@ -58,7 +62,11 @@ export class BotService {
             name: user.name,
             phone: user.phone,
             addresses: user.addresses,
-            lastOrder: user.sales[0] || null
+            lastOrder: user.sales[0] || null,
+            loyaltyPoints: (user as any).loyaltyPoints || 0,
+            customerTag: (user as any).customerTag || null,
+            historicalOrders: (user as any).historicalOrders || 0,
+            historicalSpent: Number((user as any).historicalSpent) || 0
         };
     }
 
@@ -89,6 +97,10 @@ export class BotService {
             name: user.name,
             phone: user.phone,
             addresses: user.addresses,
+            loyaltyPoints: (user as any).loyaltyPoints || 0,
+            customerTag: (user as any).customerTag || null,
+            historicalOrders: (user as any).historicalOrders || 0,
+            historicalSpent: Number((user as any).historicalSpent) || 0,
             lastOrder: lastOrder ? {
                 id: lastOrder.id,
                 total: lastOrder.total,
@@ -265,21 +277,24 @@ export class BotService {
         const sale = await this.salesService.create(saleDto);
 
         // Generar Link de Pago Real usando Mercado Pago
-        const preference = await this.paymentsService.createPreference({
-            orderId: sale.id,
-            amount: Number(sale.total),
-            channel: 'WHATSAPP',
-            shippingCost: data.shippingCost,
-            items: data.items.map(i => ({
-                id: i.productId || i.variantId || 'unknown',
-                title: i.name || 'Producto',
-                quantity: i.quantity || 1,
-                unit_price: Number(i.price || 0)
-            }))
-        });
-
-        // Retornamos el link de pago real (initPoint)
-        const paymentLink = preference.initPoint;
+        let paymentLink: string | null = null;
+        try {
+            const preference = await this.paymentsService.createPreference({
+                orderId: sale.id,
+                amount: Number(sale.total),
+                channel: 'WHATSAPP',
+                shippingCost: data.shippingCost,
+                items: data.items.map(i => ({
+                    id: i.productId || i.variantId || 'unknown',
+                    title: i.name || 'Producto',
+                    quantity: i.quantity || 1,
+                    unit_price: Number(i.price || 0)
+                }))
+            });
+            paymentLink = preference.initPoint || null;
+        } catch (err) {
+            console.error('[BOT] MercadoPago link failed (order still created):', (err as any).message);
+        }
 
         return {
             orderId: sale.id,
