@@ -43,11 +43,11 @@ services:
       - key: PEDIDOSYA_TOKEN
         sync: false
       - key: FRONTEND_URL
-        value: "https://pro-lomasrico-web.onrender.com"
+        value: "https://pro-lomasrico-web-vtyt.onrender.com"
       - key: API_URL
-        value: "https://pro-lomasrico-api.onrender.com"
+        value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: ALLOWED_ORIGINS
-        value: "https://pro-lomasrico-web.onrender.com,https://pro-lomasrico-panels.onrender.com"
+        value: "https://pro-lomasrico-web-vtyt.onrender.com,https://pro-lomasrico-panels-33rx.onrender.com"
       - key: SKIP_SEED
         value: "true"
 
@@ -69,7 +69,7 @@ services:
       - key: PORT
         value: "10000"
       - key: NEXT_PUBLIC_API_URL
-        value: "https://pro-lomasrico-api.onrender.com"
+        value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -97,7 +97,7 @@ services:
       - key: PORT
         value: "10000"
       - key: NEXT_PUBLIC_API_URL
-        value: "https://pro-lomasrico-api.onrender.com"
+        value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
