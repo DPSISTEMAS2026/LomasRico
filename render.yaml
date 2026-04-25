@@ -14,7 +14,7 @@ services:
     region: oregon
     rootDir: .
     autoDeploy: true
-    buildCommand: "npm install --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npm run build --workspace=api"
+    buildCommand: "npm install --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npm run build --workspace=@lomasrico/database && npm run build --workspace=api"
     startCommand: "npm run start:prod --workspace=api"
     healthCheckPath: /api/health
     envVars:
