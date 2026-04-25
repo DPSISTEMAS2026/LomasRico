@@ -1,0 +1,82 @@
+MODELO DE STOCK OPERATIVO - LO MÁS RICO V2
+(Enfoque: Continuidad Operativa y Realidad de Cocina)
+
+Este modelo prioriza que la venta FLUYA, permitiendo ajustes rápidos ante la realidad imperfecta de una cocina.
+
+1. ENTIDADES QUE CONTROLAN STOCK (INVENTORY ITEMS)
+
+   Todo lo que se cuenta es un `InventoryItem`. No distinguimos "Ingrediente" de "Producto" a nivel de stock, solo items contables.
+
+   A. TIPOS DE ITEM
+      - **RAW (Materia Prima)**: Se compra. (Ej: Salmón Filete, Limón Jugo, Aliño LomasRico).
+      - **BATCH (Preparación)**: Se produce internamente. (Ej: Base Ceviche 8kg, Leche de Tigre 2.4L, Potes Salsa).
+      - **RETAIL (Producto Final)**: Se vende tal cual se compra. (Ej: Bebida 500cc).
+
+   B. PROPIEDADES CLAVE
+      - `CurrentQty`: Cantidad actual (Float). Acepta negativos si la política lo permite.
+      - `StockPolicy`: `STRICT` (Bloquea venta) o `FLEXIBLE` (Permite negativo + Alerta).
+      - `AutoProduction`: Boolean. Si es TRUE, el sistema intenta "fabricarlo" al vuelo si falta stock.
+
+2. LOGICA DE DESCUENTO POR CANAL DE VENTA
+
+   A. VENTA WEB (Cliente directo)
+      - **Política**: ESTRICTA.
+      - Si el cálculo de receta indica stock insuficiente de CUALQUIER componente crítico (ej: Salmón), el producto aparece "Agotado".
+      - No queremos vender lo que no podemos entregar.
+
+   B. VENTA POS (Cajero/Mesero)
+      - **Política**: FLEXIBLE (Warning + Override).
+      - Si falta stock (ej: Base de Ceviche está en 0 en sistema, pero el cajero VE que hay), permite vender.
+      - Resultado: El stock pasa a números negativos (Deuda Técnica de Inventario) que se corrige luego con un "Ajuste de Inventario".
+
+   C. VENTA WHATSAPP (Bot/Agente)
+      - **Política**: HÍBRIDA.
+      - Consulta stock en tiempo real. Si hay riesgo, escala a un humano antes de confirmar pago.
+
+3. ESTRATEGIA "BASE PREPARADA" vs "INGREDIENTES SUELTOS" (Dualidad Operativa)
+
+   El problema: ¿Descontamos del balde de "Base 8kg" o de los kilos de "Choclo/Cebolla"?
+   
+   **Solución: Jerarquía de Cascada (Auto-Unrolling)**
+   
+   Al vender un "Ceviche Clásico":
+   1. **Intento 1 (Ideal)**: Verificar stock de `ITEM_BASE_CEVICHE`.
+      - ¿Hay suficiente? -> Descontar del Batch. FIN.
+   
+   2. **Intento 2 (Fallback Automático)**:
+      - Si `ITEM_BASE_CEVICHE < Requerido` Y `AutoProduction = TRUE`:
+      - El sistema calcula los ingredientes raw necesarios para la porción faltante.
+      - Verifica stock de `RAW_CHOCLO`, `RAW_CEBOLLA`, etc.
+      - ¿Hay suficiente Raw? -> Descuenta Raw (Simulando una preparación al vuelo).
+      - *Beneficio*: No detiene la venta porque el cocinero no registró la producción de la mañana.
+
+   3. **Intento 3 (Fallo)**:
+      - Si no hay Base ni Raw -> Retorna "Sin Stock".
+
+4. QUÉ PASA SI EL STOCK ES INSUFICIENTE (POLÍTICAS)
+
+   - **Semáforo Verde**: Stock > Alerta Mínima. Venta normal.
+   - **Semáforo Amarillo**: 0 < Stock < Alerta. Venta normal + Notificación a Cocina/Admin "Reponer X".
+   - **Semáforo Rojo**: Stock <= 0.
+     - Web: Ocultar producto.
+     - POS: Popup "Stock Teórico Agotado. ¿Forzar Venta?".
+
+5. INFORMACIÓN PARA COCINA (TIEMPO REAL)
+   
+   La cocina (KDS / Comanda) recibe la instrucción de MONTAJE, no de inventario.
+   
+   - **Orden Standard**: "1x Ceviche Peruano 500g". (Asume uso de Base).
+   - **Orden Custom**: "1x Ceviche LomasRico (Salmón/Reineta) - SIN VERDURAS".
+     - *Alerta Visual*: "SIN VERDURAS" resaltado.
+     - *Instrucción Implícita*: "Usar Gramaje Extra de Proteína".
+   
+   *Nota*: El sistema de stock corre "en silencio" tras bambalinas. La cocina solo ve pedidos, no balances, a menos que un item crítico entre en ALERTA (ej: "Sin Salmón").
+
+6. RESUMEN DE FLUJO OPERATIVO
+
+   Pedido (Ceviche) 
+      -> Receta Resolver (Determina lista de IDs: [Salmón, Base, Leche])
+      -> Inventory Check (Cascada: Base -> Raw)
+      -> Lock Stock (Reserva temporal)
+      -> Pago Confirmado
+      -> Decrement Stock (Commit definitivo)

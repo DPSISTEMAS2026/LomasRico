@@ -1,0 +1,96 @@
+MODELO DE ESTADOS Y TRANSICIONES (STATE MACHINE)
+
+Este documento define la lógica de estados para garantizar que cocina y caja hablen el mismo idioma.
+
+1. ESTADOS DEL PEDIDO (Sale)
+   Controla la transacción comercial y la comunicación con el cliente.
+
+   [PENDING_PAYMENT] -> [CONFIRMED] -> [IN_PROGRESS] -> [READY_FOR_PICKUP] -> [COMPLETED]
+                                   \-> [CANCELLED]
+
+   A. DEFINICIONES
+      - **PENDING_PAYMENT**:
+        - *Web/WhatsApp*: Pedido creado, link generado, falta confirmar dinero.
+        - *Stock*: Intacto (No reservado, riesgo de agotamiento aceptado).
+        - *Cocina*: Ciega (No ve nada).
+      
+      - **CONFIRMED**:
+        - *POS*: Estado inicial por defecto (pago en caja).
+        - *Web/Wsp*: Entra aquí tras Webhook exitoso.
+        - *Stock*: YA DESCONTADO (Snapshot generado).
+        - *Trigger*: Genera automáticamente un `KitchenTicket` en estado WAITING.
+      
+      - **IN_PROGRESS**:
+        - *Sincronización*: Se activa cuando el primer cocinero marca "Empezar" en el KDS.
+        - *Cliente*: Ve "Tu pedido se está preparando".
+
+      - **READY_FOR_PICKUP**:
+        - *Sincronización*: Se activa cuando cocina marca "Listo" en KDS.
+        - *Cliente*: Ve "Tu pedido está listo para retirar/servir".
+
+      - **COMPLETED**:
+        - *Trigger*: Mesero/Cajero marca "Entregado" al cliente.
+        - *Final*: Cierra el ciclo.
+
+      - **CANCELLED**:
+        - *Trigger*: Timeout de pago (Wsp) o cancelación manual.
+        - *Stock*: Si estaba descontado, se devuelve (salvo que ya se haya cocinado = merma).
+
+2. ESTADOS DE COMANDA COCINA (KitchenTicket)
+   Controla la realidad física del plato. Solo visible en pantallas KDS de cocina.
+
+   [WAITING] -> [PREPARING] -> [READY] -> [DELIVERED]
+
+   A. DEFINICIONES
+      - **WAITING** (Cola de Entrada):
+        - *Semántica*: "Hay que hacer esto".
+        - *Orden*: FIFO (Lo que entra primero, sale primero).
+        - *Visual*: Alerta parpadeante si pasa X minutos sin atención.
+      
+      - **PREPARING** (Trabajando):
+        - *Acción*: Cocinero toca la comanda en pantalla.
+        - *Semántica*: "Yo lo estoy haciendo" (Claim).
+        - *Efecto*: Cambia estado de Pedido a `IN_PROGRESS`.
+
+      - **READY** (En el Pase):
+        - *Acción*: Cocinero termina y poncha la comanda.
+        - *Semántica*: "Llévenselo".
+        - *Efecto*: Cambia estado de Pedido a `READY_FOR_PICKUP` y notifica a mesero/cliente.
+
+      - **DELIVERED** (Histórico):
+        - *Acción*: Runner/Mesero retira del pase.
+        - *Semántica*: Salió de la zona de cocina.
+        - *Efecto*: Desaparece de pantalla activa KDS.
+
+3. MATRIZ DE CICLO DE VIDA POR CANAL
+
+   A. WHATSAPP (Flujo Largo)
+      1. Create -> `Sale: PENDING_PAYMENT` | `Ticket: (No existe)`
+      2. Pay OK -> `Sale: CONFIRMED`       | `Ticket: WAITING`
+      3. Cook   -> `Sale: IN_PROGRESS`     | `Ticket: PREPARING`
+      4. Finish -> `Sale: READY`           | `Ticket: READY`
+      5. Pickup -> `Sale: COMPLETED`       | `Ticket: DELIVERED`
+
+   B. WEB (Flujo Rápido)
+      1. Checkout -> `Sale: PENDING_PAYMENT` (Transitorio)
+      2. Pay OK   -> `Sale: CONFIRMED`       | `Ticket: WAITING`
+      3. ... (Igual al anterior)
+
+   C. POS (Flujo Directo)
+      1. Cierre Caja -> `Sale: CONFIRMED`    | `Ticket: WAITING`
+      2. ... (Igual al anterior)
+
+4. MANEJO DE EXCEPCIONES Y REGLAS DE ORO
+
+   - **Regla 1 (Sin Ticket)**: Si `Sale` no llega a `CONFIRMED`, `KitchenTicket` JAMÁS se crea.
+     *Evita desperdicio de comida por pedidos impagos.*
+
+   - **Regla 2 (Sync Unidireccional)**:
+     - Cocina avanza el estado del Pedido (Ticket->Sale).
+     - Caja NO debe mover estados de cocina (Cajero no cocina).
+
+   - **Regla 3 (Cancelación Tardía)**:
+     - Si se cancela un pedido cuando Ticket ya está en `PREPARING` o `READY`:
+     - El sistema debe pedir motivo de merma: "¿Desperdicio o Reuso?".
+     - Stock no vuelve automáticamente.
+

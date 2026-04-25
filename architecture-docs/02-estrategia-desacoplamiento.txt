@@ -1,0 +1,35 @@
+ESTRATEGIA DE DESACOPLAMIENTO DESDE EL INICIO
+
+Para garantizar que el sistema pueda migrar de proveedores o cambiar lógica sin reescribir el core, se deben aislar estos componentes mediante el patrón ADAPTER/FACADE.
+
+1. PROCESAMIENTO DE PAGOS (Payments Module)
+   - Problema Actual: Dependencia directa de SDKs (MercadoPago).
+   - Solución: Crear una interfaz genérica `IPaymentGateway`.
+   - Implementación:
+     - `MercadoPagoAdapter implements IPaymentGateway`
+     - Métodos clave: `createPreference()`, `getPaymentStatus()`, `refund()`.
+   - Beneficio: Permite cambiar a Stripe/Local/Efectivo solo cambiando la inyección de dependencia.
+
+2. LOGÍSTICA DE ENVÍOS (Logistics Module)
+   - Problema Actual: PedidosYa tiene APIs complejas y cambiantes.
+   - Solución: Interfaz `IDeliveryProvider`.
+   - Implementación: 
+     - `PedidosYaAdapter` para envíos de terceros.
+     - `InternalFleetAdapter` para repartidores propios (futuro).
+   - Lógica Core: El sistema solo conoce `requestDelivery(order)`, el adaptador maneja los tokens y endpoints externos.
+
+3. NOTIFICACIONES Y MENSAJERÍA (Notification Module)
+   - Problema Actual: WhatsApp API es costosa o inestable; n8n es un intermediario.
+   - Solución: Interfaz `INotificationService`.
+   - Implementación:
+     - `N8NWhatsAppAdapter`: Envía payloads al webhook de n8n.
+     - `EmailAdapter`: Fallback en caso de error.
+     - `ConsoleLogAdapter`: Para desarrollo local (evita spam real).
+
+4. GESTIÓN DE STOCK (Inventory Module)
+   - La lógica de "Stock por Gramajes" debe estar en el Servicio de Dominio, NO en el controlador ni en la vista.
+   - El cálculo de recetas (ej: 1 hamburguesa = 150g carne + 1 pan) debe ser agnóstico de la base de datos (Plain Typescript Classes).
+
+5. CONFIGURACIÓN (Config Module)
+   - Nunca usar `process.env` directamente en el código de negocio.
+   - Usar un servicio `ConfigService` (de NestJS) que valide tipos y valores por defecto al inicio.

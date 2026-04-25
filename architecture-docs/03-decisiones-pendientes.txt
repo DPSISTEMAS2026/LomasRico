@@ -1,0 +1,27 @@
+DECISIONES A POSPONER (ANTI-PATRONES DE PREMATURE OPTIMIZATION)
+
+Para no bloquear la velocidad de desarrollo inicial, NO tomar decisiones definitivas sobre:
+
+1. CACHÉ DISTRIBUIDO (Redis/Memcached)
+   - Por ahora: Usar caché en memoria (RAM) dentro de la instancia de NestJS o simplemente consultar Postgres.
+   - Razón: Postgres soporta miles de transacciones por segundo. Añadir Redis ahora complica el despliegue local y en Render sin necesidad probada.
+
+2. MICROSERVICIOS
+   - Por ahora: Monolito Modular (NestJS Modules).
+   - Razón: La latencia de red entre servicios y la complejidad de despliegue en Render (varios servicios = más costo) matan la productividad inicial. Mantener carpetas separadas dentro de `apps/api` es suficiente.
+
+3. INFRAESTRUCTURA CLOUD (AWS/GCP/Azure)
+   - Por ahora: Render (PaaS).
+   - Razón: Configurar VPCs, IAM, y Kubernetes consume semanas. Render se conecta al repo y listo. La migración futura es fácil si usamos Docker.
+
+4. SISTEMA DE COLAS COMPLEJO (RabbitMQ/Kafka)
+   - Por ahora: BullMQ (con Redis si es necesario, pero idealmente procesamiento síncrono o `setImmediate` para cosas simples).
+   - Si la integración con n8n falla, reintentar con lógica simple en base de datos (tabla `PendingEvents`) en lugar de montar un clúster de Kafka.
+
+5. TESTS E2E RIGUROSOS EN BROWSER (Cypress/Playwright)
+   - Por ahora: Tests unitarios de lógica de negocio (Jest) + Tests de integración API.
+   - Razón: La UI cambiará mucho. Los tests de UI son frágiles al inicio. Proteger la lógica de stock y precios es prioridad absoluta.
+
+6. AUTENTICACIÓN PERSONALIZADA COMPLEJA
+   - Por ahora: OAuth (Google) + Session/JWT simple.
+   - No implementar: Sistema propio de user/pass con recuperación de contraseña, 2FA, etc., a menos que el cliente lo exija estrictamente. Delegar seguridad a proveedores.

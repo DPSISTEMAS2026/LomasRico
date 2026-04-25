@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Production
+.vercel
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local env files
+.env
+.env*.local
+!.env.example
+!.env*.example
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Backend (no necesario en Vercel)
+apps/api
+
+# Database (no necesario en Vercel)
+packages/database/prisma/*.db
+packages/database/prisma/*.db-journal
+
+# Infra
+infra
+
+# Scripts
+scripts
+
+# Docs (excepto README)
+*.md
+!README.md
+
+# Assets grandes
+*.pdf
+*.docx
+*.xlsx
+*.png
+*.jpg
+*.jpeg
+!apps/*/public/**/*.png
+!apps/*/public/**/*.jpg
+!apps/*/public/**/*.jpeg

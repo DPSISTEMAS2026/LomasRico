@@ -1,0 +1,99 @@
+FLUJO DE VENTA TRANSACCIONAL Y OPERATIVO (ACTUALIZADO V2)
+(Implementación sobre NestJS + Prisma)
+
+Consolidación de flujos Web, POS y la lógica asíncrona de WhatsApp con Pago Confirmado.
+
+1. ACTORES Y SERVICIOS INVOLUCRADOS
+   - **SalesService**: Orquestador.
+   - **PaymentAdapter (MP)**: Generador de Links y manejador de Webhooks.
+   - **BoMResolver**: Ingeniería de menú.
+   - **InventoryService**: Guardián del stock.
+   - **KitchenService**: KDS.
+
+2. LOGICA POR CANAL DE VENTA
+
+   A. CANAL WEB (Síncrono/Estricto)
+      1. Carrito -> Checkout.
+      2. **Pre-Validación**: Chequea stock. Si falla -> Bloquea pago.
+      3. Pago Exitoso.
+      4. **Transacción**: Crea Venta + Snapshot + Descuenta Stock + Emite Comanda.
+   
+   B. CANAL POS (Síncrono/Flexible)
+      1. Cajero carga items.
+      2. **Pre-Validación**: Solo Warning visual.
+      3. Pago/Confirmación (Efectivo/Tarjeta presencial).
+      4. **Transacción**: Crea Venta + Snapshot + Descuenta Stock (Permite Negativo) + Emite Comanda.
+
+   C. CANAL WHATSAPP (Asíncrono/Seguro) -- *NUEVA DEFINICIÓN*
+      
+      *Paso 1: Intención de Compra*
+      - Cliente envía pedido final.
+      - **Pre-Validación (Soft Check)**: El sistema verifica disponibilidad ACTUAL.
+      - Si hay stock -> Crea registro `Sale` temporal (Estado: `PENDING_PAYMENT`).
+      - Genera y envía Link de Pago (MercadoPago).
+      - *NOTA*: NO se descuenta stock todavía. NO se genera comanda.
+
+      *Paso 2: Ventana de Pago (Espera)*
+      - Cliente tiene X tiempo para pagar.
+
+      *Paso 3: Confirmación (Webhook)*
+      - Recibe `payment.created` / `approved`.
+      - **Re-Validación (Hard Check) y Ejecución**:
+        - Inicia `PrismaTransaction`.
+        - ¿Stock sigue disponible? 
+          - SÍ: Descuenta Stock, Genera Snapshot, Crea Ticket Cocina. Estado -> `CONFIRMED`.
+          - NO (Cambio durante espera): 
+            - *Regla de Negocio*: Se prioriza el dinero capturado.
+            - **Forzar Venta**: Se descuenta stock igual (llevándolo a negativo) y se emite Comanda.
+            - **Alerta Crítica**: Se notifica a Admin "Venta WhatsApp forzada sin stock teórico".
+      - Responde 200 OK al Webhook.
+
+3. DETALLE DE FASE DE EJECUCIÓN (HOOK DE CONFIRMACIÓN)
+   
+   Al recibir el "OK" de pago (o cierre de caja POS), se dispara el proceso atómico:
+   
+   1. **Freeze Recipe (Snapshot)**:
+      - Se calcula el BoM exacto en ESE milisegundo (Ej: "Usar ingredientes sueltos porque no hay base").
+      - Se guarda en `RecipeSnapshot`.
+   
+   2. **Inventory Commit**:
+      - `InventoryItem.decrement(qty)`.
+   
+   3. **Kitchen Signal**:
+      - `KitchenTicket.create({ saleId: ... })`.
+      - Esto hace aparecer el pedido en la pantalla de cocina.
+      *Regla de Hierro*: Si no hay Ticket, cocina NO cocina (aunque el cliente jure que pagó).
+
+4. MANEJO DE ESCENARIOS BORDERLINE (WHATSAPP)
+
+   1. **Cliente NO Paga (Abandono)**:
+      - El registro `Sale` queda en `PENDING_PAYMENT`.
+      - Un CRON job limpia órdenes pendientes > 2 horas.
+      - Stock nunca se tocó. Cocina nunca se enteró.
+
+   2. **Pago Falla (Tarjeta Rechazada)**:
+      - Cliente intenta pagar -> MP rechaza.
+      - Sistema sigue esperando pago válido.
+      - Estado sigue `PENDING_PAYMENT`.
+
+   3. **Stock Cambia entre Link y Pago (Race Condition)**:
+      - Ejemplo: Queda 1 Ceviche. Cliente A (WhatsApp) pide link. Cliente B (POS) compra y se lleva el último.
+      - Cliente A paga 5 minutos después.
+      - Webhook detecta Stock <= 0.
+      - **Acción**: Ejecuta venta igual (Stock negativo).
+      - *Justificación*: Reversar un pago es más costoso operativamente (y peor experiencia) que resolver un faltante de inventario en cocina.
+
+5. CUADRO COMPARATIVO DE COMPORTAMIENTO
+
+   | Característica         | WEB (Ecommerce)      | POS (Local)           | WHATSAPP (Remoto)     |
+   |------------------------|----------------------|-----------------------|-----------------------|
+   | **Validación Stock**   | ESTRICTA (Bloqueante)| INFORMATIVA (Warning) | HÍBRIDA (Force on pay)|
+   | **Momento Descuento**  | Post-Pago Inmediato  | Cierre Orden          | Webhook Confirmación  |
+   | **Stock Negativo**     | IMPOSIBLE            | PERMITIDO             | PERMITIDO (Si pagó)   |
+   | **Generación Comanda** | Automática           | Automática            | SOLO tras Webhook     |
+   | **Snapshot Receta**    | Al confirmar         | Al confirmar          | Al confirmar (Webhook)|
+
+6. IMPLICANCIA TÉCNICA
+   - El endpoint del Webhook debe ser idempotente.
+   - Si llega el mismo evento de pago 2 veces, no debe descontar stock 2 veces.
+   - Validar siempre si `Sale.status == CONFIRMED` antes de ejecutar lógica de stock.

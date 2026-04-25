@@ -1,0 +1,481 @@
+MENÚ Y RECETAS NORMALIZADAS – VERSIÓN
+
+FINAL
+
+Este documento es la fuente única de verdad para Web, Backend e Inventario.
+
+🐟 CEVICHES (RECETAS BASE)
+
+RECETA_CEVICHE_250
+
+• 
+
+Gramaje total: 250 g
+
+• 
+
+Lógica de proteínas: SÍ (1 a 3 proteínas)
+
+• 
+
+Proteína ejemplo salmón: 180 g
+
+• 
+
+Base ceviche: 70 g
+
+RECETA_CEVICHE_350
+
+• 
+
+Gramaje total: 350 g
+
+• 
+
+Lógica de proteínas: SÍ (1 a 3 proteínas)
+
+• 
+
+Proteína ejemplo salmón: 140 g
+
+• 
+
+Base ceviche: 210 g
+
+RECETA_CEVICHE_500
+
+• 
+
+Gramaje total: 500 g
+
+• 
+
+Lógica de proteínas: SÍ (1 a 3 proteínas)
+
+• 
+
+Proteína ejemplo salmón: 180 g
+
+• 
+
+Base ceviche: 320 g
+
+RECETA_CEVICHE_750
+
+• 
+
+Gramaje total: 750 g
+
+• 
+
+Lógica de proteínas: SÍ (1 a 3 proteínas)
+
+• 
+
+Proteína ejemplo salmón: 280 g
+
+• 
+
+Base ceviche: 470 g
+
+RECETA_CEVICHE_1KG
+
+• 
+
+Gramaje total: 1000 g
+
+• 
+
+Lógica de proteínas: SÍ (1 a 3 proteínas)
+
+• 
+
+Proteína ejemplo salmón: 360 g
+
+• 
+
+Base ceviche: 640 g
+
+1
+
+🥗 RECETAS BASE DE CEVICHE
+
+RECETA_BASE_CEVICHE_4KG
+
+• 
+
+Produce: 4000 g
+
+• 
+
+Insumos:
+
+• 
+
+Choclo
+
+• 
+
+Cebolla
+
+• 
+
+Pimentón
+
+• 
+
+Palta
+
+• 
+
+Leche de tigre tradicional
+
+• 
+
+Uso: consumo proporcional según gramaje requerido
+
+RECETA_BASE_CEVICHE_PERUANO_4KG
+
+• 
+
+Produce: 4000 g
+
+• 
+
+Insumos:
+
+• 
+• 
+
+Choclo: 500 g
+Cebolla: 580 g
+
+• 
+
+Leche de tigre peruana: 1200 ml
+
+• 
+
+Uso: consumo proporcional según gramaje requerido
+
+• 
+
+Observación: no incluye pimentón ni palta
+
+🎁 PROMOCIONES (RECETAS COMPUESTAS)
+
+RECETA_PROMO_1
+
+• 
+
+Incluye:
+
+• 
+
+RECETA_CEVICHE_250 (lógica de proteínas activa)
+
+• 
+
+Papas fritas
+
+• 
+
+Camarones apanados
+
+• 
+
+Aros de cebolla
+
+RECETA_PROMO_2
+
+• 
+
+Incluye:
+
+• 
+
+RECETA_CEVICHE_350 (lógica de proteínas activa)
+
+• 
+
+2 Empanadas de queso
+
+• 
+
+Papas fritas
+
+RECETA_PROMO_3
+
+• 
+
+Incluye:
+
+• 
+
+RECETA_CEVICHE_500 (lógica de proteínas activa)
+
+• 
+
+Papas fritas medianas
+
+• 
+
+10 Aros de cebolla
+
+2
+
+RECETA_PROMO_DE_MIEDO
+
+• 
+
+Incluye:
+
+• 
+
+RECETA_CEVICHE_750 (proteína fija: SALMÓN)
+
+• 
+
+2 Empanadas carapacho queso
+
+• 
+
+2 Empanadas camarón queso
+
+• 
+
+Pancitos
+
+RECETA_MEGA_PROMO
+
+• 
+
+Incluye:
+
+• 
+
+RECETA_CEVICHE_1KG (proteína fija: SALMÓN)
+
+• 
+
+6 Empanadas carapacho queso
+
+• 
+
+Pancitos
+
+• 
+
+Salsa verde grande
+
+📌 REGLAS DE SISTEMA
+
+• 
+
+Un producto siempre apunta a una receta.
+
+• 
+
+Las promos son recetas compuestas.
+
+• 
+
+La lógica de proteínas vive solo en recetas de ceviche.
+
+• 
+
+El inventario se descuenta siempre desde recetas, nunca desde productos.
+
+• 
+
+La base de ceviche se descuenta de RECETA_BASE_CEVICHE_4KG de forma proporcional.
+
+📦 EXTENSIÓN FINAL – COBERTURA 100% SEGÚN
+DOCUMENTOS OFICIALES
+
+Regla absoluta:  no se crean ingredientes, insumos ni preparaciones que no existan
+en los documentos cargados.
+
+🐟 CEVICHES – VARIANTES EXISTENTES EN DOCUMENTOS
+
+Ceviche Tradicional (elige hasta 3 proteínas)
+
+Usa   exactamente   las   recetas   ya   definidas:   -   RECETA_CEVICHE_250   -   RECETA_CEVICHE_350   -
+
+RECETA_CEVICHE_500 - RECETA_CEVICHE_750 - RECETA_CEVICHE_1KG
+
+Base: RECETA_BASE_CEVICHE_4KG Leche de tigre: tradicional
+
+Ceviche Peruano
+
+Diferencia solo por tipo de leche de tigre, no por insumos nuevos.
+
+3
+
+Recetas   válidas:
+
+-
+
+  RECETA_CEVICHE_PERUANO_350  
+
+-
+
+  RECETA_CEVICHE_PERUANO_500  
+
+-
+
+RECETA_CEVICHE_PERUANO_750 - RECETA_CEVICHE_PERUANO_1KG
+
+Reglas: - Lógica de proteínas: SÍ - Usa leche de tigre peruana (existente en documentos) - Verduras: las
+
+mismas de la base estándar
+
+Ceviche Tropical (Mango)
+
+Recetas   válidas:
+
+-
+
+  RECETA_CEVICHE_TROPICAL_250  
+
+-
+
+  RECETA_CEVICHE_TROPICAL_350  
+
+-
+
+RECETA_CEVICHE_TROPICAL_500 - RECETA_CEVICHE_TROPICAL_750 - RECETA_CEVICHE_TROPICAL_1KG
+
+Reglas: - Proteínas permitidas: salmón, camarón, atún - Usa  leche de tigre tropical (mango)  según
+
+recetario - Usa mango como parte de la receta (existente)
+
+Ceviche Sin Verduras / Arma tu gusto
+
+Recetas   válidas:   -   RECETA_CEVICHE_SIN_VERDURAS_350   -   RECETA_CEVICHE_SIN_VERDURAS_500   -
+
+RECETA_CEVICHE_SIN_VERDURAS_750 - RECETA_CEVICHE_SIN_VERDURAS_1KG
+
+Reglas estrictas (según documento): - Se permite quitar verduras - 50% del gramaje retirado se suma a
+
+proteínas - 50% se redistribuye entre verduras restantes
+
+🥗 BOWLS
+
+Bowl Acevichado
+
+RECETA_BOWL_ACEVICHADO Incluye: - Base de arroz - Verduras (zanahoria, repollo, palta) - Sub-receta:
+
+RECETA_CEVICHE_250 (elige proteínas)
+
+🥟 EMPANADAS
+
+Recetas   simples   existentes:   -   RECETA_EMPANADA_QUESO   -   RECETA_EMPANADA_CAMARON_QUESO   -
+
+RECETA_EMPANADA_CARAPACHO_QUESO
+
+-
+
+RECETA_EMPANADA_MACHA_QUESO
+
+-
+
+RECETA_EMPANADA_MARISCOS
+
+Packs válidos: - X2, X4, X6 (solo multiplicadores, no nuevas recetas)
+
+🍟 ACOMPAÑAMIENTOS / APANADOS
+
+Recetas simples: - RECETA_PAPAS_FRITAS - RECETA_PAPAS_A_LA_CREMA - RECETA_AROS_DE_CEBOLLA -
+
+RECETA_CAMARONES_APANADOS - RECETA_CANCHITA
+
+4
+
+ 
+ 
+ 
+ 
+ 
+🍞 PANCITOS
+
+Recetas:
+
+-
+
+  RECETA_PANCITOS_ORÉGANO  
+
+-
+
+  RECETA_PANCITOS_AJO_CONFITADO  
+
+-
+
+RECETA_PANCITOS_AJO_QUESO
+
+🍚 GOHAN / HAND ROLL
+
+Gohan
+
+RECETA_GOHAN - Proteína fija a elección (100 g)
+
+Hand Roll
+
+• 
+
+RECETA_HANDROLL_SALMON
+
+• 
+
+RECETA_HANDROLL_CAMARON
+
+• 
+
+RECETA_HANDROLL_POLLO
+
+🎁 PROMOCIONES ADICIONALES (SEGÚN WEB)
+
+Promo del Día
+
+RECETA_PROMO_DEL_DIA - 2 × RECETA_CEVICHE_250 (proteína fija: salmón)
+
+Promo Express
+
+RECETA_PROMO_EXPRESS   -   RECETA_CEVICHE_250   (salmón)   -   1   acompañamiento   (papas   fritas   o
+
+empanada queso) - 1 bebida
+
+Amor Amor
+
+RECETA_AMOR_AMOR - RECETA_CEVICHE_750 (elige proteínas) - 2 empanadas queso - 1 litro pisco sour
+
+Ceviche + Pisco Sour
+
+RECETA_CEVICHE_PISCO - RECETA_CEVICHE_500 o 1KG (elige proteínas) - Pisco sour (500cc o 1L)
+
+✅ ESTADO FINAL
+
+• 
+
+No se inventan ingredientes
+
+• 
+
+No se inventan verduras
+
+• 
+
+No se crean reglas nuevas fuera del recetario
+
+• 
+
+Todo el menú web queda cubierto por recetas explícitas
+
+• 
+
+El backend solo ejecuta recetas y sub-recetas
+
+5
+
+ 
+

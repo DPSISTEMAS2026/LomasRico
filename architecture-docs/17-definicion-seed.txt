@@ -1,0 +1,55 @@
+# DEFINICIÓN DE SEED INICIAL - LO MÁS RICO V2
+
+Este seed tiene como objetivo poblar la base de datos con un entorno balanceado para realizar el Testing Funcional definido en el plan anterior.
+
+## 1. INGREDIENTES (InventoryItem)
+Se deben cargar los elementos base divididos por su rol en las reglas de negocio:
+
+### Proteínas (Candidatos para PROTEIN_SLOT)
+- **Salmón Fresco**: 10 KG (Punto crítico para ceviches).
+- **Reineta**: 10 KG.
+- **Camarón Cocido**: 5 KG.
+- **Pulpo Selecto**: 3 KG (Para pruebas de Ceviche Premium).
+
+### Vegetales (Candidatos para Regla de Redistribución)
+- **Cebolla Morada**: 20 KG.
+- **Cilantro**: 5 KG.
+- **Choclo Peruano**: 15 KG.
+- **Ají Limo**: 2 KG.
+
+### Bases Preparadas (Para pruebas de unrollBase)
+- **Leche de Tigre Tradicional**: 20 Litros. (Tipo: PREPARATION)
+- **Salsa Acevichada**: 5 Litros. (Tipo: PREPARATION)
+
+## 2. PRODUCTOS Y VARIANTES (Product & ProductVariant)
+Carga mínima basada en el catálogo unificado:
+
+- **Ceviche LoMásRico**:
+  - Variante 350g ($8.900)
+  - Variante 500g ($11.900)
+- **Empanada Camarón Queso**:
+  - Variante Única ($2.500)
+- **Bebida Coca Cola 591cc**:
+  - Variante Única ($1.600)
+
+## 3. RECETAS (Recipe & RecipeItem)
+Crucial para que el `RecipeResolver` funcione.
+
+### Ejemplo Receta: Ceviche LoMásRico 350g
+- **Proteína (Tag: PROTEIN_SLOT)**: 0.200 KG (Dinamismo: se dividirá entre las seleccionadas).
+- **Leche de Tigre**: 0.100 L.
+- **Cebolla Morada (Tag: VEG_BASE)**: 0.030 KG (Sujeto a redistribución).
+- **Choclo (Tag: VEG_BASE)**: 0.020 KG (Sujeto a redistribución).
+
+## 4. ESTADOS INICIALES (Stock)
+- Todas las proteínas deben iniciar con stock suficiente (> 5 KG).
+- Se debe incluir al menos un vegetal con **Stock Bajo** (ej: Ají Limo a 0.1 KG) para probar los warnings en el Panel Admin.
+
+## 5. EJECUCIÓN CONCEPTUAL
+1. **Limpieza**: El seed debe iniciar con un `truncate` o `delete` de tablas de negocio (Ventas/Items) pero permitir mantener el catálogo si se desea.
+2. **Atomicidad**: Las inserciones deben seguir el orden de dependencias: 
+   `Ingredientes -> Recetas -> Productos -> Variantes -> Link RecipeId`.
+3. **Persistencia**: Se ejecutará mediante el script estándar de Prisma (`npx prisma db seed`) que invocará la lógica definida.
+
+---
+**Nota:** Este seed NO genera ventas. Las ventas se generarán manualmente durante el Testing Funcional para validar el descuento de este stock inicial.

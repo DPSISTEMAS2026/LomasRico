@@ -1,0 +1,76 @@
+BOOTSTRAP TÉCNICO - CHECKLIST DE VALIDACIÓN
+
+Este documento certifica el estado actual de la infraestructura del proyecto "Lo Más Rico V2" antes de la primera ejecución.
+
+1. ESTRUCTURA DE DIRECTORIOS (CONFIRMADA)
+
+   [RAIZ]
+   ├── package.json           (Gestor de Workspaces)
+   ├── tsconfig.base.json     (Reglas TypeScript Globales)
+   │
+   ├── [apps]                 (Aplicaciones Ejecutables)
+   │   ├── api/               (NestJS - Backend Monolítico) -> [SCAFFOLDED]
+   │   ├── web/               (Next.js - Cliente Público)   -> [SCAFFOLDED]
+   │   ├── admin/             (Next.js - Panel Admin)       -> [PENDIENTE: SKELETON ONLY]
+   │   └── pos/               (Next.js - Punto de Venta)    -> [PENDIENTE: SKELETON ONLY]
+   │
+   ├── [packages]             (Librerías Compartidas)
+   │   ├── database/          (Prisma ORM + Schema)         -> [READY]
+   │   └── shared-types/      (Interfaces TS)               -> [READY]
+   │
+   ├── [infra]                (Infraestructura como Código)
+   │   └── local/             (Docker Compose Local)        -> [READY]
+   │
+   └── [architecture-docs]    (Documentación de Diseño)     -> [COMPLETE]
+
+
+2. IDENTIFICACIÓN DE ARCHIVOS CRÍTICOS
+
+   A. ORQUESTACIÓN
+   - Archivo: `infra/local/docker-compose.yml`
+   - Rol: Levanta la base de datos PostgreSQL 16 y el contenedor del API.
+   - Estado: Configurado para puerto 5432 (DB) y 3333 (API).
+
+   B. GESTIÓN DE DEPENDENCIAS
+   - Archivo: `package.json` (Raíz)
+   - Rol: Define los "workspaces" para que `npm install` instale todo junto.
+   - Estado: Enlazado a `apps/*` y `packages/*`.
+
+   C. BASE DE DATOS
+   - Archivo: `packages/database/prisma/schema.prisma`
+   - Rol: Contiene la definición de tablas (Sale, Recipe, Stock) acordada.
+   - Estado: Listo para generar migraciones.
+
+   D. CONFIGURACIÓN BASE
+   - Archivo: `tsconfig.base.json`
+   - Rol: Evita reescribir reglas de compilación en cada subproyecto.
+
+
+3. COSAS QUE NO DEBEN EJECUTARSE AÚN (WARNINGS)
+
+   [NO] `npm run dev` en 'apps/admin' o 'apps/pos'
+   - Razón: Estas carpetas solo tienen un `package.json` placeholder. No tienen Next.js instalado ni código fuente real. Fallarán inmediatamente.
+
+   [NO] `docker-compose up` (Producción)
+   - Razón: Solo existe configuración `local`. No intentar desplegar en Render todavía.
+
+   [NO] Importación de Datos Reales
+   - Razón: La base de datos está vacía. No intentar carga masiva hasta validar la migración `init`.
+
+
+4. CHECKLIST DE PENDIENTES PRE-ARRANQUE
+
+   [ ] **Inicialización Real de Admin/POS**:
+       Se deben ejecutar los comandos de creación de Next.js (`create-next-app`) dentro de `apps/admin` y `apps/pos` para tener código real, o copiar la estructura de `apps/web`.
+
+   [ ] **Generación de Cliente Prisma**:
+       El paquete database necesita ejecutar `npx prisma generate` para crear los tipos TypeScript que usará el API.
+
+   [ ] **Sincronización de Base de Datos**:
+       Postgres está configurado en Docker pero virgen. Falta ejecutar `prisma migrate dev` para crear las tablas físicas.
+
+   [ ] **Variables de Entorno**:
+       No hay archivos `.env` creados. Se depende de los valores default de Docker. Validar que `DATABASE_URL` coincida.
+
+ESTADO GLOBAL: LISTO PARA FASE DE IMPLEMENTACIÓN (CÓDIGO)
+La estructura es sólida, pero requiere los pasos finales de instalación en los frontends secundarios antes de ser 100% funcional.

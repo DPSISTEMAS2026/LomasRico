@@ -1,0 +1,22 @@
+{
+    "name": "@lomasrico/database",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "generate": "npx prisma generate"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.10.0",
+        "dotenv": "^17.2.3"
+    },
+    "devDependencies": {
+        "prisma": "^5.10.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    },
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
+    }
+}

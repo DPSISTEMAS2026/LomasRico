@@ -1,0 +1,9 @@
+@echo off
+echo Iniciando Docker Desktop...
+start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+echo Esperando a que Docker Desktop inicie...
+timeout /t 15 /nobreak
+echo Docker Desktop deberia estar iniciando...
+echo.
+echo Ejecuta 'docker ps' para verificar que Docker esta corriendo.
+pause

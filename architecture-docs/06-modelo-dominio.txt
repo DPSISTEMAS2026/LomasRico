@@ -1,0 +1,101 @@
+MODELO DE DOMINIO FINAL - LO MÁS RICO V2
+(Agnóstico de UI, DB y Canales de Venta)
+
+1. ENTIDADES DEL DOMINIO PRINCIPAL
+
+   A. CONTEXTO DE CATÁLOGO (Lo que se vende)
+      - **SellingProduct**: Representa el ítem del menú (Ej: "Ceviche Peruano", "Empanada Camarón").
+      - **SellingVariant**: Variación específica (Ej: "350g", "500g", "1kg"). *Aquí se define el precio de venta.*
+      - **ModifierGroup**: Grupo de opciones (Ej: "Proteínas", "Verduras", "Salsas").
+      - **ModifierOption**: Opción seleccionable (Ej: "Salmón", "Sin Cebolla", "Veggie").
+        * Atributo clave: `Tag` (Ej: #PROTEINA, #VERDURA, #PREMIUM) para aplicar reglas lógicas.
+
+   B. CONTEXTO DE INGENIERÍA DE MENÚ (Cómo se hace)
+      - **Resource**: Concepto abstracto para cualquier cosa contable en inventario.
+        - Tipo 1: **RawIngredient** (Insumo Simple). Ej: "Salmón Filete", "Jugo Limón", "Aliño LomasRico". *No tiene receta, se compra.*
+        - Tipo 2: **Preparation** (Batch/Sub-receta). Ej: "Leche de Tigre", "Base Ceviche 8kg", "Masa Empanada". *Tiene receta, se produce.*
+      
+      - **Recipe**: La fórmula para transformar Recursos en otros Recursos o Productos.
+        - No es una lista estática, es un **Algoritmo de Composición**.
+        - Input: Variante Seleccionada + Modificadores (Output del cliente).
+        - Output: Lista de Recursos + Cantidades (BoM - Bill of Materials).
+
+      - **RulesEngine**: Motor lógico que ejecuta las excepciones.
+        - *Regla Proteína*: Si `Count(Proteins) == 2` -> `Qty = 50%` (Salvo excepción con Pulpo).
+        - *Regla Sin Verdura*: Si `HasTag(#SIN_VERDURA)` -> `Add(Proteina, +50% PesoVerdura)`.
+
+   C. CONTEXTO DE INVENTARIO (Dual Mode)
+      - **StoreConfig**: Configuración del local.
+        - Flag: `UNROLL_PREPARATIONS` (Boolean).
+        - *TRUE (Modo Ingredientes Sueltos)*: Al vender un ceviche, el sistema ignora que existe la "Base 8kg" y descuenta Choclo + Cebolla + Leche.
+        - *FALSE (Modo Producción)*: El sistema descuenta "X gramos de Base Ceviche".
+
+2. DIAGRAMA DE RELACIONES (Jerarquía de Composición)
+
+   [SellingProduct] "Ceviche LoMásRico"
+          │
+          ▼
+   [SellingVariant] "500g"
+          │
+          ├── [Recipe] (Define estructura base: 500g Total = Xg Prot + Yg Veg + Zml Leche)
+          │
+          ▼
+   [CompositionResolver] (Interpreta selección del cliente)
+      │ Input: { Proteina: Salmón+Pulpo, Sin: Cebolla }
+      │ Process: Aplica Regla(Pulpo), Aplica Regla(SinVerdura)
+      │ Output:
+      │    1. Salmón Raw (140g)
+      │    2. Pulpo Cocido (80g)
+      │    3. Leche de Tigre (150ml) -> [Preparation]
+      │    4. Choclo (50g)
+      │    5. Pimentón (30g)
+      │
+      ▼
+   [InventoryManager] (Aplica estrategia según Local)
+      │ Caso A (Local Productor con Stock de Base):
+      │    - Descuenta: Salmón, Pulpo.
+      │    - Descuenta: "Base Ceviche" (Si aplica) o "Leche Tigre" (Si está pre-hecha).
+      │
+      │ Caso B (Local Simple / Sin Stock Base):
+      │    - Descuenta: Salmón, Pulpo.
+      │    - Descompone "Leche Tigre" -> Descuenta: Jugo Limón, Aliño LomasRico, Apio, etc.
+
+3. CICLO DE VIDA Y STOCK
+
+   A. CUÁNDO SE DESCUENTA
+      - **Venta Online/POS**: Al confirmar el pedido (`OrderConfirmed`).
+      - **Producción Interna**: Al registrar un lote (`BatchCreated`). Ej: Cocinero crea 8kg de Base -> Descuenta ingredientes, suma 8kg de Base al Stock.
+
+   B. QUÉ SE CONGELA (SNAPSHOT)
+      - Al crear una **OrderLine**, se genera un `OrderLineBoM` (Bill of Materials).
+      - Esta es una copia estática JSON de los ingredientes exactos y sus costos en ESE momento.
+      - *Razón*: Si mañana cambias la receta de la Leche de Tigre, los reportes de margen de ventas pasadas no deben cambiar.
+
+   C. EL "ALIÑO LOMASRICO"
+      - Se modela como **RawIngredient**.
+      - Unidad: Gramos.
+      - Stock: Se carga por compra o ingreso manual.
+      - Uso: Presente en casi todas las recetas (Salsas, Leche Tigre, Masas).
+
+4. RESUMEN DE COMPORTAMIENTO (EJEMPLO PRÁCTICO)
+
+   Escenario: "Ceviche 500g, Salmón+Reineta, Sin Verduras" (Local en Modo: Desarmar Preparaciones)
+   
+   1. **Cliente** selecciona opciones.
+   2. **Motor**:
+      - Base teórica: 500g.
+      - Proteínas: 2.
+      - "Sin Verduras" activado:
+         - Peso Verduras Original (aprox 100g) -> Eliminado.
+         - Bonificación Proteína: +50g (50% de 100g).
+         - Nueva Meta Proteína: Base + 50g.
+         - Reparto: 50% Salmón, 50% Reineta (de la nueva meta).
+   3. **Resolución de Receta**:
+      - Necesito: Salmón (125g), Reineta (125g), Leche Tigre (150ml).
+   4. **Consultar Stock Local (Modo Desarmar)**:
+      - ¿Tengo "Leche Tigre" preparada? NO (Config dice desarmar o no hay stock).
+      - -> Descompone Leche Tigre (Receta recursiva).
+      - -> Descuenta: Jugo Limón, Aliño LomasRico, Cilantro, Jengibre.
+   5. **Resultado Final**:
+      - Stock descontado: Salmón, Reineta, Jugo Limón, Aliño, Cilantro...
+      - Margen calculado: Suma de costos de esos insumos específicos.

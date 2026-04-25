@@ -1,0 +1,79 @@
+MODELO DE EVENTOS DE DOMINIO INTERNOS (NESTJS EVENTEMITTER)
+
+Arquitectura orientada a eventos dentro del Monolito. 
+Objetivo: Desacoplar efectos secundarios (Notificaciones, Sockets) de la Lógica Core Transaccional.
+
+1. PRINCIPIO DE CONSISTENCIA
+   - **Lógica Transaccional (ACID)**: Sale + Stock + Snapshot + Ticket. Ocurre TODO junto en el Servicio. No delegar esto a eventos asíncronos para evitar inconsistencias.
+   - **Lógica Reactiva (Eventos)**: Notificaciones, WebSockets KDS, Alertas. Ocurre DESPUÉS del commit de base de datos.
+
+2. CATÁLOGO DE EVENTOS (Domain Events)
+
+   A. DOMINIO VENTAS (Sales)
+   
+      Evento: `sale.created` (Async)
+      - *Disparador*: Cliente crea orden Web/Wsp (Pending Payment).
+      - *Reacción 1*: `AnalyticsService` -> Registra intento de compra (Funnel).
+      - *Reacción 2*: `InactivityMonitor` -> Agenda timeout para cancelar si no paga en X min (Wsp).
+
+      Evento: `sale.confirmed` (Async - CRÍTICO)
+      - *Disparador*: Pago exitoso o Cierre Caja POS. La transacción stock/ticket ya ocurrió.
+      - *Reacción 1*: `KDSGateway` -> Emite WebSocket event `kds:new_ticket` a las pantallas de cocina.
+      - *Reacción 2*: `WhatsAppAdapter` -> Envía mensaje "Pedido Confirmado #1234" al cliente.
+      - *Reacción 3*: `DataWarehouse` -> Guarda métricas financieras.
+
+      Evento: `sale.cancelled` (Sync/Async)
+      - *Disparador*: Timeout de pago o Cancelación manual POS.
+      - *Reacción 1*: `InventoryService` -> Evalúa si debe ejecutar `RestoreStock` (Si el pedido ya había reservado items).
+      - *Reacción 2*: `KDSGateway` -> Emite `kds:remove_ticket`.
+
+   B. DOMINIO COCINA (Kitchen)
+
+      Evento: `kitchen.status_changed` (Async)
+      - *Payload*: `{ ticketId, saleId, newStatus: 'PREPARING' | 'READY', timestamp }`
+      - *Disparador*: Cocinero toca pantalla KDS.
+      - *Reacción 1 (Sync)*: `SalesService` -> Actualiza estado del Pedido (`IN_PROGRESS` / `READY_PICKUP`).
+      - *Reacción 2 (Async)*: `NotificationService` -> Si es 'READY', envía WhatsApp/Email al cliente "Tu pedido está listo".
+
+   C. DOMINIO INVENTARIO (Inventory)
+
+      Evento: `inventory.low_stock` (Async)
+      - *Disparador*: Tras descontar stock, un item quedó bajo `minStockThreshold`.
+      - *Reacción 1*: `NotificationService` -> Envía alerta a Admin/Jefe Cocina. "Atención: Poco Salmón (1.2kg)".
+
+   D. DOMINIO PAGOS (Payments)
+      
+      Evento: `payment.webhook_received` (Sync Entrypoint)
+      - *Disparador*: MercadoPago notifica.
+      - *Acción*: Invoca `SalesService.confirmSale()`. (Esto dispara a su vez `sale.confirmed`).
+
+3. MATRIZ DE EVENTOS Y REACCIONES
+
+   | Evento                  | Emisor (Module)    | Listener (Module)   | Acción / Efecto                   | Tipo       |
+   |-------------------------|--------------------|---------------------|-----------------------------------|------------|
+   | sale.created            | Sales              | Analytics           | Log metric                        | Info       |
+   | sale.confirmed          | Sales              | KDS (Gateway)       | Refresh Pantallas Cocina (Socket) | **Crítico**|
+   |                         |                    | Notifications       | Msg Cliente                       | Info       |
+   | kitchen.status_changed  | Kitchen            | Sales               | Sync Estado Pedido                | **Core**   |
+   |                         |                    | Notifications       | Msg Cliente ("Listo")             | Info       |
+   | inventory.low_stock     | Inventory          | Notifications       | Alerta Interna                    | Info       |
+
+4. IMPLEMENTACIÓN TÉCNICA (NESTJS)
+   
+   - Usar `@nestjs/event-emitter`.
+   - Decorador `@OnEvent('sale.confirmed', { async: true })` para notificaciones.
+   - Decorador `@OnEvent('kitchen.status_changed', { async: false })` para sincronización de estados crítica (si se requiere orden estricto).
+   
+   *Nota*: Para la comunicación con el Frontend (Web/POS/KDS) se usará `Socket.io` (Gateway) gatillado por estos eventos internos.
+
+5. FLUJO DE EJEMPLO: WHATSAPP CONFIRMADO
+
+   1. Webhook MP -> Controller -> `SalesService.confirmSale(id)`
+   2. Transacción BD (ACID): 
+      - Sale Status -> CONFIRMED
+      - Stock -> DECREMENT
+      - Ticket -> CREATED
+   3. `SalesService` emite `sale.confirmed`.
+   4. `KDSGateway` escucha -> Envía socket a Pantalla Cocina -> ¡Suena Alerta!
+   5. `NotificationService` escucha -> Envía Template WhatsApp -> "Gracias por tu compra".
+

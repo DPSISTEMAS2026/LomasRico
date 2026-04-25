@@ -1,0 +1,70 @@
+MODELO DE DOMINIO NEUTRO (OPERATIVO vs ECONÓMICO)
+
+Objetivo: Sistema de Gestión Gastronómica (Inventario y Recetas), Preparado para Costos (Modo Pasivo).
+
+1. CAPA OPERATIVA (CORE GASTRO)
+   Esta capa maneja la realidad física de la cocina. Es la única activa "En Vivo".
+
+   A. ENTIDADES DE STOCK (FÍSICO)
+      - **Ingredient**: La unidad mínima indivisible de inventario FÍSICO.
+        - Campos: `Name`, `Unit` (Kg, Lt, Un), `CurrentStock` (Cantidad física), `LowStockThreshold`.
+        - *Nota*: No tiene precio fijo. El precio es un atributo volátil de la compra.
+
+      - **Preparation (Batch)**: Resultado de un proceso de producción interna.
+        - Campos: `Name`, `Unit`, `CurrentStock`.
+        - Relación: TIENE UNA `Recipe`.
+
+   B. ENTIDADES DE DEFINICIÓN (RECETAS)
+      - **Recipe**: Algoritmo de transformación.
+        - Relación: `Input` (Ingredientes/Preparaciones) -> `Output` (Preparación/Plato).
+        - Atributos: `Quantity` (Cuánto insumo se usa físicamente).
+        - *Nota*: Los gramajes son reglas operativas, no financieras.
+
+   C. ENTIDADES DE VENTA (CATÁLOGO)
+      - **ProductVariant**: Lo que elige el cliente (Ej: "Ceviche 500g").
+      - Relación: Se conecta a una `Recipe` principal para descargo de stock.
+
+2. CAPA ECONÓMICA (DATA ENTRY - "MODO PASIVO")
+   Esta capa solo REGISTRA datos. El sistema NO toma decisiones ni calcula márgenes en tiempo real con esto aún.
+
+   A. REGISTRO DE ENTRADAS (COMPRAS)
+      - **PurchaseEvent**: Evento de ingreso de mercadería.
+      - Datos Obligatorios:
+        - `IngredientID` (Qué entró)
+        - `Quantity` (Cantidad física real que entró al stock)
+        - `TotalCost` (Cuánto costó la factura/boleta)
+        - `SupplierID` (A quién se compró - Referencial)
+      - Datos Opcionales (Editables por Compra):
+        - `YieldFactor` (Rendimiento/Merma reportada en esta compra específica).
+      - *Efecto*: Aumenta `Ingredient.CurrentStock`.
+      - *Calculo Diferido*: El precio unitario (`TotalCost / Quantity`) se guarda en un historial (`PriceLog`), pero NO bloquea la operación.
+
+   B. PROVEEDORES (AGENDA)
+      - **Supplier**: Simple directorio de contactos.
+
+3. INTEGRACIÓN DE CATÁLOGO INICIAL (EJEMPLO)
+
+   Ingredientes (Solo definen QUÉ SON y CÓMO SE MIDEN):
+   - [ID:1] "Salmón Filete" (Kg)
+   - [ID:2] "Limón Jugo/Exprimido" (Lt) - *Sin reglas de merma de fruta*
+   - [ID:3] "Aliño LomasRico" (Kg) - *Caja negra, se compra o se ingresa stock directo*
+   - [ID:4] "Pulpo Cocido" (Kg)
+   - [ID:5] "Choclo Desgranado" (Kg)
+
+   Recetas (Solo definen CANTIDADES FÍSICAS):
+   - [Receta: Ceviche 500g] -> Requiere: 150ml Jugo Limón, 140g Salmón...
+
+4. FUNCIONALIDADES MARCADAS
+   
+   [ACTIVO] Control de Stock por descuento de venta (Web/POS).
+   [ACTIVO] Control de Stock por producción interna (Batch).
+   [ACTIVO] Alertas de Stock Bajo (Físico).
+   
+   [DESACTIVADO / FUTURO] Cálculo de Food Cost en tiempo real.
+   [DESACTIVADO / FUTURO] Sugerencia de Precios de Venta Smart.
+   [DESACTIVADO / FUTURO] Gestión contable de Mermas (Solo se registra el Yield si el usuario quiere).
+   [DESACTIVADO / FUTURO] FIFO/LIFO Valorizado (Solo se guarda el log de compras).
+
+5. PRINCIPIO DE NEUTRALIDAD
+   - El sistema cree ciegamente en el stock físico (`CurrentStock`).
+   - El costo "actual" de un ingrediente es simplemente "el precio de la última compra registrada", usado solo como referencia visual, nunca para bloquear ventas.

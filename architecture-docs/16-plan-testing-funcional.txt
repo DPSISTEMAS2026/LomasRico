@@ -1,0 +1,53 @@
+# CHECKLIST DE TESTING FUNCIONAL - LO MÁS RICO V2
+
+Este plan permite validar el flujo de negocio completo desde la captación (Web/POS) hasta el despacho (Cocina) y descuento de inventario.
+
+## 1. WEB CLIENTE: FLUJO DE PRODUCTO SIMPLE
+- **Caso:** Agregar "Empanada Camarón Queso" al carrito.
+- **Interacción UI:** Click en el botón "Agregar" de la tarjeta de producto.
+- **Endpoint involucrado:** Ninguno (manejo de estado local en `CartContext`).
+- **Resultado esperado:** El ítem aparece inmediatamente en el carrito inferior con cantidad 1 y precio $2.500.
+
+## 2. WEB CLIENTE: CEVICHE (CONFIGURACIÓN VÁLIDA)
+- **Caso:** Configurar un "Ceviche LoMásRico" con 2 proteínas.
+- **Interacción UI:** 
+  1. Click en "Configurar".
+  2. Seleccionar Variante "350g".
+  3. Seleccionar "Salmón" y "Reineta".
+  4. Click "Agregar al Carrito".
+- **Endpoint involucrado:** `POST /sales/validate-item` (Dry-run de ingeniería).
+- **Resultado esperado:** API retorna `200 OK`. El ítem se agrega al carrito mostrando las proteínas seleccionadas.
+
+## 3. WEB CLIENTE: ERROR DE VALIDACIÓN (REGLAS ROTAS)
+- **Caso:** Intentar una configuración prohibida por el motor de ingeniería.
+- **Escenario A (Sin Proteínas):** Intentar agregar un ceviche sin marcar ninguna proteína.
+  - **Resultado:** El botón "Agregar" debe permanecer bloqueado en UI.
+- **Escenario B (Regla "Sin Verduras" Extrema):** Quitar TODOS los vegetales disponibles en un producto que requiere redirección de peso.
+  - **Interacción:** Marcar todas las verduras como "Removidas".
+  - **Endpoint involucrado:** `POST /sales/validate-item`.
+  - **Resultado esperado:** API retorna `400 Bad Request` con mensaje: *"Invalid combination: Cannot remove all vegetables..."*. La UI debe mostrar este error.
+
+## 4. POS: VENTA FORZADA (STOCK INSUFICIENTE)
+- **Caso:** Registrar una venta física de un producto cuyo stock en DB es 0 o insuficiente.
+- **Interacción UI:**
+  1. Seleccionar cualquier producto en el POS.
+  2. Click en "CONFIRMAR PAGO (EFECTIVO)".
+- **Endpoint involucrado:** `POST /sales` (Payload con `channel: "POS"`).
+- **Resultado esperado:** API retorna `201 Created`. A diferencia del canal Web, el POS ignora el bloqueo de stock (según `SalesService`) para permitir la operación física. El stock en DB queda en negativo.
+
+## 5. COCINA (KDS): AVANCE DE ESTADOS
+- **Caso:** Gestionar el ciclo de vida del ticket de pedido.
+- **Paso A: Recepción**
+  - **Endpoint:** `GET /kitchen`.
+  - **Resultado:** Debe listar el ticket de la venta anterior en estado `WAITING`.
+- **Paso B: Preparación**
+  - **Endpoint:** `PATCH /kitchen/{id}/status` con body `{ "status": "PREPARING" }`.
+  - **Resultado:** `200 OK`. `startTime` se registra en DB. El estado de la `Sale` asociada cambia a `PREPARING`.
+- **Paso C: Terminado**
+  - **Endpoint:** `PATCH /kitchen/{id}/status` con body `{ "status": "READY" }`.
+  - **Resultado:** `200 OK`. `endTime` se registra. La `Sale` cambia a `COMPLETED`.
+
+## 6. VERIFICACIÓN POST-TEST (PRISMA STUDIO)
+- [ ] **Ventas:** La tabla `Sale` tiene los registros con el total correcto.
+- [ ] **Snapshots:** La tabla `RecipeSnapshot` contiene el BoM exacto que calculó el motor para cada ítem vendido.
+- [ ] **Movimientos:** La tabla `StockMovement` muestra registros negativos con razón `SALE` vinculados al ID de la venta.

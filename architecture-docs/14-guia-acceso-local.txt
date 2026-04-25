@@ -1,0 +1,47 @@
+GUÍA DE ACCESO AL SISTEMA (ENTORNO LOCAL)
+
+Este documento detalla cómo acceder y probar los componentes del sistema "Lo Más Rico V2" una vez levantado el entorno de desarrollo.
+
+1. PREREQUISITOS
+   Para que los siguientes enlaces funcionen, asegúrese de que el entorno esté corriendo:
+   - Base de datos (PostgreSQL) vía Docker.
+   - API (NestJS) vía Docker o CLI local.
+   - Web Cliente (Next.js) vía CLI local.
+
+2. APLICACIONES Y PUNTOS DE ACCESO
+
+   A. WEB CLIENTE (Catálogo y Pedidos)
+      - URL: http://localhost:3000
+      - Descripción: Interfaz pública para clientes. Muestra el catálogo real, permite armar ceviches con su modal de configuración y simula el "Add to Cart".
+
+   B. API BACKEND (Servidor Central)
+      - URL Base: http://localhost:3333
+      - Estado: Debe responder en la raíz (si hay controlador root) o 404 si no. Verificar logs de NestJS para confirmar arranque.
+
+3. ENDPOINTS CLAVE PARA PRUEBAS (Vía Postman / cURL)
+
+   A. Validar Reglas de Receta (Dry-Run)
+      - Método: POST
+      - URL: http://localhost:3333/sales/validate-item
+      - Body (JSON):
+        {
+          "productVariantId": "ID_VALIDO_DE_DB",
+          "quantity": 1,
+          "modifiers": { "selectedProteins": ["ID_ITEM_SALMON"], "removedIngredients": [] }
+        }
+      - Test: Verifica que el sistema acepta la combinación sin crear venta.
+
+   B. Consultar Inventario
+      - Método: GET
+      - URL: http://localhost:3333/inventory
+      - Test: Retorna lista de ingredientes RAW y Preparaciones.
+
+   C. Ver Comandas de Cocina (KDS)
+      - Método: GET
+      - URL: http://localhost:3333/kitchen
+      - Test: Retorna lista vacía [] o tickets pendientes si se realizaron ventas.
+
+4. CONSIDERACIONES
+   - Los datos del catálogo en la Web (localhost:3000) son estáticos por ahora (archivo `products.catalog.ts`) y coinciden con la realidad del negocio, pero no vienen del API.
+   - La validación de recetas SÍ conecta con el API (simulado en servicios/api.ts), requiriendo que la BD tenga IDs coincidentes si se quita el mock.
+

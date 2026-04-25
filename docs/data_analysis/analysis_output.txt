@@ -1,0 +1,222 @@
+
+
+====================
+ANALYZING EXCEL: c:/Users/ddiaz/OneDrive/Escritorio/PRODUCCION LO MAS RICO V3/MENU RESTAURANTE.xlsx
+====================
+Sheets: ['Hoja 1']
+
+[SHEET: Hoja 1]
+            Categoría               Producto  Precio (CLP)                              Descripción / Notas  Columna1  Columna2
+           **PROMOS**  Degustación LoMASRico         26900                 3 variedades de ceviches de 350g       NaN       NaN
+           **PROMOS**          Promo Express          7990  Ceviche Salmón 250g + papas o empanada + bebida       NaN       NaN
+           **PROMOS**            Dúo Gourmet         16900      500g ceviche + 2 empanadas + Limonada 500cc       NaN       NaN
+           **PROMOS**            MEGA PROMO!         25900    1KG Ceviche + 1/2 docena empanadas + pancitos       NaN       NaN
+           **PROMOS**              De Miedo!         24900    750g Salmón + 4 empanadas variadas + pancitos       NaN       NaN
+           **PROMOS**                PROMO 1         14900 *Ceviche 250g + Papas + Camarones + Aros cebolla       NaN       NaN
+           **PROMOS**     PROMO 2 (1-2 pers)         12900       *Ceviche 350g + 2 empanadas + papas fritas       NaN       NaN
+           **PROMOS**     PROMO 3 (2-3 pers)         16400  Ceviche 500g + Papas medianas + 10 aros cebolla       NaN       NaN
+           **PROMOS**     Apanados LoMASRico          5900       10 aros de cebolla + 10 camarones apanados       NaN       NaN
+           **PROMOS**     2 Bowl's LoMASRico         11900           Base arroz, repollo, zanahoria y palta       NaN       NaN
+           **PROMOS**      Degustación Mixta         21900                     4 ceviches mixtos (250g c/u)       NaN       NaN
+           **PROMOS**   Sopaipillas 10 (uni)          5900                Masa 100% artesanal + salsa verde       NaN       NaN
+           **PROMOS**              Cevichada         29900                              1.5 Kg de trilogías       NaN       NaN
+           **PROMOS**   Ceviche + Pisco Sour         15000                      *1kg o 500g + 1L Pisco Sour       NaN       NaN
+           **PROMOS**              AMOR AMOR         26900             750g ceviche + 2 empanadas + 1L Sour       NaN       NaN
+  **CEVICHE PERUANO**           Peruano 350g         10900             Estilo peruano, macerado receta casa       NaN       NaN
+  **CEVICHE PERUANO**           Peruano 500g         13400       Con choclo peruano, cebolla pluma y cancha       NaN       NaN
+  **CEVICHE PERUANO**           Peruano 750g         18900           Leche de tigre al mejor estilo peruano       NaN       NaN
+  **CEVICHE PERUANO**            Peruano 1KG         22900                  Formato familiar estilo peruano       NaN       NaN
+**CEVICHE LOMASRICO** Ceviche LoMASRico 250g          5900                          Elige hasta 3 proteínas       NaN       NaN
+**CEVICHE LOMASRICO** Ceviche LoMASRico 350g          8900                          Elige hasta 3 proteínas       NaN       NaN
+**CEVICHE LOMASRICO** Ceviche LoMASRico 500g         11900                          Elige hasta 3 proteínas       NaN       NaN
+**CEVICHE LOMASRICO** Ceviche LoMASRico 750g         16900                          Elige hasta 3 proteínas       NaN       NaN
+**CEVICHE LOMASRICO**  Ceviche LoMASRico 1KG         20900                          Elige hasta 3 proteínas       NaN       NaN
+ **CEVICHE TROPICAL**          Tropical 250g          5900                   Salmón, Camarón o Atún y Mango       NaN       NaN
+ **CEVICHE TROPICAL**          Tropical 350g          8900                   Salmón, Camarón o Atún y Mango       NaN       NaN
+ **CEVICHE TROPICAL**          Tropical 500g         11900                   Salmón, Camarón o Atún y Mango       NaN       NaN
+ **CEVICHE TROPICAL**          Tropical 750g         16900                   Salmón, Camarón o Atún y Mango       NaN       NaN
+ **CEVICHE TROPICAL**           Tropical 1KG         20900                   Salmón, Camarón o Atún y Mango       NaN       NaN
+**CEVICHE SIN VERDE**      Sin Verduras 350g          8900          Elige hasta 3 proteínas, quita verduras       NaN       NaN
+**CEVICHE SIN VERDE**      Sin Verduras 500g         11400          Elige hasta 3 proteínas, quita verduras       NaN       NaN
+**CEVICHE SIN VERDE**      Sin Verduras 750g         16900          Elige hasta 3 proteínas, quita verduras       NaN       NaN
+**CEVICHE SIN VERDE**       Sin Verduras 1KG         20900          Elige hasta 3 proteínas, quita verduras       NaN       NaN
+      **CEVICHE VEG**            Ceviche Veg          7500         *Champiñones marinados en leche de tigre       NaN       NaN
+        **EMPANADAS**          Camarón-Queso          2500                  *Frita, camarón y queso fundido       NaN       NaN
+        **EMPANADAS**            Macha Queso          2800                 *Frita, macha y queso mozzarella       NaN       NaN
+        **EMPANADAS**                  Queso          2000                               *Frita, solo queso       NaN       NaN
+        **EMPANADAS**                Marisco          2500            *Frita, mix de mariscos seleccionados       NaN       NaN
+        **EMPANADAS**        Carapacho Queso          2800               *Frita, carapacho de jaiba y queso       NaN       NaN
+         **PANCITOS**      Al orégano (10 u)          1500                 Incluye salsa verde 100% natural       NaN       NaN
+         **PANCITOS**          Ajo confitado          1900                  Pancitos de ajo con salsa verde       NaN       NaN
+         **PANCITOS**            Ajo y Queso          2500          Con queso mozzarella y salsa de la casa       NaN       NaN
+   **PAPAS / FRITOS**        Papas LoMASRico          4500            *Papas sazonadas con aliño de la casa       NaN       NaN
+   **PAPAS / FRITOS**       Papas a la crema          5900             Con mozzarella y cebollín (1-2 pers)       NaN       NaN
+   **PAPAS / FRITOS**     Camarones apanados          6500                   *Extra grandes con salsa verde       NaN       NaN
+   **PAPAS / FRITOS**        Aros de cebolla          3500                    *Porción individual crujiente       NaN       NaN
+     **PLATOS PREP.**        Bowl Acevichado          6900         Arroz, ceviche, zanahoria, palta y salsa       NaN       NaN
+     **PLATOS PREP.**        Elige tu GOHAN!          6900         Salmón, camarón o atún, base arroz sushi       NaN       NaN
+       **HAND ROLLS**        HandRoll Salmón          4500                      *Queso crema y palta + soya       NaN       NaN
+       **HAND ROLLS**       HandRoll Camarón          4500                      *Queso crema y palta + soya       NaN       NaN
+       **HAND ROLLS**         HandRoll Pollo          4200          *Apanado con pollo, palta y queso crema       NaN       NaN
+           **CRUDOS**        Crudo de Salmón          8900            *Cortes premium listos para disfrutar       NaN       NaN
+           **CRUDOS**          Crudo de Atún          8900            *Cortes premium listos para disfrutar       NaN       NaN
+          **BEBIDAS**        Coca Cola 591cc          1600                                           Normal       NaN       NaN
+          **BEBIDAS**   Coca Cola Zero 591cc          1600                                       Sin azúcar       NaN       NaN
+          **BEBIDAS**          Monster 475cc          2400                          Energética (variedades)       NaN       NaN
+          **BEBIDAS**         Kem Piña 350cc          1400                                       Sabor piña       NaN       NaN
+          **BEBIDAS**       Limon Soda 350cc          1400                                      Sabor limón       NaN       NaN
+          **BEBIDAS**     Agua Puyehue 500cc          1400                               Mineral gasificada       NaN       NaN
+          **BEBIDAS**       Limonada Clásica          3000             *Elaborada con sumo de limón natural       NaN       NaN
+          **BEBIDAS**         Limonada Menta          3500                                *Menta y jengibre       NaN       NaN
+          **BEBIDAS**      Limonada Albahaca          3500                                   *Sabor gourmet       NaN       NaN
+          **BEBIDAS**           Jugo Natural          3200                            *Fruta de la estación       NaN       NaN
+
+
+====================
+ANALYZING DOCX: c:/Users/ddiaz/OneDrive/Escritorio/PRODUCCION LO MAS RICO V3/Gramajesceciches.docx
+====================
+TEXT CONTENT:
+Ceviche 1kg.
+Verduras:
+60gr. pimentón
+100gr. choclo
+120gr. cebolla
+40gr. palta
+225ml. leche de tigre
+*Mezclar siempre todos los ingredientes*
+Ceviche 500gr.
+Verduras:
+30gr. pimentón
+50gr. choclo
+60gr. cebolla
+20gr. palta
+150ml leche de tigre
+Ceviche 750gr.
+Verduras para todos:
+45gr. pimentón
+75gr. choclo
+90gr. cebolla
+30gr. palta
+225ml leche de tigre
+Ceviche 350gr.
+Obs: La proteína de menor gramaje siempre será Pulpo
+Luego será el camarón.
+Verduras:
+20gr. pimentón
+30gr. choclo
+40gr. cebolla
+14gr. palta
+125ml leche de tigre
+Ceviche especial quita verduras:
+50% del gramaje de la verdura retirada, se suma en proteínas.
+50% del gramaje de la verdura retirada, se suma en las verduras restantes.
+Primero pesar proteínas, seguido de verduras y por ultimo la leche de tigre hasta conseguir el gramaje esperado según cada ceviche.
+Ceviche vegetariano:
+Limpiar el champiñón en SECO, nunca mojar con agua.
+Agregar champiñón y rellenar con base hasta el gramaje deseado.
+Procedimiento para freír empanadas:
+Retiro en local: Calentar el aceite a 130° hasta que la empanada flote. Una vez que flote subir a 150° y colocar canastillo sobre empanadas hasta que doren. Retirar con espumador nunca con pinzas.
+Delivery: Calentar aceite a 160° una vez que flote colocar canastillo sobre las empanadas y retirar hasta que estén doradas.
+Procedimiento cambio de aceite
+Mantener freidoras hasta la mitad de aceite.
+Filtrar aceite los días lunes, miércoles, viernes y domingo según criterio y uso diario.
+Al momento de filtrar se debe realizar con colador de orificios muy pequeños botar residuos en tambor para reciclaje y lavar ambas freidoras.
+Rellenar con aceite nuevo cuando haya perdido su viscosidad o no este muy quemado el aceite anterior, de lo contrario se realiza el cambio total del aceite.
+
+TABLES CONTENT:
+1 proteína | 2 proteínas | 3 proteínas | Peruano
+360 gr. | 180 gr. / 180 gr. 240 gr. / 120 gr    c/p | 120 gr. /120 gr. /120 gr. 140 gr. / 140 gr. / 80gr.  c/p | 50gr. CANCHITA
+--------------------
+Base 4 kilos | Base 8 kilos | Base 4 kilos PERUANO
+240 gr. pimentón 480 gr. cebolla 400 gr. choclo 160gr. palta 1200ml leche tigre | 480 gr. pimentón 960 gr. cebolla 800 gr. choclo 320gr. palta 2400ml leche tigre | 500 gr. choclo 580 gr. cebolla 1200 ml. leche tigre peruana
+--------------------
+1 proteína | 2 proteinas | 3 proteínas | Peruano
+180 gr. | 90 gr./ 90 gr. 120gr. / 60 gr. c-p | 60 gr. / 60 gr. / 60gr. 70 gr. / 70 gr. / 40gr. c-p | 25gr CANCHITA
+--------------------
+1 proteína | 2 proteínas | 3 proteínas | Peruano
+280 gr | 140 gr. / 140 gr. 200 gr. / 80 gr. c-p | 94 gr. / 94 gr. / 94 gr. 110 gr. / 110 gr. / 60 gr. c-p | 35gr. CANCHITA
+--------------------
+1 proteína | 2 proteínas | 3 proteínas | Peruano
+140gr | 70 gr. / 70 gr. 100 gr. / 40 gr. c-p | 46 gr. / 46 gr. / 46 gr.  56 gr. / 56 gr. / 30 gr. c-p | 15 gr. CANCHITA
+--------------------
+250g. | 350g. | 500gr. | 750gr. | 1kg
+35gr. champiñón | 50gr. champiñón | 70gr. champiñón | 90gr. champiñón | 140gr. champiñón
+--------------------
+
+
+====================
+ANALYZING PDF: c:/Users/ddiaz/OneDrive/Escritorio/PRODUCCION LO MAS RICO V3/RECETAS   LOMASRICO.pdf
+====================
+
+[PAGE 1]
+Pestaña  1
+ 
+
+[PAGE 2]
+Error extracting text from page 1: 'bbox'
+
+[PAGE 3]
+Error extracting text from page 2: 'bbox'
+
+[PAGE 4]
+Error extracting text from page 3: 'bbox'
+
+[PAGE 5]
+Error extracting text from page 4: 'bbox'
+
+[PAGE 6]
+Error extracting text from page 5: 'bbox'
+
+[PAGE 7]
+Error extracting text from page 6: 'bbox'
+
+[PAGE 8]
+Error extracting text from page 7: 'bbox'
+
+[PAGE 9]
+Error extracting text from page 8: 'bbox'
+
+[PAGE 10]
+Error extracting text from page 9: 'bbox'
+
+[PAGE 11]
+Error extracting text from page 10: 'bbox'
+
+[PAGE 12]
+Error extracting text from page 11: 'bbox'
+
+[PAGE 13]
+Error extracting text from page 12: 'bbox'
+
+[PAGE 14]
+Error extracting text from page 13: 'bbox'
+
+[PAGE 15]
+Error extracting text from page 14: 'bbox'
+
+[PAGE 16]
+Error extracting text from page 15: 'bbox'
+
+[PAGE 17]
+Error extracting text from page 16: 'bbox'
+
+[PAGE 18]
+Error extracting text from page 17: 'bbox'
+
+[PAGE 19]
+Error extracting text from page 18: 'bbox'
+
+[PAGE 20]
+Pestaña  2  
+ 
+
+[PAGE 21]
+ 
+ 
+ 
+ 
+ Recetario   LoMasRico   
+ 
+ 
+ 
+

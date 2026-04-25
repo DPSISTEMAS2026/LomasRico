@@ -1,0 +1,653 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------
+// MODULO DE INVENTARIO (OPERATIVO)
+// --------------------------------------------------------
+
+enum ItemType {
+  RAW         // Insumo basico (Filete Salmon, Jugo Limon)
+  PREPARATION // Batch producido (Base Ceviche 8kg, Salsa Verde)
+  RETAIL      // Producto revendido (Coca Cola, Monster)
+}
+
+enum MeasureUnit {
+  KG
+  LT
+  UN
+}
+
+model InventoryItem {
+  id                String      @id @default(uuid())
+  name              String
+  type              ItemType
+  unit              MeasureUnit
+  currentStock      Float       @default(0) // Stock real (puede ser negativo en POS)
+  minStockThreshold Float       @default(0) // Nivel de alerta
+  costPerUnit       Float       @default(0) // Costo neto por unidad (KG/UN/LT)
+  role              IngredientRole @default(BASE) // Classification for UI/Logic (Protein, Veggie, etc)
+  
+  // Si este Item es una preparacion (ej: Base Ceviche), se define con esta Receta
+  productionRecipe  Recipe?     @relation("PreparedItemRecipe")
+
+  // Este item puede ser parte de otras recetas
+  usedInRecipes     RecipeItem[]
+  
+  // Historial de movimientos (Log Operativo)
+  movements         StockMovement[]
+
+  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime    @default(now())
+}
+
+model StockMovement {
+  id              String        @id @default(uuid())
+  inventoryItemId String
+  item            InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  
+  quantity        Float         // Cantidad afectada (+Entrada / -Salida)
+  reason          String        // "SALE", "PRODUCTION_INPUT", "PRODUCTION_OUTPUT", "ADJUSTMENT", "WASTE"
+  referenceId     String?       // ID de Venta u Orden de Produccion relacionada
+  
+  createdAt       DateTime      @default(now())
+}
+
+// --------------------------------------------------------
+// MODULO DE CATALOGO (VENTAS)
+// --------------------------------------------------------
+
+model SellingProduct {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  category       String?
+  imageUrl       String?
+  imageKey       String?          // Nombre del archivo en assets (ej: "ceviche.png")
+  hoverVideoUrl  String?          // URL publica del video al hacer hover (opcional)
+  hoverVideoKey  String?          // Key en el bucket de storage
+  price          Decimal          @default(0)
+  isActive       Boolean          @default(true)
+  isConfigurable Boolean          @default(false)
+  maxProteins    Int              @default(0) // 0 = sin elección
+
+  // Receta única para este producto (ej: Peruano 350g tiene su propia receta)
+  recipeId       String?          @unique
+  recipe         Recipe?          @relation(fields: [recipeId], references: [id])
+
+  saleItems      SaleItem[]
+
+  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime         @default(now())
+
+  // Mantenemos variants por compatibilidad o futuros combos, pero el core usará Product directamente
+  variants       ProductVariant[]
+
+  // Modificadores asignados a este producto
+  productModifiers ProductModifier[]
+
+  // Promociones asociadas a este producto
+  promotions       Promotion[]
+}
+
+model ProductVariant {
+  id               String         @id @default(uuid())
+  sellingProductId String
+  sellingProduct   SellingProduct @relation(fields: [sellingProductId], references: [id])
+  
+  name             String         // Ej: "Porcion Extra"
+  price            Decimal        // Precio venta al publico
+  isActive         Boolean        @default(true)
+
+  saleItems        SaleItem[]
+}
+
+// --------------------------------------------------------
+// MODULO DE MODIFICADORES DINAMICOS
+// --------------------------------------------------------
+
+enum ModifierType {
+  SINGLE_SELECT   // Solo 1 opción (ej: Formato 250g/350g/1kg)
+  MULTI_SELECT    // Múltiples opciones (ej: Proteínas, Extras)
+}
+
+model ModifierGroup {
+  id             String           @id @default(uuid())
+  name           String           // Clave interna (ej: "formato", "proteinas", "extras")
+  displayName    String           // Nombre visible (ej: "Elige tu Formato", "Selecciona Proteínas")
+  helpText       String?          // Texto de ayuda (ej: "Elige una opción para continuar")
+  type           ModifierType     @default(SINGLE_SELECT)
+  minSelections  Int              @default(0) // Mínimo de opciones a elegir (0 = opcional)
+  maxSelections  Int              @default(1) // Máximo de opciones a elegir
+  isGlobal       Boolean          @default(true) // Disponible para asignar a cualquier producto
+  showOnWeb      Boolean          @default(true)
+  showOnPos      Boolean          @default(true)
+  sortOrder      Int              @default(0) // Orden de aparición en UI de admin
+  externalId     String?          // Para integraciones opcionales (ej: FDB ID)
+
+  options        ModifierOption[]
+  productModifiers ProductModifier[]
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model ModifierOption {
+  id               String         @id @default(uuid())
+  modifierGroupId  String
+  modifierGroup    ModifierGroup  @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+
+  name             String         // Nombre visible (ej: "250g", "Salmón", "Pan con ajo")
+  priceAdjustment  Decimal        @default(0) // Ajuste de precio (+600, +2500, o 0 si incluido)
+  isDefault        Boolean        @default(false) // Pre-seleccionado?
+  isActive         Boolean        @default(true)
+  sortOrder        Int            @default(0)
+
+  // Enlace opcional a receta (ej: "Opción 250g" dispara la receta de 250g)
+  recipeId         String?
+  recipe           Recipe?        @relation(fields: [recipeId], references: [id])
+
+  createdAt        DateTime       @default(now())
+}
+
+model ProductModifier {
+  id               String         @id @default(uuid())
+  sellingProductId String
+  sellingProduct   SellingProduct @relation(fields: [sellingProductId], references: [id], onDelete: Cascade)
+
+  modifierGroupId  String
+  modifierGroup    ModifierGroup  @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+
+  isRequired       Boolean        @default(false) // Obligatorio seleccionar?
+  sortOrder        Int            @default(0) // Orden de aparición en el builder
+  
+  // Overrides por producto (ej: para un producto específico, cambiar min/max)
+  overrideMin      Int?           // Override minSelections del grupo
+  overrideMax      Int?           // Override maxSelections del grupo
+
+  createdAt        DateTime       @default(now())
+
+  @@unique([sellingProductId, modifierGroupId]) // 1 grupo por producto máximo
+}
+
+// --------------------------------------------------------
+// MODULO DE INGENIERIA (RECETAS Y COMPONENTES)
+// --------------------------------------------------------
+
+enum IngredientRole {
+  PROTEIN_MAIN    // Salmon, Reineta, Atun
+  PROTEIN_SPECIAL // Pulpo, Camaron
+  BASE            // Leche de tigre
+  VEGGIE          // Cebolla, Choclo, Pimenton
+  RETAIL          // Coca cola (venta directa)
+}
+
+model Recipe {
+  id             String   @id @default(uuid())
+  name           String   // Ej: "Formula Peruano 350g"
+  
+  baseWeight     Float    @default(0) // Gramaje total objetivo (ej: 350)
+  maxProteins    Int      @default(0) // Fallback si no está en producto
+  internalRules  Json?    // Reglas de distribución y combinatoria
+
+  // Relacion con producto de venta
+  sellingProduct SellingProduct?
+  
+  // Relacion con preparacion de inventario (batch)
+  outputItemId   String? @unique
+  outputItem     InventoryItem? @relation("PreparedItemRecipe", fields: [outputItemId], references: [id])
+
+  // Componentes de la receta
+  items          RecipeItem[]
+
+  // Relacion con modificadores dinamicos
+  modifierOptions ModifierOption[]
+
+  instructions   Json?    
+  createdAt      DateTime @default(now())
+}
+
+model RecipeItem {
+  id           String        @id @default(uuid())
+  recipeId     String
+  recipe       Recipe        @relation(fields: [recipeId], references: [id])
+  
+  ingredientId String
+  ingredient   InventoryItem @relation(fields: [ingredientId], references: [id])
+  
+  // Cantidad base (para fijos) o porcentaje/regla para variables
+  quantity      Float        
+  role          IngredientRole @default(BASE)
+  priority      Int            @default(0) // Para orden de calculo (pulpo siempre al final)
+  
+  isOptional    Boolean      @default(false) 
+}
+
+// --------------------------------------------------------
+// MODULO DE VENTAS (ORDENES)
+// --------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderChannel {
+  WEB
+  POS
+  WHATSAPP
+  UBER_EATS
+  PEDIDOS_YA
+}
+
+model Sale {
+  id          String       @id @default(uuid())
+  code        String       @unique // Codigo corto visible (ej: #1024)
+  channel     OrderChannel
+  status          OrderStatus  @default(PENDING)
+  total           Decimal
+  discount        Decimal      @default(0)  // Monto de descuento aplicado
+  discountType    String?      // "PERCENT", "FIXED"
+  discountReason  String?      // Razón del descuento
+  
+  // Finanzas y Pagos
+  paymentMethod   PaymentMethod?
+  paymentStatus   String?      @default("PENDING") // PENDING, APPROVED, REJECTED
+  
+  // Relacion con turno de caja (solo para POS)
+  shiftId         String?
+  shift           CashShift?   @relation(fields: [shiftId], references: [id])
+
+  // Relacion opcional con usuario (Soporta Invitados)
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+
+  // Datos de despacho consolidados
+  shippingData Json?       // { "cost": 2500, "address": "...", "estimateId": "..." }
+  
+  items       SaleItem[]
+  kitchenTicket KitchenTicket?
+  externalOrder ExternalOrder?  // Vinculación con pedido externo (Uber/PedidosYa)
+  note        String?      // Notas para la cocina o comentarios generales
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model SaleItem {
+  id             String          @id @default(uuid())
+  saleId         String
+  sale           Sale            @relation(fields: [saleId], references: [id])
+  
+  sellingProductId String?
+  sellingProduct   SellingProduct? @relation(fields: [sellingProductId], references: [id])
+  
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  
+  quantity       Int
+  priceUnit      Decimal
+  modifiers      Json?           // { "removed": ["onion"], "protein": ["salmon", "octopus"] }
+  
+  // Snapshot Obligatorio: La receta congelada al momento de la venta
+  recipeSnapshot RecipeSnapshot?
+}
+
+// Congela la estructura de costos y consumo para siempre
+model RecipeSnapshot {
+  id          String   @id @default(uuid())
+  saleItemId  String   @unique
+  saleItem    SaleItem @relation(fields: [saleItemId], references: [id])
+  
+  // Lista resuelta de ingredientes que ESTA venta descontó
+  // Formato JSON: [ { "inventoryItemId": "...", "name": "Salmon", "qty": 0.150, "unit": "KG", "costPerUnit": 12000, "subtotal": 1800 }, ... ]
+  resolvedBoM     Json     
+  
+  // Costo TOTAL de producción de ese ítem en el momento de la venta (congelado)
+  // = Suma de: (qty × costPerUnit) de TODOS los ingredientes del BOM (base + proteínas)
+  costSnapshot    Float    @default(0)
+  
+  // Precio de venta al cliente de ese ítem (copiado de SaleItem.priceUnit para quick reporting)
+  priceSnapshot   Float    @default(0)
+  
+  // Desglose por categoría: para saber cuánto costó solo la(s) proteína(s) vs la base
+  // Formato JSON: { "proteinas": 4500, "base": 320, "verduras": 180 }
+  costBreakdown   Json?
+  
+  createdAt   DateTime @default(now())
+}
+
+// --------------------------------------------------------
+// MODULO DE USUARIOS (AUTH & CLIENTES)
+// --------------------------------------------------------
+
+enum UserRole {
+  OWNER
+  ADMIN
+  CASHIER
+  KITCHEN
+  DRIVER
+  CUSTOMER
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT
+  CREDIT
+  TRANSFER
+  MERCADO_PAGO
+  OTHER
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum TransactionType {
+  OPENING
+  CLOSING
+  SALE_INCOME
+  EXPENSE
+  WITHDRAWAL
+}
+
+model User {
+  id            String    @id @default(uuid())
+  googleId      String?   @unique 
+  email         String    @unique
+  name          String
+  avatarUrl     String?
+  pin           String?   // Hashed 4-digit PIN for quick access logic
+  password      String?   // Hashed password for email login
+  phone         String?   // PhoneNumber for WhatsApp integration
+  isVerified    Boolean   @default(false)
+  confirmationCode String? // 6-digit email code
+  role          UserRole  @default(CUSTOMER)
+  modules       String?   @default("[]") // JSON array de módulos permitidos. Ej: ["pos","kitchen","inventory"]
+  canDiscount   Boolean   @default(false) // Permiso para aplicar descuentos en POS
+  
+  // Perfil de Cliente Pro (Basado en Reporte Externo)
+  loyaltyPoints    Int      @default(0)    // Puntos Vigentes
+  pointsEarned     Int      @default(0)    // Puntos Ganados
+  pointsUsed       Int      @default(0)    // Puntos Usados
+  customerTag      String?                 // Tipo de Cliente (RFM: En Riesgo, Nuevo, etc)
+  historicalOrders Int      @default(0)    // Cantidad de Órdenes (Histórico)
+  historicalSpent  Decimal  @default(0)    // Total Gastado (Histórico)
+  lastOrderDays    Int?                    // Días Última Orden
+
+  addresses     UserAddress[]
+  sales         Sale[]
+  
+  // Atención Humana (WhatsApp Inbox)
+  assignedConversations Conversation[]
+  messages              Message[]
+  notes                 ConversationNote[]
+  events                ConversationEvent[]
+
+  // Turnos de caja que ha abierto este usuario
+  shifts        CashShift[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// --------------------------------------------------------
+// MODULO DE ATENCIÓN HUMANA (WHATSAPP INBOX)
+// --------------------------------------------------------
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  RESOLVED
+}
+
+enum ConversationMode {
+  BOT
+  HUMAN
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageAuthorType {
+  BOT
+  HUMAN
+  SYSTEM
+}
+
+model Conversation {
+  id               String             @id @default(uuid())
+  contactId        String             // Identificador de WhatsApp (teléfono)
+  status           ConversationStatus @default(OPEN)
+  mode             ConversationMode   @default(BOT)
+  assignedToUserId String?
+  assignedTo       User?              @relation(fields: [assignedToUserId], references: [id])
+  lastMessageAt    DateTime           @default(now())
+  unreadCount      Int                @default(0)
+  
+  messages         Message[]
+  notes            ConversationNote[]
+  events           ConversationEvent[]
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([contactId])
+}
+
+model Message {
+  id                String            @id @default(uuid())
+  conversationId    String
+  conversation      Conversation      @relation(fields: [conversationId], references: [id])
+  direction         MessageDirection
+  body              String
+  providerMessageId String?           @unique
+  authorType        MessageAuthorType
+  authorUserId      String?
+  authorUser        User?             @relation(fields: [authorUserId], references: [id])
+  rawJson           Json?
+  createdAt         DateTime          @default(now())
+
+  @@index([conversationId])
+}
+
+model ConversationNote {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  text           String
+  createdAt      DateTime     @default(now())
+}
+
+model ConversationEvent {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  type           String       // 'TAKE','RELEASE','RESOLVE','ASSIGN'
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  metaJson       Json?
+  createdAt      DateTime     @default(now())
+}
+
+// --------------------------------------------------------
+// MODULO DE CAJA (TESORERIA)
+// --------------------------------------------------------
+
+model CashRegister {
+  id          String      @id @default(uuid())
+  name        String      // "Caja Principal", "Caja Barra"
+  isOpen      Boolean     @default(false)
+  currentShiftId String?  @unique
+  
+  shifts      CashShift[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model CashShift {
+  id              String      @id @default(uuid())
+  
+  cashRegisterId  String
+  cashRegister    CashRegister @relation(fields: [cashRegisterId], references: [id])
+  
+  cashierId       String
+  cashier         User        @relation(fields: [cashierId], references: [id])
+  
+  openingTime     DateTime    @default(now())
+  closingTime     DateTime?
+  
+  startAmount     Decimal     // Monto inicial en caja
+  endAmount       Decimal?    // Monto final contado (Real, declarado)
+  systemAmount    Decimal?    // Monto calculado por sistema
+
+  status          ShiftStatus @default(OPEN)
+  
+  transactions    CashTransaction[]
+  sales           Sale[]
+  
+  note            String?
+}
+
+model CashTransaction {
+  id            String          @id @default(uuid())
+  shiftId       String
+  shift         CashShift       @relation(fields: [shiftId], references: [id])
+
+  type          TransactionType
+  amount        Decimal
+  description   String?
+  
+  relatedSaleId String?         // Si viene de una venta
+  
+  createdAt     DateTime        @default(now())
+}
+
+model UserAddress {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  addressText String   // Calle + Numero + Comuna (Plano)
+  lat         Float?
+  lng         Float?
+  
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// --------------------------------------------------------
+// MODULO DE COCINA (KDS)
+// --------------------------------------------------------
+
+enum TicketStatus {
+  WAITING
+  PREPARING
+  READY
+  DELIVERED
+}
+
+model KitchenTicket {
+  id        String       @id @default(uuid())
+  saleId    String       @unique
+  sale      Sale         @relation(fields: [saleId], references: [id])
+  
+  status    TicketStatus @default(WAITING)
+  startTime DateTime?
+  endTime   DateTime?
+  
+  createdAt DateTime     @default(now())
+}
+
+// --------------------------------------------------------
+// MODULO DE EVENTOS / MARKETING
+// --------------------------------------------------------
+
+enum PromotionDiscountType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+  ITEM_DISCOUNT // Requires targetProductId
+}
+
+model Promotion {
+  id              String       @id @default(uuid())
+  code            String       @unique // Ej: "VERANO20", "LOMASRICO"
+  title           String       // Ej: "20% DSCTO EN TU COMPRA"
+  description     String?      
+  
+  discountType    PromotionDiscountType
+  discountValue   Decimal      // % o $
+
+  // Reglas
+  isActive        Boolean      @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  // Programación Cíclica (Ej: Solo Lunes y Viernes de 10:00 a 14:00, hora chilena)
+  activeDays      String?      // ARRAY guardado como JSON string o similar: '["MONDAY","TUESDAY"]'
+  startTime       String?      // Toma formato HH:mm (ej "10:00")
+  endTime         String?      // Toma formato HH:mm (ej "14:00")
+
+  minOrderAmount  Decimal?     @default(0) // Monto minimo para aplicar
+  maxUses         Int?         // Usos máximos globales
+  currentUses     Int          @default(0)
+
+  // Opcional: Asociado a un solo producto (ej 2x1 o Dcto en producto)
+  targetProductId String?
+  targetProduct   SellingProduct? @relation(fields: [targetProductId], references: [id])
+
+  // Opcional: Banner asocido
+  bannerImageKey  String?      // Relación al Storage de "assets" ("banner-123.jpg")
+  bannerImageUrl  String?      // URL publica del banner si está en la web
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+// --------------------------------------------------------
+// MODULO DE PEDIDOS EXTERNOS (Uber Eats / PedidosYa)
+// --------------------------------------------------------
+
+model ExternalOrder {
+  id               String   @id @default(uuid())
+  platform         String   // 'UBER_EATS' | 'PEDIDOS_YA'
+  externalOrderId  String   // ID del pedido en la plataforma externa
+
+  externalStatus   String?  // Estado en la plataforma externa
+  customerName     String?
+  customerPhone    String?
+
+  saleId           String?  @unique // Vinculado a nuestra venta interna
+  sale             Sale?    @relation(fields: [saleId], references: [id])
+
+  rawPayload       Json?    // JSON crudo del scraping
+  mappingLog       Json?    // Log de mapeo de productos
+
+  scrapedAt        DateTime @default(now())
+  syncedAt         DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([platform, externalOrderId])
+  @@index([saleId])
+  @@index([platform])
+  @@index([scrapedAt])
+}

@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# Copy root package.json and lockfile
+COPY package*.json ./
+
+# Copy packages manifest (for workspaces)
+COPY packages/database/package.json ./packages/database/
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY apps/api/package.json ./apps/api/
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Generate Prisma Client
+WORKDIR /usr/src/app/packages/database
+RUN npx prisma generate
+
+WORKDIR /usr/src/app/apps/api
+
+CMD ["npm", "run", "start:dev"]

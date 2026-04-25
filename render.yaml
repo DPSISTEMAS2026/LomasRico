@@ -1,0 +1,103 @@
+services:
+  # --------------------------------------------------------
+  # API BACKEND (NestJS)
+  # --------------------------------------------------------
+  - type: web
+    name: pro-lomasrico-api
+    env: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: true
+    buildCommand: npm install && npm run generate --workspace=@lomasrico/database && npm run build --workspace=@lomasrico/database && npm run build --workspace=api
+    startCommand: export NODE_ENV=production && npm run start:prod --workspace=api
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Setear manualmente en Render Dashboard con la URL de Supabase Transaction Pooler
+      - key: NODE_VERSION
+        value: 20.9.0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: pro-lomasrico-web
+          property: host
+      - key: API_URL
+        fromService:
+          type: web
+          name: pro-lomasrico-api
+          property: host
+      # --- NUEVAS VARIABLES DE PRODUCCIÓN ---
+      - key: ALLOWED_ORIGINS
+        value: "https://pro-lomasrico-web.onrender.com,https://pro-lomasrico-panels.onrender.com"
+      - key: SKIP_SEED
+        value: "true"
+      - key: PEDIDOSYA_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+
+  # --------------------------------------------------------
+  # PANELS APP (Next.js) - Panel Unificado (Owner, POS, Kitchen)
+  # --------------------------------------------------------
+  - type: web
+    name: pro-lomasrico-panels
+    env: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: true
+    buildCommand: npm install && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=panels
+    startCommand: npm run start --workspace=panels
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: pro-lomasrico-api
+          property: host
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NODE_VERSION
+        value: 20.9.0
+
+  # --------------------------------------------------------
+  # WEB APP (Next.js) - Cliente Final
+  # --------------------------------------------------------
+  - type: web
+    name: pro-lomasrico-web
+    env: node
+    plan: free
+    region: oregon
+    rootDir: .
+    autoDeploy: true
+    buildCommand: npm install && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=web
+    startCommand: npm run start --workspace=web
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: pro-lomasrico-api
+          property: host
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+        sync: false
+      - key: NODE_VERSION
+        value: 20.9.0

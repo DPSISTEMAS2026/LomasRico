@@ -1,0 +1,60 @@
+CONTRATO DE API: VALIDACIÓN DE RECETAS (DRY-RUN)
+
+Objetivo: Permitir al frontend verificar si una combinación de modificadores (ej: "Sin Verduras", "Solo Salmón") es válida según las reglas de negocio, y previsualizar el impacto (opcional).
+
+1. ENDPOINT DEFINICIÓN
+   
+   - **Método**: POST
+   - **Ruta**: `/sales/validate-item`
+   - **Módulo Responsable**: `SalesModule` (Ya que es parte del proceso de venta).
+   - *Nota*: Anteriormente se ubicó en `recipe-engineering`, pero semánticamente pertenece a la intención de venta.
+
+2. INPUT (Request Body JSON)
+
+   ```json
+   {
+     "productVariantId": "uuid-variants-1234",
+     "modifiers": {
+       "selectedProteins": ["uuid-salmon", "uuid-reineta"],
+       "removedIngredients": ["uuid-cebolla"] 
+     },
+     "quantity": 1 
+   }
+   ```
+   *Rationale*: Envía exactamente lo mismo que enviaría al `CreateSale`. `quantity` es opcional para validación pura, pero útil si hay reglas de volumen.
+
+3. OUTPUT (Response)
+
+   A. ÉXITO (200 OK)
+   Significa: "Esta configuración es VÁLIDA y fabricable".
+   
+   ```json
+   {
+     "valid": true,
+     "validationMessages": [], // Avisos no bloqueantes (ej: "Se aplicó recargo por Atún")
+     "estimatedBom": [ // Opcional: Debug/Staff Only
+        { "name": "Salmón", "qty": 0.150 },
+        { "name": "Reineta", "qty": 0.150 }
+     ]
+   }
+   ```
+
+   B. ERROR DE NEGOCIO (400 Bad Request)
+   Significa: "Regla rota".
+   
+   ```json
+   {
+     "statusCode": 400,
+     "message": "Invalid combination: Cannot remove all vegetables. 'Sin Verduras' rule requires remaining vegetables for redistribution.",
+     "error": "Bad Request"
+   }
+   ```
+
+4. LÓGICA INTERNA
+   - El endpoint llama a `SalesService.validateItem()`.
+   - Este llama a `RecipeResolver.resolveBom()`.
+   - Si `resolveBom` lanza excepción -> Retorna 400.
+   - Si Stock insuficiente (Solo WEB) -> Retorna 409 Conflict.
+
+5. RAZÓN DE SER
+   Evita que el usuario construya un pedido "ilegal" en el frontend y se entere recién al pagar. Valida reglas complejas (gramajes, compensaciones) que NO deben duplicarse en JS del cliente.

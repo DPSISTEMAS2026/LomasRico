@@ -1,0 +1,110 @@
+# ══════════════════════════════════════════
+# Lo Más Rico V3 - .gitignore
+# Solo código fuente en el repo
+# ══════════════════════════════════════════
+
+# === DEPENDENCIES ===
+node_modules/
+.pnp.*
+
+# === BUILD OUTPUT ===
+dist/
+build/
+.next/
+.turbo/
+.vercel/
+out/
+
+# === ENVIRONMENT / SECRETS ===
+.env
+.env.*
+!.env.example
+
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*.code-workspace
+
+# === TESTING ===
+coverage/
+
+# === PRISMA ===
+packages/database/prisma/*.db
+packages/database/prisma/migrations/
+
+# === FOTOS / ASSETS BINARIOS (están en Supabase Storage) ===
+FOTOS PARA VIDEOS/
+apps/*/public/assets/
+*.psd
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.mov
+# Excepciones: permitir assets en apps (favicon, logo, etc.)
+!apps/**/public/**
+!apps/**/src/**
+
+# === n8n / WORKFLOWS (secretos, se manejan en n8n cloud) ===
+n8n-*.json
+N8N_*.json
+MAXI V2*.json
+
+# === SCRIPTS CON SECRETOS ===
+scripts/update-maxi-*.js
+scripts/update-maxi-*.ps1
+
+# === ARCHIVOS TEMPORALES ===
+tmp/
+tmp_*
+tmp-*
+temp_docx/
+temp_docx.zip
+*.log
+pinggy.log
+
+# === DOCUMENTOS BINARIOS (no pertenecen al código) ===
+*.docx
+*.xlsx
+*.csv
+*.zip
+*.pdf
+Contrato*
+
+# === ARCHIVOS SUELTOS DE DEBUG (root level) ===
+check_*.js
+cleanup_*.js
+delete_*.js
+final_check.js
+fix_*.js
+link_*.js
+list_*.js
+restore_*.js
+seed_selling_recipes.js
+test_inbound.ts
+gramajes.*
+inv_list.txt
+git_history*.txt
+modifiers_summary*.txt
+CevicheBuilderModal_original.tsx
+reporte_clientes*
+
+# === ARCHIVOS DE MIGRACIÓN ONE-OFF en packages ===
+packages/database/*.js
+packages/database/log*.txt
+
+# === ARCHIVO ANTIGUO ===
+_ARCHIVE/
+start.bat
+
+# === LOCK FILES (regenerables) ===
+# package-lock.json se mantiene para builds reproducibles

@@ -1,0 +1,43 @@
+DIAGRAMA LÓGICO DE ARQUITECTURA (LOCAL-FIRST)
+
+El entorno local replica la infraestructura de producción usando Docker, permitiendo un desarrollo offline y consistente.
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ HOST MACHINE (Developer)                                                │
+│                                                                         │
+│   [Browser / Postman]                                                   │
+│        │                                                                │
+│        │ HTTP/WebSockets                                                │
+│        │ (Port 3000, 3001, 3002)                                        │
+│        ▼                                                                │
+│   ┌────────────────────────────────────────────────────────┐            │
+│   │ SERVICES LAYER (Docker Network: lomasrico_network)     │            │
+│   │                                                        │            │
+│   │   [Frontend Apps] (Running in Node Container or Host)  │            │
+│   │   - Next.js Web (Cliente) :3000                        │            │
+│   │   - Next.js Admin (Gestión) :3001                      │            │
+│   │   - Next.js POS (Punto de Venta) :3002                 │            │
+│   │        │                                               │            │
+│   │        │ REST / GraphQL                                │            │
+│   │        ▼                                               │            │
+│   │   [Backend API] (NestJS Monolith)                      │            │
+│   │   - Port: 3333 (Internal), 8080 (Exposed)              │            │
+│   │   - Auth Module (OAuth, JWT)                           │            │
+│   │   - Order Module (Core Logic)                          │            │
+│   │   - Integrations Module (Adapters)                     │            │
+│   │        │                                               │            │
+│   │        │ TCP                                           │            │
+│   │        ▼                                               │            │
+│   │   [Persistencia]                                       │            │
+│   │   - PostgreSQL 16 (Port: 5432)                         │            │
+│   │     (Persistent Volume: ./infra/local/postgres-data)   │            │
+│   │                                                        │            │
+│   └──────────────────────────┬─────────────────────────────┘            │
+│                              │ HTTPS (Solo Salida)                      │
+│                              ▼                                          │
+│                    [External APIs]                                      │
+│                    - MercadoPago                                        │
+│                    - PedidosYa                                          │
+│                    - n8n (WhatsApp)                                     │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘

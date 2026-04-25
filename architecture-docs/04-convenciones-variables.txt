@@ -1,0 +1,47 @@
+CONVENCIONES PARA VARIABLES DE ENTORNO
+
+Objetivo: Uniformidad entre Local (Docker) y Producción (Render).
+
+1. REGLAS GENERALES
+   - Snake_Case y Mayúsculas (ej: `DATABASE_URL`).
+   - Prefijos claros para el ámbito de la variable.
+   - NUNCA commitear `.env`. Usar `.env.example` sanitizado.
+
+2. LISTADO ESTÁNDAR
+
+   --- SISTEMA ---
+   NODE_ENV=development              # development | production | test
+   PORT=3333                         # Puerto interno del API
+   TZ=America/Santiago               # Zona horaria (Crítico para pedidos)
+
+   --- BASE DE DATOS ---
+   # Formato: postgresql://user:password@host:port/dbname?schema=public
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/lomasricodb?schema=public"
+   # En Docker interno se usa el nombre del servicio:
+   # DATABASE_URL="postgresql://postgres:password@db:5432/lomasricodb?schema=public"
+
+   --- SEGURIDAD ---
+   JWT_SECRET=super-secreto-local-123
+   JWT_EXPIRATION=1d
+   CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+
+   --- INTEGRACIONES (ADAPTERS) ---
+   # MercadoPago
+   MP_ACCESS_TOKEN=TEST-1234...      # Prefix TEST- para asegurar sandboxing
+   MP_WEBHOOK_SECRET=...
+
+   # PedidosYa
+   PEYA_CLIENT_ID=...
+   PEYA_CLIENT_SECRET=...
+   PEYA_MODE=integration             # integration | production
+
+   # Notificaciones
+   WHATSAPP_N8N_WEBHOOK_URL=http://localhost:5678/webhook/whatsapp
+
+3. ESTRATEGIA LOCAL vs RENDER
+   - Local: Archivo `.env` en la raíz de `apps/api` o cargado por Docker Compose.
+   - Render: Definir en "Environment Variables" del dashboard UI.
+   - Docker Compose: Usar `env_file: [.env]` para mapear automáticamente.
+
+4. VALIDACIÓN
+   - Usar `zod` o `joi` en el arranque de la aplicación (ConfigService) para fallar inmediatamente si falta alguna variable crítica (ej: DATABASE_URL).

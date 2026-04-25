@@ -1,0 +1,99 @@
+REGLAS DE NEGOCIO Y LÓGICA DE PRODUCTO
+(Fuente: MENU RESTAURANTE.xlsx, Gramajesceciches.docx, RECETAS LOMASRICO.pdf)
+
+1. ESTRUCTURA DE PRODUCTOS
+
+   A. CEVICHES (El Core)
+      - Variantes de Peso: 250g, 350g, 500g, 750g, 1kg.
+      - Tipos:
+        1. PERUANO: Receta fija (No elige proteínas, estilo específico).
+        2. LOMASRICO (Armable): Elige hasta 3 proteínas.
+        3. TROPICAL: Incluye Mango + Proteínas.
+        4. SIN VERDURAS: Regla especial de compensación (Ver abajo).
+        5. VEGETARIANO: Champiñones en lugar de carne.
+      - Componentes base: Proteína + Verduras (Cebolla, Pimentón, Choclo, Palta) + Leche de Tigre.
+
+   B. EMPANADAS
+      - Sabores: Camarón-Queso, Macha-Queso, Queso, Marisco, Carapacho-Queso.
+      - Proceso: Masa + Relleno (Proteína + Queso + Bechamel + Aliño).
+      - Regla de Fritura: Temperatura variable (130° -> 150° -> 160°) según estado y delivery.
+
+   C. PLATOS CALIENTES / PREPARADOS
+      - Bowls: Base arroz + verduras + proteína/apanados.
+      - Gohan: Arroz sushi + queso crema + proteína.
+      - Hand Rolls: Nori + Arroz + Relleno.
+
+   D. PROMOS
+      - Combos predefinidos de Ceviche + Acompañamiento (Empanadas, Papas) + Bebida.
+
+2. REGLAS DE GRAMAJES Y COMPOSICIÓN (CRÍTICO)
+
+   A. Lógica de Proteínas en Ceviches Armables
+      - 1 Proteína: 100% del peso asignado a carne.
+      - 2 Proteínas: 50% / 50% (Equitativo) O Regla de Costo (Ver excepción Pulpo).
+      - 3 Proteínas: 33% c/u (Aprox, ver tablas exactas).
+      - REGLA DE ORO (Docx): "La proteína de menor gramaje siempre será Pulpo. Luego será el camarón." 
+        * Esto implica que si el cliente elige Salmón + Pulpo, y los gramajes no son iguales (ej: en combinaciones asimétricas), el Pulpo recibe la cantidad menor.
+      - Tablas de Gramaje (Ejemplo para 1kg):
+        * 1 Prot: 360g.
+        * 2 Prot (Normal): 180g / 180g.
+        * 2 Prot (Con Pulpo/Premium): 240g (Base) / 120g (Pulpo). ** ¡ATENCIÓN! Desbalance intencional **
+        * 3 Prot (Con Pulpo): 140g / 140g / 80g (Pulpo).
+
+   B. Regla "Sin Verduras" (Compensación)
+      - Si el cliente quita verduras, NO es solo quitar.
+      - Regla: "50% del gramaje de la verdura retirada se suma en proteínas".
+      - Regla: "50% del gramaje restante se distribuye en otras verduras" (si quedan).
+      - Esto afecta el Inventario de Proteína drásticamente (Costo sube).
+
+   C. Orden de Ensamble (Operativo)
+      1. Pesar Proteínas.
+      2. Pesar Verduras.
+      3. Agregar Leche de Tigre hasta gramaje final.
+      * Nota: La Leche de Tigre actúa como "filler" hasta llegar al peso nominal del producto vendido? No, las recetas tienen ml fijos de leche (Ej: 1kg -> 225ml). El peso final es la suma de componentes predefinidos.
+
+3. RECETAS AUXILIARES (COMPONENTES DE ALMACÉN)
+
+   A. LECHE DE TIGRE (Batch de 2.4 Litros)
+      - Insumos: Limón (1L), Cilantro (120g), Jengibre (16g), Agua (200cc), Aliño LomasRico (160g), BLT (2 bolsas), Leche Evaporada (240cc).
+      - *BLT*: Definido como mezcla de Apio (200g), Cebolla Corazón (100g), Pimentón (30g).
+
+   B. BASE CEVICHE (Batch de 8 Kilos - "Mise en place")
+      - Mezcla lista de: Choclo (800g), Morrón (480g), Palta (320g), Cebolla (960g), Leche Tigre (2.4L).
+      - *Conflicto de Lógica*: El documento menciona "Mezclar muy bien todo". Esto implica que para ceviches estándar, se saca de este "BOWL GIGANTE".
+      - Para "Sin Verduras" o "Tropical", NO se puede usar esta base. Se debe armar desde cero.
+
+   C. SALSAS
+      - Salsa Verde, Salsa Merquén, Salsa Ajo Confitado.
+      - Todas usan una base de emulsión (Limón + Huevo Deshidratado + Aceite + Agua).
+
+4. GLOSARIO DEL SISTEMA
+
+   - **Producto**: Lo que se vende en POS (Ej: "Ceviche Salmón 500g").
+   - **Insumo (Raw)**: Materia prima comprada (Ej: "Limón a granel", "Filete Salmón", "Saco Cebolla").
+   - **Preparación (Batch)**: Receta intermedia que se stockea (Ej: "Litro de Leche de Tigre", "Kilo de Base Ceviche").
+   - **Aliño LomasRico**: Mezcla de especias (secreta/pre-mix) usada en casi todo. Se mide en gramos.
+   - **BLT**: "Base Licuada Tigre" (Apio, Cebolla, Pimentón). Componente de la Leche de Tigre.
+   - **Proteína Premium**: Pulpo (y a veces Camarón según contexto). Tiene reglas de gramaje reducido en combinaciones.
+
+5. DECISIONES ABIERTAS / AMBIGÜEDADES (A RESOLVER)
+
+   [ ] **Política de Stock "Base vs Raw"**:
+       ¿El sistema debe descontar del stock de "Base Ceviche 8kg" por defecto?
+       Si el stock de "Base" se acaba, ¿el sistema permite vender descontando insumos sueltos automáticamente?
+       *Recomendación*: Manejar stock de "Base" como producto principal. Si se vende "Sin Verduras", descontar insumos raw directamente (rompe la consistencia si no hay stock raw reservado).
+
+   [ ] **Mermas**:
+       Las recetas indican "Limón Filtrado". 1kg de Limón fruta != 1L de Jugo.
+       ¿Definiremos factores de rendimiento (yield) ahora o asumimos stock de "Jugo de Limón" ya exprimido?
+
+   [ ] **Aliño LomasRico**:
+       Aparece como ingrediente. ¿Lo compran hecho o lo preparan? Si lo preparan, falta esa receta en el PDF. (Asumir ingrediente de compra por ahora).
+
+   [ ] **Empanadas**:
+       La receta de empanada mezcla "Queso y Bechamel". ¿El stock se descuenta al armar la empanada (producción diaria) o al venderla (fritura)?
+       Los "batch" de mezcla (Queso+Bechamel) deberían descontarse al momento de la "mise en place" de la mañana.
+
+   [ ] **Canchita**:
+       En las tablas de Excel/Docx aparece "Peruano -> 50gr CANCHITA". ¿Es un insumo extra o reemplaza gramaje de proteína?
+       (Parece ser un topping fijo del Peruano).

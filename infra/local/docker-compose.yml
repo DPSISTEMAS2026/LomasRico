@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lomasrico_db_local
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lomasricodb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ../../
+      dockerfile: infra/local/Dockerfile.api
+    container_name: lomasrico_api_local
+    volumes:
+      - ../../apps/api:/usr/src/app/apps/api
+      - /usr/src/app/node_modules
+    ports:
+      - "3333:3333"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/lomasricodb?schema=public
+      PORT: 3333
+    depends_on:
+      - postgres
+    command: npm run start:dev
+
+volumes:
+  postgres_data:
