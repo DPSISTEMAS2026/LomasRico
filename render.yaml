@@ -50,6 +50,13 @@ services:
         value: "https://pro-lomasrico-web-vtyt.onrender.com,https://pro-lomasrico-panels-33rx.onrender.com"
       - key: SKIP_SEED
         value: "true"
+      # --- Uber Eats Scraper (auto-poll cada 30s) ---
+      - key: UBER_EATS_ENABLED
+        value: "true"
+      - key: UBER_EATS_COOKIE
+        sync: false
+      - key: UBER_EATS_CSRF_TOKEN
+        value: "x"
 
   # --------------------------------------------------------
   # 2. WEB STOREFRONT (Next.js — Cliente Final)
