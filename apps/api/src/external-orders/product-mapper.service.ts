@@ -42,25 +42,85 @@ export class ProductMapperService implements OnModuleInit {
 
     // Manual overrides: external name → internal name (for common mismatches)
     private readonly MANUAL_ALIASES: Record<string, string> = {
-        // === Uber Eats aliases ===
+        // ═══════════════════════════════════════════════════════════
+        // EMPANADAS — Uber Eats vende por sabor, internamente es
+        // "Empanada Frita" + modificador de sabor
+        // ═══════════════════════════════════════════════════════════
+        'carapacho queso': 'empanada frita',
+        'macha queso': 'empanada frita',
+        'macha-queso': 'empanada frita',
+        'empanada carapacho queso': 'empanada frita',
+        'empanada macha queso': 'empanada frita',
+        'empanada de queso': 'empanada frita',
+        'empanada frita de queso': 'empanada frita',
+        'empanada camaron queso': 'empanada frita',
+        'empanada cheese': 'empanada frita',
+        'empanada marisco': 'empanada frita',
+
+        // ═══════════════════════════════════════════════════════════
+        // CEVICHES POR PESO — Uber Eats los nombra "500 gm Peruano"
+        // Internamente: "Ceviche Peruano" + mod Formato 500gr
+        // ═══════════════════════════════════════════════════════════
+        '500 gm peruano': 'ceviche peruano',
+        '350 gm peruano': 'ceviche peruano',
+        '750 gm peruano': 'ceviche peruano',
+        '1 kg peruano': 'ceviche peruano',
+        '250 gm peruano': 'ceviche peruano',
+
+        // Ceviche LOMASRICO (nombre genérico en Uber)
+        '500 gm elige hasta 3 proteinas': 'ceviche lomasrico',
+        '350 gm elige hasta 3 proteinas': 'ceviche lomasrico',
+        '750 gm elige hasta 3 proteinas': 'ceviche lomasrico',
+        '1 kg elige hasta 3 proteinas': 'ceviche lomasrico',
+        '500 gm': 'ceviche lomasrico',
+        '350 gm': 'ceviche lomasrico',
+        '750 gm': 'ceviche lomasrico',
+        '1 kg': 'ceviche lomasrico',
+
+        // Aliases directos
         'ceviche clasico': 'ceviche lomasrico',
-        'ceviche clásico': 'ceviche lomasrico',
+        'ceviche clasico': 'ceviche lomasrico',
         'ceviche tradicional': 'ceviche lomasrico',
         'ceviche classic': 'ceviche lomasrico',
         'ceviche lo mas rico': 'ceviche lomasrico',
-        'ceviche lomásrico': 'ceviche lomasrico',
+        'ceviche lomasrico': 'ceviche lomasrico',
+        'ceviche peruano': 'ceviche peruano',
+
+        // ═══════════════════════════════════════════════════════════
+        // LIMONADAS — Uber dice "Limonada LoMASRico"
+        // ═══════════════════════════════════════════════════════════
+        'limonada lomasrico': 'limonada artesanal',
+        'limonada lo mas rico': 'limonada artesanal',
+        'limonada': 'limonada artesanal',
+        'lemonade': 'limonada artesanal',
+        'limonada artesanal': 'limonada artesanal',
+
+        // ═══════════════════════════════════════════════════════════
+        // SOPAIPILLAS (modifier en Uber, producto en interno)
+        // ═══════════════════════════════════════════════════════════
+        'sopaipillas 3 uni salsa verde': 'sopaipillas',
+        'sopaipillas 3 uni': 'sopaipillas',
+        'sopaipillas 10 uni': 'sopaipillas 10 (uni)',
+
+        // ═══════════════════════════════════════════════════════════
+        // SALSAS EXTRAS (modifier en Uber)
+        // ═══════════════════════════════════════════════════════════
+        'salsa merquen ahumado': 'salsa merquen',
+        'salsa ajo confitado': 'salsa ajo',
+        'salsa verde': 'salsa verde',
+
+        // ═══════════════════════════════════════════════════════════
+        // OTROS PRODUCTOS
+        // ═══════════════════════════════════════════════════════════
         'papas fritas': 'papas fritas lomasrico',
         'french fries': 'papas fritas lomasrico',
-        'empanada de queso': 'empanada frita',
-        'empanada frita de queso': 'empanada frita',
-        'empanada cheese': 'empanada frita',
         'rolls acevichado': 'acevichado lomasrico',
         'camarones apanados 10': 'camarones apanados',
         'aros de cebolla 10': 'aros de cebolla',
         'onion rings': 'aros de cebolla',
-        'pancitos': 'porción de pancitos (10 un)',
-        'pan con ajo': 'porción de pancitos (10 un)',
-        'garlic bread': 'porción de pancitos (10 un)',
+        'pancitos': 'porcion de pancitos (10 un)',
+        'pan con ajo': 'porcion de pancitos (10 un)',
+        'garlic bread': 'porcion de pancitos (10 un)',
         'coca cola': 'bebida individual',
         'coca-cola': 'bebida individual',
         'pepsi': 'bebida individual',
@@ -68,21 +128,23 @@ export class ProductMapperService implements OnModuleInit {
         'sprite': 'bebida individual',
         'agua mineral': 'agua cachantun 500cc',
         'agua': 'agua cachantun 500cc',
-        'limonada': 'limonada artesanal',
-        'lemonade': 'limonada artesanal',
         'bowl acevichado': 'bowl acevichado',
-        'ceviche peruano': 'ceviche peruano',
-        'crudo salmon': 'crudo de salmón',
-        'crudo atun': 'crudo de atún',
-        'crudo de salmon': 'crudo de salmón',
-        'crudo de atun': 'crudo de atún',
+        'crudo salmon': 'crudo de salmon',
+        'crudo atun': 'crudo de atun',
+        'crudo de salmon': 'crudo de salmon',
+        'crudo de atun': 'crudo de atun',
         'gohan': 'gohan',
         'bowl gohan': 'gohan',
+        'apanados lomasrico': 'apanados lomasrico',
+        'mango fuego': 'mango fuego',
+        'pink nikkei': 'pink nikkei',
+        'black pacific sin arroz': 'black pacific (sin arroz)',
+        'leche de tigre': 'leche de tigre',
 
         // === PedidosYa aliases ===
-        'ceviche lo más rico': 'ceviche lomasrico',
+        'ceviche lo mas rico': 'ceviche lomasrico',
         'papas con salsa': 'papas fritas lomasrico',
-        'empanada camarón queso': 'empanada frita',
+        'empanada camaron queso': 'empanada frita',
         'mix empanadas': 'mix empanadas (4 unidades)',
         'promo express': 'promo express',
     };

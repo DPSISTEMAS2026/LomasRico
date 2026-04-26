@@ -99,15 +99,20 @@ export class ExternalOrdersService {
                 internalVariantId: mapping.variantId,
             });
 
+            // Parse modifiers from item notes (e.g., "Salmón, Camarón, Machas")
+            const modifiers = this.parseModifiers(item.notes);
+
             if (mapping.matched && mapping.variantId) {
                 saleItems.push({
                     productVariantId: mapping.variantId,
                     quantity: item.quantity,
+                    modifiers,
                 });
             } else if (mapping.matched && mapping.productId) {
                 saleItems.push({
                     sellingProductId: mapping.productId,
                     quantity: item.quantity,
+                    modifiers,
                 });
             } else {
                 hasUnmapped = true;
@@ -315,8 +320,43 @@ export class ExternalOrdersService {
 
     private buildNote(dto: CreateExternalOrderDto): string {
         const parts = [`[${dto.platform}] #${dto.externalOrderId}`];
-        if (dto.customerName) parts.push(`Cliente: ${dto.customerName}`);
-        if (dto.notes) parts.push(`Notas: ${dto.notes}`);
+        if (dto.customerName) parts.push(`👤 ${dto.customerName}`);
+        if (dto.notes) parts.push(dto.notes);
+
+        // Add item details with modifiers for kitchen visibility
+        const itemLines = dto.items.map(item => {
+            let line = `${item.quantity}x ${item.externalName}`;
+            if (item.notes) line += ` [${item.notes}]`;
+            return line;
+        });
+        if (itemLines.length > 0) {
+            parts.push(`📦 ${itemLines.join(' + ')}`);
+        }
+
+        if (dto.deliveryAddress) parts.push(`📍 ${dto.deliveryAddress}`);
         return parts.join(' | ');
+    }
+
+    /**
+     * Parse modifier notes from Uber Eats into structured modifiers.
+     * Input: "Salmón, Camarón, Machas, Sopaipillas (3 uni) + salsa verde"
+     * Output: { selectedProteins: ["Salmón", "Camarón", "Machas"] }
+     */
+    private parseModifiers(notes?: string): { selectedProteins?: string[]; removedIngredients?: string[] } | undefined {
+        if (!notes) return undefined;
+
+        const proteins = ['salmon', 'atun', 'camaron', 'machas', 'reineta', 'pulpo'];
+        const parts = notes.split(',').map(s => s.trim()).filter(Boolean);
+
+        const selectedProteins: string[] = [];
+        for (const part of parts) {
+            const normalized = part.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (proteins.some(p => normalized.includes(p))) {
+                selectedProteins.push(part);
+            }
+        }
+
+        if (selectedProteins.length === 0) return undefined;
+        return { selectedProteins };
     }
 }
