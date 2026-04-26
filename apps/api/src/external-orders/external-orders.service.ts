@@ -53,7 +53,7 @@ export class ExternalOrdersService {
             },
         });
 
-        if (existing) {
+        if (existing && existing.saleId) {
             this.logger.warn(`⏩ Duplicate: ${platform}#${externalOrderId} already exists (saleId=${existing.saleId})`);
             return {
                 externalOrderId,
@@ -63,6 +63,10 @@ export class ExternalOrdersService {
                 mappingLog: [],
             };
         }
+
+        // If ExternalOrder exists but saleId is null, the previous attempt failed.
+        // We'll retry by continuing the flow below.
+        const isRetry = !!existing;
 
         // 2. Map products
         const mappingLog: MappingLogEntry[] = [];
@@ -297,8 +301,14 @@ export class ExternalOrdersService {
         mappingLog: MappingLogEntry[],
     ) {
         try {
-            await (this.prisma as any).externalOrder.create({
-                data: {
+            await (this.prisma as any).externalOrder.upsert({
+                where: {
+                    platform_externalOrderId: {
+                        platform: dto.platform,
+                        externalOrderId: dto.externalOrderId,
+                    },
+                },
+                create: {
                     platform: dto.platform,
                     externalOrderId: dto.externalOrderId,
                     externalStatus: dto.externalStatus || 'NEW',
@@ -310,14 +320,14 @@ export class ExternalOrdersService {
                     scrapedAt: new Date(),
                     syncedAt: saleId ? new Date() : null,
                 },
+                update: {
+                    saleId,
+                    mappingLog,
+                    syncedAt: saleId ? new Date() : null,
+                },
             });
         } catch (error: any) {
-            // If duplicate constraint fires, it's fine
-            if (error.code === 'P2002') {
-                this.logger.debug(`Duplicate external order record suppressed: ${dto.platform}#${dto.externalOrderId}`);
-            } else {
-                this.logger.error(`Failed to record external order: ${error.message}`);
-            }
+            this.logger.error(`Failed to record external order: ${error.message}`);
         }
     }
 
