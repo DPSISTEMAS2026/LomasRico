@@ -132,6 +132,8 @@ export class ProductMapperService implements OnModuleInit {
         'crudo atun': 'crudo de atun',
         'crudo de salmon': 'crudo de salmon',
         'crudo de atun': 'crudo de atun',
+        'crudo de atun (2 pers)': 'crudo de atun',
+        'crudo de salmon (2 pers)': 'crudo de salmon',
         'gohan': 'gohan',
         'bowl gohan': 'gohan',
         'apanados lomasrico': 'apanados lomasrico',
@@ -139,6 +141,18 @@ export class ProductMapperService implements OnModuleInit {
         'pink nikkei': 'pink nikkei',
         'black pacific sin arroz': 'black pacific (sin arroz)',
         'leche de tigre': 'leche de tigre',
+
+        // Ceviche Vegetariano (Uber lo pone como "Ceviche Veg")
+        'ceviche veg': 'ceviche vegetariano',
+        'ceviche vegetariano': 'ceviche vegetariano',
+        'ceviche veggie': 'ceviche vegetariano',
+
+        // Empanada de Marisco (Uber la pone como solo "Marisco")
+        'marisco': 'empanada frita',
+
+        // Ceviche Tropical variantes
+        'ceviche tropical mango': 'ceviche tropical',
+        'tropical mango': 'ceviche tropical',
 
         // === PedidosYa aliases ===
         'papas con salsa': 'papas fritas lomasrico',
