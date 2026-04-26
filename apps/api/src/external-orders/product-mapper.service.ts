@@ -79,7 +79,6 @@ export class ProductMapperService implements OnModuleInit {
 
         // Aliases directos
         'ceviche clasico': 'ceviche lomasrico',
-        'ceviche clasico': 'ceviche lomasrico',
         'ceviche tradicional': 'ceviche lomasrico',
         'ceviche classic': 'ceviche lomasrico',
         'ceviche lo mas rico': 'ceviche lomasrico',
@@ -142,9 +141,7 @@ export class ProductMapperService implements OnModuleInit {
         'leche de tigre': 'leche de tigre',
 
         // === PedidosYa aliases ===
-        'ceviche lo mas rico': 'ceviche lomasrico',
         'papas con salsa': 'papas fritas lomasrico',
-        'empanada camaron queso': 'empanada frita',
         'mix empanadas': 'mix empanadas (4 unidades)',
         'promo express': 'promo express',
     };
