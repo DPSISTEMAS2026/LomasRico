@@ -319,22 +319,25 @@ export class ExternalOrdersService {
     }
 
     private buildNote(dto: CreateExternalOrderDto): string {
-        const parts = [`[${dto.platform}] #${dto.externalOrderId}`];
-        if (dto.customerName) parts.push(`👤 ${dto.customerName}`);
-        if (dto.notes) parts.push(dto.notes);
+        const lines: string[] = [];
 
-        // Add item details with modifiers for kitchen visibility
-        const itemLines = dto.items.map(item => {
-            let line = `${item.quantity}x ${item.externalName}`;
-            if (item.notes) line += ` [${item.notes}]`;
-            return line;
-        });
-        if (itemLines.length > 0) {
-            parts.push(`📦 ${itemLines.join(' + ')}`);
+        // Line 1: Platform + Order ID + Customer
+        const header = [`[${dto.platform}] #${dto.externalOrderId}`];
+        if (dto.customerName) header.push(`👤 ${dto.customerName}`);
+        lines.push(header.join(' | '));
+
+        // Line 2+: Each item on its own line (clear for kitchen)
+        for (const item of dto.items) {
+            let line = `• ${item.quantity}x ${item.externalName}`;
+            if (item.notes) line += ` → ${item.notes}`;
+            lines.push(line);
         }
 
-        if (dto.deliveryAddress) parts.push(`📍 ${dto.deliveryAddress}`);
-        return parts.join(' | ');
+        // Delivery info
+        if (dto.deliveryAddress) lines.push(`📍 ${dto.deliveryAddress}`);
+        if (dto.notes) lines.push(`💬 ${dto.notes}`);
+
+        return lines.join('\n');
     }
 
     /**

@@ -260,21 +260,75 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
             {/* Notas del Pedido (Prominente) */}
             {sale.note && (
                 <div className="mb-5 pl-2">
-                    <div className={`p-3 rounded-2xl flex items-start gap-3 shadow-md ${
-                        isUber ? 'bg-green-50 border-2 border-green-300' :
-                        isPedidosYa ? 'bg-red-50 border-2 border-red-300' :
-                        'bg-amber-100 border-2 border-amber-400 animate-pulse'
+                    <div className={`rounded-2xl overflow-hidden shadow-md ${
+                        isUber ? 'border-2 border-green-300' :
+                        isPedidosYa ? 'border-2 border-red-300' :
+                        'border-2 border-amber-400 animate-pulse'
                     }`}>
-                        <MessageSquare size={18} className={`shrink-0 mt-0.5 ${
-                            isUber ? 'text-green-600' : isPedidosYa ? 'text-red-600' : 'text-amber-600'
-                        }`} />
-                        <div>
-                            <p className={`text-[10px] font-black uppercase italic tracking-widest mb-1 leading-none ${
-                                isUber ? 'text-green-700' : isPedidosYa ? 'text-red-700' : 'text-amber-700'
-                            }`}>
-                                {isExternal ? 'PEDIDO EXTERNO:' : 'NOTA ESPECIAL:'}
+                        {/* Header */}
+                        <div className={`px-3 py-2 flex items-center gap-2 ${
+                            isUber ? 'bg-green-600' : isPedidosYa ? 'bg-red-600' : 'bg-amber-500'
+                        }`}>
+                            <MessageSquare size={14} className="text-white shrink-0" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white leading-none">
+                                {isExternal ? 'PEDIDO EXTERNO' : 'NOTA ESPECIAL'}
                             </p>
-                            <p className="text-xs md:text-sm font-black text-slate-900 uppercase italic tracking-tighter leading-tight bg-white/50 px-2 py-1 rounded-lg">"{sale.note}"</p>
+                        </div>
+                        {/* Content - Parse multi-line notes */}
+                        <div className={`p-3 space-y-1.5 ${
+                            isUber ? 'bg-green-50' : isPedidosYa ? 'bg-red-50' : 'bg-amber-50'
+                        }`}>
+                            {sale.note.split('\n').map((line: string, i: number) => {
+                                // First line = header (platform, ID, customer)
+                                if (i === 0) {
+                                    // Parse: [UBER_EATS] #UE-2DD98 | 👤 Catalina M.
+                                    const customerMatch = line.match(/👤\s*(.+)/);
+                                    const idMatch = line.match(/#([\w-]+)/);
+                                    return (
+                                        <div key={i} className="flex items-center justify-between gap-2">
+                                            {idMatch && (
+                                                <span className="text-xs font-black text-slate-700 uppercase tracking-tight">
+                                                    #{idMatch[1]}
+                                                </span>
+                                            )}
+                                            {customerMatch && (
+                                                <span className="text-xs font-black text-slate-500 uppercase tracking-tight">
+                                                    👤 {customerMatch[1]}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                // Item lines: • 1x Ceviche Veg → Salsa Merquén
+                                if (line.startsWith('•')) {
+                                    const itemText = line.replace('•', '').trim();
+                                    const [itemName, ...modParts] = itemText.split('→');
+                                    const mods = modParts.join('→').trim();
+                                    return (
+                                        <div key={i} className={`rounded-lg px-2.5 py-1.5 ${
+                                            isUber ? 'bg-green-100/80' : isPedidosYa ? 'bg-red-100/80' : 'bg-amber-100/80'
+                                        }`}>
+                                            <p className="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-tight">
+                                                {itemName.trim()}
+                                            </p>
+                                            {mods && (
+                                                <p className="text-[9px] md:text-[10px] font-bold text-slate-500 mt-0.5 italic">
+                                                    ↳ {mods}
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                // Address or other lines
+                                if (line.trim()) {
+                                    return (
+                                        <p key={i} className="text-[10px] font-bold text-slate-500 italic">
+                                            {line}
+                                        </p>
+                                    );
+                                }
+                                return null;
+                            })}
                         </div>
                     </div>
                 </div>
