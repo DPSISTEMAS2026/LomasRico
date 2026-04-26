@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChefHat, Clock, AlertCircle, Package, Timer, ChevronRight, MessageSquare, Truck, CheckCircle2, UtensilsCrossed } from 'lucide-react';
+import { ChefHat, Clock, AlertCircle, Package, Timer, ChevronRight, MessageSquare, Truck, CheckCircle2, UtensilsCrossed, XCircle } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
 import { API_URL } from '../../../services/api';
@@ -50,6 +50,11 @@ export default function KitchenPage() {
         } catch (e) {
             alert('Error al actualizar el estado');
         }
+    };
+
+    const cancelTicket = async (ticketId: string) => {
+        if (!confirm('¿Cancelar este pedido? Esta acción no se puede deshacer.')) return;
+        await updateTicketStatus(ticketId, 'CANCELLED');
     };
 
     if (loading) {
@@ -126,6 +131,7 @@ export default function KitchenPage() {
                                     key={ticket.id}
                                     ticket={ticket}
                                     onAction={() => updateTicketStatus(ticket.id, 'PREPARING')}
+                                    onCancel={() => cancelTicket(ticket.id)}
                                     actionLabel="Comenzar"
                                     actionColor="bg-orange-500 hover:bg-orange-600"
                                 />
@@ -148,6 +154,7 @@ export default function KitchenPage() {
                                     key={ticket.id}
                                     ticket={ticket}
                                     onAction={() => updateTicketStatus(ticket.id, 'READY')}
+                                    onCancel={() => cancelTicket(ticket.id)}
                                     actionLabel="Listo ✓"
                                     actionColor="bg-blue-500 hover:bg-blue-600"
                                 />
@@ -170,6 +177,7 @@ export default function KitchenPage() {
                                     key={ticket.id}
                                     ticket={ticket}
                                     onAction={() => updateTicketStatus(ticket.id, 'DELIVERED')}
+                                    onCancel={() => cancelTicket(ticket.id)}
                                     actionLabel="Entregado ✓"
                                     actionColor="bg-green-500 hover:bg-green-600"
                                 />
@@ -199,7 +207,7 @@ function StatCard({ label, value, color }: { label: string, value: number, color
     );
 }
 
-function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
+function TicketCard({ ticket, onAction, onCancel, actionLabel, actionColor }: any) {
     const sale = ticket.sale;
     const createdAt = new Date(ticket.createdAt);
     const now = new Date();
@@ -459,14 +467,24 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
                 ))}
             </div>
 
-            <button
-                onClick={onAction}
-                className={`w-full h-14 md:h-16 rounded-2xl md:rounded-[20px] font-black uppercase italic tracking-tighter text-white transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 group-hover:shadow-orange-500/10 text-xs md:text-sm ${actionColor}`}
-            >
-                {ticket.status === 'READY' && <CheckCircle2 size={18} />}
-                {actionLabel}
-                {ticket.status !== 'READY' && <ChevronRight size={18} className="md:w-5 md:h-5" />}
-            </button>
+            <div className="flex gap-2">
+                <button
+                    onClick={onCancel}
+                    className="h-14 md:h-16 px-4 rounded-2xl md:rounded-[20px] font-black uppercase italic tracking-tighter text-white transition-all transform active:scale-95 flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 shadow-lg text-[10px] md:text-xs shrink-0"
+                    title="Cancelar pedido"
+                >
+                    <XCircle size={18} />
+                    <span className="hidden sm:inline">Cancelar</span>
+                </button>
+                <button
+                    onClick={onAction}
+                    className={`flex-1 h-14 md:h-16 rounded-2xl md:rounded-[20px] font-black uppercase italic tracking-tighter text-white transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 group-hover:shadow-orange-500/10 text-xs md:text-sm ${actionColor}`}
+                >
+                    {ticket.status === 'READY' && <CheckCircle2 size={18} />}
+                    {actionLabel}
+                    {ticket.status !== 'READY' && <ChevronRight size={18} className="md:w-5 md:h-5" />}
+                </button>
+            </div>
         </div>
     );
 }

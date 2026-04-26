@@ -74,6 +74,11 @@ export class KitchenService {
         } else if (status === TicketStatus.DELIVERED) {
             if (!ticket.endTime) updateData.endTime = new Date();
             saleUpdateData.status = OrderStatus.COMPLETED;
+        } else if (status === 'CANCELLED') {
+            // Cancelación: quitar de la vista activa y marcar sale como cancelada
+            updateData.status = TicketStatus.DELIVERED; // Removes from active view
+            updateData.endTime = new Date();
+            saleUpdateData.status = OrderStatus.CANCELLED;
         }
 
         return (this.prisma as any).$transaction(async (tx: any) => {
