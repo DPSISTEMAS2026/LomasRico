@@ -21,11 +21,15 @@ const OrderStatus = {
 export class KitchenService {
     constructor(private prisma: PrismaService) { }
 
+    /**
+     * Retorna tickets activos: WAITING + PREPARING + READY
+     * Solo excluye DELIVERED (ya fue entregado al repartidor/cliente)
+     */
     async findAllActive() {
         return (this.prisma as any).kitchenTicket.findMany({
             where: {
                 status: {
-                    notIn: [TicketStatus.READY, TicketStatus.DELIVERED],
+                    notIn: [TicketStatus.DELIVERED],
                 },
             },
             orderBy: {
@@ -37,10 +41,11 @@ export class KitchenService {
                         items: {
                             include: {
                                 productVariant: true,
-                                sellingProduct: true,  // ✅ BUG #7 FIX: Incluir producto
-                                recipeSnapshot: true   // ✅ BUG #7 FIX: Incluir snapshot con detalles
+                                sellingProduct: true,
+                                recipeSnapshot: true
                             },
                         },
+                        externalOrder: true, // Para saber si es Uber/PedidosYa
                     },
                 },
             },
@@ -64,6 +69,9 @@ export class KitchenService {
             if (!ticket.startTime) updateData.startTime = new Date();
             saleUpdateData.status = OrderStatus.PREPARING;
         } else if (status === TicketStatus.READY) {
+            if (!ticket.endTime) updateData.endTime = new Date();
+            // No marcar COMPLETED aún — se marca cuando se entrega
+        } else if (status === TicketStatus.DELIVERED) {
             if (!ticket.endTime) updateData.endTime = new Date();
             saleUpdateData.status = OrderStatus.COMPLETED;
         }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChefHat, Clock, AlertCircle, Package, Timer, ChevronRight, MessageSquare } from 'lucide-react';
+import { ChefHat, Clock, AlertCircle, Package, Timer, ChevronRight, MessageSquare, Truck, CheckCircle2, UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
 import { API_URL } from '../../../services/api';
@@ -83,6 +83,7 @@ export default function KitchenPage() {
 
     const waitingTickets = tickets.filter(t => t.status === 'WAITING');
     const preparingTickets = tickets.filter(t => t.status === 'PREPARING');
+    const readyTickets = tickets.filter(t => t.status === 'READY');
 
     return (
         <div className="flex-1 flex flex-col gap-6 md:gap-8 animate-in fade-in duration-700 pb-10">
@@ -101,6 +102,7 @@ export default function KitchenPage() {
                 <div className="flex gap-3 w-full sm:w-auto overflow-x-auto no-scrollbar pb-2 sm:pb-0">
                     <StatCard label="En Espera" value={waitingTickets.length} color="orange" />
                     <StatCard label="En Proceso" value={preparingTickets.length} color="blue" />
+                    <StatCard label="Listos" value={readyTickets.length} color="green" />
                 </div>
             </div>
 
@@ -111,8 +113,8 @@ export default function KitchenPage() {
                     <p className="text-[10px] md:text-xs text-slate-300 font-bold uppercase tracking-widest mt-1">Nuevos pedidos aparecerán aquí</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                    {/* Columna: Nuevas Órdenes */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                    {/* Columna 1: Nuevas Órdenes */}
                     <div className="flex flex-col gap-4">
                         <h2 className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
                             <Clock size={16} className="text-orange-500" />
@@ -128,10 +130,13 @@ export default function KitchenPage() {
                                     actionColor="bg-orange-500 hover:bg-orange-600"
                                 />
                             ))}
+                            {waitingTickets.length === 0 && (
+                                <p className="text-xs text-slate-300 text-center py-8 italic">Sin pedidos entrantes</p>
+                            )}
                         </div>
                     </div>
 
-                    {/* Columna: Preparación */}
+                    {/* Columna 2: Preparación */}
                     <div className="flex flex-col gap-4">
                         <h2 className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2 border-t lg:border-t-0 pt-6 lg:pt-0 border-slate-100">
                             <ChefHat size={16} className="text-blue-500" />
@@ -143,10 +148,35 @@ export default function KitchenPage() {
                                     key={ticket.id}
                                     ticket={ticket}
                                     onAction={() => updateTicketStatus(ticket.id, 'READY')}
-                                    actionLabel="Listo para Entrega"
+                                    actionLabel="Listo ✓"
+                                    actionColor="bg-blue-500 hover:bg-blue-600"
+                                />
+                            ))}
+                            {preparingTickets.length === 0 && (
+                                <p className="text-xs text-slate-300 text-center py-8 italic">Nada en preparación</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Columna 3: Listos para Entrega */}
+                    <div className="flex flex-col gap-4">
+                        <h2 className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2 border-t lg:border-t-0 pt-6 lg:pt-0 border-slate-100">
+                            <Truck size={16} className="text-green-500" />
+                            Entrega ({readyTickets.length})
+                        </h2>
+                        <div className="flex flex-col gap-4">
+                            {readyTickets.map(ticket => (
+                                <TicketCard
+                                    key={ticket.id}
+                                    ticket={ticket}
+                                    onAction={() => updateTicketStatus(ticket.id, 'DELIVERED')}
+                                    actionLabel="Entregado ✓"
                                     actionColor="bg-green-500 hover:bg-green-600"
                                 />
                             ))}
+                            {readyTickets.length === 0 && (
+                                <p className="text-xs text-slate-300 text-center py-8 italic">Sin pedidos listos</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -159,6 +189,7 @@ function StatCard({ label, value, color }: { label: string, value: number, color
     const colorClasses: any = {
         orange: 'bg-orange-50 border-orange-100 text-orange-600',
         blue: 'bg-blue-50 border-blue-100 text-blue-600',
+        green: 'bg-green-50 border-green-100 text-green-600',
     };
     return (
         <div className={`px-5 py-3 md:px-6 md:py-4 rounded-2xl border-2 flex-1 sm:flex-none ${colorClasses[color]} flex flex-col min-w-[110px] md:min-w-[140px] transition-all`}>
@@ -174,10 +205,23 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
     const now = new Date();
     const minutesAgo = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
 
+    // Detect external platform
+    const isUber = sale.channel === 'UBER_EATS';
+    const isPedidosYa = sale.channel === 'PEDIDOS_YA';
+    const isExternal = isUber || isPedidosYa;
+    const platformLabel = isUber ? '🟢 UBER EATS' : isPedidosYa ? '🔴 PEDIDOS YA' : sale.channel;
+
     return (
-        <div className="bg-white rounded-3xl md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group relative overflow-hidden">
+        <div className={`bg-white rounded-3xl md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl transition-all duration-300 border group relative overflow-hidden ${
+            isUber ? 'border-green-200 ring-2 ring-green-100' : 
+            isPedidosYa ? 'border-red-200 ring-2 ring-red-100' : 
+            'border-slate-100'
+        }`}>
             {/* Urgency indicator */}
-            <div className={`absolute top-0 left-0 w-1.5 h-full ${minutesAgo > 15 ? 'bg-red-500' : minutesAgo > 5 ? 'bg-orange-500' : 'bg-green-500'}`} />
+            <div className={`absolute top-0 left-0 w-1.5 h-full ${
+                ticket.status === 'READY' ? 'bg-green-500' :
+                minutesAgo > 15 ? 'bg-red-500' : minutesAgo > 5 ? 'bg-orange-500' : 'bg-green-500'
+            }`} />
 
             <div className="flex justify-between items-start mb-5 pl-2">
                 <div className="min-w-0">
@@ -185,27 +229,51 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
                         <h3 className="text-xl md:text-2xl font-black text-slate-900 italic tracking-tighter uppercase truncate">
                             {sale.code || `#${ticket.id.slice(0, 4)}`}
                         </h3>
-                        {minutesAgo > 15 && <AlertCircle size={18} className="text-red-500 shrink-0" />}
+                        {minutesAgo > 15 && ticket.status !== 'READY' && <AlertCircle size={18} className="text-red-500 shrink-0" />}
                     </div>
                     <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
                         <Timer size={12} className="shrink-0" />
-                        <span className="truncate">Hace {minutesAgo}m • {sale.channel}</span>
+                        <span className="truncate">Hace {minutesAgo}m</span>
                     </p>
                 </div>
-                <div className={`shrink-0 px-2.5 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-tighter sm:tracking-widest ${ticket.status === 'WAITING' ? 'bg-orange-100 text-orange-700' :
-                    'bg-blue-100 text-blue-700'
+                <div className="flex flex-col items-end gap-1">
+                    {/* Platform badge */}
+                    <span className={`px-2.5 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-tighter sm:tracking-widest ${
+                        isUber ? 'bg-green-100 text-green-800' :
+                        isPedidosYa ? 'bg-red-100 text-red-800' :
+                        sale.channel === 'POS' ? 'bg-slate-100 text-slate-700' :
+                        'bg-purple-100 text-purple-700'
                     }`}>
-                    {ticket.status === 'WAITING' ? 'ESPERA' : 'PROCESO'}
+                        {platformLabel}
+                    </span>
+                    {/* Status badge */}
+                    <span className={`px-2.5 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-tighter sm:tracking-widest ${
+                        ticket.status === 'WAITING' ? 'bg-orange-100 text-orange-700' :
+                        ticket.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' :
+                        'bg-green-100 text-green-700'
+                    }`}>
+                        {ticket.status === 'WAITING' ? 'ESPERA' : ticket.status === 'PREPARING' ? 'PROCESO' : 'LISTO'}
+                    </span>
                 </div>
             </div>
 
             {/* Notas del Pedido (Prominente) */}
             {sale.note && (
                 <div className="mb-5 pl-2">
-                    <div className="bg-amber-100 border-2 border-amber-400 p-3 rounded-2xl flex items-start gap-3 animate-pulse shadow-md">
-                        <MessageSquare size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div className={`p-3 rounded-2xl flex items-start gap-3 shadow-md ${
+                        isUber ? 'bg-green-50 border-2 border-green-300' :
+                        isPedidosYa ? 'bg-red-50 border-2 border-red-300' :
+                        'bg-amber-100 border-2 border-amber-400 animate-pulse'
+                    }`}>
+                        <MessageSquare size={18} className={`shrink-0 mt-0.5 ${
+                            isUber ? 'text-green-600' : isPedidosYa ? 'text-red-600' : 'text-amber-600'
+                        }`} />
                         <div>
-                            <p className="text-[10px] font-black uppercase text-amber-700 italic tracking-widest mb-1 leading-none">NOTA ESPECIAL:</p>
+                            <p className={`text-[10px] font-black uppercase italic tracking-widest mb-1 leading-none ${
+                                isUber ? 'text-green-700' : isPedidosYa ? 'text-red-700' : 'text-amber-700'
+                            }`}>
+                                {isExternal ? 'PEDIDO EXTERNO:' : 'NOTA ESPECIAL:'}
+                            </p>
                             <p className="text-xs md:text-sm font-black text-slate-900 uppercase italic tracking-tighter leading-tight bg-white/50 px-2 py-1 rounded-lg">"{sale.note}"</p>
                         </div>
                     </div>
@@ -254,6 +322,11 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
                             <div className="flex flex-col gap-1.5 mt-1">
                                 {/* Modificadores de Venta (Solo si no hay BoM) */}
                                 <div className="flex flex-wrap gap-1.5">
+                                    {item.modifiers?.selectedProteins?.map((name: string, i: number) => (
+                                        <span key={`p-${i}`} className="bg-slate-900 text-white px-2 py-1 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-tight">
+                                            + {name}
+                                        </span>
+                                    ))}
                                     {item.modifiers?.selectedProteinNames?.map((name: string, i: number, arr: string[]) => {
                                         const pName = (item.sellingProduct?.name || '').toLowerCase();
                                         const vName = (item.productVariant?.name || '').toLowerCase();
@@ -313,7 +386,7 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
                                         </span>
                                     ))}
                                 </div>
-                                {item.productVariant && (
+                                {item.productVariant && !item.modifiers?.selectedProteins?.length && !item.modifiers?.selectedProteinNames?.length && (
                                     <p className="text-[10px] font-bold text-slate-400 italic">No hay receta detallada para esta variante</p>
                                 )}
                             </div>
@@ -334,11 +407,11 @@ function TicketCard({ ticket, onAction, actionLabel, actionColor }: any) {
 
             <button
                 onClick={onAction}
-                className="w-full h-14 md:h-16 rounded-2xl md:rounded-[20px] font-black uppercase italic tracking-tighter text-white transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 group-hover:shadow-orange-500/10 text-xs md:text-sm"
-                style={{ backgroundColor: ticket.status === 'WAITING' ? '#f2642e' : '#3b82f6' }}
+                className={`w-full h-14 md:h-16 rounded-2xl md:rounded-[20px] font-black uppercase italic tracking-tighter text-white transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-black/5 group-hover:shadow-orange-500/10 text-xs md:text-sm ${actionColor}`}
             >
+                {ticket.status === 'READY' && <CheckCircle2 size={18} />}
                 {actionLabel}
-                <ChevronRight size={18} className="md:w-5 md:h-5" />
+                {ticket.status !== 'READY' && <ChevronRight size={18} className="md:w-5 md:h-5" />}
             </button>
         </div>
     );
