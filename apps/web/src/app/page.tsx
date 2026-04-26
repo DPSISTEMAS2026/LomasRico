@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProductGrid } from '../components/catalog/ProductGrid';
+import { BannerSection } from '../components/BannerSection';
 import { useCart, CartProvider } from '../context/CartContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import CheckoutModal from '../components/modals/CheckoutModal';
@@ -126,35 +127,7 @@ function HomeContent() {
 
       <main className="flex-grow bg-slate-50/50">
         {/* === SECCIÓN DE BANNERS === */}
-        <div className="w-full">
-          {/* 1. Banner Desktop (Visible solo en pantallas medianas y grandes) */}
-          {/* Dimensiones recomendadas: 1920px ancho x 600px alto (o hasta 800px de alto) */}
-          <div className="hidden md:block w-full">
-            <img 
-              src="/assets/banner-desktop.jpg" 
-              alt="Banner Principal" 
-              className="w-full object-cover min-h-[400px] max-h-[600px] bg-slate-200"
-              onError={(e) => {
-                // Placeholder temporal si no existe la imagen
-                (e.target as HTMLImageElement).src = 'https://placehold.co/1920x600/f8fafc/94a3b8?text=Banner+Desktop+(1920x600)';
-              }}
-            />
-          </div>
-
-          {/* 2. Banner Mobile (Visible solo en celulares) */}
-          {/* Dimensiones recomendadas: 1080px ancho x 1080px alto (Cuadrado 1:1) o 1080x1350px (Formato 4:5) */}
-          <div className="block md:hidden w-full">
-            <img 
-              src="/assets/banner-mobile.jpg" 
-              alt="Banner Móvil" 
-              className="w-full object-cover min-h-[350px] aspect-square bg-slate-200"
-              onError={(e) => {
-                // Placeholder temporal si no existe la imagen
-                (e.target as HTMLImageElement).src = 'https://placehold.co/1080x1080/f8fafc/94a3b8?text=Banner+Mobile+(1080x1080)';
-              }}
-            />
-          </div>
-        </div>
+        <BannerSection />
 
         <ProductGrid />
       </main>
