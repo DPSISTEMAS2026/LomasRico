@@ -1,13 +1,21 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ExternalOrdersService } from './external-orders.service';
 import { CreateExternalOrderDto } from './dto/create-external-order.dto';
 
 /**
- * 🔔 Uber Eats Scraper Cron — Runs inside the NestJS API
+ * 🔔 Uber Eats Scraper — Runs inside the NestJS API
  * 
- * Polls Uber Eats GraphQL every 30 seconds for active orders
- * and auto-ingests new ones to the kitchen system.
+ * Anti-detection design:
+ * ─────────────────────────────────────────────────────────
+ * 1. JITTER:          Random interval 45-90s (not a fixed period)
+ * 2. BUSINESS HOURS:  Only polls 10:00-23:00 Chile time
+ * 3. BACKOFF:         Exponential backoff on errors (up to 10 min)
+ * 4. IDENTICAL:       Same query/headers as the real merchant portal
+ * ─────────────────────────────────────────────────────────
+ * 
+ * This results in ~800-1200 requests/day (only during business hours),
+ * with irregular spacing — indistinguishable from a human refreshing
+ * the orders dashboard periodically.
  * 
  * Requirements:
  * - UBER_EATS_COOKIE env var (renewed every 24-48h from merchants-beta.ubereats.com)
@@ -17,8 +25,15 @@ import { CreateExternalOrderDto } from './dto/create-external-order.dto';
 const UBER_GRAPHQL_URL = 'https://merchants-beta.ubereats.com/graphql';
 const UBER_STORE_ID = '9b61ddd3-f68c-53ad-a1a3-435f20fe87d2';
 
+// Polling config
+const MIN_INTERVAL_MS = 45_000;   // 45 seconds minimum
+const MAX_INTERVAL_MS = 90_000;   // 90 seconds maximum
+const BUSINESS_HOUR_START = 10;   // 10:00 AM Chile
+const BUSINESS_HOUR_END = 23;     // 11:00 PM Chile
+const MAX_BACKOFF_MS = 600_000;   // 10 minutes max backoff
+
 @Injectable()
-export class UberScraperCronService implements OnModuleInit {
+export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger('UberScraperCron');
     private seenOrders = new Set<string>();
     private isEnabled = false;
@@ -26,6 +41,8 @@ export class UberScraperCronService implements OnModuleInit {
     private csrfToken = 'x';
     private pollCount = 0;
     private lastError: string | null = null;
+    private consecutiveErrors = 0;
+    private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
     // The real GraphQL payload (exact copy from Uber Eats merchant portal)
     private readonly gqlPayload: any;
@@ -33,7 +50,6 @@ export class UberScraperCronService implements OnModuleInit {
     constructor(
         private readonly externalOrdersService: ExternalOrdersService,
     ) {
-        // Build the massive GraphQL payload once
         this.gqlPayload = this.buildGraphQLPayload();
     }
 
@@ -43,9 +59,12 @@ export class UberScraperCronService implements OnModuleInit {
         this.isEnabled = process.env.UBER_EATS_ENABLED === 'true' && !!this.cookie;
 
         if (this.isEnabled) {
-            this.logger.log('🟢 Uber Eats Scraper ENABLED — polling every 30s');
+            this.logger.log('🟢 Uber Eats Scraper ENABLED');
             this.logger.log(`   Store: ${UBER_STORE_ID}`);
-            this.logger.log(`   Cookie length: ${this.cookie.length} chars`);
+            this.logger.log(`   Interval: ${MIN_INTERVAL_MS / 1000}-${MAX_INTERVAL_MS / 1000}s (with jitter)`);
+            this.logger.log(`   Hours: ${BUSINESS_HOUR_START}:00 - ${BUSINESS_HOUR_END}:00 Chile time`);
+            this.logger.log(`   Cookie: ${this.cookie.length} chars`);
+            this.scheduleNext();
         } else {
             this.logger.warn('🔴 Uber Eats Scraper DISABLED');
             if (!this.cookie) this.logger.warn('   → Missing UBER_EATS_COOKIE');
@@ -53,12 +72,72 @@ export class UberScraperCronService implements OnModuleInit {
         }
     }
 
+    onModuleDestroy() {
+        if (this.pollTimer) {
+            clearTimeout(this.pollTimer);
+            this.pollTimer = null;
+        }
+    }
+
     /**
-     * Runs every 30 seconds — polls Uber Eats for active orders
+     * Get the current hour in Chile timezone (America/Santiago)
      */
-    @Cron(CronExpression.EVERY_30_SECONDS)
+    private getChileHour(): number {
+        const now = new Date();
+        const chileTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Santiago' }));
+        return chileTime.getHours();
+    }
+
+    /**
+     * Generate a random interval between MIN and MAX, with additional
+     * jitter to avoid perfectly periodic patterns.
+     */
+    private getNextInterval(): number {
+        // Base random interval
+        const base = MIN_INTERVAL_MS + Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS);
+        // Add small random jitter (-5s to +5s)
+        const jitter = (Math.random() - 0.5) * 10_000;
+        return Math.max(MIN_INTERVAL_MS, Math.round(base + jitter));
+    }
+
+    /**
+     * Schedule the next poll with random delay
+     */
+    private scheduleNext() {
+        if (!this.isEnabled) return;
+
+        const chileHour = this.getChileHour();
+        const isBusinessHours = chileHour >= BUSINESS_HOUR_START && chileHour < BUSINESS_HOUR_END;
+
+        let delay: number;
+
+        if (!isBusinessHours) {
+            // Outside business hours: check again in 5 minutes
+            delay = 300_000;
+        } else if (this.consecutiveErrors > 0) {
+            // Exponential backoff: 2^errors * 30s, capped at MAX_BACKOFF_MS
+            delay = Math.min(MAX_BACKOFF_MS, Math.pow(2, this.consecutiveErrors) * 30_000);
+            this.logger.debug(`  ⏳ Backoff: next poll in ${Math.round(delay / 1000)}s (${this.consecutiveErrors} consecutive errors)`);
+        } else {
+            // Normal: random between 45-90s
+            delay = this.getNextInterval();
+        }
+
+        this.pollTimer = setTimeout(() => this.pollUberEats(), delay);
+    }
+
+    /**
+     * Core poll function — fetches active orders from Uber Eats
+     */
     async pollUberEats() {
         if (!this.isEnabled) return;
+
+        // Re-check business hours at poll time
+        const chileHour = this.getChileHour();
+        if (chileHour < BUSINESS_HOUR_START || chileHour >= BUSINESS_HOUR_END) {
+            this.scheduleNext();
+            return;
+        }
 
         this.pollCount++;
 
@@ -76,12 +155,22 @@ export class UberScraperCronService implements OnModuleInit {
                 body: JSON.stringify(this.gqlPayload),
             });
 
-            // Session expired
+            // Session expired — stop hammering, log once
             if (res.status === 401 || res.status === 403) {
                 if (this.lastError !== 'session_expired') {
                     this.logger.error('⚠️ Cookie de Uber Eats expirada! Renovar en UBER_EATS_COOKIE');
                     this.lastError = 'session_expired';
                 }
+                this.consecutiveErrors++;
+                this.scheduleNext();
+                return;
+            }
+
+            // Rate limited — back off
+            if (res.status === 429) {
+                this.logger.warn('⚠️ Rate limited por Uber (429) — aplicando backoff');
+                this.consecutiveErrors += 2; // aggressive backoff
+                this.scheduleNext();
                 return;
             }
 
@@ -89,10 +178,13 @@ export class UberScraperCronService implements OnModuleInit {
             const result = data.data?.getActiveOrders;
             if (!result?.success) {
                 this.logger.debug(`Poll #${this.pollCount}: API responded but no success flag`);
+                this.scheduleNext();
                 return;
             }
 
+            // Success — reset error state
             this.lastError = null;
+            this.consecutiveErrors = 0;
             const orders = result.result?.orders || [];
 
             // Process new orders
@@ -103,7 +195,7 @@ export class UberScraperCronService implements OnModuleInit {
                 if (this.seenOrders.has(orderId)) continue;
                 this.seenOrders.add(orderId);
 
-                // Only ingest PREPARING or ACCEPTED orders
+                // Skip terminal states
                 const state = order.state;
                 if (state === 'COMPLETED' || state === 'CANCELLED') continue;
 
@@ -127,12 +219,12 @@ export class UberScraperCronService implements OnModuleInit {
                 }
             }
 
-            // Periodic status log
+            // Periodic status log (every ~20 polls ≈ ~20 min)
             if (this.pollCount % 20 === 0) {
-                this.logger.debug(`📊 Poll #${this.pollCount} — ${orders.length} activos | ${this.seenOrders.size} vistos total`);
+                this.logger.log(`📊 Poll #${this.pollCount} — ${orders.length} activos | ${this.seenOrders.size} vistos total`);
             }
 
-            // Clean up old seen orders (keep last 500)
+            // Prune seen orders cache (keep last 200)
             if (this.seenOrders.size > 500) {
                 const arr = [...this.seenOrders];
                 this.seenOrders = new Set(arr.slice(-200));
@@ -143,7 +235,11 @@ export class UberScraperCronService implements OnModuleInit {
                 this.logger.error(`❌ Poll error: ${err.message}`);
                 this.lastError = err.message;
             }
+            this.consecutiveErrors++;
         }
+
+        // Schedule next poll with random jitter
+        this.scheduleNext();
     }
 
     /**

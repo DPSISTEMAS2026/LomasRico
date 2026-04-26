@@ -1,5 +1,4 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { ExternalOrdersController } from './external-orders.controller';
 import { ExternalOrdersService } from './external-orders.service';
 import { ProductMapperService } from './product-mapper.service';
@@ -10,7 +9,6 @@ import { SalesModule } from '../sales/sales.module';
 @Module({
     imports: [
         DatabaseModule,
-        ScheduleModule.forRoot(),
         forwardRef(() => SalesModule),
     ],
     controllers: [ExternalOrdersController],
