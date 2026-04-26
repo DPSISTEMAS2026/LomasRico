@@ -463,10 +463,13 @@ export class SalesService {
             // Solo crear ticket de cocina si la venta está confirmada (no PENDING de pago)
             // Para ventas WEB con MP, el ticket se crea en handleApprovedOrder al confirmar el pago
             if (!isPending) {
+                // External orders (Uber, PedidosYa) go straight to PREPARING
+                // since they're already confirmed by the platform
+                const isExternalOrder = channel === 'UBER_EATS' || channel === 'PEDIDOS_YA';
                 await tx.kitchenTicket.create({
                     data: {
                         saleId: sale.id,
-                        status: 'WAITING'
+                        status: isExternalOrder ? 'PREPARING' : 'WAITING'
                     }
                 });
             }
