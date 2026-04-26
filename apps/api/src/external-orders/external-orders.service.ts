@@ -140,6 +140,9 @@ export class ExternalOrdersService {
                 channel: channel as any,
                 items: saleItems,
                 note: this.buildNote(dto),
+                // External orders are already paid through the platform
+                paymentMethod: 'OTHER',
+                status: 'CONFIRMED',
                 shippingData: dto.deliveryAddress
                     ? {
                           address: dto.deliveryAddress,
@@ -147,7 +150,7 @@ export class ExternalOrdersService {
                           estimateId: `${platform}-${externalOrderId}`,
                       }
                     : undefined,
-            };
+            } as any;
 
             // Try to link to existing customer by phone
             if (dto.customerPhone) {
@@ -331,6 +334,11 @@ export class ExternalOrdersService {
             let line = `• ${item.quantity}x ${item.externalName}`;
             if (item.notes) line += ` → ${item.notes}`;
             lines.push(line);
+        }
+
+        // Total from external platform (for admin reference)
+        if (dto.externalTotal && dto.externalTotal > 0) {
+            lines.push(`💰 Total Uber: $${dto.externalTotal.toLocaleString('es-CL')}`);
         }
 
         // Delivery info

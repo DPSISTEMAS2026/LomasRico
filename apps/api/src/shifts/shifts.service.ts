@@ -160,10 +160,89 @@ export class ShiftsService {
                         email: true
                     }
                 },
-                transactions: true
+                transactions: true,
+                sales: {
+                    select: {
+                        id: true,
+                        code: true,
+                        channel: true,
+                        total: true,
+                        paymentMethod: true,
+                        paymentStatus: true,
+                        createdAt: true,
+                    },
+                    where: { status: { not: 'CANCELLED' } },
+                    orderBy: { createdAt: 'desc' },
+                }
             },
             orderBy: { openingTime: 'desc' }
         });
+    }
+
+    /**
+     * Get a complete shift summary with revenue breakdown by channel.
+     * Queries ALL sales during the shift period (not just shiftId-linked),
+     * so Uber Eats and other external orders are included.
+     */
+    async getShiftSummary(shiftId: string) {
+        const shift = await (this.prisma as any).cashShift.findUnique({
+            where: { id: shiftId },
+            include: {
+                cashier: { select: { id: true, name: true } },
+                transactions: { orderBy: { createdAt: 'asc' } },
+            },
+        });
+
+        if (!shift) throw new Error('Turno no encontrado');
+
+        // Query ALL sales during the shift period (captures Uber, Web, POS, etc.)
+        const periodEnd = shift.closingTime || new Date();
+        const allSalesInPeriod = await (this.prisma as any).sale.findMany({
+            where: {
+                createdAt: {
+                    gte: shift.openingTime,
+                    lte: periodEnd,
+                },
+                status: { not: 'CANCELLED' },
+            },
+            select: {
+                id: true,
+                code: true,
+                channel: true,
+                total: true,
+                paymentMethod: true,
+                paymentStatus: true,
+                createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        // Build revenue breakdown by channel
+        const channelBreakdown: Record<string, { count: number; total: number }> = {};
+        for (const sale of allSalesInPeriod) {
+            const ch = sale.channel || 'OTHER';
+            if (!channelBreakdown[ch]) channelBreakdown[ch] = { count: 0, total: 0 };
+            channelBreakdown[ch].count++;
+            channelBreakdown[ch].total += Number(sale.total);
+        }
+
+        // Build revenue breakdown by payment method
+        const paymentBreakdown: Record<string, { count: number; total: number }> = {};
+        for (const sale of allSalesInPeriod) {
+            const pm = sale.paymentMethod || 'SIN_MÉTODO';
+            if (!paymentBreakdown[pm]) paymentBreakdown[pm] = { count: 0, total: 0 };
+            paymentBreakdown[pm].count++;
+            paymentBreakdown[pm].total += Number(sale.total);
+        }
+
+        return {
+            ...shift,
+            sales: allSalesInPeriod,
+            channelBreakdown,
+            paymentBreakdown,
+            totalRevenue: allSalesInPeriod.reduce((sum: number, s: any) => sum + Number(s.total), 0),
+            totalOrders: allSalesInPeriod.length,
+        };
     }
 
     // Registrar venta en turno

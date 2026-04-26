@@ -2,61 +2,74 @@ import { BaseScraper, AuthContext } from './base-scraper';
 import { CreateExternalOrderDto } from '../dto/create-external-order.dto';
 
 /**
- * Uber Eats Scraper
+ * Uber Eats Scraper — CONFIGURADO CON DATOS REALES
  * 
- * Estrategia: Interceptar la API interna de merchants.ubereats.com
- * 
- * El dashboard de Uber Eats para restaurantes usa estas APIs internas:
- * 
- *   GET /api/getActiveOrders      → Lista de pedidos activos
- *   GET /api/getOrderDetails/:id  → Detalle de un pedido
- * 
- * Los headers requeridos son:
- *   - x-csrf-token: (token CSRF de la sesión)
- *   - cookie: (cookies de sesión autenticada)
+ * Portal: merchants-beta.ubereats.com
+ * API: GraphQL (POST /graphql)
+ * Query: GetActiveOrders
+ * Store ID: 9b61ddd3-f68c-53ad-a1a3-435f20fe87d2
  * 
  * ═══════════════════════════════════════════════════════════════
- * SETUP INICIAL (Manual, 1 vez):
+ * RENOVAR SESIÓN (cada 24-48h cuando expire):
  * ═══════════════════════════════════════════════════════════════
  * 
- * 1. Abrir Chrome → merchants.ubereats.com → Loguearse
- * 2. Abrir DevTools → Network → Filtrar "getActiveOrders" o "getOrderList"
- * 3. Copiar los headers de la request:
- *    - Cookie (todo el string)
- *    - x-csrf-token
- *    - Opcional: user-agent
- * 4. Pegar en .env:
- *    UBER_EATS_COOKIE="sid=xxx; ..."
- *    UBER_EATS_CSRF_TOKEN="xxx"
- *    UBER_EATS_STORE_ID="xxx"
- * 
- * La sesión dura aprox 24-48h. Cuando expire, repetir el proceso.
- * 
- * ═══════════════════════════════════════════════════════════════
- * CÓMO ENCONTRAR LOS ENDPOINTS REALES:
- * ═══════════════════════════════════════════════════════════════
- * 
- * 1. En DevTools → Network, buscar requests XHR al navegar por "Pedidos"
- * 2. Los endpoints comunes son:
- *    - /rt/api/v1/orders (REST)
- *    - /graphql (algunos portales usan GraphQL)
- *    - WebSocket en /ws/... (para notificaciones en tiempo real)
- * 3. Copiar la URL completa y el body/params
- * 4. Actualizar las constantes ORDERS_ENDPOINT y parseOrders() abajo
+ * 1. Abrir Chrome → merchants-beta.ubereats.com → Loguearse
+ * 2. DevTools (F12) → Red → Filtrar "graphql"
+ * 3. Click en request "graphql" → Encabezados → copiar Cookie completa
+ * 4. Actualizar UBER_EATS_COOKIE en .env (o en Render Dashboard)
  */
 
-// ═══════════════════════════════════════════════════════════════
-// CONFIGURACIÓN — Actualizar con datos reales del portal
-// ═══════════════════════════════════════════════════════════════
+const UBER_GRAPHQL_URL = 'https://merchants-beta.ubereats.com/graphql';
+const UBER_STORE_ID = '9b61ddd3-f68c-53ad-a1a3-435f20fe87d2';
 
-const UBER_BASE_URL = 'https://merchants.ubereats.com';
-
-// Endpoint para obtener pedidos — ACTUALIZAR con el real
-// Opciones comunes:
-//   /rt/api/v1/orders?status=active
-//   /api/getActiveOrders?storeId=XXX
-//   /graphql (con query de orders)
-const ORDERS_ENDPOINT = '/api/getActiveOrders';
+// GraphQL query para obtener pedidos activos
+const GET_ACTIVE_ORDERS_QUERY = `
+query GetActiveOrders($getActiveOrdersRequest: GetActiveOrdersRequest!) {
+  getActiveOrders(getActiveOrdersRequest: $getActiveOrdersRequest) {
+    orders {
+      id
+      uuid
+      displayId
+      currentState
+      createdAt
+      estimatedReadyForPickupAt
+      eater {
+        name
+        phone
+      }
+      deliveryInfo {
+        address {
+          formattedAddress
+          address1
+          city
+        }
+      }
+      shoppingCart {
+        items {
+          title
+          quantity
+          price
+          selectedModifierGroups {
+            title
+            selectedItems {
+              title
+              price
+              quantity
+            }
+          }
+          specialInstructions
+        }
+      }
+      totalPrice
+      subtotalPrice
+      taxAmount
+      deliveryFee
+      orderType
+      specialInstructions
+    }
+  }
+}
+`;
 
 export class UberEatsScraper extends BaseScraper {
     constructor(apiUrl?: string) {
@@ -65,27 +78,38 @@ export class UberEatsScraper extends BaseScraper {
 
     protected async getAuth(): Promise<AuthContext> {
         const cookie = process.env.UBER_EATS_COOKIE;
-        const csrfToken = process.env.UBER_EATS_CSRF_TOKEN;
 
         if (!cookie) {
             this.logger.error('❌ UBER_EATS_COOKIE no configurado en .env');
-            this.logger.error('   → Abre merchants.ubereats.com, loguéate, y copia las cookies desde DevTools');
+            this.logger.error('   → Abre merchants-beta.ubereats.com, loguéate');
+            this.logger.error('   → DevTools → Red → graphql → Copiar cookie');
             return { valid: false, error: 'Missing UBER_EATS_COOKIE' };
         }
 
-        // Quick validation: try a lightweight request
+        // Quick validation: test GraphQL endpoint
         try {
-            const testRes = await fetch(`${UBER_BASE_URL}/manager`, {
-                method: 'HEAD',
+            const testRes = await fetch(UBER_GRAPHQL_URL, {
+                method: 'POST',
                 headers: {
                     'Cookie': cookie,
-                    ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://merchants-beta.ubereats.com',
+                    'Referer': 'https://merchants-beta.ubereats.com/orders/overview',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 },
-                redirect: 'manual',
+                body: JSON.stringify({
+                    operationName: 'GetActiveOrders',
+                    query: GET_ACTIVE_ORDERS_QUERY,
+                    variables: {
+                        getActiveOrdersRequest: {
+                            storeID: UBER_STORE_ID,
+                            locale: 'es-ES'
+                        }
+                    }
+                }),
             });
 
-            // If redirected to login page, session expired
-            if (testRes.status === 302 || testRes.status === 401) {
+            if (testRes.status === 401 || testRes.status === 403) {
                 this.logger.warn('⚠️ Sesión de Uber Eats expirada — necesita re-login manual');
                 return { valid: false, error: 'Session expired' };
             }
@@ -96,8 +120,9 @@ export class UberEatsScraper extends BaseScraper {
                 headers: {
                     'Cookie': cookie,
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+                    'Origin': 'https://merchants-beta.ubereats.com',
+                    'Referer': 'https://merchants-beta.ubereats.com/orders/overview',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 },
             };
         } catch (e: any) {
@@ -106,72 +131,74 @@ export class UberEatsScraper extends BaseScraper {
     }
 
     protected async fetchOrders(auth: AuthContext): Promise<any[]> {
-        const storeId = process.env.UBER_EATS_STORE_ID || '';
-        const url = `${UBER_BASE_URL}${ORDERS_ENDPOINT}${storeId ? `?storeId=${storeId}` : ''}`;
+        this.logger.debug(`  📡 Fetching orders via GraphQL (Store: ${UBER_STORE_ID})`);
 
-        this.logger.debug(`  📡 Fetching: ${url}`);
-
-        const res = await fetch(url, {
-            method: 'GET',
+        const res = await fetch(UBER_GRAPHQL_URL, {
+            method: 'POST',
             headers: auth.headers || {},
+            body: JSON.stringify({
+                operationName: 'GetActiveOrders',
+                query: GET_ACTIVE_ORDERS_QUERY,
+                variables: {
+                    getActiveOrdersRequest: {
+                        storeID: UBER_STORE_ID,
+                        locale: 'es-ES'
+                    }
+                }
+            }),
         });
 
         if (!res.ok) {
             const text = await res.text().catch(() => 'no body');
-            throw new Error(`Uber API returned ${res.status}: ${text.substring(0, 200)}`);
+            throw new Error(`Uber GraphQL returned ${res.status}: ${text.substring(0, 300)}`);
         }
 
         const data = await res.json();
 
-        // ═══════════════════════════════════════════════════════
-        // ADAPTAR según la estructura real de la respuesta
-        // Opciones comunes:
-        //   data.orders
-        //   data.data.orders
-        //   data (si es array directo)
-        // ═══════════════════════════════════════════════════════
-        const orders = data.orders || data.data?.orders || (Array.isArray(data) ? data : []);
+        // Handle GraphQL errors
+        if (data.errors && data.errors.length > 0) {
+            throw new Error(`GraphQL errors: ${data.errors.map((e: any) => e.message).join(', ')}`);
+        }
+
+        const orders = data.data?.getActiveOrders?.orders || [];
+        this.logger.log(`  📦 ${orders.length} pedidos activos encontrados`);
 
         return orders;
     }
 
     protected normalizeOrder(raw: any): CreateExternalOrderDto {
-        // ═══════════════════════════════════════════════════════
-        // ADAPTAR según la estructura real del JSON de Uber Eats
-        // 
-        // Estructura típica de un pedido Uber Eats:
-        // {
-        //   "uuid": "abc-123",
-        //   "displayId": "UE-001",
-        //   "currentState": "PLACED",
-        //   "eater": { "name": "Juan", "phone": "+569..." },
-        //   "deliveryAddress": { "formattedAddress": "Calle 123..." },
-        //   "shoppingCart": {
-        //     "items": [
-        //       { "title": "Ceviche Clásico", "quantity": 1, "price": 8900 }
-        //     ]
-        //   },
-        //   "totalPrice": 12500
-        // }
-        // ═══════════════════════════════════════════════════════
+        // Build items array from shoppingCart
+        const items = (raw.shoppingCart?.items || []).map((item: any) => {
+            // Include modifier details in notes
+            let modifierNotes = '';
+            if (item.selectedModifierGroups?.length) {
+                const mods = item.selectedModifierGroups
+                    .flatMap((g: any) => (g.selectedItems || []).map((si: any) => si.title))
+                    .filter(Boolean);
+                if (mods.length) modifierNotes = `[${mods.join(', ')}]`;
+            }
+
+            const notes = [item.specialInstructions, modifierNotes].filter(Boolean).join(' ');
+
+            return {
+                externalName: item.title || 'Producto',
+                quantity: item.quantity || 1,
+                unitPrice: item.price || 0,
+                notes: notes || undefined,
+            };
+        });
 
         return {
             platform: 'UBER_EATS',
             externalOrderId: raw.uuid || raw.displayId || raw.id || `UE-${Date.now()}`,
-            externalStatus: raw.currentState || raw.status || 'NEW',
-            customerName: raw.eater?.name || raw.customer?.name || 'Cliente Uber',
-            customerPhone: raw.eater?.phone || raw.customer?.phone,
-            deliveryAddress: raw.deliveryAddress?.formattedAddress 
-                || raw.deliveryAddress?.address
-                || raw.deliveryLocation?.address,
-            items: (raw.shoppingCart?.items || raw.items || raw.cart?.items || []).map((item: any) => ({
-                externalName: item.title || item.name || 'Producto',
-                quantity: item.quantity || 1,
-                unitPrice: item.price || item.unitPrice || 0,
-                notes: item.specialInstructions || item.notes || undefined,
-            })),
-            externalTotal: raw.totalPrice || raw.total || raw.orderTotal,
-            notes: raw.specialInstructions || raw.note,
+            externalStatus: raw.currentState || 'NEW',
+            customerName: raw.eater?.name || 'Cliente Uber',
+            customerPhone: raw.eater?.phone,
+            deliveryAddress: raw.deliveryInfo?.address?.formattedAddress
+                || raw.deliveryInfo?.address?.address1,
+            items,
+            externalTotal: raw.totalPrice || raw.subtotalPrice,
+            notes: raw.specialInstructions,
             rawPayload: raw,
         };
     }

@@ -489,10 +489,60 @@ export default function CashiersManagementPage() {
                                                 <span className="font-black text-slate-400 uppercase tracking-widest italic">Capital Inicial</span>
                                                 <span className="font-black text-slate-900">${Number(shift.startAmount).toLocaleString()}</span>
                                             </div>
-                                            <div className="flex justify-between items-center text-[10px] md:text-xs">
-                                                <span className="font-black text-slate-400 uppercase tracking-widest italic">Ventas POS ({salesInPos.length})</span>
-                                                <span className="font-black text-green-600">+$ {totalSalesValue.toLocaleString()}</span>
-                                            </div>
+
+                                            {/* === DESGLOSE POR CANAL === */}
+                                            {(() => {
+                                                // Build channel breakdown from sales
+                                                const channelData: Record<string, { count: number; total: number }> = {};
+                                                const sales = shift.sales || [];
+                                                for (const sale of sales) {
+                                                    const ch = sale.channel || 'OTHER';
+                                                    if (!channelData[ch]) channelData[ch] = { count: 0, total: 0 };
+                                                    channelData[ch].count++;
+                                                    channelData[ch].total += Number(sale.total);
+                                                }
+
+                                                const CHANNEL_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+                                                    POS: { label: 'POS (Local)', icon: '🏪', color: 'text-blue-600' },
+                                                    UBER_EATS: { label: 'Uber Eats', icon: '🟢', color: 'text-green-600' },
+                                                    PEDIDOS_YA: { label: 'PedidosYa', icon: '🔴', color: 'text-red-600' },
+                                                    WEB: { label: 'Web', icon: '🌐', color: 'text-purple-600' },
+                                                    WHATSAPP: { label: 'WhatsApp', icon: '💬', color: 'text-emerald-600' },
+                                                };
+
+                                                const channels = Object.entries(channelData);
+                                                const totalAllChannels = channels.reduce((s, [, v]) => s + v.total, 0);
+
+                                                if (channels.length === 0) {
+                                                    return (
+                                                        <div className="flex justify-between items-center text-[10px] md:text-xs">
+                                                            <span className="font-black text-slate-400 uppercase tracking-widest italic">Ventas</span>
+                                                            <span className="font-black text-slate-300 italic">Sin ventas</span>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <>
+                                                        {channels.map(([ch, data]) => {
+                                                            const cfg = CHANNEL_CONFIG[ch] || { label: ch, icon: '📦', color: 'text-slate-600' };
+                                                            return (
+                                                                <div key={ch} className="flex justify-between items-center text-[10px] md:text-xs">
+                                                                    <span className="font-black text-slate-400 uppercase tracking-widest italic">
+                                                                        {cfg.icon} {cfg.label} ({data.count})
+                                                                    </span>
+                                                                    <span className={`font-black ${cfg.color}`}>+${data.total.toLocaleString()}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-100">
+                                                            <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Ingresos</span>
+                                                            <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">${totalAllChannels.toLocaleString()}</span>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+
                                             <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-50">
                                                 <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Esperado</span>
                                                 <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">$ {systemValue.toLocaleString()}</span>

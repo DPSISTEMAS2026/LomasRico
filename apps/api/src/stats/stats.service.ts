@@ -74,6 +74,7 @@ export class StatsService {
         return (this.prisma as any).sale.groupBy({
             by: ['channel'],
             _count: { id: true },
+            _sum: { total: true },
             where: { status: { not: 'CANCELLED' } }
         });
     }

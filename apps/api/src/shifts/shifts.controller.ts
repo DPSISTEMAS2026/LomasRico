@@ -12,6 +12,11 @@ export class ShiftsController {
         return this.shiftsService.findAll({ cashierId, status });
     }
 
+    @Get(':id/summary')
+    getShiftSummary(@Param('id') id: string) {
+        return this.shiftsService.getShiftSummary(id);
+    }
+
     @Get('active/:cashierId')
     async getActiveShift(@Param('cashierId') cashierId: string) {
         const shift = await this.shiftsService.getActiveShift(cashierId);
