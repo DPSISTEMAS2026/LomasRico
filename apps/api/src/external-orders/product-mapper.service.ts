@@ -65,7 +65,7 @@ export class ProductMapperService implements OnModuleInit {
         "bowl's acevichados": "bowl acevichado",
         "bowl´s acevichados": "bowl acevichado",
         "bowls acevichados": "bowl acevichado",
-        "bowl acevichado": "bowl acevichado",
+
 
         // ═══════════════════════════════════════════════════════════
         // CEVICHES POR PESO — Uber Eats los nombra "500 gm Peruano"
