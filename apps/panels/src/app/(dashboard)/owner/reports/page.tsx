@@ -2,26 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import {
-    BarChart3,
-    Calendar,
-    Download,
-    TrendingUp,
-    DollarSign,
-    Package,
-    AlertTriangle,
-    ArrowUpRight,
-    ArrowDownRight,
-    CreditCard,
-    Users,
-    CheckCircle,
-    Clock,
-    Loader2
+    BarChart3, Calendar, Download, TrendingUp, DollarSign,
+    Package, AlertTriangle, CreditCard, Clock, Loader2,
+    Flame, ShoppingBag, ArrowUpRight, ArrowDownRight, Zap,
+    Trophy, AlertCircle
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 
-// Dynamic imports for charts to avoid SSR issues
+// Dynamic imports for charts
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
 const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
@@ -29,211 +19,312 @@ const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: fa
 const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
 const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
+const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
 
-export default function ReportsBusinessIntelligencePage() {
+const CHANNEL_COLORS: Record<string, { bg: string, text: string, fill: string, label: string }> = {
+    POS: { bg: 'bg-blue-500', text: 'text-blue-600', fill: '#3b82f6', label: '🖥️ POS' },
+    UBER_EATS: { bg: 'bg-green-500', text: 'text-green-600', fill: '#22c55e', label: '🟢 Uber Eats' },
+    PEDIDOS_YA: { bg: 'bg-red-500', text: 'text-red-600', fill: '#ef4444', label: '🔴 PedidosYa' },
+    WEB: { bg: 'bg-purple-500', text: 'text-purple-600', fill: '#a855f7', label: '🌐 Web' },
+    WHATSAPP: { bg: 'bg-emerald-500', text: 'text-emerald-600', fill: '#10b981', label: '💬 WhatsApp' },
+};
+
+export default function ReportsPage() {
     const [sales, setSales] = useState<any[]>([]);
-    const [dashboardData, setDashboardData] = useState<any>(null);
+    const [dashboard, setDashboard] = useState<any>(null);
+    const [topProducts, setTopProducts] = useState<any[]>([]);
+    const [inventory, setInventory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [period, setPeriod] = useState('7d');
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useEffect(() => { loadAll(); }, []);
 
-    const loadData = async () => {
+    const loadAll = async () => {
         try {
-            const [salesRes, dashRes] = await Promise.all([
+            const [salesRes, dashRes, topRes, invRes] = await Promise.all([
                 authFetch(`${API_URL}/sales`),
-                authFetch(`${API_URL}/stats/dashboard`)
+                authFetch(`${API_URL}/stats/dashboard`),
+                authFetch(`${API_URL}/stats/top-products`),
+                authFetch(`${API_URL}/inventory`),
             ]);
-
             if (salesRes.ok) setSales(await salesRes.json());
-            if (dashRes.ok) setDashboardData(await dashRes.json());
-        } catch (e) {
-            console.error('Failed to load real data', e);
-        } finally {
-            setLoading(false);
-        }
+            if (dashRes.ok) setDashboard(await dashRes.json());
+            if (topRes.ok) setTopProducts(await topRes.json());
+            if (invRes.ok) setInventory(await invRes.json());
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
-    // Calculate Stats
-    const totalRevenue = sales.reduce((acc, sale) => acc + Number(sale.total), 0);
-    const avgTicket = sales.length > 0 ? totalRevenue / sales.length : 0;
-    const pendingOrders = sales.filter(s => s.status === 'PENDING' || s.status === 'PREPARING').length;
+    // Calculations
+    const totalRevenue = sales.reduce((a, s) => a + Number(s.total), 0);
+    const completedSales = sales.filter(s => s.status === 'COMPLETED' || s.status === 'DELIVERED');
+    const avgTicket = completedSales.length > 0 ? completedSales.reduce((a, s) => a + Number(s.total), 0) / completedSales.length : 0;
 
-    // Chart Data Preparation (Last 7 Days)
-    const chartData = sales.slice(0, 10).map(s => ({
-        name: new Date(s.createdAt).toLocaleDateString('es-CL', { weekday: 'short' }),
-        total: s.total
-    })).reverse();
+    // Daily chart data (last 7 days)
+    const dailyData = (() => {
+        const days: Record<string, number> = {};
+        const now = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now); d.setDate(d.getDate() - i);
+            const key = d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric' });
+            days[key] = 0;
+        }
+        sales.forEach(s => {
+            if (s.status === 'CANCELLED') return;
+            const d = new Date(s.createdAt);
+            const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
+            if (diff <= 6) {
+                const key = d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric' });
+                if (days[key] !== undefined) days[key] += Number(s.total);
+            }
+        });
+        return Object.entries(days).map(([name, total]) => ({ name, total }));
+    })();
+
+    // Channel breakdown
+    const channelData = dashboard?.orders?.byChannel || [];
+
+    // Low stock items
+    const lowStockItems = inventory.filter(i =>
+        i.isActive !== false && (i.currentStock || 0) < (i.minStockThreshold || 10)
+    ).sort((a, b) => (a.currentStock || 0) - (b.currentStock || 0)).slice(0, 8);
+
+    // Stock valorizado
+    const totalStockValue = inventory.reduce((a, i) =>
+        a + ((i.currentStock || 0) * (i.costPerUnit || 0)), 0
+    );
 
     if (loading) return (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Generando Auditoría de Ventas...</p>
+            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Generando Auditoría...</p>
         </div>
     );
 
     return (
-        <div className="space-y-6 md:space-y-12 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
             {/* Header */}
-            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
                 <div>
                     <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                         AUDITORÍA <span className="text-orange-500">GLOBAL</span>
                     </h1>
                     <p className="text-slate-400 font-bold uppercase text-[8px] md:text-[10px] tracking-widest mt-2 px-1">
-                        Métricas de Rendimiento y Salud Financiera
+                        Métricas de Rendimiento · Inventario · Márgenes
                     </p>
                 </div>
-
-                <div className="flex flex-row gap-3 w-full lg:w-auto">
-                    <button
-                        onClick={() => setPeriod(prev => prev === '7d' ? '30d' : '7d')}
-                        className="flex-1 lg:flex-none px-4 md:px-6 py-3 md:py-4 bg-white border border-slate-100 rounded-xl md:rounded-3xl flex items-center justify-center gap-2 md:gap-3 font-black text-[9px] md:text-[10px] uppercase tracking-widest text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all shadow-sm italic whitespace-nowrap"
-                    >
-                        <Calendar size={14} className="text-orange-500 shrink-0" /> <span className="truncate">{period === '7d' ? 'Últimos 7 días' : 'Este Mes'}</span>
-                    </button>
-                    <button
-                        onClick={() => alert('Exportando reporte a Excel...')}
-                        className="flex-1 lg:flex-none px-4 md:px-8 py-3 md:py-4 bg-slate-900 text-white rounded-xl md:rounded-3xl flex items-center justify-center gap-2 md:gap-3 font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 hover:bg-orange-600 transition-all italic whitespace-nowrap"
-                    >
-                        <Download size={14} className="shrink-0" /> <span className="truncate">Exportar</span>
-                    </button>
-                </div>
+                <button onClick={() => alert('Exportando reporte...')}
+                    className="px-6 py-3 bg-slate-900 text-white rounded-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 hover:bg-orange-600 transition-all italic">
+                    <Download size={14} /> Exportar
+                </button>
             </header>
 
-            {/* KPI Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <KpiCard title="Ventas Acumuladas" value={`$${totalRevenue.toLocaleString()}`} icon={<DollarSign />} note="Histórico" />
-                <KpiCard title="Tickets Emitidos" value={sales.length.toString()} icon={<CreditCard />} note="Tickets" />
-                <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString()}`} icon={<TrendingUp />} note="Performance" />
-                <KpiCard title="Flujo en Cocina" value={pendingOrders.toString()} icon={<Clock />} note="Pendientes" highlight />
+            {/* KPI Grid — 5 cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                <KpiCard title="Ventas Hoy" value={`$${(dashboard?.sales?.today || 0).toLocaleString()}`} icon={<DollarSign />}
+                    trend={dashboard?.sales?.trend} highlight />
+                <KpiCard title="Ventas Mes" value={`$${(dashboard?.sales?.month || 0).toLocaleString()}`} icon={<BarChart3 />} />
+                <KpiCard title="Tickets" value={completedSales.length.toString()} icon={<CreditCard />} />
+                <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString()}`} icon={<TrendingUp />} />
+                <KpiCard title="Stock Valorizado" value={`$${Math.round(totalStockValue).toLocaleString()}`} icon={<Package />} />
             </div>
 
-            {/* Charts & Highlights */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                <div className="lg:col-span-2 bg-white p-5 md:p-10 rounded-3xl md:rounded-[3rem] shadow-sm border border-slate-100 border-b-8 border-b-slate-900">
-                    <div className="flex justify-between items-center mb-6 md:mb-10">
-                        <h3 className="text-lg md:text-2xl font-black italic tracking-tighter uppercase text-slate-900">Curva de Ingresos</h3>
+            {/* Main Content: Chart + Channel Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                {/* Revenue Chart */}
+                <div className="lg:col-span-2 bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-slate-900">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Ingresos 7 Días</h3>
                         <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                            <span className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Live Feed</span>
+                            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest italic">Live</span>
                         </div>
                     </div>
-                    <div className="h-[200px] sm:h-[250px] md:h-[350px] w-full">
+                    <div className="h-[220px] md:h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData}>
+                            <BarChart data={dailyData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis
-                                    dataKey="name"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }}
-                                    dy={10}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 8, fontWeight: 900, fill: '#94a3b8' }}
-                                    tickFormatter={(val) => `$${val / 1000}k`}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: '#f8fafc' }}
-                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                                    itemStyle={{ color: '#0f172a', fontWeight: 900, textTransform: 'uppercase', fontSize: '9px' }}
-                                    formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Venta']}
-                                />
-                                <Bar dataKey="total" fill="#f97316" radius={[8, 8, 8, 8]} barSize={24} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false}
+                                    tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false}
+                                    tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }}
+                                    tickFormatter={(v) => v >= 1000 ? `$${v / 1000}k` : `$${v}`} />
+                                <Tooltip cursor={{ fill: '#f8fafc' }}
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                    formatter={(v: any) => [`$${Number(v).toLocaleString()}`, 'Venta']} />
+                                <Bar dataKey="total" fill="#f97316" radius={[8, 8, 4, 4]} barSize={28} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-slate-900 text-white p-6 md:p-10 rounded-3xl md:rounded-[3rem] shadow-2xl relative overflow-hidden group flex flex-col justify-between border-b-8 border-b-orange-500 min-h-[250px] md:min-h-[300px]">
-                    <div className="relative z-10">
-                        <div className="w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-6 md:mb-8 border border-white/10 group-hover:bg-orange-500 transition-all duration-700">
-                            <Package className="text-white w-6 h-6 md:w-8 md:h-8" />
-                        </div>
-                        <h3 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase leading-none mb-2 md:mb-4">MÁS <span className="text-orange-500">PEDIDO</span></h3>
-                        <p className="text-slate-400 font-bold text-[9px] md:text-xs uppercase tracking-widest italic">Favorito de la Audiencia</p>
+                {/* Channel Breakdown */}
+                <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border-b-4 border-b-orange-500 flex flex-col">
+                    <h3 className="text-lg font-black italic tracking-tighter uppercase mb-6">Ventas por <span className="text-orange-400">Canal</span></h3>
+                    <div className="space-y-3 flex-1">
+                        {channelData.length === 0 && <p className="text-slate-500 text-xs italic">Sin datos de canales</p>}
+                        {channelData.map((ch: any) => {
+                            const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-400', fill: '#64748b', label: ch.channel };
+                            const pct = totalRevenue > 0 ? ((ch._sum?.total || 0) / totalRevenue * 100) : 0;
+                            return (
+                                <div key={ch.channel} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-black uppercase italic">{cfg.label}</span>
+                                        <span className="text-orange-400 font-black text-sm italic">${(ch._sum?.total || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full ${cfg.bg}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+                                        </div>
+                                        <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-slate-500 mt-1">{ch._count?.id || 0} pedidos</p>
+                                </div>
+                            );
+                        })}
                     </div>
-
-                    <div className="relative z-10 mt-6 md:mt-12 bg-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 backdrop-blur-sm">
-                        <h2 className="text-xl md:text-4xl font-black uppercase tracking-tighter leading-none italic group-hover:text-orange-500 transition-colors truncate">
-                            {dashboardData?.topProduct?.name || 'Ceviche Mixto'}
-                        </h2>
-                        <div className="mt-3 md:mt-6 flex flex-wrap items-center gap-3 md:gap-4">
-                            <div className="px-3 md:px-4 py-1.5 md:py-2 bg-orange-500 text-white rounded-full text-[9px] md:text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20">
-                                {dashboardData?.topProduct?.quantity || 128} Vendidos
-                            </div>
-                            <span className="text-slate-500 text-[8px] md:text-[9px] font-black uppercase tracking-widest italic">+12% vs ayer</span>
-                        </div>
-                    </div>
-
-                    {/* Aura Decoration */}
-                    <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-orange-500 rounded-full blur-[120px] opacity-10 group-hover:opacity-30 transition-opacity duration-1000" />
                 </div>
             </div>
 
-            {/* Detailed Transaction Log */}
-            <section className="bg-white rounded-3xl md:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden border-b-8 border-b-slate-900">
-                <div className="p-5 md:p-10 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h3 className="text-lg md:text-2xl font-black italic tracking-tighter uppercase text-slate-900">Bitácora de Ventas</h3>
-                    <button
-                        onClick={() => alert('Cargando historial completo de transacciones...')}
-                        className="text-[8px] md:text-[10px] font-black uppercase text-orange-500 hover:underline italic tracking-widest"
-                    >
-                        Ver Historial
-                    </button>
+            {/* Top Products + Low Stock */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                {/* Top 5 Products */}
+                <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-orange-500">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <Trophy size={18} className="text-orange-500" />
+                        </div>
+                        <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Top 5 Productos</h3>
+                    </div>
+                    <div className="space-y-3">
+                        {topProducts.length === 0 && <p className="text-slate-400 text-xs italic font-bold">Sin datos de productos</p>}
+                        {topProducts.map((p: any, i: number) => {
+                            const maxQty = topProducts[0]?.quantity || 1;
+                            const pct = (p.quantity / maxQty) * 100;
+                            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                            return (
+                                <div key={i} className="group">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="text-lg">{medals[i]}</span>
+                                            <span className="font-black text-sm uppercase italic tracking-tight text-slate-900 truncate">{p.name}</span>
+                                        </div>
+                                        <span className="font-black text-orange-500 text-sm italic shrink-0 ml-2">{p.quantity} un</span>
+                                    </div>
+                                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-700"
+                                            style={{ width: `${pct}%` }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <div className="overflow-x-auto no-scrollbar">
-                    <table className="w-full text-left min-w-[800px] md:min-w-0">
+                {/* Low Stock Alerts */}
+                <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-red-500">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                                <AlertCircle size={18} className="text-red-500" />
+                            </div>
+                            <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Alertas Stock</h3>
+                        </div>
+                        <span className="bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black">{lowStockItems.length}</span>
+                    </div>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {lowStockItems.length === 0 && (
+                            <div className="text-center py-8">
+                                <span className="text-3xl">✅</span>
+                                <p className="text-sm font-black text-green-600 uppercase italic mt-2">Stock OK</p>
+                                <p className="text-[10px] text-slate-400 font-bold">Todos los insumos por encima del mínimo</p>
+                            </div>
+                        )}
+                        {lowStockItems.map((item: any) => {
+                            const threshold = item.minStockThreshold || 10;
+                            const pct = Math.min(((item.currentStock || 0) / threshold) * 100, 100);
+                            const isCritical = pct < 25;
+                            return (
+                                <div key={item.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCritical ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[9px] font-black text-white ${isCritical ? 'bg-red-500' : 'bg-orange-400'}`}>
+                                        {item.category?.substring(0, 3) || '???'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-black text-xs uppercase italic tracking-tight text-slate-900 truncate">{item.name}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${isCritical ? 'bg-red-500' : 'bg-orange-400'}`} style={{ width: `${pct}%` }} />
+                                            </div>
+                                            <span className="text-[9px] font-black text-slate-500">{item.currentStock || 0}/{threshold} {item.unit}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Sales Log */}
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden border-b-4 border-b-slate-900">
+                <div className="p-5 md:p-8 border-b border-slate-50 flex justify-between items-center">
+                    <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Últimas Ventas</h3>
+                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest italic">{sales.length} registros</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[700px]">
                         <thead className="bg-slate-50/50">
-                            <tr className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
-                                <th className="px-5 md:px-10 py-5 md:py-8 whitespace-nowrap">Venta / Código</th>
-                                <th className="px-5 py-5 md:py-8 whitespace-nowrap">Cronología</th>
-                                <th className="px-5 py-5 md:py-8 text-center uppercase tracking-tighter whitespace-nowrap">Canal</th>
-                                <th className="px-5 py-5 md:py-8 text-right whitespace-nowrap">Estatus</th>
-                                <th className="px-5 md:px-10 py-5 md:py-8 text-right pr-6 md:pr-14 text-slate-900 whitespace-nowrap">Liquidado</th>
+                            <tr className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 italic">
+                                <th className="px-6 py-5">Código</th>
+                                <th className="px-4 py-5">Fecha</th>
+                                <th className="px-4 py-5 text-center">Canal</th>
+                                <th className="px-4 py-5 text-center">Estado</th>
+                                <th className="px-6 py-5 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {sales.slice(0, 10).map((sale) => (
-                                <tr key={sale.id} className="group hover:bg-slate-50 transition-colors">
-                                    <td className="px-5 md:px-10 py-4 md:py-6">
-                                        <div className="flex items-center gap-2 md:gap-3">
-                                            <div className="w-1 md:w-2 h-6 md:h-8 bg-slate-900 rounded-full group-hover:bg-orange-500 transition-colors shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="font-black italic text-xs md:text-base tracking-tighter text-slate-900 uppercase truncate">#{sale.code || 'SALE-MASTER'}</p>
-                                                <p className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-0.5 truncate">ID: {sale.id.substring(0, 8)}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-5 py-4 md:py-6 whitespace-nowrap">
-                                        <p className="font-black text-[9px] md:text-xs text-slate-500 italic uppercase">{new Date(sale.createdAt).toLocaleDateString('es-CL')}</p>
-                                        <p className="text-[8px] md:text-[10px] font-bold text-slate-300 uppercase mt-0.5">{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                    </td>
-                                    <td className="px-5 py-4 md:py-6 text-center">
-                                        <span className={`px-2.5 md:px-4 py-1 md:py-1.5 rounded-full text-[8px] md:text-[9px] font-black uppercase italic tracking-widest
-                                            ${sale.channel === 'WEB' ? 'bg-indigo-50 text-indigo-500' : 'bg-blue-50 text-blue-500'}`}>
-                                            {sale.channel}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-4 md:py-6 transition-all text-right">
-                                        <div className="flex items-center justify-end gap-1.5 md:gap-2">
-                                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shrink-0 ${sale.status === 'COMPLETED' ? 'bg-green-500' : 'bg-orange-500'}`} />
-                                            <span className="font-black italic uppercase text-[8px] md:text-[10px] text-slate-900">{sale.status}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-5 md:px-10 py-4 md:py-6 text-right pr-6 md:pr-14">
-                                        <p className="text-sm md:text-xl font-black italic tracking-tighter text-slate-900 group-hover:text-orange-500 transition-colors">
-                                            ${Number(sale.total).toLocaleString()}
-                                        </p>
-                                    </td>
-                                </tr>
-                            ))}
+                            {sales.slice(0, 15).map((sale) => {
+                                const chCfg = CHANNEL_COLORS[sale.channel] || { bg: 'bg-slate-400', label: sale.channel };
+                                const statusColors: Record<string, string> = {
+                                    COMPLETED: 'bg-green-100 text-green-700',
+                                    DELIVERED: 'bg-green-100 text-green-700',
+                                    PREPARING: 'bg-blue-100 text-blue-700',
+                                    WAITING: 'bg-orange-100 text-orange-700',
+                                    CANCELLED: 'bg-red-100 text-red-700',
+                                    PENDING: 'bg-yellow-100 text-yellow-700',
+                                };
+                                return (
+                                    <tr key={sale.id} className="group hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <p className="font-black italic text-sm tracking-tighter text-slate-900 uppercase">#{sale.code || sale.id.slice(0, 6)}</p>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <p className="text-xs font-bold text-slate-500 italic">{new Date(sale.createdAt).toLocaleDateString('es-CL')}</p>
+                                            <p className="text-[9px] font-bold text-slate-300">{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase italic tracking-wider ${
+                                                sale.channel === 'UBER_EATS' ? 'bg-green-100 text-green-700' :
+                                                sale.channel === 'PEDIDOS_YA' ? 'bg-red-100 text-red-700' :
+                                                sale.channel === 'POS' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-purple-100 text-purple-700'
+                                            }`}>{chCfg.label}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${statusColors[sale.status] || 'bg-slate-100 text-slate-500'}`}>
+                                                {sale.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <p className="text-base font-black italic tracking-tighter text-slate-900 group-hover:text-orange-500 transition-colors">
+                                                ${Number(sale.total).toLocaleString()}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -242,24 +333,31 @@ export default function ReportsBusinessIntelligencePage() {
     );
 }
 
-function KpiCard({ title, value, icon, note, highlight }: { title: string, value: string, icon: any, note: string, highlight?: boolean }) {
+function KpiCard({ title, value, icon, trend, highlight }: { title: string, value: string, icon: any, trend?: string, highlight?: boolean }) {
+    const trendNum = parseFloat(trend || '0');
+    const isPositive = trendNum >= 0;
     return (
-        <div className={`p-6 md:p-8 rounded-[2rem] border shadow-sm transition-all duration-500 flex flex-col justify-between h-40 md:h-48 group hover:-translate-y-2
-            ${highlight ? 'bg-orange-500 border-orange-400 text-white shadow-orange-500/20' : 'bg-white border-slate-100 hover:border-slate-900 text-slate-900'}`}>
-            <div className="flex justify-between items-start">
-                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500 shrink-0
-                    ${highlight ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-300 group-hover:bg-slate-900 group-hover:text-white'}`}>
-                    <div className="scale-75 md:scale-100">{icon}</div>
+        <div className={`p-5 md:p-6 rounded-2xl border shadow-sm transition-all duration-300 group hover:-translate-y-1 ${
+            highlight ? 'bg-orange-500 border-orange-400 text-white col-span-2 sm:col-span-1' : 'bg-white border-slate-100 hover:border-slate-300'
+        }`}>
+            <div className="flex justify-between items-start mb-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    highlight ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-300 group-hover:bg-slate-900 group-hover:text-white'
+                }`}>
+                    <div className="scale-75">{icon}</div>
                 </div>
-                <div className={`px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest italic whitespace-nowrap
-                    ${highlight ? 'bg-white text-orange-600 shadow-xl shadow-orange-600/10' : 'bg-slate-50 text-slate-400'}`}>
-                    {note}
-                </div>
+                {trend && (
+                    <div className={`flex items-center gap-0.5 px-2 py-1 rounded-full text-[9px] font-black ${
+                        highlight ? 'bg-white/20' :
+                        isPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'
+                    }`}>
+                        {isPositive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                        {Math.abs(trendNum).toFixed(0)}%
+                    </div>
+                )}
             </div>
-            <div>
-                <p className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-1 italic leading-none ${highlight ? 'text-orange-200' : 'text-slate-400'}`}>{title}</p>
-                <h3 className="text-2xl md:text-4xl font-black italic tracking-tighter leading-none">{value}</h3>
-            </div>
+            <p className={`text-[8px] font-black uppercase tracking-widest italic ${highlight ? 'text-orange-200' : 'text-slate-400'}`}>{title}</p>
+            <h3 className="text-xl md:text-2xl font-black italic tracking-tighter leading-none mt-1">{value}</h3>
         </div>
     );
 }

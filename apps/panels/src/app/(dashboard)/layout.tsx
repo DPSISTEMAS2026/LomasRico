@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -36,6 +36,7 @@ interface SidebarItemProps {
 const SidebarItem = ({ href, icon: Icon, label, active, collapsed, onClick }: SidebarItemProps) => (
     <Link
         href={href}
+        prefetch={true}
         onClick={onClick}
         title={collapsed ? label : undefined}
         className={`flex items-center gap-3 rounded-2xl transition-all duration-300 ${
@@ -250,7 +251,9 @@ export default function DashboardLayout({
                     isKitchen ? 'p-0 max-w-none h-full' :
                     'max-w-7xl mx-auto p-4 md:p-10'
                 }`}>
-                    {children}
+                    <div className="animate-in fade-in duration-300">
+                        {children}
+                    </div>
                 </div>
             </main>
         </div>
