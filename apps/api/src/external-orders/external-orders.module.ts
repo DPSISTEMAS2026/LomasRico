@@ -3,6 +3,7 @@ import { ExternalOrdersController } from './external-orders.controller';
 import { ExternalOrdersService } from './external-orders.service';
 import { ProductMapperService } from './product-mapper.service';
 import { UberScraperCronService } from './uber-scraper-cron.service';
+import { DailyHealthCheckService } from './daily-health-check.service';
 import { DatabaseModule } from '../database/database.module';
 import { SalesModule } from '../sales/sales.module';
 
@@ -12,7 +13,7 @@ import { SalesModule } from '../sales/sales.module';
         forwardRef(() => SalesModule),
     ],
     controllers: [ExternalOrdersController],
-    providers: [ExternalOrdersService, ProductMapperService, UberScraperCronService],
+    providers: [ExternalOrdersService, ProductMapperService, UberScraperCronService, DailyHealthCheckService],
     exports: [ExternalOrdersService, ProductMapperService],
 })
 export class ExternalOrdersModule {}

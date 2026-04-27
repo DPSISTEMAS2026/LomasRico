@@ -614,9 +614,11 @@ model Promotion {
   targetProductId String?
   targetProduct   SellingProduct? @relation(fields: [targetProductId], references: [id])
 
-  // Opcional: Banner asocido
-  bannerImageKey  String?      // Relación al Storage de "assets" ("banner-123.jpg")
-  bannerImageUrl  String?      // URL publica del banner si está en la web
+  // Opcional: Banners asociados (desktop + mobile)
+  bannerImageKey    String?      // LEGACY — Relación al Storage
+  bannerImageUrl    String?      // LEGACY — URL pública genérica
+  bannerDesktopUrl  String?      // Banner panorámico para PC (1920×600)
+  bannerMobileUrl   String?      // Banner cuadrado para celular (600×400)
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

@@ -235,12 +235,51 @@ export class ShiftsService {
             paymentBreakdown[pm].total += Number(sale.total);
         }
 
+        // ✅ Comisiones por plataforma externa
+        // Uber Eats cobra ~15%, PedidosYa ~20% del total bruto
+        const PLATFORM_COMMISSIONS: Record<string, { rate: number; label: string }> = {
+            UBER_EATS: { rate: 0.15, label: 'Uber Eats' },
+            PEDIDOS_YA: { rate: 0.20, label: 'PedidosYa' },
+        };
+
+        const platformCommissions: Record<string, {
+            label: string;
+            count: number;
+            gross: number;
+            commissionRate: number;
+            commission: number;
+            net: number;
+        }> = {};
+
+        let totalCommissions = 0;
+
+        for (const [channel, config] of Object.entries(PLATFORM_COMMISSIONS)) {
+            const channelData = channelBreakdown[channel];
+            if (channelData && channelData.count > 0) {
+                const commission = Math.round(channelData.total * config.rate);
+                totalCommissions += commission;
+                platformCommissions[channel] = {
+                    label: config.label,
+                    count: channelData.count,
+                    gross: channelData.total,
+                    commissionRate: config.rate,
+                    commission,
+                    net: channelData.total - commission,
+                };
+            }
+        }
+
+        const totalRevenue = allSalesInPeriod.reduce((sum: number, s: any) => sum + Number(s.total), 0);
+
         return {
             ...shift,
             sales: allSalesInPeriod,
             channelBreakdown,
             paymentBreakdown,
-            totalRevenue: allSalesInPeriod.reduce((sum: number, s: any) => sum + Number(s.total), 0),
+            platformCommissions,
+            totalCommissions,
+            totalRevenue,
+            totalNetRevenue: totalRevenue - totalCommissions,
             totalOrders: allSalesInPeriod.length,
         };
     }

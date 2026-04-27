@@ -185,14 +185,30 @@ export class PaymentsService {
                 }
             });
 
-            // Registrar en el turno de caja si es POS
-            if (sale.shiftId) {
+            // Registrar en el turno de caja
+            // ✅ FIX: Si la venta no tiene shiftId (WEB, etc.), buscar turno activo
+            let shiftId = sale.shiftId;
+            if (!shiftId) {
+                const activeShift = await tx.cashShift.findFirst({
+                    where: { status: 'OPEN' },
+                    orderBy: { openingTime: 'desc' },
+                });
+                if (activeShift) {
+                    shiftId = activeShift.id;
+                    // Vincular la venta al turno para futuros reportes
+                    await tx.sale.update({
+                        where: { id: orderId },
+                        data: { shiftId },
+                    });
+                }
+            }
+            if (shiftId) {
                 await tx.cashTransaction.create({
                     data: {
-                        shiftId: sale.shiftId,
+                        shiftId,
                         type: 'SALE_INCOME',
                         amount: sale.total,
-                        description: `Pago Mercado Pago Venta ${sale.code}`,
+                        description: `Pago ${sale.channel === 'WEB' ? 'Web' : sale.channel} ${sale.code} (Mercado Pago)`,
                         relatedSaleId: sale.id
                     }
                 });

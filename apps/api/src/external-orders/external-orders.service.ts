@@ -143,7 +143,7 @@ export class ExternalOrdersService {
             const saleDto: CreateSaleDto = {
                 channel: channel as any,
                 items: saleItems,
-                note: this.buildNote(dto),
+                note: this.buildNote(dto, mappingLog),
                 // External orders are already paid through the platform
                 paymentMethod: 'OTHER',
                 status: 'CONFIRMED',
@@ -168,6 +168,23 @@ export class ExternalOrdersService {
             }
 
             const sale = await this.salesService.create(saleDto);
+
+            // ✅ FIX: Usar el total REAL de la plataforma externa, no el calculado con precios internos.
+            // Lo que Uber/PedidosYa transfiere puede diferir de nuestros precios de carta.
+            if (dto.externalTotal && dto.externalTotal > 0 && dto.externalTotal !== Number(sale.total)) {
+                await (this.prisma as any).sale.update({
+                    where: { id: sale.id },
+                    data: { total: dto.externalTotal },
+                });
+                // También actualizar la CashTransaction asociada para que el reporte de caja cuadre
+                await (this.prisma as any).cashTransaction.updateMany({
+                    where: { relatedSaleId: sale.id, type: 'SALE_INCOME' },
+                    data: { amount: dto.externalTotal },
+                });
+                this.logger.log(
+                    `💲 Total ajustado: interno=$${sale.total} → externo=$${dto.externalTotal} (${platform}#${externalOrderId})`,
+                );
+            }
 
             // 5. Record the external order link
             await this.recordExternalOrder(dto, sale.id, mappingLog);
@@ -331,7 +348,7 @@ export class ExternalOrdersService {
         }
     }
 
-    private buildNote(dto: CreateExternalOrderDto): string {
+    private buildNote(dto: CreateExternalOrderDto, mappingLog?: MappingLogEntry[]): string {
         const lines: string[] = [];
 
         // Line 1: Platform + Order ID + Customer
@@ -339,16 +356,30 @@ export class ExternalOrdersService {
         if (dto.customerName) header.push(`👤 ${dto.customerName}`);
         lines.push(header.join(' | '));
 
-        // Line 2+: Each item on its own line (clear for kitchen)
+        // Line 2+: Each item with INTERNAL name (readable for kitchen)
         for (const item of dto.items) {
-            let line = `• ${item.quantity}x ${item.externalName}`;
-            if (item.notes) line += ` → ${item.notes}`;
+            // Try to find the mapped internal product name
+            const mapped = mappingLog?.find(
+                m => m.externalName === item.externalName && m.mapped,
+            );
+            const displayName = mapped?.internalProduct || item.externalName;
+
+            let line = `• ${item.quantity}x ${displayName}`;
             lines.push(line);
+
+            // Add modifiers as indented sub-lines (structured from scraper)
+            if (item.notes) {
+                // Notes now come as "🥩 Proteínas: Salmón, Camarón | 🌶️ Salsas: Merquén"
+                const groups = item.notes.split(' | ');
+                for (const group of groups) {
+                    lines.push(`   ${group.trim()}`);
+                }
+            }
         }
 
         // Total from external platform (for admin reference)
         if (dto.externalTotal && dto.externalTotal > 0) {
-            lines.push(`💰 Total Uber: $${dto.externalTotal.toLocaleString('es-CL')}`);
+            lines.push(`💰 Total: $${dto.externalTotal.toLocaleString('es-CL')}`);
         }
 
         // Delivery info

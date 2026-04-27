@@ -17,6 +17,16 @@ export class PromotionsController {
         return this.service.findAll();
     }
 
+    /** 
+     * GET /promotions/active-banners
+     * Public — Retorna solo banners activos para el carousel de la web.
+     * Filtrado por fecha, día y horario chileno.
+     */
+    @Get('active-banners')
+    getActiveBanners() {
+        return this.service.findActiveBanners();
+    }
+
     @Get(':id')
     @UseGuards(JwtAuthGuard)
     findOne(@Param('id') id: string) {

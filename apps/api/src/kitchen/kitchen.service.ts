@@ -94,6 +94,44 @@ export class KitchenService {
                 });
             }
 
+            // ✅ REVERSIÓN DE INVENTARIO AL CANCELAR
+            if (status === 'CANCELLED') {
+                const saleItems = await tx.saleItem.findMany({
+                    where: { saleId: ticket.saleId },
+                    include: { recipeSnapshot: true }
+                });
+
+                for (const item of saleItems) {
+                    if (item.recipeSnapshot?.resolvedBoM) {
+                        const bom = item.recipeSnapshot.resolvedBoM as any[];
+                        for (const bomItem of bom) {
+                            const totalQty = bomItem.quantity * item.quantity;
+                            await tx.inventoryItem.update({
+                                where: { id: bomItem.inventoryItemId },
+                                data: {
+                                    currentStock: { increment: totalQty },
+                                    movements: {
+                                        create: {
+                                            quantity: totalQty,
+                                            reason: 'CANCELLATION',
+                                            referenceId: ticket.saleId
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Revertir la CashTransaction asociada
+                await tx.cashTransaction.updateMany({
+                    where: { relatedSaleId: ticket.saleId, type: 'SALE_INCOME' },
+                    data: { type: 'CANCELLED_SALE', description: `[CANCELADA] Venta ${ticket.sale.code || ''}` }
+                });
+
+                console.log(`🔄 Inventario revertido + CashTransaction anulada para Sale ${ticket.saleId}`);
+            }
+
             return updatedTicket;
         });
     }

@@ -81,14 +81,22 @@ export class BannersService {
         }
     }
 
-    async upload(buffer: Buffer, originalName: string, mimeType: string) {
+    async upload(buffer: Buffer, originalName: string, mimeType: string, bannerType?: string) {
         if (!this.supabase) {
             throw new InternalServerErrorException('Supabase Storage no configurado. Verifica tu .env');
         }
 
-        // Nombre único para evitar colisiones
         const ext = originalName.split('.').pop() || 'jpg';
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+
+        // Si se especifica tipo, usar prefijo determinista y reemplazar el anterior
+        let filename: string;
+        if (bannerType === 'desktop' || bannerType === 'mobile') {
+            // Eliminar el banner anterior del mismo tipo
+            await this.deleteByPrefix(`${bannerType}-`);
+            filename = `${bannerType}-${Date.now()}.${ext}`;
+        } else {
+            filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+        }
 
         const { error } = await this.supabase.storage
             .from(BUCKET)
@@ -104,11 +112,33 @@ export class BannersService {
 
         const { data: urlData } = this.supabase.storage.from(BUCKET).getPublicUrl(filename);
 
-        this.logger.log(`[Banners] Banner subido: ${filename} → ${urlData.publicUrl}`);
+        this.logger.log(`[Banners] Banner subido: ${filename} (tipo=${bannerType || 'auto'}) → ${urlData.publicUrl}`);
         return {
             name: filename,
             url: urlData.publicUrl,
+            type: bannerType || 'auto',
         };
+    }
+
+    /**
+     * Elimina todos los archivos que empiecen con un prefijo dado.
+     * Usado para reemplazar el banner desktop/mobile anterior.
+     */
+    private async deleteByPrefix(prefix: string) {
+        if (!this.supabase) return;
+        try {
+            const { data } = await this.supabase.storage.from(BUCKET).list('');
+            const toDelete = (data || [])
+                .filter((f: any) => f.name.toLowerCase().startsWith(prefix))
+                .map((f: any) => f.name);
+            
+            if (toDelete.length > 0) {
+                await this.supabase.storage.from(BUCKET).remove(toDelete);
+                this.logger.log(`[Banners] Eliminados ${toDelete.length} banners anteriores con prefijo "${prefix}"`);
+            }
+        } catch (err: any) {
+            this.logger.error('[Banners] Error en deleteByPrefix:', err.message);
+        }
     }
 
     async delete(filename: string) {

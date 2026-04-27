@@ -536,9 +536,76 @@ export default function CashiersManagementPage() {
                                                             );
                                                         })}
                                                         <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-100">
-                                                            <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Ingresos</span>
+                                                            <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Bruto</span>
                                                             <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">${totalAllChannels.toLocaleString()}</span>
                                                         </div>
+
+                                                        {/* === COMISIONES PLATAFORMAS === */}
+                                                        {(() => {
+                                                            const COMMISSIONS: Record<string, { rate: number; label: string; icon: string }> = {
+                                                                UBER_EATS: { rate: 0.15, label: 'Uber Eats', icon: '🟢' },
+                                                                PEDIDOS_YA: { rate: 0.20, label: 'PedidosYa', icon: '🔴' },
+                                                            };
+                                                            let totalComm = 0;
+                                                            const commLines: { label: string; icon: string; gross: number; rate: number; commission: number; net: number }[] = [];
+
+                                                            for (const [ch, cfg] of Object.entries(COMMISSIONS)) {
+                                                                const cd = channelData[ch];
+                                                                if (cd && cd.count > 0) {
+                                                                    const commission = Math.round(cd.total * cfg.rate);
+                                                                    totalComm += commission;
+                                                                    commLines.push({
+                                                                        label: cfg.label,
+                                                                        icon: cfg.icon,
+                                                                        gross: cd.total,
+                                                                        rate: cfg.rate,
+                                                                        commission,
+                                                                        net: cd.total - commission,
+                                                                    });
+                                                                }
+                                                            }
+
+                                                            if (commLines.length === 0) return null;
+
+                                                            return (
+                                                                <div className="mt-3 bg-red-50/50 rounded-2xl p-3 border border-red-100/50 space-y-2">
+                                                                    <p className="text-[8px] font-black text-red-400 uppercase tracking-widest italic mb-2">📊 Comisiones Plataformas</p>
+                                                                    {commLines.map(c => (
+                                                                        <div key={c.label} className="space-y-1">
+                                                                            <div className="flex justify-between items-center text-[10px]">
+                                                                                <span className="font-bold text-slate-500 italic">{c.icon} {c.label} ({(c.rate * 100).toFixed(0)}%)</span>
+                                                                                <span className="font-black text-red-500 italic">-${c.commission.toLocaleString()}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between items-center text-[9px] pl-4">
+                                                                                <span className="text-slate-400 italic">Neto {c.label}</span>
+                                                                                <span className="font-bold text-green-600 italic">${c.net.toLocaleString()}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    <div className="flex justify-between items-center text-[10px] md:text-xs pt-2 mt-1 border-t border-red-200/50">
+                                                                        <span className="font-black text-red-500 uppercase tracking-widest italic">Total Comisiones</span>
+                                                                        <span className="font-black text-red-600 italic">-${totalComm.toLocaleString()}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {/* INGRESO NETO (después de comisiones) */}
+                                                        {(() => {
+                                                            const RATES: Record<string, number> = { UBER_EATS: 0.15, PEDIDOS_YA: 0.20 };
+                                                            let totalComm = 0;
+                                                            for (const [ch, rate] of Object.entries(RATES)) {
+                                                                const cd = channelData[ch];
+                                                                if (cd && cd.count > 0) totalComm += Math.round(cd.total * rate);
+                                                            }
+                                                            if (totalComm === 0) return null;
+                                                            return (
+                                                                <div className="flex justify-between items-center text-[11px] md:text-sm pt-2 mt-1">
+                                                                    <span className="font-black text-green-700 uppercase tracking-widest italic">💰 Ingreso Neto</span>
+                                                                    <span className="font-black text-green-700 text-lg md:text-xl italic tracking-tighter">${(totalAllChannels - totalComm).toLocaleString()}</span>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </>
                                                 );
                                             })()}

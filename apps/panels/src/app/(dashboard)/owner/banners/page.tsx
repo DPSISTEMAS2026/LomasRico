@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
     Image as ImageIcon, Upload, Trash2, PlusCircle, Loader2, Clock, Check, AlertCircle,
     ExternalLink, Tag, Percent, DollarSign, Truck, Package, Calendar, Hash, ToggleLeft,
-    ToggleRight, Edit, X, Save, Megaphone
+    ToggleRight, Edit, X, Save, Megaphone, Monitor, Smartphone
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { API_URL } from '../../../../services/api';
@@ -44,7 +44,8 @@ export default function MarketingPage() {
     const [saving, setSaving] = useState(false);
 
     // Image Upload State inside modal
-    const [uploadingImage, setUploadingImage] = useState(false);
+    const [uploadingDesktop, setUploadingDesktop] = useState(false);
+    const [uploadingMobile, setUploadingMobile] = useState(false);
 
     const emptyForm: any = {
         code: '', title: '', description: '',
@@ -53,7 +54,8 @@ export default function MarketingPage() {
         activeDays: [], startTime: '', endTime: '',
         minOrderAmount: 0, maxUses: 0,
         targetProductId: '',
-        bannerImageKey: '', bannerImageUrl: ''
+        bannerImageKey: '', bannerImageUrl: '',
+        bannerDesktopUrl: '', bannerMobileUrl: ''
     };
     const [form, setForm] = useState(emptyForm);
 
@@ -74,23 +76,24 @@ export default function MarketingPage() {
 
     const showSuccess = (msg: string) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
 
-    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>, type: 'desktop' | 'mobile') => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setUploadingImage(true);
+        const setUploading = type === 'desktop' ? setUploadingDesktop : setUploadingMobile;
+        setUploading(true);
         try {
             const ext = file.name.split('.').pop();
-            const fileName = `${BANNER_PREFIX}${Date.now()}.${ext}`;
+            const fileName = `${BANNER_PREFIX}${type}-${Date.now()}.${ext}`;
             const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, file);
             if (uploadError) throw uploadError;
-            
             const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
-            setForm(prev => ({ ...prev, bannerImageKey: fileName, bannerImageUrl: urlData.publicUrl }));
-            showSuccess('Imagen subida correctamente');
+            const fieldKey = type === 'desktop' ? 'bannerDesktopUrl' : 'bannerMobileUrl';
+            setForm((prev: any) => ({ ...prev, [fieldKey]: urlData.publicUrl, bannerImageUrl: prev.bannerImageUrl || urlData.publicUrl }));
+            showSuccess(`Banner ${type === 'desktop' ? 'PC' : 'Móvil'} subido ✓`);
         } catch(e: any) {
             alert('Error al subir: ' + e.message);
         } finally {
-            setUploadingImage(false);
+            setUploading(false);
         }
     };
 
@@ -167,7 +170,9 @@ export default function MarketingPage() {
             maxUses: promo.maxUses || 0,
             targetProductId: promo.targetProductId || '',
             bannerImageKey: promo.bannerImageKey || '',
-            bannerImageUrl: promo.bannerImageUrl || ''
+            bannerImageUrl: promo.bannerImageUrl || '',
+            bannerDesktopUrl: promo.bannerDesktopUrl || '',
+            bannerMobileUrl: promo.bannerMobileUrl || ''
         });
         setEditing(promo);
         setShowForm(true);
@@ -261,26 +266,48 @@ export default function MarketingPage() {
                                             />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Imagen de Banner (Opcional)</label>
-                                        <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center hover:bg-slate-100 transition-colors">
-                                            {form.bannerImageUrl ? (
-                                                <>
-                                                 <img src={form.bannerImageUrl} className="w-full h-full object-cover" />
-                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                    <label className="bg-white text-slate-900 px-4 py-2 rounded-xl text-[10px] font-black uppercase cursor-pointer italic hover:bg-orange-500 hover:text-white transition-colors">
-                                                        <input type="file" className="hidden" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
-                                                        {uploadingImage ? 'SUBIENDO...' : 'CAMBIAR IMAGEN'}
+                                    <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* DESKTOP BANNER */}
+                                        <div>
+                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic"><Monitor size={10}/> Banner PC (1920×600)</label>
+                                            <div className="relative aspect-[3/1] bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center hover:bg-slate-100 transition-colors">
+                                                {form.bannerDesktopUrl ? (<>
+                                                    <img src={form.bannerDesktopUrl} className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                        <label className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase cursor-pointer italic hover:bg-orange-500 hover:text-white transition-colors">
+                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'desktop')} disabled={uploadingDesktop} />
+                                                            {uploadingDesktop ? 'SUBIENDO...' : 'CAMBIAR'}
+                                                        </label>
+                                                    </div>
+                                                </>) : (
+                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-orange-500">
+                                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'desktop')} disabled={uploadingDesktop} />
+                                                        {uploadingDesktop ? <Loader2 className="animate-spin mb-1" size={20}/> : <Monitor size={24} className="mb-1" />}
+                                                        <span className="text-[9px] font-black uppercase tracking-widest italic">{uploadingDesktop ? 'SUBIENDO...' : 'SUBIR PC'}</span>
                                                     </label>
-                                                 </div>
-                                                </>
-                                            ) : (
-                                                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-orange-500">
-                                                    <input type="file" className="hidden" accept="image/*" onChange={handleUploadImage} disabled={uploadingImage} />
-                                                    {uploadingImage ? <Loader2 className="animate-spin mb-2" /> : <ImageIcon size={32} className="mb-2" />}
-                                                    <span className="text-[10px] font-black uppercase tracking-widest italic">{uploadingImage ? 'SUBIENDO...' : 'SUBIR BANNER'}</span>
-                                                </label>
-                                            )}
+                                                )}
+                                            </div>
+                                        </div>
+                                        {/* MOBILE BANNER */}
+                                        <div>
+                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic"><Smartphone size={10}/> Banner Móvil (600×400)</label>
+                                            <div className="relative aspect-[3/2] bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center hover:bg-slate-100 transition-colors">
+                                                {form.bannerMobileUrl ? (<>
+                                                    <img src={form.bannerMobileUrl} className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                        <label className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase cursor-pointer italic hover:bg-orange-500 hover:text-white transition-colors">
+                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'mobile')} disabled={uploadingMobile} />
+                                                            {uploadingMobile ? 'SUBIENDO...' : 'CAMBIAR'}
+                                                        </label>
+                                                    </div>
+                                                </>) : (
+                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-orange-500">
+                                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'mobile')} disabled={uploadingMobile} />
+                                                        {uploadingMobile ? <Loader2 className="animate-spin mb-1" size={20}/> : <Smartphone size={24} className="mb-1" />}
+                                                        <span className="text-[9px] font-black uppercase tracking-widest italic">{uploadingMobile ? 'SUBIENDO...' : 'SUBIR MÓVIL'}</span>
+                                                    </label>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

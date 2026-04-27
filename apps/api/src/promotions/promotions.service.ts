@@ -14,6 +14,63 @@ export class PromotionsService {
         });
     }
 
+    /**
+     * Retorna solo promociones activas que tienen banner (para la web/carousel).
+     * Máximo 4 banners, filtrados por fecha/hora/día actual.
+     */
+    async findActiveBanners() {
+        const all = await this.prisma.promotion.findMany({
+            where: {
+                isActive: true,
+                OR: [
+                    { bannerDesktopUrl: { not: null } },
+                    { bannerMobileUrl: { not: null } },
+                    { bannerImageUrl: { not: null } },
+                ],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 4,
+        });
+
+        // Filtrar por schedule (fecha + día + hora Chile)
+        const chileTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Santiago' }));
+        const currentDay = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][chileTime.getDay()];
+        const nowMinutes = chileTime.getHours() * 60 + chileTime.getMinutes();
+
+        return all.filter(p => {
+            // Date range check
+            if (p.startDate && chileTime < p.startDate) return false;
+            if (p.endDate && chileTime > p.endDate) return false;
+            // Max uses check
+            if (p.maxUses && p.currentUses >= p.maxUses) return false;
+            // Day check
+            if (p.activeDays) {
+                try {
+                    const days = JSON.parse(p.activeDays);
+                    if (Array.isArray(days) && days.length > 0 && !days.includes(currentDay)) return false;
+                } catch {}
+            }
+            // Time check
+            if (p.startTime) {
+                const [h, m] = p.startTime.split(':').map(Number);
+                if (nowMinutes < h * 60 + (m || 0)) return false;
+            }
+            if (p.endTime) {
+                const [h, m] = p.endTime.split(':').map(Number);
+                if (nowMinutes > h * 60 + (m || 0)) return false;
+            }
+            return true;
+        }).map(p => ({
+            id: p.id,
+            title: p.title,
+            code: p.code,
+            desktopUrl: p.bannerDesktopUrl || p.bannerImageUrl,
+            mobileUrl: p.bannerMobileUrl || p.bannerImageUrl || p.bannerDesktopUrl,
+            discountType: p.discountType,
+            discountValue: Number(p.discountValue),
+        }));
+    }
+
     async findOne(id: string) {
         const promo = await this.prisma.promotion.findUnique({
             where: { id },
@@ -96,6 +153,8 @@ export class PromotionsService {
         targetProductId?: string;
         bannerImageKey?: string;
         bannerImageUrl?: string;
+        bannerDesktopUrl?: string;
+        bannerMobileUrl?: string;
         activeDays?: string;
         startTime?: string;
         endTime?: string;
@@ -124,6 +183,8 @@ export class PromotionsService {
                 targetProductId: data.targetProductId || null,
                 bannerImageKey: data.bannerImageKey || null,
                 bannerImageUrl: data.bannerImageUrl || null,
+                bannerDesktopUrl: (data as any).bannerDesktopUrl || null,
+                bannerMobileUrl: (data as any).bannerMobileUrl || null,
             },
             include: { targetProduct: true },
         });
