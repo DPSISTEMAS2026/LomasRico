@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Res } from '@nestjs/common';
 import { KitchenService } from './kitchen.service';
 import { UpdateTicketStatusDto } from './dto/update-ticket.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,5 +19,11 @@ export class KitchenController {
         @Body() updateDto: UpdateTicketStatusDto,
     ) {
         return this.kitchenService.updateStatus(id, updateDto.status);
+    }
+
+    @Get(':id/print')
+    async printTicket(@Param('id') id: string, @Res() res: any) {
+        const html = await this.kitchenService.generatePrintHtml(id);
+        res.type('text/html').send(html);
     }
 }
