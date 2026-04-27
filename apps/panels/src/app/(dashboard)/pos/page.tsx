@@ -533,7 +533,7 @@ export default function POSPage() {
                     </div>
 
                     {/* Footer: Despacho + Pago + Total */}
-                    <div className="p-4 md:p-5 bg-slate-50 border-t border-slate-100 space-y-3 md:space-y-4 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+                    <div className="p-4 md:p-5 bg-slate-50 border-t border-slate-100 space-y-3 md:space-y-4 overflow-y-auto max-h-[55vh] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
                         {/* Totales */}
                         <div className="space-y-1">
                             <div className="flex justify-between text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">
