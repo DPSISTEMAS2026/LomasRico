@@ -45,7 +45,7 @@ export abstract class BaseScraper {
                 return {
                     platform: this.platform,
                     success: false,
-                    error: 'Authentication failed - need to refresh session',
+                    error: auth.error || 'Authentication failed - need to refresh session',
                     ordersFound: 0,
                     ordersIngested: 0,
                     duration: Date.now() - startTime,
