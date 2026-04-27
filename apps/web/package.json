@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@lomasrico/shared-types": "^1.0.0",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.98.0",
     "lucide-react": "^0.300.0",

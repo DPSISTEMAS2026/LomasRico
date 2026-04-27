@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
 interface Props {
     isOpen: boolean;
@@ -20,6 +21,11 @@ const UPSELL_ITEMS = [
     { id: 'upsell-empanada', name: 'Empanada Queso', price: 2000, img: '/assets/Empanada Queso.jpg' },
     { id: 'upsell-papas', name: 'Papas Fritas', price: 2900, img: '/assets/Papas Fritas LoMASRico.png' },
 ];
+
+// Initialize MercadoPago SDK once
+if (typeof window !== 'undefined') {
+    initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '', { locale: 'es-CL' });
+}
 
 export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const { user, isLoggedIn } = useAuth();
@@ -38,6 +44,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'checking' | 'ready' | 'error' | 'out-of-range' | 'paying' | 'success'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
+    const [preferenceId, setPreferenceId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && isLoggedIn && user) {
@@ -142,7 +149,8 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         }
     };
 
-    const handlePayment = async () => {
+    // Create preference and show Wallet Brick
+    const handlePreparePayment = async () => {
         if (deliveryType === 'delivery' && !address) {
             setErrorMsg('Ingresa una dirección válida');
             return;
@@ -151,6 +159,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         setLoading(true);
         setStatus('paying');
         setErrorMsg('');
+        setPreferenceId(null);
 
         try {
             // Create sale first
@@ -167,7 +176,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
             const orderId = sale.id;
 
-            // Crear preferencia MP directamente (ahora con la venta existente)
+            // Create MP preference
             const prefRes = await fetch(`${API_URL}/payments/create-preference`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -183,7 +192,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     })),
                     payer: { email: user?.email || 'cliente@lomasrico.cl' },
                     shippingCost: deliveryType === 'delivery' ? (shippingQuote?.cost || 0) : 0,
-                    // Metadata adicional para procesar cuando MP aprueba
                     metadata: {
                         userId: user?.id,
                         deliveryType,
@@ -205,13 +213,10 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             }
 
             const pref = await prefRes.json();
-
-            // Redirigir a MercadoPago (TEST: sandboxInitPoint, PROD: initPoint)
-            const redirectUrl = pref.sandboxInitPoint || pref.initPoint;
-            if (redirectUrl) {
-                window.location.href = redirectUrl;
+            if (pref.preferenceId || pref.id) {
+                setPreferenceId(pref.preferenceId || pref.id);
             } else {
-                throw new Error('MercadoPago no devolvió un link de pago. Intente nuevamente.');
+                throw new Error('MercadoPago no devolvió un ID de preferencia.');
             }
 
         } catch (e: any) {
@@ -219,9 +224,9 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             console.error('[Checkout] ❌ Payment failed:', msg, e);
             setStatus('error');
             setErrorMsg(msg);
+            setPreferenceId(null);
+        } finally {
             setLoading(false);
-            // Mostrar alerta para debugging - el error NUNCA debe ser silencioso
-            alert(`❌ Error al pagar:\n${msg}\n\nRevisa la consola del navegador (F12) para más detalles.`);
         }
     };
 
@@ -548,35 +553,44 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             <span className="text-4xl font-[900] text-slate-900 tracking-tighter leading-none">${finalTotal.toLocaleString()}</span>
                         </div>
 
-                        <button
-                            onClick={handlePayment}
-                            disabled={!canPay || loading}
-                            className={`w-full py-6 rounded-[2rem] font-black text-xl uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-4 relative overflow-hidden group ${canPay
-                                ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.03] shadow-blue-100 hover:shadow-blue-200'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed text-base'
-                                }`}
-                        >
-                            {status === 'paying' ? (
-                                <Loader2 className="animate-spin text-white" />
-                            ) : (
-                                <div className="flex items-center gap-3">
-                                    <span className="italic">PAGAR CON</span>
-                                    <img
-                                        src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/6.6.92/mercadopago/logo__large@2x.png"
-                                        className="h-6 brightness-0 invert object-contain"
-                                        alt="Mercado Pago"
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        {/* MercadoPago Wallet Brick */}
+                        {!preferenceId ? (
+                            <button
+                                onClick={handlePreparePayment}
+                                disabled={!canPay || loading || items.length === 0}
+                                className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${canPay && items.length > 0
+                                    ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.02] shadow-blue-200'
+                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    }`}
+                            >
+                                {loading ? (
+                                    <Loader2 className="animate-spin" size={20} />
+                                ) : (
+                                    <>
+                                        <span className="italic">PROCEDER AL PAGO</span>
+                                        <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="bg-white p-4 rounded-2xl border-2 border-[#009EE3] shadow-xl shadow-blue-100/50 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-black uppercase text-[#009EE3] tracking-widest italic">Finalizar Pago</p>
+                                        <button
+                                            onClick={() => { setPreferenceId(null); setStatus('ready'); }}
+                                            className="text-[9px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                    <Wallet
+                                        initialization={{ preferenceId, redirectMode: 'self' }}
+                                        customization={{ texts: { action: 'pay', valueProp: 'security_safety' } }}
                                     />
-                                    <span className="font-black text-base italic tracking-tight">MERCADO PAGO</span>
-                                    <ArrowRight className="group-hover:translate-x-2 transition-transform ml-1" strokeWidth={3} />
                                 </div>
-                            )}
-
-                            {/* Abstract glow effect */}
-                            {canPay && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
-                            )}
-                        </button>
+                            </div>
+                        )}
 
                         <div className="flex flex-col items-center gap-2 mt-2">
                             <p className="text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] italic">Transacción Segura · Mercado Pago</p>
