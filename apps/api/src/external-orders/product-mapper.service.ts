@@ -48,6 +48,8 @@ export class ProductMapperService implements OnModuleInit {
         // ═══════════════════════════════════════════════════════════
         'carapacho queso': 'empanada frita',
         'macha queso': 'empanada frita',
+        'camaron queso': 'empanada frita',
+        'camarón queso': 'empanada frita',
         'macha-queso': 'empanada frita',
         'empanada carapacho queso': 'empanada frita',
         'empanada macha queso': 'empanada frita',
@@ -56,6 +58,14 @@ export class ProductMapperService implements OnModuleInit {
         'empanada camaron queso': 'empanada frita',
         'empanada cheese': 'empanada frita',
         'empanada marisco': 'empanada frita',
+
+        // ═══════════════════════════════════════════════════════════
+        // BOWLS
+        // ═══════════════════════════════════════════════════════════
+        "bowl's acevichados": "bowl acevichado",
+        "bowl´s acevichados": "bowl acevichado",
+        "bowls acevichados": "bowl acevichado",
+        "bowl acevichado": "bowl acevichado",
 
         // ═══════════════════════════════════════════════════════════
         // CEVICHES POR PESO — Uber Eats los nombra "500 gm Peruano"
