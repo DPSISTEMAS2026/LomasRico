@@ -7,6 +7,8 @@
 [build.environment]
   NODE_VERSION = "20.9.0"
   NEXT_PUBLIC_API_URL = "https://pro-lomasrico-api-69je.onrender.com"
+  NEXT_PUBLIC_SUPABASE_URL = "https://xnwbrdnorjafwwyfhysx.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhud2JyZG5vcmphZnd3eWZoeXN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDI3NDQsImV4cCI6MjA4NTMxODc0NH0.eWDp2G1wRlc_L5Tc87N0W6jUj4BodLamcRiWgYvbmLs"
 
 # Plugin de Next.js para Netlify (maneja SSR automáticamente)
 [[plugins]]
