@@ -87,6 +87,7 @@ model SellingProduct {
 
   updatedAt      DateTime         @updatedAt
   createdAt      DateTime         @default(now())
+  sortOrder      Int              @default(0)  // Orden personalizado por admin
 
   // Mantenemos variants por compatibilidad o futuros combos, pero el core usará Product directamente
   variants       ProductVariant[]

@@ -118,7 +118,8 @@ export class ProductsService implements OnModuleInit {
     private enrichProduct = (p: any) => {
         const enriched = {
             ...p,
-            price: Number(p.price)
+            price: Number(p.price),
+            sortOrder: p.sortOrder || 0,
         };
 
         if (enriched.variants) {
@@ -180,10 +181,17 @@ export class ProductsService implements OnModuleInit {
             'PAPAS / FRITOS': 12,
             'PANCITOS': 13,
             'BEBIDAS': 14,
-            'EXTRAS': 15
+            'EXTRAS': 15,
+            'CRUDOS': 16
         };
 
         return products.sort((a, b) => {
+            // 1. Si ambos tienen sortOrder custom (>0), usar ese
+            if (a.sortOrder > 0 && b.sortOrder > 0) return a.sortOrder - b.sortOrder;
+            // 2. Items con sortOrder van antes que los sin orden
+            if (a.sortOrder > 0) return -1;
+            if (b.sortOrder > 0) return 1;
+            // 3. Fallback: prioridad por categoría + nombre
             const pa = CATEGORY_PRIORITY[a.category] || 999;
             const pb = CATEGORY_PRIORITY[b.category] || 999;
             if (pa !== pb) return pa - pb;
@@ -278,5 +286,17 @@ export class ProductsService implements OnModuleInit {
 
     async remove(id: string) {
         return this.prisma.sellingProduct.update({ where: { id }, data: { isActive: false } });
+    }
+
+    async reorder(items: { id: string; sortOrder: number }[]) {
+        this.logger.log(`Reordering ${items.length} products`);
+        const updates = items.map(item =>
+            this.prisma.sellingProduct.update({
+                where: { id: item.id },
+                data: { sortOrder: item.sortOrder }
+            })
+        );
+        await this.prisma.$transaction(updates);
+        return { success: true, updated: items.length };
     }
 }

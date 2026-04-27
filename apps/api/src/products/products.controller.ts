@@ -21,6 +21,13 @@ export class ProductsController {
         return this.productsService.findActive();
     }
 
+    // Solo autenticados — Reordenar productos (debe ir ANTES de :id)
+    @UseGuards(JwtAuthGuard)
+    @Patch('reorder/bulk')
+    reorder(@Body() data: { items: { id: string; sortOrder: number }[] }) {
+        return this.productsService.reorder(data.items);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.productsService.findOne(id);

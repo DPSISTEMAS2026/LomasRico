@@ -22,7 +22,10 @@ import {
     Layers,
     ToggleLeft,
     ToggleRight,
-    Pencil
+    Pencil,
+    ArrowUp,
+    ArrowDown,
+    GripVertical
 } from 'lucide-react';
 
 import { API_URL } from '../../../../services/api';
@@ -46,6 +49,9 @@ export default function CatalogManagementPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [modifierSearchQuery, setModifierSearchQuery] = useState('');
+    const [showSortModal, setShowSortModal] = useState(false);
+    const [sortItems, setSortItems] = useState<any[]>([]);
+    const [savingSort, setSavingSort] = useState(false);
 
     const CATEGORIES = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
@@ -356,13 +362,30 @@ export default function CatalogManagementPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleAddNew}
-                        className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
-                    >
-                        <PlusCircle size={18} />
-                        Nuevo Producto
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                setSortItems(products.filter(p => p.isActive).sort((a: any, b: any) => {
+                                    if (a.sortOrder > 0 && b.sortOrder > 0) return a.sortOrder - b.sortOrder;
+                                    if (a.sortOrder > 0) return -1;
+                                    if (b.sortOrder > 0) return 1;
+                                    return a.name.localeCompare(b.name);
+                                }));
+                                setShowSortModal(true);
+                            }}
+                            className="bg-white text-slate-600 border border-slate-200 px-5 py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-wider hover:border-orange-400 hover:text-orange-600 transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                            <GripVertical size={16} />
+                            Organizar
+                        </button>
+                        <button
+                            onClick={handleAddNew}
+                            className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
+                        >
+                            <PlusCircle size={18} />
+                            Nuevo Producto
+                        </button>
+                    </div>
                 </div>
 
                 {/* Barra de Búsqueda y Filtros Compacta */}
@@ -820,6 +843,130 @@ export default function CatalogManagementPage() {
                                         })}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════════════ SORT / ORGANIZE MODAL ════════════ */}
+            {showSortModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowSortModal(false)} />
+                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-300">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                            <div>
+                                <h2 className="text-xl font-black italic tracking-tighter uppercase text-slate-900">
+                                    ORGANIZAR <span className="text-orange-500">CATÁLOGO</span>
+                                </h2>
+                                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
+                                    Define el orden en que los clientes ven los productos
+                                </p>
+                            </div>
+                            <button onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Products List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            {(() => {
+                                const categories = Array.from(new Set(sortItems.map(p => p.category))).filter(Boolean);
+                                return categories.map(cat => {
+                                    const catItems = sortItems.filter(p => p.category === cat);
+                                    return (
+                                        <div key={cat}>
+                                            <div className="flex items-center gap-2 mb-2 px-2">
+                                                <div className="w-6 h-[2px] bg-orange-500" />
+                                                <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">{cat}</p>
+                                                <p className="text-[9px] font-bold text-slate-300 uppercase">({catItems.length})</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {catItems.map((item, idx) => {
+                                                    const globalIdx = sortItems.findIndex(s => s.id === item.id);
+                                                    return (
+                                                        <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group">
+                                                            <GripVertical size={14} className="text-slate-300 shrink-0" />
+                                                            <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">
+                                                                {globalIdx + 1}
+                                                            </span>
+                                                            {item.imageUrl && (
+                                                                <img src={item.imageUrl} className="w-8 h-8 rounded-lg object-cover shrink-0" alt="" />
+                                                            )}
+                                                            <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 shrink-0">${Number(item.price).toLocaleString()}</span>
+                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    disabled={globalIdx === 0}
+                                                                    onClick={() => {
+                                                                        if (globalIdx === 0) return;
+                                                                        const newItems = [...sortItems];
+                                                                        [newItems[globalIdx - 1], newItems[globalIdx]] = [newItems[globalIdx], newItems[globalIdx - 1]];
+                                                                        setSortItems(newItems);
+                                                                    }}
+                                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                >
+                                                                    <ArrowUp size={12} />
+                                                                </button>
+                                                                <button
+                                                                    disabled={globalIdx === sortItems.length - 1}
+                                                                    onClick={() => {
+                                                                        if (globalIdx === sortItems.length - 1) return;
+                                                                        const newItems = [...sortItems];
+                                                                        [newItems[globalIdx], newItems[globalIdx + 1]] = [newItems[globalIdx + 1], newItems[globalIdx]];
+                                                                        setSortItems(newItems);
+                                                                    }}
+                                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                >
+                                                                    <ArrowDown size={12} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                            <button
+                                onClick={() => setShowSortModal(false)}
+                                className="px-6 py-3 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-wider hover:text-slate-600 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setSavingSort(true);
+                                    try {
+                                        const items = sortItems.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
+                                        await authFetch(`${API_URL}/products/reorder/bulk`, {
+                                            method: 'PATCH',
+                                            body: JSON.stringify({ items })
+                                        });
+                                        // Update local state
+                                        setProducts(prev => prev.map(p => {
+                                            const sorted = items.find(s => s.id === p.id);
+                                            return sorted ? { ...p, sortOrder: sorted.sortOrder } : p;
+                                        }));
+                                        setShowSortModal(false);
+                                    } catch (e) {
+                                        console.error('Error saving sort order:', e);
+                                        alert('Error al guardar el orden');
+                                    } finally {
+                                        setSavingSort(false);
+                                    }
+                                }}
+                                disabled={savingSort}
+                                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {savingSort ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                Guardar Orden
+                            </button>
                         </div>
                     </div>
                 </div>
