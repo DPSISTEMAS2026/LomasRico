@@ -38,6 +38,8 @@ export class ShippingService {
     async calculateQuote(dto: ShippingQuoteDto): Promise<ShippingQuoteResponse> {
         const { address, channel, coordinates } = dto;
 
+        this.logger.log(`[QUOTE] Address: "${address}" | Channel: ${channel} | Coords: ${coordinates ? `${coordinates.lat},${coordinates.lng}` : 'NONE'}`);
+
         // 1. Calculate Distance
         let distanceKm = 0;
         if (coordinates) {
@@ -45,6 +47,8 @@ export class ShippingService {
         } else {
             distanceKm = await this.mockDistanceCalculation(address);
         }
+
+        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Max: ${this.MAX_DISTANCE_KM}km | Mode: ${this.deliveryMode}`);
 
         // 2. Validate Radius
         if (distanceKm > this.MAX_DISTANCE_KM && channel !== 'POS') {
