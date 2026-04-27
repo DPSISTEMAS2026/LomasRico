@@ -843,7 +843,7 @@ export default function InventoryManagementPage() {
                                         if (res.ok) {
                                             alert('✅ Ingrediente actualizado');
                                             setEditItem(null);
-                                            loadItems();
+                                            loadData();
                                         } else {
                                             alert('Error al actualizar');
                                         }
@@ -897,7 +897,7 @@ export default function InventoryManagementPage() {
                                             const result = await res.json();
                                             alert(`✅ Producción completada\n${result.produced}: +${result.quantityProduced} ${produceItem.unit}\nInsumos consumidos: ${result.ingredientsConsumed?.length || 0}`);
                                             setProduceItem(null);
-                                            loadItems();
+                                            loadData();
                                         } else {
                                             const err = await res.json().catch(() => ({}));
                                             alert(`❌ Error: ${err.message || 'No se pudo producir'}`);

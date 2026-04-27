@@ -85,16 +85,19 @@ export default function KitchenPage() {
         } catch (e) { /* Audio not supported */ }
     }, []);
 
+    const hasLoaded = useRef(false);
+
     const loadTickets = useCallback(async () => {
         try {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const newWaiting = data.filter((t: any) => t.status === 'WAITING').length;
-            if (newWaiting > prevWaitingCount.current && prevWaitingCount.current >= 0 && !loading) {
+            if (hasLoaded.current && newWaiting > prevWaitingCount.current) {
                 playNotificationSound();
             }
             prevWaitingCount.current = newWaiting;
+            hasLoaded.current = true;
             setTickets(data);
             setError('');
         } catch (e: unknown) {

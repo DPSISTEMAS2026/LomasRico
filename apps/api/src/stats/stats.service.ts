@@ -25,11 +25,14 @@ export class StatsService {
             where: { status: { in: ['WAITING', 'PREPARING'] } }
         });
 
-        // Alertas reales: items debajo de su stock mínimo
-        const lowStockItems = await (this.prisma as any).inventoryItem.findMany({
-            where: {
-                currentStock: { lte: 10 } // TODO: Usar minStockThreshold del campo una vez mapeado
-            }
+        // Alertas reales: items debajo de su stock mínimo individual
+        const allItems = await (this.prisma as any).inventoryItem.findMany({
+            where: { isActive: true },
+            select: { id: true, currentStock: true, minStockThreshold: true }
+        });
+        const lowStockItems = allItems.filter((i: any) => {
+            const threshold = i.minStockThreshold ?? 10;
+            return (i.currentStock ?? 0) < threshold;
         });
 
         const todayTotal = daySales._sum.total || 0;
