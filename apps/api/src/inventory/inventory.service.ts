@@ -263,4 +263,163 @@ export class InventoryService {
     async fixRecipes() {
         return this.forceSeed();
     }
+
+    // ─── MERMA / WASTE ──────────────────────────────────────
+
+    /**
+     * Registra pérdida/merma de un ingrediente.
+     * Razones válidas: EXPIRED, DAMAGED, OVERPRODUCTION, SPILL, OTHER
+     */
+    async registerWaste(id: string, quantity: number, reason: string, note?: string) {
+        const item = await this.findOne(id);
+        if (!item) throw new NotFoundException('Ingrediente no encontrado');
+
+        if (quantity <= 0) throw new NotFoundException('La cantidad debe ser positiva');
+
+        const validReasons = ['EXPIRED', 'DAMAGED', 'OVERPRODUCTION', 'SPILL', 'OTHER'];
+        if (!validReasons.includes(reason)) {
+            reason = 'OTHER';
+        }
+
+        const oldStock = Number(item.currentStock) || 0;
+        const newStock = Math.max(0, oldStock - quantity);
+        const wasteCost = quantity * (Number(item.costPerUnit) || 0);
+
+        // Descontar stock
+        await this.tryPrisma(() => (this.prisma as any).inventoryItem.update({
+            where: { id },
+            data: { currentStock: newStock },
+        }));
+
+        // Registrar movimiento
+        await this.tryPrisma(() => (this.prisma as any).stockMovement.create({
+            data: {
+                inventoryItemId: id,
+                quantity: -quantity,
+                reason: `WASTE_${reason}`,
+                referenceId: note || undefined,
+            },
+        }));
+
+        this.logger.warn(`🗑️ MERMA: ${item.name} — ${quantity} ${item.unit} (${reason}) — Pérdida: $${Math.round(wasteCost)}`);
+
+        return {
+            success: true,
+            item: item.name,
+            quantityLost: quantity,
+            reason,
+            note,
+            previousStock: oldStock,
+            newStock,
+            estimatedLoss: Math.round(wasteCost),
+        };
+    }
+
+    // ─── PRODUCCIÓN DE SUB-RECETA ───────────────────────────
+
+    /**
+     * Produce un item PREPARED (ej: Leche de Tigre) descontando sus ingredientes base.
+     * El item debe tener una productionRecipe asociada.
+     */
+    async produceSubRecipe(id: string, batches: number = 1) {
+        const item: any = await this.tryPrisma(() => (this.prisma as any).inventoryItem.findUnique({
+            where: { id },
+            include: {
+                productionRecipe: {
+                    include: {
+                        items: { include: { ingredient: true } },
+                    },
+                },
+            },
+        }));
+
+        if (!item) throw new NotFoundException('Item no encontrado');
+        if (!item.productionRecipe) {
+            throw new NotFoundException(`"${item.name}" no tiene receta de producción asociada`);
+        }
+
+        const recipe = item.productionRecipe;
+        const deductions: { name: string; qty: number; unit: string }[] = [];
+
+        // Descontar ingredientes base
+        for (const recipeItem of recipe.items) {
+            const totalQty = Number(recipeItem.quantity) * batches;
+            const ingredient = recipeItem.ingredient;
+
+            await this.tryPrisma(() => (this.prisma as any).inventoryItem.update({
+                where: { id: ingredient.id },
+                data: { currentStock: { decrement: totalQty } },
+            }));
+
+            await this.tryPrisma(() => (this.prisma as any).stockMovement.create({
+                data: {
+                    inventoryItemId: ingredient.id,
+                    quantity: -totalQty,
+                    reason: 'PRODUCTION',
+                    referenceId: `Producción de ${item.name} x${batches}`,
+                },
+            }));
+
+            deductions.push({ name: ingredient.name, qty: totalQty, unit: recipeItem.unit || ingredient.unit });
+        }
+
+        // Incrementar stock del item producido
+        const yieldPerBatch = Number(recipe.yield) || 1;
+        const totalProduced = yieldPerBatch * batches;
+
+        await this.tryPrisma(() => (this.prisma as any).inventoryItem.update({
+            where: { id },
+            data: { currentStock: { increment: totalProduced } },
+        }));
+
+        await this.tryPrisma(() => (this.prisma as any).stockMovement.create({
+            data: {
+                inventoryItemId: id,
+                quantity: totalProduced,
+                reason: 'PRODUCTION',
+                referenceId: `Producido: ${batches} batch(es)`,
+            },
+        }));
+
+        this.logger.log(`🏭 PRODUCCIÓN: ${item.name} x${batches} — +${totalProduced} ${item.unit}`);
+
+        return {
+            success: true,
+            produced: item.name,
+            batches,
+            totalProduced,
+            unit: item.unit,
+            ingredientsUsed: deductions,
+        };
+    }
+
+    // ─── HISTORIAL DE MOVIMIENTOS ────────────────────────────
+
+    async getMovements(itemId: string, limit: number = 50) {
+        const movements = await this.tryPrisma(() => (this.prisma as any).stockMovement.findMany({
+            where: { inventoryItemId: itemId },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        }));
+
+        return movements || [];
+    }
+
+    async getAllMovements(limit: number = 100, reason?: string) {
+        const where: any = {};
+        if (reason) {
+            where.reason = { startsWith: reason };
+        }
+
+        const movements = await this.tryPrisma(() => (this.prisma as any).stockMovement.findMany({
+            where,
+            include: {
+                inventoryItem: { select: { name: true, unit: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        }));
+
+        return movements || [];
+    }
 }

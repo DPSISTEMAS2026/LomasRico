@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════
 # Lo Más Rico V3 — Render Blueprint
-# 3 servicios en plan Free para pruebas
+# API: Starter (always-on) | Web: Free | Panels: Netlify
 # ══════════════════════════════════════════════════════════
 
 services:
@@ -10,7 +10,7 @@ services:
   - type: web
     name: pro-lomasrico-api
     env: node
-    plan: free
+    plan: starter
     region: oregon
     rootDir: .
     autoDeploy: true
@@ -47,7 +47,7 @@ services:
       - key: API_URL
         value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: ALLOWED_ORIGINS
-        value: "https://pro-lomasrico-web-vtyt.onrender.com,https://pro-lomasrico-panels-33rx.onrender.com"
+        value: "https://pro-lomasrico-web-vtyt.onrender.com,https://lomasrico-panels.netlify.app,https://pro-lomasrico-panels-33rx.onrender.com"
       - key: SKIP_SEED
         value: "true"
       # --- Uber Eats Scraper (auto-poll cada 30s) ---
@@ -87,25 +87,6 @@ services:
         sync: false
 
   # --------------------------------------------------------
-  # 3. ADMIN PANEL (Next.js — POS, Kitchen, Owner)
+  # NOTA: Panels (Admin/POS/Kitchen) migrado a Netlify
+  # URL: https://lomasrico-panels.netlify.app
   # --------------------------------------------------------
-  - type: web
-    name: pro-lomasrico-panels
-    env: node
-    plan: free
-    region: oregon
-    rootDir: .
-    autoDeploy: true
-    buildCommand: "npm install --include=dev && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=panels"
-    startCommand: "npm run start --workspace=panels -- -p 10000 -H 0.0.0.0"
-    envVars:
-      - key: NODE_VERSION
-        value: "20.9.0"
-      - key: PORT
-        value: "10000"
-      - key: NEXT_PUBLIC_API_URL
-        value: "https://pro-lomasrico-api-69je.onrender.com"
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false

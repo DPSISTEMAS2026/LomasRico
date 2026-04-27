@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query, Logger, UseGuards } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -40,6 +40,44 @@ export class InventoryController {
     @Post(':id/restock')
     restock(@Param('id') id: string, @Body() body: { quantity: number; unitCost: number }) {
         return this.service.restock(id, body.quantity, body.unitCost);
+    }
+
+    // ─── MERMA / WASTE ──────────────────────────────────────
+    @Post(':id/waste')
+    registerWaste(
+        @Param('id') id: string,
+        @Body() body: { quantity: number; reason: string; note?: string },
+    ) {
+        this.logger.log(`POST /inventory/${id}/waste — qty: ${body.quantity}, reason: ${body.reason}`);
+        return this.service.registerWaste(id, body.quantity, body.reason, body.note);
+    }
+
+    // ─── PRODUCCIÓN DE SUB-RECETA ───────────────────────────
+    @Post(':id/produce')
+    produceSubRecipe(
+        @Param('id') id: string,
+        @Body() body: { batches?: number },
+    ) {
+        this.logger.log(`POST /inventory/${id}/produce — batches: ${body.batches || 1}`);
+        return this.service.produceSubRecipe(id, body.batches || 1);
+    }
+
+    // ─── HISTORIAL DE MOVIMIENTOS ────────────────────────────
+    @Get(':id/movements')
+    getMovements(
+        @Param('id') id: string,
+        @Query('limit') limit?: string,
+    ) {
+        return this.service.getMovements(id, parseInt(limit || '50'));
+    }
+
+    // ─── HISTORIAL GLOBAL ───────────────────────────────────
+    @Get('movements/all')
+    getAllMovements(
+        @Query('limit') limit?: string,
+        @Query('reason') reason?: string,
+    ) {
+        return this.service.getAllMovements(parseInt(limit || '100'), reason);
     }
 
     @Delete(':id')

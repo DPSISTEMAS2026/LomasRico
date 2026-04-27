@@ -17,7 +17,9 @@ import {
     Layers,
     PlusCircle,
     ClipboardCheck,
-    History
+    History,
+    Trash2,
+    Factory
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
@@ -32,11 +34,13 @@ export default function InventoryManagementPage() {
     const [isCreating, setIsCreating] = useState(false);
     const [restockItem, setRestockItem] = useState<any>(null);
     const [adjustItem, setAdjustItem] = useState<any>(null);
+    const [wasteItem, setWasteItem] = useState<any>(null);
 
     // Form States
     const [newItem, setNewItem] = useState({ name: '', category: 'VERDURAS', unit: 'KG', yield: '100', purchasePrice: '' });
     const [restockData, setRestockData] = useState({ quantity: '', unitCost: '' });
     const [adjustValue, setAdjustValue] = useState('');
+    const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
 
     useEffect(() => {
         loadData();
@@ -140,6 +144,36 @@ export default function InventoryManagementPage() {
         } catch (e) {
             console.error('Adjustment Error:', e);
             alert('Error de conexión al aplicar el ajuste.');
+        }
+    };
+
+    const handleWaste = async () => {
+        if (!wasteItem) return;
+        const qty = Number(wasteData.quantity);
+        if (!qty || qty <= 0) {
+            alert('Ingrese una cantidad válida de merma.');
+            return;
+        }
+        try {
+            const res = await authFetch(`${API_URL}/inventory/${wasteItem.id}/waste`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    quantity: qty,
+                    reason: wasteData.reason,
+                    note: wasteData.note || undefined,
+                }),
+            });
+            if (res.ok) {
+                const result = await res.json();
+                alert(`✓ Merma registrada: ${result.quantityLost} ${wasteItem.unit} de ${wasteItem.name}\nPérdida estimada: $${result.estimatedLoss}`);
+                loadData();
+                setWasteItem(null);
+                setWasteData({ quantity: '', reason: 'EXPIRED', note: '' });
+            } else {
+                alert('Error al registrar merma.');
+            }
+        } catch (e) {
+            alert('Error de conexión.');
         }
     };
 
@@ -321,22 +355,30 @@ export default function InventoryManagementPage() {
                                             <button
                                                 id={`adjust-btn-${item.id}`}
                                                 onClick={() => {
-                                                    console.log('Opening Adjust Modal for:', item.name);
                                                     setAdjustItem(item);
                                                     setAdjustValue(item.currentStock?.toString() || '0');
                                                 }}
-                                                className="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center gap-2"
+                                                className="px-3 py-2 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center gap-1.5"
                                             >
-                                                <RefreshCw size={12} /> Ajuste Manual
+                                                <RefreshCw size={12} /> Ajustar
                                             </button>
                                             <button
                                                 onClick={() => {
                                                     setRestockItem(item);
                                                     setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' });
                                                 }}
-                                                className="px-4 py-2 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2 shadow-sm"
+                                                className="px-3 py-2 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-1.5 shadow-sm"
                                             >
                                                 <TrendingUp size={12} /> Reponer
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setWasteItem(item);
+                                                    setWasteData({ quantity: '', reason: 'EXPIRED', note: '' });
+                                                }}
+                                                className="px-3 py-2 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"
+                                            >
+                                                <Trash2 size={12} /> Merma
                                             </button>
                                         </div>
                                     </td>
@@ -369,24 +411,33 @@ export default function InventoryManagementPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                        <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-50">
                             <button
                                 onClick={() => {
                                     setAdjustItem(item);
                                     setAdjustValue(item.currentStock?.toString() || '0');
                                 }}
-                                className="bg-slate-50 text-slate-500 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border border-slate-100 active:scale-95"
+                                className="bg-slate-50 text-slate-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 border border-slate-100 active:scale-95"
                             >
-                                <RefreshCw size={12} /> Ajustar Stock
+                                <RefreshCw size={12} /> Ajustar
                             </button>
                             <button
                                 onClick={() => {
                                     setRestockItem(item);
                                     setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' });
                                 }}
-                                className="bg-slate-900 text-white py-3 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                                className="bg-slate-900 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 shadow-lg active:scale-95"
                             >
                                 <TrendingUp size={12} /> Reponer
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setWasteItem(item);
+                                    setWasteData({ quantity: '', reason: 'EXPIRED', note: '' });
+                                }}
+                                className="bg-red-50 text-red-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 border border-red-100 active:scale-95"
+                            >
+                                <Trash2 size={12} /> Merma
                             </button>
                         </div>
                     </div>
@@ -527,6 +578,84 @@ export default function InventoryManagementPage() {
                                     <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                 </button>
                                 <button onClick={() => setAdjustItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar Operación</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Waste / Merma Modal */}
+            {wasteItem && (
+                <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-500 overflow-hidden relative">
+                        <Trash2 size={120} className="absolute -top-10 -right-10 text-red-50 opacity-20 rotate-12" />
+
+                        <div className="text-center mb-8 relative z-10">
+                            <div className="w-20 h-20 rounded-[2rem] bg-red-500 flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-red-200">
+                                <Trash2 size={36} />
+                            </div>
+                            <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">REGISTRAR <span className="text-red-500">MERMA</span></h3>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{wasteItem.name} — Stock: {wasteItem.currentStock} {wasteItem.unit}</p>
+                        </div>
+
+                        <div className="space-y-5 relative z-10">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad Perdida ({wasteItem.unit})</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="w-full bg-slate-50 p-5 rounded-2xl font-black italic text-3xl outline-none focus:bg-white focus:ring-2 focus:ring-red-500 transition-all text-center border border-transparent shadow-inner"
+                                    value={wasteData.quantity}
+                                    onChange={e => setWasteData({ ...wasteData, quantity: e.target.value })}
+                                    autoFocus
+                                    step="0.01"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Razón de la Merma</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { value: 'EXPIRED', label: '🕐 Vencido', color: 'orange' },
+                                        { value: 'DAMAGED', label: '💥 Dañado', color: 'red' },
+                                        { value: 'OVERPRODUCTION', label: '📦 Sobrante', color: 'blue' },
+                                        { value: 'SPILL', label: '💧 Derrame', color: 'purple' },
+                                        { value: 'OTHER', label: '📋 Otro', color: 'slate' },
+                                    ].map(r => (
+                                        <button
+                                            key={r.value}
+                                            onClick={() => setWasteData({ ...wasteData, reason: r.value })}
+                                            className={`py-3 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${
+                                                wasteData.reason === r.value
+                                                    ? 'bg-red-500 text-white shadow-lg'
+                                                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            {r.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nota (Opcional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej: Salmón llegó en mal estado del proveedor"
+                                    className="w-full bg-slate-50 p-4 rounded-2xl font-bold italic text-sm outline-none focus:bg-white focus:ring-2 focus:ring-red-500 transition-all border border-transparent"
+                                    value={wasteData.note}
+                                    onChange={e => setWasteData({ ...wasteData, note: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-3 mt-4">
+                                <button
+                                    onClick={handleWaste}
+                                    className="w-full bg-red-500 text-white py-5 rounded-[2rem] font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-red-200 hover:bg-red-600 transition-all flex items-center justify-center gap-4 active:scale-95"
+                                >
+                                    <Trash2 size={18} /> CONFIRMAR MERMA
+                                </button>
+                                <button onClick={() => setWasteItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
                         </div>
                     </div>

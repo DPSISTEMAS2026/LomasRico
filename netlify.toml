@@ -1,0 +1,13 @@
+[build]
+  # El monorepo se buildea desde la raíz
+  base = "."
+  command = "npm install --include=dev && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=panels"
+  publish = "apps/panels/.next"
+
+[build.environment]
+  NODE_VERSION = "20.9.0"
+  NEXT_PUBLIC_API_URL = "https://pro-lomasrico-api-69je.onrender.com"
+
+# Plugin de Next.js para Netlify (maneja SSR automáticamente)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
