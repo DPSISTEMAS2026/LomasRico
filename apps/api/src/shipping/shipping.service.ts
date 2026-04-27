@@ -1,7 +1,14 @@
 
 import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
-import { LOCATION } from '@lomasrico/shared-types';
+// Location constants (inlined to avoid cross-package build issues on Render)
+const LOCATION = {
+    address: 'Obispo Hipólito Salas 1205, Concepción',
+    city: 'Concepción',
+    lat: -36.8270,
+    lng: -73.0503,
+    maxDeliveryRadiusKm: 8,
+} as const;
 
 @Injectable()
 export class ShippingService {
