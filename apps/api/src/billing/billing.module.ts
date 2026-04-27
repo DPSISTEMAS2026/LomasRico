@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { BillingService } from './billing.service';
+import { DatabaseModule } from '../database/database.module';
+import { LibreDteService } from './libre-dte.service';
 import { BillingController } from './billing.controller';
-// import { DatabaseModule } from '../database/database.module';
 
 @Module({
-    //   imports: [DatabaseModule],
-    providers: [BillingService],
+    imports: [DatabaseModule],
+    providers: [LibreDteService],
     controllers: [BillingController],
-    exports: [BillingService],
+    exports: [LibreDteService],
 })
-export class BillingModule { }
+export class BillingModule {}
