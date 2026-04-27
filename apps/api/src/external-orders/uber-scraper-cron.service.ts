@@ -72,6 +72,22 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
         }
     }
 
+    getStatus() {
+        return {
+            enabled: this.isEnabled,
+            cookieLength: this.cookie.length,
+            cookiePreview: this.cookie ? `${this.cookie.substring(0, 20)}...` : '(empty)',
+            uberEatsEnabled: process.env.UBER_EATS_ENABLED,
+            hasCookieEnv: !!process.env.UBER_EATS_COOKIE,
+            pollCount: this.pollCount,
+            consecutiveErrors: this.consecutiveErrors,
+            lastError: this.lastError,
+            seenOrdersCount: this.seenOrders.size,
+            hasActiveTimer: !!this.pollTimer,
+            chileHour: this.getChileHour(),
+        };
+    }
+
     onModuleDestroy() {
         if (this.pollTimer) {
             clearTimeout(this.pollTimer);
@@ -254,14 +270,56 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
             const qty = item.quantity?.amount || 1;
             const price = this.parsePrice(item.price?.currencyAmount?.formatted);
 
-            // Build modifier notes from ModifierOption entries
-            const modNotes: string[] = [];
+            // Build structured modifier groups: { category: [option, option, ...] }
+            const modGroups: { category: string; options: string[] }[] = [];
+            let currentGroup: { category: string; options: string[] } | null = null;
+
             if (item.modifiers?.length) {
-                item.modifiers.forEach((mod: any) => {
-                    if (mod.__typename === 'ModifierOption') {
-                        modNotes.push(mod.name);
+                for (const mod of item.modifiers) {
+                    if (mod.__typename === 'Modifier') {
+                        // Category header (e.g., "Elige Hasta 3 Proteínas", "¿Deseas Pancitos?")
+                        currentGroup = { category: mod.name, options: [] };
+                        modGroups.push(currentGroup);
+                    } else if (mod.__typename === 'ModifierOption') {
+                        if (currentGroup) {
+                            currentGroup.options.push(mod.name);
+                        } else {
+                            // Orphan option without header — create uncategorized group
+                            modGroups.push({ category: '', options: [mod.name] });
+                        }
                     }
-                });
+                }
+            }
+
+            // Build a clean structured notes string for the note
+            // Sub-classify options within "Extras" groups (salsas vs acompañamientos)
+            const finalGroups: { label: string; options: string[] }[] = [];
+            for (const group of modGroups) {
+                if (group.options.length === 0) continue;
+                const label = this.classifyModifierGroup(group.category);
+
+                // If this is an "Extras" group, split salsas into their own sub-group
+                if (label.includes('Extras')) {
+                    const salsas: string[] = [];
+                    const otherExtras: string[] = [];
+                    for (const opt of group.options) {
+                        const n = opt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        if (n.includes('salsa')) {
+                            salsas.push(opt);
+                        } else {
+                            otherExtras.push(opt);
+                        }
+                    }
+                    if (otherExtras.length > 0) finalGroups.push({ label: '🍞 Extras', options: otherExtras });
+                    if (salsas.length > 0) finalGroups.push({ label: '🌶️ Salsas (extras)', options: salsas });
+                } else {
+                    finalGroups.push({ label, options: group.options });
+                }
+            }
+
+            const noteParts: string[] = [];
+            for (const group of finalGroups) {
+                noteParts.push(`${group.label}: ${group.options.join(', ')}`);
             }
 
             // Item special instructions from note elements
@@ -269,7 +327,9 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
                 .map((n: any) => n.title?.content?.richTextElements?.map((e: any) => e.text?.text).filter(Boolean).join(' ') || '')
                 .filter(Boolean);
 
-            const allNotes = [...modNotes, ...itemNotes].filter(Boolean).join(', ');
+            if (itemNotes.length > 0) noteParts.push(`📝 ${itemNotes.join('; ')}`);
+
+            const allNotes = noteParts.join(' | ');
 
             return {
                 externalName: item.name || 'Producto',
@@ -336,6 +396,21 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
         } catch {
             return 0;
         }
+    }
+
+    /**
+     * Classify an Uber modifier category header into a readable emoji label.
+     * e.g., "Elige Hasta 3 Proteínas" → "🥩 Proteínas"
+     */
+    private classifyModifierGroup(category: string): string {
+        const c = (category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        if (c.includes('proteina')) return '🥩 Proteínas';
+        if (c.includes('salsa')) return '🌶️ Salsas';
+        if (c.includes('pancito') || c.includes('acompana') || c.includes('deseas')) return '🍞 Extras';
+        if (c.includes('tamano') || c.includes('tamaño') || c.includes('porcion')) return '📏 Tamaño';
+        if (!category) return '⚙️ Opciones';
+        return `⚙️ ${category}`;
     }
 
     /**

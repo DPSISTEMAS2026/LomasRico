@@ -13,10 +13,12 @@ import {
 } from '@nestjs/common';
 import { ExternalOrdersService } from './external-orders.service';
 import { ProductMapperService } from './product-mapper.service';
+import { DailyHealthCheckService } from './daily-health-check.service';
 import { CreateExternalOrderDto, BulkExternalOrderDto, ExternalPlatform } from './dto/create-external-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UberEatsScraper } from './scrapers/uber-eats.scraper';
 import { PedidosYaScraper } from './scrapers/pedidosya.scraper';
+import { UberScraperCronService } from './uber-scraper-cron.service';
 
 @Controller('external-orders')
 export class ExternalOrdersController {
@@ -25,6 +27,8 @@ export class ExternalOrdersController {
     constructor(
         private readonly externalOrdersService: ExternalOrdersService,
         private readonly productMapper: ProductMapperService,
+        private readonly healthCheck: DailyHealthCheckService,
+        private readonly uberCron: UberScraperCronService,
     ) {}
 
     /**
@@ -95,6 +99,25 @@ export class ExternalOrdersController {
             limit: limit ? parseInt(limit, 10) : undefined,
         });
     }
+    /**
+     * GET /external-orders/health-check
+     * Obtener el último resultado del health check diario.
+     */
+    @Get('health-check')
+    async getHealthCheck() {
+        const result = this.healthCheck.getLastResult();
+        if (!result) return { message: 'No se ha ejecutado un health check aún. Se ejecuta diariamente a las 10:00.' };
+        return result;
+    }
+
+    /**
+     * POST /external-orders/health-check/run
+     * Forzar un health check manual.
+     */
+    @Post('health-check/run')
+    async runHealthCheck() {
+        return this.healthCheck.forceCheck();
+    }
 
     /**
      * GET /external-orders/:id
@@ -137,5 +160,14 @@ export class ExternalOrdersController {
             input: body.name,
             ...result,
         };
+    }
+
+    /**
+     * GET /external-orders/cron-status
+     * Check the status of the UberScraperCronService.
+     */
+    @Get('cron-status')
+    getCronStatus() {
+        return this.uberCron.getStatus();
     }
 }
