@@ -113,3 +113,13 @@ start.bat
 *.psd
 _MG_*
 
+# === UBER EATS DEBUG DUMPS ===
+uber-*.json
+uber_*.json
+
+# === SCRIPTS OUTPUT ===
+scripts/*.txt
+scripts/diagnostics
+
+# === BUILD INFO ===
+*.tsbuildinfo
