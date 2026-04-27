@@ -251,7 +251,7 @@ export default function DashboardLayout({
                     isKitchen ? 'p-0 max-w-none h-full' :
                     'max-w-7xl mx-auto p-4 md:p-10'
                 }`}>
-                    <div className="animate-in fade-in duration-300">
+                    <div className={`animate-in fade-in duration-300 ${isPos || isKitchen ? 'h-full' : ''}`}>
                         {children}
                     </div>
                 </div>

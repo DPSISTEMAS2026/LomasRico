@@ -302,7 +302,7 @@ export default function POSPage() {
     const [mobileTab, setMobileTab] = useState<'CATALOG' | 'CART'>('CATALOG');
 
     return (
-        <div className="flex-1 flex flex-col xl:grid xl:grid-cols-[1fr,420px] gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-screen xl:min-h-0 bg-slate-50/50">
+        <div className="flex-1 flex flex-col xl:grid xl:grid-cols-[1fr,420px] gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-0 bg-slate-50/50">
 
             {/* Mobile Tab Switcher */}
             <div className="xl:hidden flex bg-white p-1 rounded-2xl shadow-sm border border-slate-100 mb-2 shrink-0">
