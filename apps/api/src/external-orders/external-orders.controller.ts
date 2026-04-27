@@ -166,7 +166,8 @@ export class ExternalOrdersController {
      * GET /external-orders/cron-status
      * Check the status of the UberScraperCronService.
      */
-    @Get('cron-status')
+    @Post('cron-status')
+    @HttpCode(HttpStatus.OK)
     getCronStatus() {
         return this.uberCron.getStatus();
     }
