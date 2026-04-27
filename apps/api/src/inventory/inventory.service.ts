@@ -98,7 +98,7 @@ export class InventoryService {
                 currentStock: parseFloat(data.currentStock) || 0,
                 costPerUnit: parseFloat(data.costPerUnit) || 0,
                 role: data.role || 'BASE',
-                minStockThreshold: 10
+                minStockThreshold: parseInt(data.minStockThreshold) || 10
             }
         }));
 

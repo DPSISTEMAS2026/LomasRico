@@ -37,7 +37,10 @@ export default function InventoryManagementPage() {
     const [wasteItem, setWasteItem] = useState<any>(null);
 
     // Form States
-    const [newItem, setNewItem] = useState({ name: '', category: 'VERDURAS', unit: 'KG', yield: '100', purchasePrice: '' });
+    const [newItem, setNewItem] = useState({
+        name: '', category: 'VERDURAS', unit: 'KG', yield: '100',
+        purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10'
+    });
     const [restockData, setRestockData] = useState({ quantity: '', unitCost: '' });
     const [adjustValue, setAdjustValue] = useState('');
     const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
@@ -62,6 +65,7 @@ export default function InventoryManagementPage() {
     };
 
     const handleCreate = async () => {
+        if (!newItem.name.trim()) { alert('Ingrese un nombre.'); return; }
         try {
             const pPrice = Number(newItem.purchasePrice) || 0;
             const yieldPct = Number(newItem.yield) || 100;
@@ -70,16 +74,20 @@ export default function InventoryManagementPage() {
             const res = await authFetch(`${API_URL}/inventory`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    ...newItem,
+                    name: newItem.name,
+                    unit: newItem.unit,
+                    role: newItem.role,
+                    type: newItem.type,
                     costPerUnit: Math.round(netCost),
-                    yield: yieldPct
+                    currentStock: Number(newItem.currentStock) || 0,
+                    minStockThreshold: Number(newItem.minStock) || 10,
                 })
             });
 
             if (res.ok) {
                 loadData();
                 setIsCreating(false);
-                setNewItem({ name: '', category: 'VERDURAS', unit: 'KG', yield: '100', purchasePrice: '' });
+                setNewItem({ name: '', category: 'VERDURAS', unit: 'KG', yield: '100', purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10' });
             }
         } catch (e) {
             alert('Error al crear insumo');
@@ -447,33 +455,89 @@ export default function InventoryManagementPage() {
             {/* Creating Insumo Modal */}
             {isCreating && (
                 <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
-                    <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-xl w-full shadow-2xl animate-in zoom-in-95 duration-500">
+                    <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-500 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
                             <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Registrar <span className="text-orange-500">Nuevo Insumo</span></h3>
                             <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-50 rounded-full transition-colors"><X size={24} /></button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {/* Nombre */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nombre del Producto / Insumo</label>
-                                <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} placeholder="Ej: Reineta Fresca (Cajas)" />
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nombre del Insumo</label>
+                                <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} placeholder="Ej: Salmón Fresco" autoFocus />
                             </div>
 
+                            {/* Rol */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Categoría Base</label>
-                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.category} onChange={e => setNewItem({ ...newItem, category: e.target.value })}>
-                                    {categoriesList.filter(c => c !== 'TODOS').map(c => <option key={c} value={c}>{c}</option>)}
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.role} onChange={e => setNewItem({ ...newItem, role: e.target.value })}>
+                                    <option value="BASE">🍚 Base / Abarrote</option>
+                                    <option value="PROTEIN_MAIN">🥩 Proteína Principal</option>
+                                    <option value="PROTEIN_SPECIAL">🦐 Proteína Premium</option>
+                                    <option value="VEGGIE">🥬 Verdura / Vegetal</option>
+                                    <option value="SAUCE">🌶️ Salsa / Aderezo</option>
+                                    <option value="PACKAGING">📦 Packaging</option>
                                 </select>
                             </div>
 
+                            {/* Tipo */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Unidad Medida</label>
-                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.unit} onChange={e => setNewItem({ ...newItem, unit: e.target.value })}>
-                                    <option value="KG">KILOGRAMO (KG)</option>
-                                    <option value="UN">UNIDAD (UN)</option>
-                                    <option value="LT">LITRO (LT)</option>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Tipo</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.type} onChange={e => setNewItem({ ...newItem, type: e.target.value })}>
+                                    <option value="RAW">🪨 Materia Prima</option>
+                                    <option value="PREPARED">🍳 Preparado / Sub-receta</option>
+                                    <option value="PACKAGING">📦 Envase / Empaque</option>
                                 </select>
                             </div>
+
+                            {/* Unidad */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Unidad de Medida</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.unit} onChange={e => setNewItem({ ...newItem, unit: e.target.value })}>
+                                    <option value="KG">Kilogramo (KG)</option>
+                                    <option value="GR">Gramo (GR)</option>
+                                    <option value="LT">Litro (LT)</option>
+                                    <option value="ML">Mililitro (ML)</option>
+                                    <option value="UN">Unidad (UN)</option>
+                                </select>
+                            </div>
+
+                            {/* Rendimiento */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rendimiento %</label>
+                                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.yield} onChange={e => setNewItem({ ...newItem, yield: e.target.value })} placeholder="100" />
+                                <p className="text-[8px] text-slate-400 mt-1 italic text-center">100% = sin merma | 60% = 40% pérdida en limpieza</p>
+                            </div>
+
+                            {/* Precio Compra */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Precio Compra ($ por {newItem.unit})</label>
+                                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.purchasePrice} onChange={e => setNewItem({ ...newItem, purchasePrice: e.target.value })} placeholder="$0" />
+                            </div>
+
+                            {/* Stock Inicial */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Stock Inicial ({newItem.unit})</label>
+                                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.currentStock} onChange={e => setNewItem({ ...newItem, currentStock: e.target.value })} placeholder="0" />
+                            </div>
+
+                            {/* Umbral Mínimo */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Alerta Stock Mínimo</label>
+                                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.minStock} onChange={e => setNewItem({ ...newItem, minStock: e.target.value })} placeholder="10" />
+                            </div>
+
+                            {/* Preview costo neto */}
+                            {newItem.purchasePrice && (
+                                <div className="md:col-span-2 bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center">
+                                    <p className="text-[10px] font-black uppercase text-orange-400 tracking-widest italic">Costo Neto Calculado (PMP)</p>
+                                    <p className="text-3xl font-black italic text-orange-600 tracking-tighter">
+                                        ${Math.round(Number(newItem.purchasePrice) / ((Number(newItem.yield) || 100) / 100)).toLocaleString()}
+                                        <span className="text-sm text-orange-400"> /{newItem.unit}</span>
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="md:col-span-2 grid grid-cols-2 gap-4 mt-4">
                                 <button onClick={() => setIsCreating(false)} className="py-4 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar</button>
