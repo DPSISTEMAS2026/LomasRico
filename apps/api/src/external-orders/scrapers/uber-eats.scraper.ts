@@ -93,6 +93,7 @@ export class UberEatsScraper extends BaseScraper {
                 headers: {
                     'Cookie': cookie,
                     'Content-Type': 'application/json',
+                    'X-Csrf-Token': 'x',
                     'Origin': 'https://merchants-beta.ubereats.com',
                     'Referer': 'https://merchants-beta.ubereats.com/orders/overview',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -120,6 +121,7 @@ export class UberEatsScraper extends BaseScraper {
                 headers: {
                     'Cookie': cookie,
                     'Content-Type': 'application/json',
+                    'X-Csrf-Token': 'x',
                     'Origin': 'https://merchants-beta.ubereats.com',
                     'Referer': 'https://merchants-beta.ubereats.com/orders/overview',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
