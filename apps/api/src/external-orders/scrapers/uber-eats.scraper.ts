@@ -111,8 +111,10 @@ export class UberEatsScraper extends BaseScraper {
             });
 
             if (testRes.status === 401 || testRes.status === 403) {
-                this.logger.warn('⚠️ Sesión de Uber Eats expirada — necesita re-login manual');
-                return { valid: false, error: 'Session expired' };
+                const body = await testRes.text().catch(() => 'no body');
+                this.logger.warn(`⚠️ Uber auth failed: HTTP ${testRes.status} — ${body.substring(0, 200)}`);
+                this.logger.warn(`   Cookie length: ${cookie.length} chars`);
+                return { valid: false, error: `Session expired (HTTP ${testRes.status}: ${body.substring(0, 100)})` };
             }
 
             return {
