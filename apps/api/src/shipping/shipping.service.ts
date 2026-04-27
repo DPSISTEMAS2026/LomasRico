@@ -84,18 +84,16 @@ export class ShippingService {
             };
         } catch (error) {
             this.logger.error('PedidosYa Quote Failed', error);
-            // Fallback for POS, WHATSAPP or manual override
-            if (channel === 'POS' || channel === 'WHATSAPP') {
-                const fallbackCost = distanceKm > 5 ? 3500 : 2500;
-                return {
-                    valid: true,
-                    cost: fallbackCost,
-                    deliveryTimeEstimate: '35-50 min (Estimado)',
-                    reason: 'API Failure: Fallback applied.',
-                    distanceKm,
-                };
-            }
-            throw new InternalServerErrorException('No se pudo calcular el envío con el proveedor logístico.');
+            // Fallback: use distance-based pricing when API fails
+            const fallbackCost = distanceKm > 5 ? 3500 : 2500;
+            return {
+                valid: true,
+                cost: fallbackCost,
+                deliveryTimeEstimate: '35-50 min (Estimado)',
+                reason: channel === 'WEB' ? undefined : 'API Failure: Fallback applied.',
+                estimateId: `fallback-${Date.now()}`,
+                distanceKm,
+            };
         }
     }
 

@@ -61,6 +61,13 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
         }
     };
 
+    // Submit typed address when autocomplete doesn't provide suggestions
+    const handleManualSubmit = () => {
+        if (value && value.trim().length > 3 && status !== "OK") {
+            handleSelect(value.trim());
+        }
+    };
+
     return (
         <div className="relative w-full group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -72,6 +79,8 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
                     setValue(e.target.value);
                     if (!e.target.value) onSelect({ address: '' });
                 }}
+                onBlur={handleManualSubmit}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); } }}
                 disabled={!ready}
                 className="w-full p-4 pl-12 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-400"
                 placeholder={placeholder}
