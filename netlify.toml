@@ -1,8 +1,8 @@
-[build]
-  # El monorepo se buildea desde la raíz
-  base = "."
-  command = "npm install --include=dev && npm run build --workspace=@lomasrico/shared-types && npm run build --workspace=panels"
-  publish = "apps/panels/.next"
+# ══════════════════════════════════════════════════════
+# Lo Más Rico V3 — Netlify Config
+# Build command y publish directory se configuran en la UI
+# de cada sitio (v7=panels, v8=web) para evitar conflictos.
+# ══════════════════════════════════════════════════════
 
 [build.environment]
   NODE_VERSION = "20.9.0"
@@ -10,6 +10,6 @@
   NEXT_PUBLIC_SUPABASE_URL = "https://xnwbrdnorjafwwyfhysx.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhud2JyZG5vcmphZnd3eWZoeXN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NDI3NDQsImV4cCI6MjA4NTMxODc0NH0.eWDp2G1wRlc_L5Tc87N0W6jUj4BodLamcRiWgYvbmLs"
 
-# Plugin de Next.js para Netlify (maneja SSR automáticamente)
+# Plugin de Next.js para Netlify (SSR automático)
 [[plugins]]
   package = "@netlify/plugin-nextjs"
