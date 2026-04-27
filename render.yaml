@@ -47,7 +47,7 @@ services:
       - key: API_URL
         value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: ALLOWED_ORIGINS
-        value: "https://pro-lomasrico-web-vtyt.onrender.com,https://lomasrico-panels.netlify.app,https://pro-lomasrico-panels-33rx.onrender.com"
+        value: "https://lomasrico.netlify.app,https://lomasrico-panels.netlify.app,https://pro-lomasrico-web-vtyt.onrender.com,https://pro-lomasrico-panels-33rx.onrender.com"
       - key: SKIP_SEED
         value: "true"
       # --- Uber Eats Scraper (auto-poll cada 30s) ---

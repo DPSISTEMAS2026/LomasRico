@@ -35,8 +35,8 @@ async function bootstrap() {
       if (allowedOrigins.some(allowed => origin.startsWith(allowed.trim()))) {
         return callback(null, true);
       }
-      // En producción también permitir Render/Vercel domains genéricos
-      if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')) {
+      // En producción también permitir Render/Vercel/Netlify domains genéricos
+      if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
         return callback(null, true);
       }
       callback(new Error(`Origin ${origin} not allowed by CORS`));
