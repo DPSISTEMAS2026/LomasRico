@@ -62,7 +62,36 @@ export class SalesService {
         }
     }
 
+    // ✅ Protección anti doble-click: fingerprints recientes (10s window)
+    private recentSaleFingerprints = new Map<string, number>();
+
+    private getSaleFingerprint(dto: any): string {
+        const key = `${dto.channel}|${dto.userId || 'anon'}|${JSON.stringify((dto.items || []).map((i: any) => `${i.sellingProductId || i.productVariantId}x${i.quantity}`).sort())}`;
+        // Simple hash
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) {
+            hash = ((hash << 5) - hash) + key.charCodeAt(i);
+            hash |= 0;
+        }
+        return String(hash);
+    }
+
     async create(createSaleDto: CreateSaleDto) {
+        // Anti doble-click: rechazar si el mismo pedido se envió hace menos de 10 segundos
+        const fingerprint = this.getSaleFingerprint(createSaleDto);
+        const now = Date.now();
+        const lastSeen = this.recentSaleFingerprints.get(fingerprint);
+        if (lastSeen && (now - lastSeen) < 10_000) {
+            throw new ConflictException('Pedido duplicado detectado. Espera unos segundos antes de intentar de nuevo.');
+        }
+        this.recentSaleFingerprints.set(fingerprint, now);
+        // Limpiar fingerprints viejos cada 100 ventas
+        if (this.recentSaleFingerprints.size > 100) {
+            for (const [fp, ts] of this.recentSaleFingerprints.entries()) {
+                if (now - ts > 30_000) this.recentSaleFingerprints.delete(fp);
+            }
+        }
+
         const {
             channel,
             items,
@@ -103,14 +132,15 @@ export class SalesService {
         let products: any[] = [];
         if (itemsWithProductId.length > 0) {
             const productIds = itemsWithProductId.map(i => i.sellingProductId);
+            const uniqueProductIds = [...new Set(productIds)];
             products = await this.prisma.sellingProduct.findMany({
-                where: { id: { in: productIds } },
+                where: { id: { in: uniqueProductIds } },
                 include: { recipe: true }
             });
 
-            if (products.length !== productIds.length) {
+            if (products.length !== uniqueProductIds.length) {
                 const foundIds = products.map((p: any) => p.id);
-                const missingIds = productIds.filter((id: string) => !foundIds.includes(id));
+                const missingIds = uniqueProductIds.filter((id: string) => !foundIds.includes(id));
                 throw new BadRequestException(
                     `One or more SellingProduct IDs are invalid. Missing: ${missingIds.join(', ')}`
                 );
@@ -121,11 +151,12 @@ export class SalesService {
         let variants: any[] = [];
         if (itemsWithVariantId.length > 0) {
             const variantIds = itemsWithVariantId.map(i => i.productVariantId);
+            const uniqueVariantIds = [...new Set(variantIds)];
             variants = await this.prisma.productVariant.findMany({
-                where: { id: { in: variantIds } },
+                where: { id: { in: uniqueVariantIds } },
             });
 
-            if (variants.length !== variantIds.length) {
+            if (variants.length !== uniqueVariantIds.length) {
                 throw new BadRequestException('One or more ProductVariant IDs are invalid');
             }
         }
@@ -347,6 +378,16 @@ export class SalesService {
                 }
             }
 
+            // ✅ FIX: Para canales sin shiftId (WEB, UBER_EATS, PEDIDOS_YA, WHATSAPP),
+            // vincular al turno de caja abierto más reciente para que registre en reportes
+            if (!finalShiftId) {
+                const activeShift = await tx.cashShift.findFirst({
+                    where: { status: 'OPEN' },
+                    orderBy: { openingTime: 'desc' },
+                });
+                if (activeShift) finalShiftId = activeShift.id;
+            }
+
             // Generar código único secuencial (con retry para race conditions)
             let uniqueCode = '';
             for (let attempt = 0; attempt < 5; attempt++) {
@@ -446,14 +487,20 @@ export class SalesService {
                     });
                 }
 
-                // ✅ REGISTRAR EN FLUJO DE CAJA SI ES POS
-                if (channel === 'POS' && finalShiftId) {
+                // ✅ REGISTRAR EN FLUJO DE CAJA — TODOS LOS CANALES con turno activo
+                if (finalShiftId) {
+                    const channelLabel = channel === 'POS' ? 'POS' 
+                        : channel === 'UBER_EATS' ? 'Uber Eats'
+                        : channel === 'PEDIDOS_YA' ? 'PedidosYa'
+                        : channel === 'WEB' ? 'Web'
+                        : channel === 'WHATSAPP' ? 'WhatsApp'
+                        : channel;
                     await tx.cashTransaction.create({
                         data: {
                             shiftId: finalShiftId,
                             type: 'SALE_INCOME',
                             amount: totalAmount,
-                            description: `Venta POS ${uniqueCode} (${paymentMethod})`,
+                            description: `Venta ${channelLabel} ${uniqueCode} (${paymentMethod})`,
                             relatedSaleId: sale.id
                         }
                     });
