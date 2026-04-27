@@ -351,7 +351,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                 </div>
 
                 {/* RIGHT COLUMN: Actions & Summary */}
-                <div className="w-full md:w-[400px] bg-slate-100 p-6 md:p-8 flex flex-col gap-6 flex-none relative overflow-visible md:overflow-y-auto">
+                <div className="w-full md:w-[400px] bg-slate-100 p-6 md:p-8 pb-10 flex flex-col gap-6 flex-none relative overflow-y-auto">
 
                     {/* Delivery Type Selector */}
                     <div className="space-y-4">
@@ -562,10 +562,12 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                 <div className="flex items-center gap-3">
                                     <span className="italic">PAGAR CON</span>
                                     <img
-                                        src="https://logotipoz.com/wp-content/uploads/2021/10/version-horizontal-large-logo-mercadopago.webp"
+                                        src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/6.6.92/mercadopago/logo__large@2x.png"
                                         className="h-6 brightness-0 invert object-contain"
                                         alt="Mercado Pago"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
+                                    <span className="font-black text-base italic tracking-tight">MERCADO PAGO</span>
                                     <ArrowRight className="group-hover:translate-x-2 transition-transform ml-1" strokeWidth={3} />
                                 </div>
                             )}

@@ -98,6 +98,12 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
 function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Props & { error?: boolean, loading?: boolean }) {
     const [val, setVal] = useState(defaultValue);
 
+    const submit = () => {
+        if (val && val.trim().length > 3) {
+            onSelect({ address: val.trim() });
+        }
+    };
+
     return (
         <div className="relative w-full">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -105,10 +111,9 @@ function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Pr
             </div>
             <input
                 value={val}
-                onChange={(e) => {
-                    setVal(e.target.value);
-                    onSelect({ address: e.target.value });
-                }}
+                onChange={(e) => setVal(e.target.value)}
+                onBlur={submit}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
                 className={`w-full p-4 pl-12 rounded-xl bg-slate-50 border font-bold text-sm outline-none transition-all placeholder:text-slate-400 ${error ? 'border-red-200 bg-red-50' : 'border-slate-200 focus:border-slate-900'}`}
                 placeholder={loading ? 'Cargando mapa...' : (placeholder || 'Ingresa tu dirección manual...')}
                 disabled={loading}
