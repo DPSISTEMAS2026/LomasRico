@@ -1,14 +1,14 @@
 
 import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
+import { LOCATION } from '@lomasrico/shared-types';
 
 @Injectable()
 export class ShippingService {
     private readonly logger = new Logger(ShippingService.name);
-    // Coordenadas aproximadas del local (Concepción Centro)
-    private readonly ORIGIN_COORDS = { lat: -36.82699, lng: -73.04977 };
-    private readonly ORIGIN_ADDRESS = 'Obispo Hipólito Salas 1205, Concepción';
-    private readonly MAX_DISTANCE_KM = 8;
+    private readonly ORIGIN_COORDS = { lat: LOCATION.lat, lng: LOCATION.lng };
+    private readonly ORIGIN_ADDRESS = LOCATION.address;
+    private readonly MAX_DISTANCE_KM = LOCATION.maxDeliveryRadiusKm;
 
     private readonly PEDIDOSYA_API_URL = process.env.PEDIDOSYA_API_URL || 'https://api.pedidosya.com/v1';
     private readonly PEDIDOSYA_TOKEN = process.env.PEDIDOSYA_TOKEN;

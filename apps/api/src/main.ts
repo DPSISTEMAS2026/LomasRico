@@ -3,6 +3,23 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // ── Validate critical environment variables ──
+  const required = ['DATABASE_URL'];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error('╔══════════════════════════════════════════════════╗');
+    console.error('║  ❌ MISSING REQUIRED ENVIRONMENT VARIABLES      ║');
+    missing.forEach(key => console.error(`║  → ${key.padEnd(44)}║`));
+    console.error('║  Set them in .env or environment config.        ║');
+    console.error('╚══════════════════════════════════════════════════╝');
+    process.exit(1);
+  }
+
+  const warned = ['JWT_SECRET'];
+  warned.filter(key => !process.env[key]).forEach(key => {
+    console.warn(`⚠️  ${key} not set — using insecure default (OK for local dev)`);
+  });
+
   const app = await NestFactory.create(AppModule);
 
   // CORS: Whitelist basada en variable de entorno

@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "../context/AuthContext";
+import { ToastProvider } from "../context/ToastContext";
 
 export default function RootLayout({
   children,
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${outfit.variable} font-sans antialiased bg-white`}>
         <AuthProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

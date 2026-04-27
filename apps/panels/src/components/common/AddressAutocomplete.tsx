@@ -106,11 +106,11 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
     );
 }
 
-function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Props & { error?: boolean, loading?: boolean }) {
+function ManualInput({ onSelect, defaultValue = '', placeholder, error, loading }: Props & { error?: boolean, loading?: boolean }) {
     const [val, setVal] = useState(defaultValue);
 
     const handleConfirm = () => {
-        if (val.trim()) {
+        if (val && val.trim()) {
             onSelect({ address: val });
         }
     };

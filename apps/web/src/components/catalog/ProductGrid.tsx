@@ -7,7 +7,7 @@ import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES } from '@lomasrico/shared-types';
 import { API_URL } from '../../services/api';
-import { supabase } from '../../lib/supabase';
+
 
 
 import { LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda } from 'lucide-react';
@@ -40,54 +40,9 @@ export const ProductGrid = () => {
     const [selectedCategory, setSelectedCategory] = useState('todo');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [availableProteins, setAvailableProteins] = useState<any[]>([]);
-    const [banners, setBanners] = useState<any[]>([]);
-    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-
-    useEffect(() => {
-        const fetchBanners = async () => {
-            try {
-                const { data, error } = await supabase.storage
-                    .from('assets')
-                    .list('', {
-                        limit: 100,
-                        sortBy: { column: 'name', order: 'asc' }
-                    });
-
-                if (error) throw error;
-
-                // Filtramos archivos que empiezan con banner- (Case-insensitive)
-                const bannerFiles = (data || []).filter(f =>
-                    f.name.toLowerCase().startsWith('banner-')
-                );
-
-                if (bannerFiles.length > 0) {
-                    const urls = bannerFiles.map(f => {
-                        const { data: urlData } = supabase.storage
-                            .from('assets')
-                            .getPublicUrl(f.name);
-                        return { url: urlData.publicUrl, name: f.name };
-                    });
-                    setBanners(urls);
-                } else {
-                    setBanners([{ url: '/assets/BANNER VERANO.png' }]);
-                }
-            } catch (e) {
-                console.error('Error fetching banners:', e);
-                setBanners([{ url: '/assets/BANNER VERANO.png' }]);
-            }
-        };
-        fetchBanners();
-    }, []);
+    const [availableProteins, setAvailableProteins] = useState<{ id: string; name: string }[]>([]);
 
 
-    useEffect(() => {
-        if (banners.length <= 1) return;
-        const interval = setInterval(() => {
-            setCurrentBannerIndex(prev => (prev + 1) % banners.length);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [banners]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -233,42 +188,7 @@ export const ProductGrid = () => {
                 </div>
             </div>
 
-            {/* HERO BANNER SECTION */}
-            <div className="relative w-full h-[45vh] md:h-[60vh] bg-slate-900 overflow-hidden">
-                {/* Banner Images */}
-                <div className="absolute inset-0">
-                    {banners.length > 0 ? (
-                        banners.map((banner, index) => (
-                            <img
-                                key={index}
-                                src={banner.url}
-                                alt={`Banner ${index}`}
-                                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${index === currentBannerIndex ? 'opacity-90' : 'opacity-0'}`}
-                            />
-                        ))
-                    ) : (
-                        <div className="w-full h-full bg-slate-800 animate-pulse" />
-                    )}
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/30 z-10" />
-                </div>
 
-                {/* Dots Indicator */}
-                {banners.length > 1 && (
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
-                        {banners.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setCurrentBannerIndex(i)}
-                                className={`h-1.5 rounded-full transition-all duration-500 ${i === currentBannerIndex ? 'w-12 bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]' : 'w-3 bg-white/30 hover:bg-white/50'}`}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Reduced spacer */}
-            <div className="h-8" />
 
             {/* CONTENT CONTAINER */}
             <div className="max-w-7xl mx-auto px-6 space-y-16">
@@ -290,8 +210,8 @@ export const ProductGrid = () => {
                                 </span>
                             </div>
 
-                            {/* Responsive Grid */}
-                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10">
+                            {/* Responsive Grid — full-width card when only 1 product in category */}
+                            <div className={`grid ${displayProducts.length === 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'} lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10`}>
                                 {displayProducts.map(product => (
                                     <ProductCard
                                         key={product.id}

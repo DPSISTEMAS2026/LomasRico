@@ -30,6 +30,7 @@ import {
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { PROTEINS, VEGGIES } from '@lomasrico/shared-types';
+import type { CashierShift, AppUser, ShiftTransaction } from '@lomasrico/shared-types';
 import { createSale, getShippingQuote, simulateMPCallback, fetchCatalog, API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
 import { useAuth } from '../../../context/AuthContext';
@@ -38,357 +39,11 @@ import { ComandaPrinter } from '../../../components/printer/ComandaPrinter';
 import AddressAutocomplete from '../../../components/common/AddressAutocomplete';
 import { Product, CartItem } from '../../../types';
 
-// ─────────────────────────────────────────────
-// Modal: Apertura de Turno
-// ─────────────────────────────────────────────
-function OpenShiftModal({ userId, onSuccess, onClose }: { userId: string; onSuccess: (shift: any) => void; onClose: () => void }) {
-    const [startAmount, setStartAmount] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleOpen = async () => {
-        const amount = parseFloat(startAmount);
-        if (isNaN(amount) || amount < 0) { setError('Ingresa un monto válido (puede ser 0)'); return; }
-        setLoading(true);
-        try {
-            const res = await authFetch(`${API_URL}/shifts/open`, {
-                method: 'POST',
-                body: JSON.stringify({ cashierId: userId, startAmount: amount })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Error al abrir turno');
-            onSuccess(data);
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-[3rem] p-10 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="text-center mb-8">
-                    <div className="w-20 h-20 rounded-[2rem] bg-green-50 flex items-center justify-center mx-auto mb-4">
-                        <Unlock size={36} className="text-green-500" />
-                    </div>
-                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Apertura de Caja</h2>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Ingresa el efectivo inicial en caja</p>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Monto Inicial en Efectivo</label>
-                    <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
-                        <input
-                            type="number"
-                            min="0"
-                            value={startAmount}
-                            onChange={e => setStartAmount(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleOpen()}
-                            className="w-full pl-10 pr-5 py-5 border-2 border-slate-100 rounded-2xl font-black text-3xl text-slate-900 focus:outline-none focus:border-green-400 transition-all text-center"
-                            placeholder="0"
-                            autoFocus
-                        />
-                    </div>
-                    {error && <p className="text-red-500 text-xs font-bold mt-2 text-center">{error}</p>}
-                </div>
-
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleOpen}
-                        disabled={loading}
-                        className="flex-1 py-4 rounded-2xl bg-green-500 text-white font-black uppercase italic text-sm hover:bg-green-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 size={18} className="animate-spin" /> : <Unlock size={18} />}
-                        Abrir Turno
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────
-// Modal: Cierre de Turno
-// ─────────────────────────────────────────────
-function CloseShiftModal({ shift, onSuccess, onClose }: { shift: any; onSuccess: () => void; onClose: () => void }) {
-    const [endAmount, setEndAmount] = useState('');
-    const [note, setNote] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    // Calcular sistema
-    const systemAmount = (shift?.transactions || []).reduce((sum: number, tx: any) => {
-        if (tx.type === 'SALE_INCOME') return sum + Number(tx.amount);
-        if (tx.type === 'EXPENSE' || tx.type === 'WITHDRAWAL') return sum - Number(tx.amount);
-        if (tx.type === 'OPENING') return sum;
-        return sum;
-    }, Number(shift?.startAmount || 0));
-
-    const countedAmount = parseFloat(endAmount) || 0;
-    const diff = countedAmount - systemAmount;
-
-    const handleClose = async () => {
-        if (endAmount === '') { setError('Ingresa el efectivo contado'); return; }
-        setLoading(true);
-        try {
-            const res = await authFetch(`${API_URL}/shifts/${shift.id}/close`, {
-                method: 'POST',
-                body: JSON.stringify({ endAmount: countedAmount, note })
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.message || 'Error al cerrar turno'); }
-            onSuccess();
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const openTime = shift?.openingTime ? new Date(shift.openingTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-    const salesCount = (shift?.transactions || []).filter((t: any) => t.type === 'SALE_INCOME').length;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
-                <div className="text-center mb-8">
-                    <div className="w-20 h-20 rounded-[2rem] bg-red-50 flex items-center justify-center mx-auto mb-4">
-                        <Lock size={36} className="text-red-500" />
-                    </div>
-                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Cierre de Caja</h2>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Turno abierto desde las {openTime}</p>
-                </div>
-
-                {/* Resumen del turno */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                    <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Efectivo Inicial</p>
-                        <p className="text-lg font-black italic text-slate-900 mt-1">${Number(shift?.startAmount || 0).toLocaleString()}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Ventas</p>
-                        <p className="text-lg font-black italic text-orange-500 mt-1">{salesCount}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Sistema</p>
-                        <p className="text-lg font-black italic text-green-600 mt-1">${systemAmount.toLocaleString()}</p>
-                    </div>
-                </div>
-
-                {/* Efectivo contado */}
-                <div className="mb-4">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Efectivo Contado en Caja</label>
-                    <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
-                        <input
-                            type="number"
-                            min="0"
-                            value={endAmount}
-                            onChange={e => setEndAmount(e.target.value)}
-                            className="w-full pl-10 pr-5 py-5 border-2 border-slate-100 rounded-2xl font-black text-3xl text-slate-900 focus:outline-none focus:border-red-400 transition-all text-center"
-                            placeholder="0"
-                            autoFocus
-                        />
-                    </div>
-                </div>
-
-                {/* Diferencia */}
-                {endAmount !== '' && (
-                    <div className={`rounded-2xl p-4 mb-4 flex items-center justify-between ${Math.abs(diff) < 100 ? 'bg-green-50' : diff > 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
-                        <span className="text-xs font-black uppercase text-slate-500">Diferencia</span>
-                        <span className={`text-xl font-black italic ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-                        </span>
-                    </div>
-                )}
-
-                {/* Nota */}
-                <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Nota (opcional)</label>
-                    <textarea
-                        value={note}
-                        onChange={e => setNote(e.target.value)}
-                        className="w-full border-2 border-slate-100 rounded-2xl p-4 font-bold text-sm text-slate-700 focus:outline-none focus:border-slate-300 transition-all resize-none"
-                        rows={2}
-                        placeholder="Observaciones del turno..."
-                    />
-                </div>
-
-                {error && <p className="text-red-500 text-xs font-bold mb-4 text-center">{error}</p>}
-
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleClose}
-                        disabled={loading}
-                        className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-black uppercase italic text-sm hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
-                        Cerrar Turno
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────
-// Modal: Retiro de Efectivo
-// ─────────────────────────────────────────────
-function WithdrawalModal({ shiftId, onSuccess, onClose }: { shiftId: string; onSuccess: () => void; onClose: () => void }) {
-    const [amount, setAmount] = useState('');
-    const [note, setNote] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleWithdraw = async () => {
-        const val = parseFloat(amount);
-        if (isNaN(val) || val <= 0) { setError('Ingresa un monto válido'); return; }
-        if (!note) { setError('Debes justificar el retiro'); return; }
-
-        setLoading(true);
-        try {
-            const res = await authFetch(`${API_URL}/shifts/${shiftId}/expense`, {
-                method: 'POST',
-                body: JSON.stringify({ amount: val, description: note, type: 'WITHDRAWAL' })
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.message || 'Error al procesar retiro'); }
-            onSuccess();
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-[3rem] p-8 md:p-10 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mx-auto mb-4">
-                        <Coins size={32} className="text-orange-500" />
-                    </div>
-                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">Retiro de Caja</h2>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Registra la salida de efectivo</p>
-                </div>
-
-                <div className="mb-4">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Monto a retirar</label>
-                    <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
-                        <input
-                            type="number"
-                            min="0"
-                            value={amount}
-                            onChange={e => setAmount(e.target.value)}
-                            className="w-full pl-10 pr-5 py-4 border-2 border-slate-100 rounded-2xl font-black text-3xl text-slate-900 outline-none focus:border-orange-400 transition-all text-center"
-                            placeholder="0"
-                            autoFocus
-                        />
-                    </div>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Motivo / Justificación</label>
-                    <textarea
-                        value={note}
-                        onChange={e => setNote(e.target.value)}
-                        className="w-full border-2 border-slate-100 rounded-2xl p-4 font-bold text-sm text-slate-700 outline-none focus:border-orange-400 transition-all resize-none"
-                        rows={2}
-                        placeholder="Ej: Pago de proveedores, Compra insumos..."
-                    />
-                </div>
-
-                {error && <p className="text-red-500 text-xs font-bold mb-4 text-center">{error}</p>}
-
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleWithdraw}
-                        disabled={loading}
-                        className="flex-1 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs hover:bg-orange-500 transition-all shadow-xl shadow-orange-100 flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Coins size={16} />}
-                        Confirmar Retiro
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────
-// Modal: Descuento Especial
-// ─────────────────────────────────────────────
-function DiscountModal({ currentDiscount, currentType, onApply, onClose }: { currentDiscount: number; currentType: 'PERCENT' | 'FIXED'; onApply: (val: number, type: 'PERCENT' | 'FIXED') => void; onClose: () => void }) {
-    const [val, setVal] = useState(currentDiscount.toString());
-    const [type, setType] = useState(currentType);
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-[3rem] p-8 md:p-10 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
-                        <TrendingDown size={32} className="text-red-500" />
-                    </div>
-                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">Descuento Especial</h2>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Autorización del Administrador</p>
-                </div>
-
-                <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
-                    <button
-                        onClick={() => setType('PERCENT')}
-                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'PERCENT' ? 'bg-white shadow-md text-slate-900' : 'text-slate-400'}`}
-                    >
-                        Porcentaje (%)
-                    </button>
-                    <button
-                        onClick={() => setType('FIXED')}
-                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'FIXED' ? 'bg-white shadow-md text-slate-900' : 'text-slate-400'}`}
-                    >
-                        Monto ($)
-                    </button>
-                </div>
-
-                <div className="mb-8">
-                    <div className="relative">
-                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-300 text-2xl">
-                            {type === 'PERCENT' ? '%' : '$'}
-                        </span>
-                        <input
-                            type="number"
-                            value={val}
-                            onChange={e => setVal(e.target.value)}
-                            className="w-full bg-slate-50 pl-14 pr-6 py-6 rounded-3xl font-black text-4xl text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-red-100 transition-all text-center"
-                            placeholder="0"
-                            autoFocus
-                        />
-                    </div>
-                </div>
-
-                <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={() => onApply(parseFloat(val) || 0, type)}
-                        className="flex-1 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs hover:bg-red-600 transition-all shadow-xl shadow-red-100"
-                    >
-                        Aplicar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
+// ─── Extracted POS Modals ──────────────────────────────────
+import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
+import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
+import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
+import { DiscountModal } from '../../../components/pos/DiscountModal';
 
 // ─────────────────────────────────────────────
 // Página Principal del POS
@@ -407,7 +62,7 @@ export default function POSPage() {
     const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MP' | 'TRANSFER'>('CASH');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeShift, setActiveShift] = useState<any>(null);
+    const [activeShift, setActiveShift] = useState<CashierShift | null>(null);
     const [loadingShift, setLoadingShift] = useState(true);
 
     // Modals
@@ -426,9 +81,9 @@ export default function POSPage() {
     const [orderNote, setOrderNote] = useState('');
 
     // Customer Selection
-    const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<AppUser | null>(null);
     const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
-    const [customers, setCustomers] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<AppUser[]>([]);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
     // Debounced Customer Search
@@ -464,7 +119,7 @@ export default function POSPage() {
 
     const { user } = useAuth();
     const isOwnerOrAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN';
-    const canApplyDiscount = isOwnerOrAdmin || (user as any)?.canDiscount;
+    const canApplyDiscount = isOwnerOrAdmin || (user as AppUser | null)?.canDiscount;
 
     useEffect(() => {
         loadProducts();
@@ -641,8 +296,8 @@ export default function POSPage() {
         ? new Date(activeShift.openingTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
         : null;
     const shiftSalesTotal = (activeShift?.transactions || [])
-        .filter((t: any) => t.type === 'SALE_INCOME')
-        .reduce((s: number, t: any) => s + Number(t.amount), 0);
+        .filter((t: ShiftTransaction) => t.type === 'SALE_INCOME')
+        .reduce((s: number, t: ShiftTransaction) => s + Number(t.amount), 0);
 
     const [mobileTab, setMobileTab] = useState<'CATALOG' | 'CART'>('CATALOG');
 
@@ -998,7 +653,7 @@ export default function POSPage() {
 
                                 {selectedCustomer && (selectedCustomer.addresses || []).length > 0 && (
                                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2 pb-1">
-                                        {selectedCustomer.addresses.map((a: any) => (
+                                        {selectedCustomer.addresses?.map((a) => (
                                             <button
                                                 key={a.id}
                                                 onClick={() => {

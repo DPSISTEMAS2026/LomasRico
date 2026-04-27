@@ -269,11 +269,16 @@ export class RecipeResolverService {
             });
             if (byName) return { id: byName.ingredientId, name: byName.ingredient.name, role: byName.role };
 
-            // Búsqueda global
+            // Búsqueda global (bidireccional: "Camarón Mango" matchea "Camarón")
             const candidates = await this.prisma.inventoryItem.findMany({
                 where: { role: { in: ['PROTEIN_MAIN', 'PROTEIN_SPECIAL'] } }
             });
-            const dbItem = candidates.find(item => normalizeString(item.name).includes(searchTerm));
+            const dbItem = candidates.find(item => {
+                const itemName = normalizeString(item.name);
+                return itemName.includes(searchTerm) 
+                    || searchTerm.includes(itemName)
+                    || searchTerm.split(' ')[0] === itemName.split(' ')[0];
+            });
             
             if (!dbItem) throw new NotFoundException(`Protein '${id}' not found`);
             return { id: dbItem.id, name: dbItem.name, role: dbItem.role as any };

@@ -10,6 +10,56 @@ import { supabase } from '../../../../lib/supabase';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 
+// ─── Types ──────────────────────────────────────────
+interface Promotion {
+    id: string;
+    code: string;
+    title: string;
+    description?: string;
+    discountType: string;
+    discountValue: number;
+    isActive: boolean;
+    startDate?: string;
+    endDate?: string;
+    activeDays?: string;
+    startTime?: string;
+    endTime?: string;
+    minOrderAmount?: number;
+    maxUses?: number;
+    currentUses?: number;
+    targetProductId?: string;
+    bannerImageKey?: string;
+    bannerImageUrl?: string;
+    bannerDesktopUrl?: string;
+    bannerMobileUrl?: string;
+}
+
+interface PromotionForm {
+    code: string;
+    title: string;
+    description: string;
+    discountType: string;
+    discountValue: number;
+    isActive: boolean;
+    startDate: string;
+    endDate: string;
+    activeDays: string[];
+    startTime: string;
+    endTime: string;
+    minOrderAmount: number;
+    maxUses: number;
+    targetProductId: string;
+    bannerImageKey: string;
+    bannerImageUrl: string;
+    bannerDesktopUrl: string;
+    bannerMobileUrl: string;
+}
+
+interface SimpleProduct {
+    id: string;
+    name: string;
+}
+
 const BUCKET = 'assets';
 const BANNER_PREFIX = 'banner-';
 
@@ -35,11 +85,11 @@ const DAYS = [
 ];
 
 export default function MarketingPage() {
-    const [promos, setPromos] = useState<any[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
+    const [promos, setPromos] = useState<Promotion[]>([]);
+    const [products, setProducts] = useState<SimpleProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [editing, setEditing] = useState<any>(null);
+    const [editing, setEditing] = useState<Promotion | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -47,7 +97,7 @@ export default function MarketingPage() {
     const [uploadingDesktop, setUploadingDesktop] = useState(false);
     const [uploadingMobile, setUploadingMobile] = useState(false);
 
-    const emptyForm: any = {
+    const emptyForm: PromotionForm = {
         code: '', title: '', description: '',
         discountType: 'PERCENT', discountValue: 0,
         isActive: true, startDate: '', endDate: '',
@@ -57,7 +107,7 @@ export default function MarketingPage() {
         bannerImageKey: '', bannerImageUrl: '',
         bannerDesktopUrl: '', bannerMobileUrl: ''
     };
-    const [form, setForm] = useState(emptyForm);
+    const [form, setForm] = useState<PromotionForm>(emptyForm);
 
     useEffect(() => { loadData(); }, []);
 
@@ -88,10 +138,10 @@ export default function MarketingPage() {
             if (uploadError) throw uploadError;
             const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
             const fieldKey = type === 'desktop' ? 'bannerDesktopUrl' : 'bannerMobileUrl';
-            setForm((prev: any) => ({ ...prev, [fieldKey]: urlData.publicUrl, bannerImageUrl: prev.bannerImageUrl || urlData.publicUrl }));
+            setForm((prev: PromotionForm) => ({ ...prev, [fieldKey]: urlData.publicUrl, bannerImageUrl: prev.bannerImageUrl || urlData.publicUrl }));
             showSuccess(`Banner ${type === 'desktop' ? 'PC' : 'Móvil'} subido ✓`);
-        } catch(e: any) {
-            alert('Error al subir: ' + e.message);
+        } catch(e: unknown) {
+            alert('Error al subir: ' + (e instanceof Error ? e.message : 'Error desconocido'));
         } finally {
             setUploading(false);
         }
@@ -141,7 +191,7 @@ export default function MarketingPage() {
         loadData();
     };
 
-    const toggleActive = async (promo: any) => {
+    const toggleActive = async (promo: Promotion) => {
         await authFetch(`${API_URL}/promotions/${promo.id}`, {
             method: 'PATCH',
             body: JSON.stringify({ isActive: !promo.isActive }),
@@ -150,7 +200,7 @@ export default function MarketingPage() {
         loadData();
     };
 
-    const openEdit = (promo: any) => {
+    const openEdit = (promo: Promotion) => {
         let parsedDays = [];
         try { if(promo.activeDays) parsedDays = JSON.parse(promo.activeDays); } catch(e){}
 
@@ -179,10 +229,10 @@ export default function MarketingPage() {
     };
 
     const toggleDay = (dayId: string) => {
-        setForm(p => ({
+        setForm((p: PromotionForm) => ({
             ...p,
             activeDays: p.activeDays.includes(dayId) 
-                ? p.activeDays.filter(d => d !== dayId) 
+                ? p.activeDays.filter((d: string) => d !== dayId) 
                 : [...p.activeDays, dayId]
         }));
     };
@@ -391,7 +441,7 @@ export default function MarketingPage() {
                                             <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Producto Específico</label>
                                             <select value={form.targetProductId} onChange={e => setForm(p => ({...p, targetProductId: e.target.value}))} className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none">
                                                 <option value="">Selecciona Producto...</option>
-                                                {products.map((p:any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                {products.map((p: SimpleProduct) => <option key={p.id} value={p.id}>{p.name}</option>)}
                                             </select>
                                         </div>
                                     )}
@@ -422,7 +472,7 @@ export default function MarketingPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     {promos.map(promo => {
                         const isExpired = promo.endDate && new Date(promo.endDate) < new Date();
-                        const isExhausted = promo.maxUses && promo.currentUses >= promo.maxUses;
+                        const isExhausted = promo.maxUses && (promo.currentUses ?? 0) >= promo.maxUses;
                         
                         let parsedDays = [];
                         try { if(promo.activeDays) parsedDays = JSON.parse(promo.activeDays); } catch(e){}

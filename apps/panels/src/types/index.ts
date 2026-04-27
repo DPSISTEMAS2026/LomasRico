@@ -5,7 +5,8 @@ export interface ModifierOption {
     id: string;
     name: string;
     priceAdjustment: number;
-    isDefault: boolean;
+    isDefault?: boolean;
+    sortOrder?: number;
 }
 
 export interface ModifierGroup {
@@ -30,6 +31,7 @@ export interface Product {
     maxProteins?: number; // Regla de negocio
     isConfigurable?: boolean;
     modifiers?: ModifierGroup[]; // NUEVO: Modificadores dinámicos
+    hoverVideoUrl?: string; // Video de hover para catálogo POS
 }
 
 export interface ProductVariant {
