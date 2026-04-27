@@ -128,7 +128,8 @@ export class InventoryService {
                 role: data.role,
                 type: data.type,
                 unit: data.unit,
-                isActive: data.isActive
+                isActive: data.isActive,
+                minStockThreshold: data.minStockThreshold !== undefined ? parseInt(data.minStockThreshold) : undefined
             }
         }));
 

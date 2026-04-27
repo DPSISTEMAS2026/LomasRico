@@ -19,7 +19,8 @@ import {
     ClipboardCheck,
     History,
     Trash2,
-    Factory
+    Factory,
+    Pencil
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
@@ -35,6 +36,8 @@ export default function InventoryManagementPage() {
     const [restockItem, setRestockItem] = useState<any>(null);
     const [adjustItem, setAdjustItem] = useState<any>(null);
     const [wasteItem, setWasteItem] = useState<any>(null);
+    const [editItem, setEditItem] = useState<any>(null);
+    const [editData, setEditData] = useState({ name: '', role: 'BASE', type: 'RAW', unit: 'KG', costPerUnit: '', minStockThreshold: '10' });
 
     // Form States
     const [newItem, setNewItem] = useState({
@@ -361,6 +364,15 @@ export default function InventoryManagementPage() {
                                     <td className="px-8 py-6">
                                         <div className="flex justify-center gap-2">
                                             <button
+                                                onClick={() => {
+                                                    setEditItem(item);
+                                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10' });
+                                                }}
+                                                className="px-3 py-2 bg-blue-50 text-blue-600 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5"
+                                            >
+                                                <Pencil size={12} /> Editar
+                                            </button>
+                                            <button
                                                 id={`adjust-btn-${item.id}`}
                                                 onClick={() => {
                                                     setAdjustItem(item);
@@ -419,31 +431,40 @@ export default function InventoryManagementPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-50">
+                        <div className="grid grid-cols-4 gap-2 pt-4 border-t border-slate-50">
+                            <button
+                                onClick={() => {
+                                    setEditItem(item);
+                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10' });
+                                }}
+                                className="bg-blue-50 text-blue-600 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 border border-blue-100 active:scale-95"
+                            >
+                                <Pencil size={12} /> Editar
+                            </button>
                             <button
                                 onClick={() => {
                                     setAdjustItem(item);
                                     setAdjustValue(item.currentStock?.toString() || '0');
                                 }}
-                                className="bg-slate-50 text-slate-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 border border-slate-100 active:scale-95"
+                                className="bg-slate-50 text-slate-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 border border-slate-100 active:scale-95"
                             >
-                                <RefreshCw size={12} /> Ajustar
+                                <RefreshCw size={12} /> Ajust
                             </button>
                             <button
                                 onClick={() => {
                                     setRestockItem(item);
                                     setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' });
                                 }}
-                                className="bg-slate-900 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 shadow-lg active:scale-95"
+                                className="bg-slate-900 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 shadow-lg active:scale-95"
                             >
-                                <TrendingUp size={12} /> Reponer
+                                <TrendingUp size={12} /> Repo
                             </button>
                             <button
                                 onClick={() => {
                                     setWasteItem(item);
                                     setWasteData({ quantity: '', reason: 'EXPIRED', note: '' });
                                 }}
-                                className="bg-red-50 text-red-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 border border-red-100 active:scale-95"
+                                className="bg-red-50 text-red-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 border border-red-100 active:scale-95"
                             >
                                 <Trash2 size={12} /> Merma
                             </button>
@@ -721,6 +742,100 @@ export default function InventoryManagementPage() {
                                 </button>
                                 <button onClick={() => setWasteItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Ingredient Modal */}
+            {editItem && (
+                <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-500 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
+                            <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Editar <span className="text-blue-500">{editItem.name}</span></h3>
+                            <button onClick={() => setEditItem(null)} className="p-2 hover:bg-slate-50 rounded-full transition-colors"><X size={24} /></button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {/* Nombre */}
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nombre del Insumo</label>
+                                <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                            </div>
+
+                            {/* Rol */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol en Producción</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.role} onChange={e => setEditData({ ...editData, role: e.target.value })}>
+                                    <option value="PROTEIN_MAIN">🥩 Proteína Principal</option>
+                                    <option value="PROTEIN_SPECIAL">🦑 Proteína Especial</option>
+                                    <option value="VEGGIE">🥬 Vegetal / Fresco</option>
+                                    <option value="BASE">🍚 Base / Cereal</option>
+                                    <option value="SAUCE">🫙 Salsa / Aderezo</option>
+                                    <option value="PACKAGING">📦 Envase / Packaging</option>
+                                </select>
+                            </div>
+
+                            {/* Tipo */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Tipo</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.type} onChange={e => setEditData({ ...editData, type: e.target.value })}>
+                                    <option value="RAW">🧊 Materia Prima</option>
+                                    <option value="PREPARED">🍲 Preparado / Sub-receta</option>
+                                    <option value="PACKAGING">📦 Empaque</option>
+                                </select>
+                            </div>
+
+                            {/* Unidad */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Unidad de Medida</label>
+                                <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.unit} onChange={e => setEditData({ ...editData, unit: e.target.value })}>
+                                    <option value="KG">KG – Kilogramo</option>
+                                    <option value="GR">GR – Gramo</option>
+                                    <option value="LT">LT – Litro</option>
+                                    <option value="ML">ML – Mililitro</option>
+                                    <option value="UN">UN – Unidad</option>
+                                </select>
+                            </div>
+
+                            {/* Costo Unitario */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Costo por {editData.unit}</label>
+                                <div className="relative">
+                                    <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                    <input type="number" className="w-full bg-slate-50 p-4 pl-10 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.costPerUnit} onChange={e => setEditData({ ...editData, costPerUnit: e.target.value })} />
+                                </div>
+                            </div>
+
+                            {/* Umbral Mínimo */}
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">🔔 Alerta de Stock Mínimo ({editData.unit})</label>
+                                <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.minStockThreshold} onChange={e => setEditData({ ...editData, minStockThreshold: e.target.value })} placeholder="10" />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 mt-8">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await authFetch(`${API_URL}/inventory/${editItem.id}`, {
+                                            method: 'PATCH',
+                                            body: JSON.stringify(editData)
+                                        });
+                                        if (res.ok) {
+                                            alert('✅ Ingrediente actualizado');
+                                            setEditItem(null);
+                                            loadItems();
+                                        } else {
+                                            alert('Error al actualizar');
+                                        }
+                                    } catch { alert('Error de conexión'); }
+                                }}
+                                className="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95"
+                            >
+                                <Save size={18} /> GUARDAR CAMBIOS
+                            </button>
+                            <button onClick={() => setEditItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-blue-500 transition-colors italic">Cancelar</button>
                         </div>
                     </div>
                 </div>
