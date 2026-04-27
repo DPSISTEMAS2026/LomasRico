@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     ChefHat, AlertCircle, Package, Truck, Flame, RefreshCw, Zap
 } from 'lucide-react';
@@ -55,19 +55,54 @@ export default function KitchenPage() {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<TabKey>('WAITING');
     const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
+    const prevWaitingCount = useRef(0);
+
+    // 🔔 Sound notification for new tickets
+    const playNotificationSound = useCallback(() => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+            // Second beep
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.frequency.value = 1100;
+            osc2.type = 'sine';
+            gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
+            osc2.start(ctx.currentTime + 0.15);
+            osc2.stop(ctx.currentTime + 0.65);
+        } catch (e) { /* Audio not supported */ }
+    }, []);
 
     const loadTickets = useCallback(async () => {
         try {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            setTickets(await res.json());
+            const data = await res.json();
+            const newWaiting = data.filter((t: any) => t.status === 'WAITING').length;
+            if (newWaiting > prevWaitingCount.current && prevWaitingCount.current >= 0 && !loading) {
+                playNotificationSound();
+            }
+            prevWaitingCount.current = newWaiting;
+            setTickets(data);
             setError('');
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Error de conexión');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [playNotificationSound]);
 
     useEffect(() => { loadTickets(); const i = setInterval(loadTickets, 8000); return () => clearInterval(i); }, [loadTickets]);
 
