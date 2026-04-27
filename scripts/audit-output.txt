@@ -1,0 +1,1030 @@
+﻿
+TOTAL PRODUCTOS: 106 (44 activos)
+
+
+================================================================================
+Ô£à Agua CACHANTUN 500cc ÔÇö $1.400 | Cat: BEBIDAS | Simple
+   ID: 0e9a9b68-6c1b-4a49-bfc5-dcb421b57a5e
+   ­ƒôª VARIANTES:
+      - Agua CACHANTUN 500cc ÔåÆ $1.400 (ID: 991677f9-f9f0-481b-89d8-9c5bc69f0973)
+   ­ƒôï RECETA: "Agua Cachantun" | Base: 1g
+      RETAIL             Agua Mineral Puyehue           1UN   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $1.400 | MARGEN: 100%
+
+================================================================================
+Ô£à Agua mineral cachantun ÔÇö $1.400 | Cat: BEBIDAS | Simple
+   ID: 3cd40b2e-0a4d-4ffe-a4a4-88777ab03157
+   ­ƒôª VARIANTES:
+      - Agua mineral cachantun ÔåÆ $1.400 (ID: bacf5274-4db9-4516-a6bd-e227459142bd)
+   ­ƒôï RECETA: "Agua Mineral Cachantun" | Base: 1g
+      RETAIL             Agua Mineral Puyehue           1UN   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $1.400 | MARGEN: 100%
+
+================================================================================
+ÔØî Agua Puyehue 500cc ÔÇö $1.400 | Cat: BEBIDAS | Simple
+   ID: be89580f-d2c2-440f-b427-2759e2f14d0d
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Bebida Individual ÔÇö $1.400 | Cat: BEBIDAS | Simple
+   ID: 499fd7c3-d3e8-46b6-bc18-3d8ee1a7236c
+   ­ƒôª VARIANTES:
+      - Bebida Individual ÔåÆ $1.400 (ID: 5f30d6eb-88c4-400f-acf7-ea0d8c6665e6)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Sabor de Bebida] Kem Pi├▒a 350cc, Limon Soda 350cc, Coca Cola 591cc, Coca Cola Zero 591cc
+   ­ƒôï RECETA: "Bebida Individual" | Base: 1g
+      RETAIL             Coca Cola 591cc                1UN   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $1.400 | MARGEN: 100%
+
+================================================================================
+ÔØî Coca Cola 1.5L ÔÇö $2.500 | Cat: BEBIDAS | Simple
+   ID: 70ff8ae2-20b9-4c22-a01f-b16a719e01ad
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Coca Cola 591cc ÔÇö $1.600 | Cat: BEBIDAS | Simple
+   ID: 75d5185c-3681-45e2-8f53-174d545bc803
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Coca Cola Zero 1.5L ÔÇö $2.500 | Cat: BEBIDAS | Simple
+   ID: 7aadcc75-ebd3-4217-a023-7bcee6cbd1d2
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Coca Cola Zero 591cc ÔÇö $1.600 | Cat: BEBIDAS | Simple
+   ID: 0266b332-c03d-4983-9c06-7e817e081c9f
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Jugo Natural ÔÇö $3.200 | Cat: BEBIDAS | Simple
+   ID: a31ce893-ce76-4f14-8a11-50dd049f0937
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Kem Pi├▒a 1.5L ÔÇö $2.200 | Cat: BEBIDAS | Simple
+   ID: 65c0927d-631e-40ba-a8f0-ddae6fac2961
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Limon Soda 1.5L ÔÇö $2.200 | Cat: BEBIDAS | Simple
+   ID: 70579074-b060-4f21-a871-a3ccb1d2a8d9
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Limon Soda 350cc ÔÇö $1.400 | Cat: BEBIDAS | Simple
+   ID: 98b7cea1-3677-491e-9119-788ea7fb4bd8
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Limonada Albahaca ÔÇö $3.500 | Cat: BEBIDAS | Simple
+   ID: 85441824-4454-444c-9b06-e243bbb1720a
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Limonada Artesanal ÔÇö $3.000 | Cat: BEBIDAS | Simple
+   ID: 36131e43-2723-4a21-8c6f-a8406081d8ee
+   ­ƒôª VARIANTES:
+      - Limonada Artesanal ÔåÆ $3.000 (ID: 375d0236-a829-4081-93c8-5da3f12bc566)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Sabor de Limonada] Cl├ísico, Cl├ísica, Albahaca, Menta, Menta Jengibre
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [Opciones CC] 500cc, 1 Litro
+   ­ƒôï RECETA: "Limonada Artesanal" | Base: 1g
+      BASE               Lim├│n Sutil                    0.15KG   costo: $375
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $375 | PRECIO: $3.000 | MARGEN: 88%
+
+================================================================================
+ÔØî Limonada Cl├ísica ÔÇö $3.000 | Cat: BEBIDAS | Simple
+   ID: 2ccfb6b9-1b54-4342-aa07-0c80c33b4ef5
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Limonada Menta ÔÇö $3.500 | Cat: BEBIDAS | Simple
+   ID: d39e2582-175f-4fe7-a10d-cfd68209e7cc
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Limonada Menta Jengibre ÔÇö $3.500 | Cat: BEBIDAS | Simple
+   ID: d4d99c6b-42d5-4894-b054-b48b3418caab
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Monster 473cc ÔÇö $2.500 | Cat: BEBIDAS | Simple
+   ID: 73f9c9b6-2b9a-4bae-8050-2e23d44df051
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Monster 475cc ÔÇö $2.400 | Cat: BEBIDAS | Simple
+   ID: 791cdad6-cc62-41ec-981d-4a43e02f39ed
+   ­ƒôª VARIANTES:
+      - Monster 475cc ÔåÆ $2.400 (ID: cb27ed5e-9d51-4b4a-9cb0-86905b216df3)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [opciones monster] Monster normal
+   ­ƒôï RECETA: "Monster 475cc" | Base: 1g
+      RETAIL             Monster 475cc                  1UN   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $2.400 | MARGEN: 100%
+
+================================================================================
+Ô£à 2 Bowl's LoMASRico ÔÇö $11.900 | Cat: BOWLS | Simple
+   ID: 7dc5652a-4656-4882-998e-3526306202be
+   ­ƒôª VARIANTES:
+      - 2 Bowl's LoMASRico ÔåÆ $11.900 (ID: 75dd996a-1f7a-4ee6-8b97-7a74b0d500a7)
+   ­ƒôï RECETA: "2 Bowls LoMASRico" | Base: 700g
+      PROTEIN_MAIN       Salm├│n                         0.16KG   costo: $1360
+      BASE               Arroz Sushi (Vinagreta)        0.24KG   costo: $857
+      BASE               Leche de Tigre Tradicional     0.16LT   costo: $0
+      VEGGIE             Palta                          0.06KG   costo: $270
+      VEGGIE             Cebolla Morada                 0.08KG   costo: $72
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2559 | PRECIO: $11.900 | MARGEN: 78%
+
+================================================================================
+ÔØî 2 Bowl's LoMASrico regulares ÔÇö $11.900 | Cat: BOWLS | Simple
+   ID: cba8dcf4-a1a8-4875-85ab-8b030bd3b181
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Bowl Acevichado ÔÇö $6.900 | Cat: BOWLS | Simple
+   ID: 5b40ab19-0f92-41a2-a48b-81b6f49dc483
+   ­ƒôª VARIANTES:
+      - Bowl Acevichado ÔåÆ $6.900 (ID: 958a9e75-a642-49fb-bf7b-0374d05c4240)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [opciones BOWL regular y premium] Regular, Premium (doble prote├¡na)
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+   ­ƒôï RECETA: "Bowl Acevichado" | Base: 350g
+      PROTEIN_MAIN       Salm├│n                         0.08KG   costo: $680
+      BASE               Arroz Sushi (Vinagreta)        0.12KG   costo: $428
+      BASE               Leche de Tigre Tradicional     0.08LT   costo: $0
+      VEGGIE             Palta                          0.03KG   costo: $135
+      VEGGIE             Cebolla Morada                 0.04KG   costo: $36
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1279 | PRECIO: $6.900 | MARGEN: 81%
+
+================================================================================
+ÔØî 1 KG Elige hasta 3 prote├¡nas ÔÇö $23.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 9954fca7-2e47-4487-876a-618a4202e8bc
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ­ƒôï RECETA: "Receta Maestra Simulada" | Base: 500g
+      PROTEIN_SPECIAL    Camar├│n Calibre 30/40          0.1KG   costo: $685
+      BASE               Leche de Tigre                 0.15LT   costo: $0
+      VEGGIE             Cebolla Morada                 0.05KG   costo: $45
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $730 | PRECIO: $23.900 | MARGEN: 97%
+
+================================================================================
+ÔØî 250g Elige hasta 3 prote├¡nas ÔÇö $5.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: d06bef5d-7fe1-4a34-a318-fc69628ca86e
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 500g Elige hasta 3 prote├¡na ÔÇö $12.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 1e7987ee-2133-4498-9fcf-02266bfc34ed
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 750g Elige hasta 3 prote├¡nas ÔÇö $18.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: e3493620-7239-4cdc-b475-2f83e25630ce
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Ceviche LOMASRICO ÔÇö $8.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 5c464a84-9dfc-460c-9bfa-8adc059d602a
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Formato o Tama├▒o] 350G, 500G, 750G, 1KG
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+   ­ƒôï RECETA: "Recipe for 5c464a84-9dfc-460c-9bfa-8adc059d602a" | Base: 1000g
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_SPECIAL    Pulpo                          0.12KG   costo: $1428
+      BASE               Leche de Tigre Tradicional     0.225LT   costo: $0
+      VEGGIE             Choclo Peruano                 0.1KG   costo: $244
+      VEGGIE             Cebolla Morada                 0.12KG   costo: $108
+      VEGGIE             Palta                          1KG   costo: $4500
+      VEGGIE             Piment├│n Rojo                  0.06KG   costo: $1500
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $9640 | PRECIO: $8.900 | MARGEN: -8%
+
+================================================================================
+ÔØî Ceviche LOMASRICO (1KG) ÔÇö $20.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 5d75df16-ce37-424f-ab2c-e00f5914734a
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche LOMASRICO (250G) ÔÇö $5.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 8a5ffe85-f55a-496e-8f0a-4350ea5953c6
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche LOMASRICO (500G) ÔÇö $11.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: 0739c4c2-f0dc-47e8-b0a9-172763523d92
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche LOMASRICO (750G) ÔÇö $16.900 | Cat: CEVICHE LOMASRICO | Config(max 3 prot)
+   ID: cfeb06f5-5487-4fdc-a1a1-cbbabacfeacf
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Ceviche Peruano ÔÇö $10.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: 48c77636-91fc-4eb2-98e4-80ce8af1d1df
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+   ­ƒôï RECETA: "Ceviche Peruano Base 1KG" | Base: 1000g
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_SPECIAL    Pulpo                          0.12KG   costo: $1428
+      BASE               Leche de Tigre Peruana         0.225LT   costo: $855
+      BASE               Canchita                       0.05UN   costo: $150
+      VEGGIE             Choclo Peruano                 0.1KG   costo: $244
+      VEGGIE             Cebolla Morada                 0.12KG   costo: $108
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $4645 | PRECIO: $10.900 | MARGEN: 57%
+
+================================================================================
+ÔØî Ceviche Peruano (1KG) ÔÇö $22.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: 4b516922-cb03-48a5-a5dd-20c008002d2e
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Peruano (500g) ÔÇö $13.400 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: ec9465d0-9744-4287-9e70-121553cb94fd
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Peruano (750g) ÔÇö $18.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: 8d6408b4-8771-44d7-9cdd-d60c4ae95a50
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Peruano ÔÇö $10.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: f172fd9a-66ca-4f4f-bfd4-3e98291097ed
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Formato o Tama├▒o] 350G, 1KG
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Peruano 1KG ÔÇö $22.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: 3c58fb54-a222-429c-a3fb-9a7d133c08a6
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Peruano 500g  ÔÇö $14.900 | Cat: CEVICHE PERUANO | Config(max ? prot)
+   ID: 4de143b3-3ca6-4127-9f6b-769a57f040a8
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 1 KG Arma a tu gusto ÔÇö $23.900 | Cat: CEVICHE SIN VERDE | Simple
+   ID: 84d8bf2e-799a-41e6-a9cb-f1f38b1a45bc
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 350g Arma tu gusto! ÔÇö $9.500 | Cat: CEVICHE SIN VERDE | Simple
+   ID: 7482f105-7ab4-41a1-a536-39708f46ccf6
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 500g Arma tu gusto! ÔÇö $12.900 | Cat: CEVICHE SIN VERDE | Simple
+   ID: 3660ab13-5848-4638-af97-9091dfbb3d86
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 750g Arma a tu gusto! ÔÇö $18.900 | Cat: CEVICHE SIN VERDE | Simple
+   ID: 24eef139-1eb3-4882-83dc-596397e23566
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Ceviche Sin Verduras ÔÇö $8.900 | Cat: CEVICHE SIN VERDE | Config(max 3 prot)
+   ID: 1f191c6f-a2de-48e4-8321-81d5c99d6132
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Formato o Tama├▒o] 350G, 500G, 750G, 1KG
+   ­ƒôï RECETA: "Ceviche Sin Verduras Base 1KG" | Base: 1000g
+      PROTEIN_MAIN       Salm├│n                         0.18KG   costo: $1530
+      PROTEIN_MAIN       Reineta                        0.18KG   costo: $1260
+      PROTEIN_SPECIAL    Pulpo                          0.12KG   costo: $1428
+      BASE               Leche de Tigre Tradicional     0.3LT   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $4218 | PRECIO: $8.900 | MARGEN: 53%
+
+================================================================================
+ÔØî Ceviche Sin Verduras (1KG) ÔÇö $20.900 | Cat: CEVICHE SIN VERDE | Config(max 3 prot)
+   ID: ef7abf9f-b77a-4202-b16f-702014623bf6
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Sin Verduras (250g) ÔÇö $5.900 | Cat: CEVICHE SIN VERDE | Config(max 3 prot)
+   ID: 0f5de9d1-72b4-40fe-91ff-342fda4d41f6
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Sin Verduras (500g) ÔÇö $11.400 | Cat: CEVICHE SIN VERDE | Config(max 3 prot)
+   ID: 73427b96-48cd-4ea0-8bba-027689490728
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+   ­ƒôï RECETA: "Receta Maestra Ceviche LMR (Base 1KG)" | Base: 1000g
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      PROTEIN_SPECIAL    Pulpo                          0.12KG   costo: $1428
+      BASE               Leche de Tigre Tradicional     0.225LT   costo: $0
+      VEGGIE             Piment├│n Rojo                  0.06KG   costo: $1500
+      VEGGIE             Choclo Peruano                 0.1KG   costo: $244
+      VEGGIE             Cebolla Morada                 0.12KG   costo: $108
+      VEGGIE             Palta                          0.04KG   costo: $180
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $5320 | PRECIO: $11.400 | MARGEN: 53%
+
+================================================================================
+ÔØî Ceviche Sin Verduras (750g) ÔÇö $16.900 | Cat: CEVICHE SIN VERDE | Config(max 3 prot)
+   ID: 8626ca73-3a97-4fd7-b630-d4761fd4d6b4
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 1Kg Elige tu prote├¡na ÔÇö $20.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: 4d2c85e3-8298-4283-9a9e-1ae1ac629d64
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [proteinas Ceviche Tropical] Salm├│n Mango, Camar├│n Mango, At├║n Mango
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 250g Elige tu prote├¡na ÔÇö $5.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: 468cd06d-373c-4e47-a088-e155d4667f14
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [proteinas Ceviche Tropical] Salm├│n Mango, Camar├│n Mango, At├║n Mango
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî 500g Elige tu prote├¡na ÔÇö $6.500 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: a5bd7ad7-41d6-4817-885a-1db0fe6920c0
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [proteinas Ceviche Tropical] Salm├│n Mango, Camar├│n Mango, At├║n Mango
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Ceviche Tropical ÔÇö $8.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: b9e61da3-9c7c-4cc2-9e95-267e4b3a8cf0
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [proteinas Ceviche Tropical] Salm├│n Mango, Camar├│n Mango, At├║n Mango
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [Formato o Tama├▒o] 350G, 500G, 750G, 1KG
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Ceviche Tropical Base 1KG" | Base: 1000g
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      PROTEIN_SPECIAL    Pulpo                          0.12KG   costo: $1428
+      BASE               Leche de Tigre Tropical        0.225LT   costo: $945
+      VEGGIE             Mango (Cubo)                   0.08KG   costo: $184
+      VEGGIE             Cebolla Morada                 0.1KG   costo: $90
+      VEGGIE             Piment├│n Rojo                  0.06KG   costo: $1500
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $6007 | PRECIO: $8.900 | MARGEN: 33%
+
+================================================================================
+ÔØî Ceviche Tropical (1KG) ÔÇö $20.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: 5db2582e-06ae-4bab-b488-8fb35d60b25c
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Tropical (250g) ÔÇö $5.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: 2ecdfa1b-3845-4380-892c-3d748ab2a137
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Tropical (500g) ÔÇö $11.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: 9108321e-5488-4271-9ebd-f5c25872861b
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Tropical (750g) ÔÇö $16.900 | Cat: CEVICHE TROPICAL | Config(max ? prot)
+   ID: b11aa6fd-e196-4616-a062-bf329a043b0a
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [proteinas Ceviche Tropical] Salm├│n Mango, Camar├│n Mango, At├║n Mango
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Veg ÔÇö $7.900 | Cat: CEVICHE VEG | Simple
+   ID: 5068e5b3-a0ee-46d8-a4b4-2fea896b6c2d
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Ceviche Vegano ÔÇö $12.900 | Cat: CEVICHE VEG | Config(max ? prot)
+   ID: 78205e1d-5b61-4438-80c6-f4a54131fe0b
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+   ­ƒôï RECETA: "Ceviche Vegano Base 500g" | Base: 500g
+      BASE               Champi├▒├│n                      0.07KG   costo: $88
+      BASE               Leche de Tigre Tradicional     0.15LT   costo: $0
+      VEGGIE             Piment├│n Rojo                  0.03KG   costo: $750
+      VEGGIE             Choclo Peruano                 0.05KG   costo: $122
+      VEGGIE             Cebolla Morada                 0.06KG   costo: $54
+      VEGGIE             Palta                          0.02KG   costo: $90
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1104 | PRECIO: $12.900 | MARGEN: 91%
+
+================================================================================
+Ô£à Crudo de At├║n ÔÇö $8.900 | Cat: CRUDOS | Simple
+   ID: 9a41f1d3-e936-485c-b7c1-98d004139617
+   ­ƒôª VARIANTES:
+      - Crudo de At├║n ÔåÆ $8.900 (ID: b45c4532-3f3b-4b77-b20e-48c7478672c4)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones Crudo de At├║n] 250g (2 per), 500g(4per)
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Crudo de At├║n" | Base: 200g
+      PROTEIN_MAIN       At├║n                           0.15KG   costo: $1463
+      BASE               Salsa Soya                     0.02LT   costo: $228
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1826 | PRECIO: $8.900 | MARGEN: 79%
+
+================================================================================
+Ô£à Crudo de Salm├│n ÔÇö $8.900 | Cat: CRUDOS | Simple
+   ID: 9b9b245d-045e-4920-b9f3-082f6f004925
+   ­ƒôª VARIANTES:
+      - Crudo de Salm├│n ÔåÆ $8.900 (ID: 58561c36-405d-4d49-ba42-ac21d3c34ba4)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones Crudo de Salm├│n] 250g (2 Per), 500g (4per)
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Crudo de Salm├│n" | Base: 200g
+      PROTEIN_MAIN       Salm├│n                         0.15KG   costo: $1275
+      BASE               Salsa Soya                     0.02LT   costo: $228
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1638 | PRECIO: $8.900 | MARGEN: 82%
+
+================================================================================
+ÔØî Camar├│n-Queso ÔÇö $2.500 | Cat: EMPANADAS | Simple
+   ID: a9a6b9d7-9780-4cfb-bd66-ea2909e808df
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones empanadas camar├│n] Unidad, 1/2 Docena, MAS CAMARON MAS QUESO
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Carapacho Queso ÔÇö $2.800 | Cat: EMPANADAS | Simple
+   ID: 125eee10-80da-4c7d-855b-50050a3aa9f7
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones empanadas de karapacho] Unidad, 1/2 docena
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Empanada de mariscos ÔÇö $2.500 | Cat: EMPANADAS | Simple
+   ID: 2ef96069-279b-441a-8b7b-80d35ec620c4
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Empanada Frita ÔÇö $2.000 | Cat: EMPANADAS | Simple
+   ID: 1cfebf2b-c6b9-43b7-a4d8-08ae74f3b7f5
+   ­ƒôª VARIANTES:
+      - Empanada Frita ÔåÆ $2.000 (ID: 5946669f-9ccf-4209-9d79-7a126b035b20)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Sabor] Queso, Mariscos, Camar├│n-Queso, Marisco, Macha Queso, Carapacho Queso, Macha-Queso
+      - [Opciones emp queso] Unidad, 1/2 docena
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Empanada Frita (1 un)" | Base: 1g
+      BASE               Masa Empanada                  1UN   costo: $3200
+      BASE               Aceite Vegetal                 0.15LT   costo: $1529
+      BASE               Queso                          0.04KG   costo: $313
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $5041 | PRECIO: $2.000 | MARGEN: -152%
+
+================================================================================
+ÔØî Empanada Macha-Queso ÔÇö $2.800 | Cat: EMPANADAS | Simple
+   ID: 6a23d023-db21-475a-96b7-2f80acba313b
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Empanada Marisco ÔÇö $2.500 | Cat: EMPANADAS | Simple
+   ID: dc3bc15a-9731-48f1-81bc-f851de031294
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Empanada Queso ÔÇö $2.000 | Cat: EMPANADAS | Simple
+   ID: daec0c83-1c1d-442b-a1cd-a852d35eda29
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Macha Queso ÔÇö $2.800 | Cat: EMPANADAS | Simple
+   ID: 1fdd82dd-3392-420b-a2c4-3d9990645178
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [opciones macha queso] Unidad, 1/2 docena
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Marisco ÔÇö $2.500 | Cat: EMPANADAS | Simple
+   ID: fd392d9e-6dc9-4ef9-99bd-903e9c7b02e6
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [opciones empanadas de marisco] Unidad, 1/2 docena
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Mix Empanadas (4 unidades) ÔÇö $8.900 | Cat: EMPANADAS | Simple
+   ID: 55392100-7a43-45ae-9433-98bd2d7f1a8d
+   ­ƒôª VARIANTES:
+      - Mix Empanadas (4 unidades) ÔåÆ $8.900 (ID: 757f5485-d179-4e5f-b350-3b14108064b1)
+   ­ƒôï RECETA: "Mix Empanadas (4 un)" | Base: 4g
+      BASE               Masa Empanada                  4UN   costo: $12800
+      BASE               Aceite Vegetal                 0.6LT   costo: $6114
+      BASE               Queso                          0.16KG   costo: $1251
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $20165 | PRECIO: $8.900 | MARGEN: -127%
+
+================================================================================
+Ô£à Handroll ÔÇö $4.000 | Cat: EXTRAS | Simple
+   ID: 65f2b795-a6b9-4de6-b5f4-147d2e768924
+   ­ƒôª VARIANTES:
+      - Handroll ÔåÆ $4.000 (ID: 56b2aa07-b3b5-4097-bd9d-4c80d6982713)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Handroll de Pollo] Unidad, DOS X
+      - [Relleno del Handroll] Pollo, Camar├│n, Salm├│n
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Handroll" | Base: 150g
+      PROTEIN_MAIN       Salm├│n                         0.06KG   costo: $510
+      BASE               Arroz Sushi (Vinagreta)        0.06KG   costo: $214
+      VEGGIE             Palta                          0.02KG   costo: $90
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $814 | PRECIO: $4.000 | MARGEN: 80%
+
+================================================================================
+Ô£à Sopaipillas ÔÇö $1.990 | Cat: EXTRAS | Config(max ? prot)
+   ID: 0b062eca-f6d4-4d07-b42f-9f8338dc6933
+   ­ƒôª VARIANTES:
+      - 3 Unidades ÔåÆ $1.990 (ID: fcb48b89-bd8b-4de1-b51a-5a6b5b1e925b)
+      - 10 Unidades ÔåÆ $5.900 (ID: 48b9998d-3469-41fc-afbd-e9d6a6d1f445)
+   ­ƒôï RECETA: "Sopaipillas" | Base: 3g
+      BASE               Sopaipillas                    3UN   costo: $9600
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $9600 | PRECIO: $1.990 | MARGEN: -382%
+
+================================================================================
+Ô£à Sopaipillas 10 (uni) ÔÇö $5.900 | Cat: EXTRAS | Config(max ? prot)
+   ID: a385757b-af98-4c17-8e3f-ea2a4a955d67
+   ­ƒôª VARIANTES:
+      - 3 Unidades ÔåÆ $1.990 (ID: 48c94c26-c0f2-4d73-8535-43c22eee48d1)
+      - 10 Unidades ÔåÆ $5.900 (ID: 3bf5e09a-8b73-460f-8d77-0e0f41848ee9)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+   ­ƒôï RECETA: "Sopaipillas 10 uni" | Base: 10g
+      BASE               Sopaipillas                    10UN   costo: $32000
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $32000 | PRECIO: $5.900 | MARGEN: -442%
+
+================================================================================
+Ô£à Elige tu GOHAN! ÔÇö $6.900 | Cat: GOHAN | Config(max 1 prot)
+   ID: 6b92fd5a-186d-4807-b5fe-b2a35d9a5900
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige tu GOHAN] Gohan de Salm├│n, Gohan de Camar├│n, Gohan de Camar├│n apanado, Gohan de At├║n, Gohan de pollo teriyaki
+      - [Salsas GOHAN] leche de tigre, Teriyaki, Soya
+   ­ƒôï RECETA: "Elige tu Gohan" | Base: 350g
+      PROTEIN_MAIN       Salm├│n                         0.1KG   costo: $850
+      BASE               Arroz Sushi (Vinagreta)        0.18KG   costo: $643
+      BASE               Salsa Soya                     0.02LT   costo: $228
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1856 | PRECIO: $6.900 | MARGEN: 73%
+
+================================================================================
+Ô£à Gohan ÔÇö $6.900 | Cat: GOHAN | Config(max 1 prot)
+   ID: ef493f77-cc3c-4380-862f-be535453c01a
+   ­ƒôï RECETA: "Gohan" | Base: 350g
+      PROTEIN_MAIN       Salm├│n                         0.1KG   costo: $850
+      BASE               Arroz Sushi (Vinagreta)        0.18KG   costo: $643
+      BASE               Salsa Soya                     0.02LT   costo: $228
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1856 | PRECIO: $6.900 | MARGEN: 73%
+
+================================================================================
+ÔØî HandRoll Camar├│n ÔÇö $4.500 | Cat: GOHAN | Simple
+   ID: ab514dd0-814a-4866-8446-0ee8f4d9a28e
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Hand Roll de Camar├│n] Dos X, Unidad
+      - [Salsas GOHAN] leche de tigre, Teriyaki, Soya
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî HandRoll Pollo ÔÇö $4.000 | Cat: GOHAN | Simple
+   ID: 85d64fcd-b0d0-4ef9-ac84-aa2d810dad77
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî HandRoll Salm├│n ÔÇö $4.500 | Cat: GOHAN | Simple
+   ID: aea278fb-1c8b-44e2-b3f1-fd682db863a2
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Hand Roll de Salm├│n] Unidad, Dos x
+      - [Salsas GOHAN] leche de tigre, Teriyaki, Soya
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ceviche Lo mas Rico ÔÇö $13.900 | Cat: LO M├üS RICO | Config(max ? prot)
+   ID: 19e82cc0-6177-453d-a7d0-b258700896d8
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Formato] 250gr, 350gr, 500gr, 750gr, 1kg
+      - [Salsas] Salsa Merqu├®n ahumado, salsa de ajo, Salsa verde, Jugo de Lim├│n natural, leche de tigre
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [QUITA las verduras que quieras!] SIN Choclo, SIN Palta, SIN Cebolla, SIN Piment├│n
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Ajo y Queso ÔÇö $2.500 | Cat: PANCITOS | Simple
+   ID: 6fd90b55-cf3f-41c8-9167-c629d3ed596c
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Pancitos con ajo confitado  y salsa verde ÔÇö $1.900 | Cat: PANCITOS | Simple
+   ID: 6a8021c7-0534-4c60-bf2c-890b3156aa4c
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Pancitos con ajo confitado y queso mozzarella ÔÇö $2.500 | Cat: PANCITOS | Simple
+   ID: c134283c-f9fa-47a0-a267-8f6b6ee2fb27
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+ÔØî Pancitos horneados ÔÇö $1.900 | Cat: PANCITOS | Simple
+   ID: a2917cad-0ecf-4728-b2dc-cceab3ee1954
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à Porci├│n de Pancitos (10 un) ÔÇö $1.500 | Cat: PANCITOS | Simple
+   ID: 162aafca-1f1a-4ee0-9f06-6e14d7b9b386
+   ­ƒôª VARIANTES:
+      - Porci├│n de Pancitos (10 un) ÔåÆ $1.500 (ID: 258c3cc7-5676-4d4f-bbd2-3c6ddaecacfc)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Tipo de Horneado] Al or├®gano (), Ajo  y salsa verde, Horneados, Ajo y queso mozzarella, Ajo y Queso
+   ­ƒôï RECETA: "Pancitos (10 un)" | Base: 10g
+      BASE               Pan de Ajo                     10UN   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $1.500 | MARGEN: 100%
+
+================================================================================
+Ô£à Aros de cebolla ÔÇö $3.500 | Cat: PAPAS / FRITOS | Simple
+   ID: 8de57aba-6bf4-4522-ab58-3163f1165aef
+   ­ƒôª VARIANTES:
+      - Aros de cebolla ÔåÆ $3.500 (ID: e563c334-9fc4-4d8a-9864-1689f519ba0e)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones aros] 1 x 6 aros, 1 x 10 aros, 1 x 20 aros
+   ­ƒôï RECETA: "Aros de Cebolla" | Base: 200g
+      BASE               Aros de Cebolla                0.2KG   costo: $1724
+      BASE               Aceite Vegetal                 0.05LT   costo: $510
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2234 | PRECIO: $3.500 | MARGEN: 36%
+
+================================================================================
+Ô£à Camarones apanados ÔÇö $6.500 | Cat: PAPAS / FRITOS | Simple
+   ID: 47af46f6-45ba-4c02-b620-c612b16def46
+   ­ƒôª VARIANTES:
+      - Camarones apanados ÔåÆ $6.500 (ID: 6a194b17-c0f9-42d2-a415-f10b8e11afab)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones camarones apandos] Porci├│n (9), Porci├│n XL (18)
+   ­ƒôï RECETA: "Camarones Apanados" | Base: 200g
+      BASE               Camarones Apanados             0.18KG   costo: $1058
+      BASE               Aceite Vegetal                 0.05LT   costo: $510
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1568 | PRECIO: $6.500 | MARGEN: 76%
+
+================================================================================
+Ô£à Leche de Tigre ÔÇö $4.900 | Cat: PAPAS / FRITOS | Simple
+   ID: 3a981bc1-702d-467a-b65c-8670cd1d0f21
+   ­ƒôª VARIANTES:
+      - Leche de Tigre ÔåÆ $4.900 (ID: 84228e34-204c-47ac-a4f6-99422aee922b)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones CC] 500cc, 1 Litro
+   ­ƒôï RECETA: "Leche de Tigre (vaso)" | Base: 250g
+      BASE               Leche de Tigre Tradicional     0.25LT   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $0 | PRECIO: $4.900 | MARGEN: 100%
+
+================================================================================
+Ô£à Papas a la crema ÔÇö $5.900 | Cat: PAPAS / FRITOS | Simple
+   ID: 8e34f968-3d68-4099-977f-653212fce9b7
+   ­ƒôª VARIANTES:
+      - Papas a la crema ÔåÆ $5.900 (ID: 465ae778-352c-4a04-9c18-e3ff223df012)
+   ­ƒôï RECETA: "Papas a la crema" | Base: 400g
+      BASE               Papas Fritas (Congeladas)      0.3KG   costo: $1530
+      BASE               Salsa Bechamel                 0.1KG   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1530 | PRECIO: $5.900 | MARGEN: 74%
+
+================================================================================
+Ô£à Papas a la crema (1-2 personas) ÔÇö $4.500 | Cat: PAPAS / FRITOS | Simple
+   ID: 3391b89d-1303-4f77-8701-fdcdb917e390
+   ­ƒôª VARIANTES:
+      - Papas a la crema (1-2 personas) ÔåÆ $4.500 (ID: 4a94bab0-2d75-4842-8488-fdb62064cdba)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [TOPPING PAPAS] Camarones, Camarones apanados, Choclo, Champi├▒ones
+   ­ƒôï RECETA: "Papas a la crema (1-2p)" | Base: 250g
+      BASE               Papas Fritas (Congeladas)      0.2KG   costo: $1020
+      BASE               Salsa Bechamel                 0.06KG   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1020 | PRECIO: $4.500 | MARGEN: 77%
+
+================================================================================
+Ô£à Papas Fritas LoMASRico ÔÇö $4.500 | Cat: PAPAS / FRITOS | Simple
+   ID: d183d58e-a727-4dae-9a67-663659a3557f
+   ­ƒôª VARIANTES:
+      - Papas Fritas LoMASRico ÔåÆ $4.500 (ID: c67d48b7-8a7e-4db6-907d-bea1d5a2dd47)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Opciones PAPAS FRITAS] Individual, Mediana, Familiar
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Papas Fritas LoMASRico" | Base: 300g
+      BASE               Papas Fritas (Congeladas)      0.25KG   costo: $1275
+      BASE               Aceite Vegetal                 0.05LT   costo: $510
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1785 | PRECIO: $4.500 | MARGEN: 60%
+
+================================================================================
+Ô£à Papas Fritas XL ÔÇö $4.900 | Cat: PAPAS / FRITOS | Simple
+   ID: a9a863b4-a03f-44fa-9609-fa4b1ec2e853
+   ­ƒôª VARIANTES:
+      - Papas Fritas XL ÔåÆ $4.900 (ID: 0a6748be-69ca-4f9d-a601-d2dc9e6b219b)
+   ­ƒôï RECETA: "Papas Fritas XL" | Base: 500g
+      BASE               Papas Fritas (Congeladas)      0.4KG   costo: $2040
+      BASE               Aceite Vegetal                 0.08LT   costo: $815
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2855 | PRECIO: $4.900 | MARGEN: 42%
+
+================================================================================
+Ô£à Papas LoMASRico ÔÇö $4.500 | Cat: PAPAS / FRITOS | Simple
+   ID: e5079a37-6627-479f-b3ae-aa5b388427c2
+   ­ƒôª VARIANTES:
+      - Papas LoMASRico ÔåÆ $4.500 (ID: 2a2456bd-cbfd-4d3f-8c45-f518e3122ff2)
+   ­ƒôï RECETA: "Papas LoMASRico" | Base: 300g
+      BASE               Papas Fritas (Congeladas)      0.25KG   costo: $1275
+      BASE               Aceite Vegetal                 0.05LT   costo: $510
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1785 | PRECIO: $4.500 | MARGEN: 60%
+
+================================================================================
+Ô£à Apanados LoMASRico ÔÇö $5.900 | Cat: PROMOS | Simple
+   ID: 2e6261b6-4cc2-4536-8973-0334d4afbafb
+   ­ƒôª VARIANTES:
+      - Apanados LoMASRico ÔåÆ $5.900 (ID: 7ac7df9c-f90c-4a1d-8c8e-78313eb0203c)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Apanados LoMASRico" | Base: 400g
+      BASE               Camarones Apanados             0.15KG   costo: $882
+      BASE               Papas Fritas (Congeladas)      0.2KG   costo: $1020
+      BASE               Aceite Vegetal                 0.08LT   costo: $815
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2717 | PRECIO: $5.900 | MARGEN: 54%
+
+================================================================================
+Ô£à Cevichada ÔÇö $29.900 | Cat: PROMOS | Simple
+   ID: 69b9f98b-732b-453c-ba04-8d3fa8d350bc
+   ­ƒôª VARIANTES:
+      - Cevichada ÔåÆ $29.900 (ID: 23321678-19ef-4af6-908c-8ff819cb9cde)
+   ­ƒôï RECETA: "Cevichada" | Base: 1500g
+      PROTEIN_MAIN       Salm├│n                         0.18KG   costo: $1530
+      PROTEIN_MAIN       Reineta                        0.18KG   costo: $1260
+      BASE               Leche de Tigre Tradicional     0.3LT   costo: $0
+      BASE               Papas Fritas (Congeladas)      0.25KG   costo: $1275
+      VEGGIE             Palta                          0.04KG   costo: $180
+      VEGGIE             Piment├│n Rojo                  0.06KG   costo: $1500
+      VEGGIE             Choclo Peruano                 0.1KG   costo: $244
+      VEGGIE             Cebolla Morada                 0.12KG   costo: $108
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $6097 | PRECIO: $29.900 | MARGEN: 80%
+
+================================================================================
+Ô£à Ceviche + Pisco Sour ÔÇö $15.000 | Cat: PROMOS | Config(max 3 prot)
+   ID: 1988b159-be52-4edd-9539-1bbb24df2ff0
+   ­ƒôª VARIANTES:
+      - 500 g ceviche + 500 cc sour ÔåÆ $15.000 (ID: ecc295c9-501b-4754-a700-f00e33139385)
+      - 1 kg ceviche + 1 L sour ÔåÆ $25.000 (ID: 98d4bcfa-46d1-4b7f-ad75-904a8c9cc9fd)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Opciones Ceviche + Pisco Sour] 1kg + 1 Litro, 500g + 500c
+   ­ƒôï RECETA: "Ceviche + Pisco Sour" | Base: 750g
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      BASE               Leche de Tigre Tradicional     0.2LT   costo: $0
+      VEGGIE             Piment├│n Rojo                  0.04KG   costo: $1000
+      VEGGIE             Cebolla Morada                 0.08KG   costo: $72
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2932 | PRECIO: $15.000 | MARGEN: 80%
+
+================================================================================
+Ô£à Degustaci├│n LoMASRico ÔÇö $18.900 | Cat: PROMOS | Config(max ? prot)
+   ID: 7a5465d9-22e4-4629-8801-3779c01f3e4a
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ­ƒôï RECETA: "Degustaci├│n LoMASRico" | Base: 750g
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      BASE               Leche de Tigre Tradicional     0.2LT   costo: $0
+      VEGGIE             Cebolla Morada                 0.09KG   costo: $81
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1941 | PRECIO: $18.900 | MARGEN: 90%
+
+================================================================================
+Ô£à D├║o Gourmet ÔÇö $21.900 | Cat: PROMOS | Config(max 3 prot)
+   ID: 4c20c1ac-e5ee-4487-94e6-b20735ac425a
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "D├║o Gourmet" | Base: 600g
+      PROTEIN_MAIN       Salm├│n                         0.1KG   costo: $850
+      PROTEIN_MAIN       Reineta                        0.1KG   costo: $700
+      BASE               Leche de Tigre Tradicional     0.15LT   costo: $0
+      VEGGIE             Cebolla Morada                 0.08KG   costo: $72
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1622 | PRECIO: $21.900 | MARGEN: 93%
+
+================================================================================
+Ô£à Full Baj├│n ÔÇö $12.900 | Cat: PROMOS | Config(max ? prot)
+   ID: 1880c8dc-2d72-4ce3-8f25-b1ce6c47c440
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [Opciones full bajon] 350g, 500g
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Full Baj├│n" | Base: 800g
+      PROTEIN_MAIN       Salm├│n                         0.1KG   costo: $850
+      PROTEIN_MAIN       Reineta                        0.1KG   costo: $700
+      BASE               Leche de Tigre Tradicional     0.15LT   costo: $0
+      BASE               Papas Fritas (Congeladas)      0.2KG   costo: $1020
+      BASE               Masa Empanada                  1UN   costo: $3200
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $5770 | PRECIO: $12.900 | MARGEN: 55%
+
+================================================================================
+Ô£à MEGA PROMO ÔÇö $45.900 | Cat: PROMOS | Config(max 3 prot)
+   ID: 96661635-f312-40bf-a9de-56f231f3b6de
+   ­ƒôï RECETA: "MEGA PROMO" | Base: 1200g
+      PROTEIN_MAIN       Salm├│n                         0.18KG   costo: $1530
+      PROTEIN_MAIN       Reineta                        0.18KG   costo: $1260
+      BASE               Leche de Tigre Tradicional     0.3LT   costo: $0
+      BASE               Papas Fritas (Congeladas)      0.3KG   costo: $1530
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $4320 | PRECIO: $45.900 | MARGEN: 91%
+
+================================================================================
+Ô£à MEGA PROMO! ÔÇö $25.900 | Cat: PROMOS | Config(max ? prot)
+   ID: 6f8cdc2b-3363-46a9-8d1b-3b4de95f0f0c
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [opciones mega promo] Queso, Carapacho Queso, Camar├│n Queso, Macha Queso, Marisco
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ­ƒôï RECETA: "MEGA PROMO!" | Base: 1200g
+      PROTEIN_MAIN       Salm├│n                         0.18KG   costo: $1530
+      PROTEIN_MAIN       Reineta                        0.18KG   costo: $1260
+      BASE               Leche de Tigre Tradicional     0.3LT   costo: $0
+      BASE               Papas Fritas (Congeladas)      0.3KG   costo: $1530
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $4320 | PRECIO: $25.900 | MARGEN: 83%
+
+================================================================================
+ÔØî PARA COMPARTIR (3-4 personas) ÔÇö $29.900 | Cat: PROMOS | Simple
+   ID: 16ccc317-652c-4843-b3eb-b5565f4e5f92
+   ÔÜá´©Å  SIN RECETA
+
+================================================================================
+Ô£à PROMO DEL DIA! ÔÇö $15.000 | Cat: PROMOS | Simple
+   ID: ca94532c-01c6-481a-b930-5c44f91f7033
+   ­ƒôª VARIANTES:
+      - PROMO DEL DIA! ÔåÆ $15.000 (ID: e55c5a9c-08a9-43ea-9c02-88db4af0cdf5)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "PROMO DEL DIA" | Base: 800g
+      PROTEIN_MAIN       Salm├│n                         0.12KG   costo: $1020
+      PROTEIN_MAIN       Reineta                        0.12KG   costo: $840
+      BASE               Leche de Tigre Tradicional     0.2LT   costo: $0
+      BASE               Papas Fritas (Congeladas)      0.2KG   costo: $1020
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $2880 | PRECIO: $15.000 | MARGEN: 81%
+
+================================================================================
+Ô£à Promo Express ÔÇö $9.900 | Cat: PROMOS | Config(max ? prot)
+   ID: 7ac4174f-8749-4b82-b47b-115b169fec2c
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Elige hasta 3 prote├¡nas!] Salm├│n, Reineta, Camar├│n, At├║n, machas
+      - [promo express] Papas fritas, Empanada de queso
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+   ­ƒôï RECETA: "Promo Express" | Base: 500g
+      PROTEIN_MAIN       Salm├│n                         0.09KG   costo: $765
+      PROTEIN_MAIN       Reineta                        0.09KG   costo: $630
+      BASE               Leche de Tigre Tradicional     0.15LT   costo: $0
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1395 | PRECIO: $9.900 | MARGEN: 86%
+
+================================================================================
+Ô£à Acevichado LoMasRico ÔÇö $7.900 | Cat: ROLLS PREMIUM | Simple
+   ID: 4a55dbab-151e-4fac-836b-3e5b3453d2d6
+   ­ƒôª VARIANTES:
+      - Acevichado LoMasRico ÔåÆ $7.900 (ID: 3026ab33-731b-49d0-af9f-8ecc36b3c24d)
+   ­ƒôï RECETA: "Roll Acevichado" | Base: 300g
+      PROTEIN_MAIN       Salm├│n                         0.08KG   costo: $680
+      BASE               Queso Crema                    0.03KG   costo: $380
+      BASE               Arroz Sushi (Vinagreta)        0.12KG   costo: $428
+      BASE               Leche de Tigre Tradicional     0.04LT   costo: $0
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1623 | PRECIO: $7.900 | MARGEN: 79%
+
+================================================================================
+Ô£à Black Pacific (sin arroz) ÔÇö $7.490 | Cat: ROLLS PREMIUM | Simple
+   ID: 7c05815c-84e3-4990-8bfb-22a3ae703925
+   ­ƒôª VARIANTES:
+      - Black Pacific (sin arroz) ÔåÆ $7.490 (ID: 77c11678-ed95-40d8-a4a3-025ff6854045)
+   ­ƒôï RECETA: "Roll Black Pacific" | Base: 300g
+      PROTEIN_MAIN       Salm├│n                         0.1KG   costo: $850
+      BASE               Queso Crema                    0.04KG   costo: $506
+      BASE               Salsa Soya                     0.02LT   costo: $228
+      VEGGIE             Palta                          0.04KG   costo: $180
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1764 | PRECIO: $7.490 | MARGEN: 76%
+
+================================================================================
+Ô£à Mango fuego ÔÇö $6.900 | Cat: ROLLS PREMIUM | Simple
+   ID: 040fd4ff-a1de-42c8-8b67-71bebad070a1
+   ­ƒôª VARIANTES:
+      - Mango fuego ÔåÆ $6.900 (ID: de81e79c-a8c3-466e-ab15-57dfe6a13c16)
+   ­ƒÄø´©Å  MODIFICADORES:
+      - [Extras LoMasRico] Sopaipillas (3 un) + salsa, pan con ajo confitado y queso mozzarella, Pan con ajo confitado, Pancitos Horneados a La Oliva Or├®gano 10 unidades + Salsa Verde, Salsa Merqu├®n ahumado, Salsa verde, Salsa ajo confitado
+      - [Limonada LoMASrico] Limonada Jengibre, Limonada Mango, Limonada Frambuesa
+   ­ƒôï RECETA: "Roll Mango Fuego" | Base: 300g
+      PROTEIN_MAIN       Salm├│n                         0.08KG   costo: $680
+      BASE               Queso Crema                    0.03KG   costo: $380
+      BASE               Arroz Sushi (Vinagreta)        0.12KG   costo: $428
+      BASE               Salsa Merqu├®n                  0.02LT   costo: $0
+      VEGGIE             Mango (Cubo)                   0.04KG   costo: $92
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1580 | PRECIO: $6.900 | MARGEN: 77%
+
+================================================================================
+Ô£à Pink Nikkei ÔÇö $6.900 | Cat: ROLLS PREMIUM | Simple
+   ID: 893a1cd1-c38b-4fba-860b-b804fc0e3f5f
+   ­ƒôª VARIANTES:
+      - Pink Nikkei ÔåÆ $6.900 (ID: cbaf7744-0203-4306-93d9-b97c790fc3cf)
+   ­ƒôï RECETA: "Roll Pink Nikkei" | Base: 300g
+      PROTEIN_MAIN       Salm├│n                         0.08KG   costo: $680
+      BASE               Queso Crema                    0.03KG   costo: $380
+      BASE               Arroz Sushi (Vinagreta)        0.12KG   costo: $428
+      VEGGIE             Palta                          0.03KG   costo: $135
+      ÔöÇÔöÇÔöÇ COSTO RECETA: $1623 | PRECIO: $6.900 | MARGEN: 76%
+
+
+================================================================================
+RESUMEN DE POSIBLES DUPLICADOS:
+  DUPLICADO: "mega promo" ÔÇö MEGA PROMO ($45.900) ID:96661635-f312-40bf-a9de-56f231f3b6de vs MEGA PROMO! ($25.900) ID:6f8cdc2b-3363-46a9-8d1b-3b4de95f0f0c

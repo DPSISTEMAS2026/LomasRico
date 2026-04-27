@@ -1,0 +1,715 @@
+{
+  "shouldShowReadyConfirmModal": false,
+  "highRiskOrderModalInfo": null,
+  "fulfillmentType": "DELIVERY",
+  "id": "f01d394a-ddfe-4625-943c-50aaf515d60c",
+  "customers": [
+    {
+      "customerID": "c896417a-db3e-5ba1-9411-7cd997df61d5",
+      "name": "Sebastian A.",
+      "orderHistory": {
+        "pastOrderCount": 22,
+        "__typename": "OrderHistory"
+      },
+      "phone": {
+        "countryCode": "CL",
+        "phoneNumber": "+56 2 2712 5162",
+        "pinCode": "731 26 807",
+        "__typename": "Phone"
+      },
+      "canRespondToFulfillmentIssues": true,
+      "taxProfiles": null,
+      "__typename": "Customer"
+    }
+  ],
+  "terminalStateTimestamp": null,
+  "callPartyInfos": [
+    {
+      "text": "Llama al repartidor",
+      "id": "551179be-b3bb-4f6e-82f6-9360fc28c44f",
+      "party": "DELIVERY_PARTNER",
+      "phone": {
+        "countryCode": "CL",
+        "phoneNumber": "+56227125162",
+        "pinCode": "01142188",
+        "__typename": "Phone"
+      },
+      "option": {
+        "isDisabled": false,
+        "disabledReason": null,
+        "__typename": "OptionUIState"
+      },
+      "__typename": "CallPartyInfo"
+    },
+    {
+      "text": "Llama al cliente",
+      "id": null,
+      "party": "CUSTOMER",
+      "phone": {
+        "countryCode": "CL",
+        "phoneNumber": "+56 2 2712 5162",
+        "pinCode": "731 26 807",
+        "__typename": "Phone"
+      },
+      "option": {
+        "isDisabled": false,
+        "disabledReason": null,
+        "__typename": "OptionUIState"
+      },
+      "__typename": "CallPartyInfo"
+    },
+    {
+      "text": "Llama al servicio de soporte",
+      "id": null,
+      "party": "UBER",
+      "phone": {
+        "countryCode": null,
+        "phoneNumber": "800914749",
+        "pinCode": null,
+        "__typename": "Phone"
+      },
+      "option": {
+        "isDisabled": false,
+        "disabledReason": null,
+        "__typename": "OptionUIState"
+      },
+      "__typename": "CallPartyInfo"
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "551179be-b3bb-4f6e-82f6-9360fc28c44f",
+      "state": "COURIER_EN_ROUTE_TO_DROPOFF",
+      "deliveryPartner": {
+        "id": "a4241881-5f57-596b-b85f-df9282de9a58",
+        "name": "FELIPE ALEJANDRO",
+        "pictureUrl": "https://d1w2poirtb3as9.cloudfront.net/c2d888d9-2f94-4863-87c6-536eef3c9ab4.jpeg?Expires=1777292607&Signature=mruMXGFpvKcrLw2mpZtyptrZ1oPcKK8~wW7yYkaUsBOtnSoTipTkHwYcwbf8I6mDh-XHay4W7Zx7HVjKD9upvnsWqUOKF-lvHk3mj8M4Uf8CDQJJmamD-HhBG2nyleNo~Hs6dmf4bq-atGfvVQbawTtUchBAPMW34eKP~Ecc9LtMnQeTC~awVc8mB2CNzKi9g5ZeMEtZdl4iE~tJn7xfQ6ILHOM1YzE3NEoIiKsXkp7~FdG98q~aUPrSQXvELJHSpHH-L7CR44rHDdlrCTh599Hcts3zcrzWRfdDf0fbg6Dx9E3ihxl7oh7e3rAVEEJP6gs8RB-Fsg09HxfLV4ljxQ__&Key-Pair-Id=K36LFL06Z5BT10",
+        "phone": {
+          "countryCode": "CL",
+          "phoneNumber": "+56227125162",
+          "pinCode": "01142188",
+          "__typename": "Phone"
+        },
+        "locationV2": {
+          "latitude": -36.80782553725935,
+          "longitude": -73.07670612924123,
+          "__typename": "LocationV2"
+        },
+        "feedback": null,
+        "vehicle": {
+          "make": "Yamaha",
+          "__typename": "Vehicle"
+        },
+        "stats": {
+          "satisfactionRating": 98,
+          "numberOfOrdersDelivered": 6570,
+          "__typename": "DeliveryPartnerStats"
+        },
+        "deliveryPartnerBlockStatus": {
+          "blockStatus": "COURIER_BLOCK_STATUS_NOT_BLOCKED",
+          "__typename": "DeliveryPartnerBlockStatus"
+        },
+        "__typename": "DeliveryPartner"
+      },
+      "previouslyAssignedDeliveryPartners": null,
+      "avUnlockInfo": null,
+      "estimatedPickUpTime": {
+        "relativeFromNowSecs": 0,
+        "__typename": "TimeRelativity"
+      },
+      "estimatedDropOffTime": "2026-04-26T20:26:23-04:00",
+      "actualDropOffTime": null,
+      "deliveryPartnerIsWaitingTime": null,
+      "location": null,
+      "interactionType": "Entregar en la puerta",
+      "deliveryInstructions": null,
+      "isDeliveryPartnerArrivingWithinPrepTime": true,
+      "__typename": "Delivery"
+    }
+  ],
+  "cancellationInfo": null,
+  "displayID": "5D60C",
+  "state": "OUT_FOR_DELIVERY",
+  "itemCount": 3,
+  "cartInfo": {
+    "__typename": "CartItemList",
+    "cartItems": [
+      {
+        "id": "Bowl´s_Acevichados",
+        "actions": [
+          {
+            "icon": {
+              "content": {
+                "illustration": {
+                  "__typename": "StyledIcon",
+                  "icon": "DELIVERY_BAG_REMOVE",
+                  "size": "SPACING_UNIT_2X",
+                  "color": "CONTENT_PRIMARY",
+                  "backgroundColor": null
+                },
+                "__typename": "RichIllustration"
+              },
+              "accessibilityText": null,
+              "__typename": "IllustrationViewModel"
+            },
+            "type": "OUT_OF_ITEM",
+            "__typename": "CartItemAction"
+          }
+        ],
+        "cartID": "c2e369a9-4bee-4e9c-82aa-e25320630c17",
+        "imageURL": "https://tb-static.uber.com/prod/image-proc/processed_images/1729dbe765997bd957f5ca88cbf828cc/bc9c318a9c96996e2d990faf2b0c65f6.jpeg",
+        "itemID": "888e2992-4963-46d7-8cd1-e4672be1a3aa",
+        "modifiers": [
+          {
+            "__typename": "Modifier",
+            "id": "Elige_Hasta_3_Proteí",
+            "name": "Elige Hasta 3 Proteínas",
+            "nestingDepth": 1,
+            "icon": null
+          },
+          {
+            "__typename": "ModifierOption",
+            "itemID": "2ab2cf27-f46f-4ae5-8d87-fbf84d91162b",
+            "id": "Salmón",
+            "name": "Salmón",
+            "nestingDepth": 1,
+            "quantity": {
+              "amount": 1,
+              "__typename": "Quantity"
+            },
+            "price": {
+              "amount": "0 CLP",
+              "currencyAmount": {
+                "amountE5": {
+                  "type": "Buffer",
+                  "data": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "currencyCode": "CLP",
+                "formatted": "0 CLP",
+                "__typename": "CurrencyAmount"
+              },
+              "priceModification": null,
+              "__typename": "Price"
+            }
+          },
+          {
+            "__typename": "ModifierOption",
+            "itemID": "c1f419d9-0465-44fe-b031-2d8bfc22cc0b",
+            "id": "Camarón",
+            "name": "Camarón",
+            "nestingDepth": 1,
+            "quantity": {
+              "amount": 1,
+              "__typename": "Quantity"
+            },
+            "price": {
+              "amount": "0 CLP",
+              "currencyAmount": {
+                "amountE5": {
+                  "type": "Buffer",
+                  "data": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "currencyCode": "CLP",
+                "formatted": "0 CLP",
+                "__typename": "CurrencyAmount"
+              },
+              "priceModification": null,
+              "__typename": "Price"
+            }
+          },
+          {
+            "__typename": "ModifierOption",
+            "itemID": "6b33eaf1-1020-4a53-bd0f-fb94e55d6335",
+            "id": "Atún",
+            "name": "Atún",
+            "nestingDepth": 1,
+            "quantity": {
+              "amount": 1,
+              "__typename": "Quantity"
+            },
+            "price": {
+              "amount": "0 CLP",
+              "currencyAmount": {
+                "amountE5": {
+                  "type": "Buffer",
+                  "data": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "currencyCode": "CLP",
+                "formatted": "0 CLP",
+                "__typename": "CurrencyAmount"
+              },
+              "priceModification": null,
+              "__typename": "Price"
+            }
+          }
+        ],
+        "name": "Bowl´s Acevichados",
+        "notes": null,
+        "price": {
+          "amount": "11.900 CLP",
+          "currencyAmount": {
+            "amountE5": {
+              "type": "Buffer",
+              "data": [
+                0,
+                0,
+                0,
+                0,
+                70,
+                237,
+                245,
+                128
+              ]
+            },
+            "currencyCode": "CLP",
+            "formatted": "11.900 CLP",
+            "__typename": "CurrencyAmount"
+          },
+          "priceModification": null,
+          "__typename": "Price"
+        },
+        "quantity": {
+          "amount": 1,
+          "__typename": "Quantity"
+        },
+        "__typename": "CartItem"
+      },
+      {
+        "id": "Camarón_Queso",
+        "actions": [
+          {
+            "icon": {
+              "content": {
+                "illustration": {
+                  "__typename": "StyledIcon",
+                  "icon": "DELIVERY_BAG_REMOVE",
+                  "size": "SPACING_UNIT_2X",
+                  "color": "CONTENT_PRIMARY",
+                  "backgroundColor": null
+                },
+                "__typename": "RichIllustration"
+              },
+              "accessibilityText": null,
+              "__typename": "IllustrationViewModel"
+            },
+            "type": "OUT_OF_ITEM",
+            "__typename": "CartItemAction"
+          }
+        ],
+        "cartID": "c2e369a9-4bee-4e9c-82aa-e25320630c17",
+        "imageURL": "https://tb-static.uber.com/prod/image-proc/processed_images/06ac8b1b9e76ece6c6d5b0807575b873/0fb376d1da56c05644450062d25c5c84.jpeg",
+        "itemID": "809e5dd0-ef5c-48aa-a553-93aebefebdd9",
+        "modifiers": null,
+        "name": "Camarón Queso",
+        "notes": null,
+        "price": {
+          "amount": "3.900 CLP",
+          "currencyAmount": {
+            "amountE5": {
+              "type": "Buffer",
+              "data": [
+                0,
+                0,
+                0,
+                0,
+                23,
+                62,
+                237,
+                128
+              ]
+            },
+            "currencyCode": "CLP",
+            "formatted": "3.900 CLP",
+            "__typename": "CurrencyAmount"
+          },
+          "priceModification": null,
+          "__typename": "Price"
+        },
+        "quantity": {
+          "amount": 1,
+          "__typename": "Quantity"
+        },
+        "__typename": "CartItem"
+      },
+      {
+        "id": "Carapacho_Queso",
+        "actions": [
+          {
+            "icon": {
+              "content": {
+                "illustration": {
+                  "__typename": "StyledIcon",
+                  "icon": "DELIVERY_BAG_REMOVE",
+                  "size": "SPACING_UNIT_2X",
+                  "color": "CONTENT_PRIMARY",
+                  "backgroundColor": null
+                },
+                "__typename": "RichIllustration"
+              },
+              "accessibilityText": null,
+              "__typename": "IllustrationViewModel"
+            },
+            "type": "OUT_OF_ITEM",
+            "__typename": "CartItemAction"
+          }
+        ],
+        "cartID": "c2e369a9-4bee-4e9c-82aa-e25320630c17",
+        "imageURL": "https://tb-static.uber.com/prod/image-proc/processed_images/533dfd128a5380d8e37714c117442d2f/bc9c318a9c96996e2d990faf2b0c65f6.jpeg",
+        "itemID": "02437e80-2de1-4fc3-a242-560433080ea4",
+        "modifiers": null,
+        "name": "Carapacho Queso",
+        "notes": null,
+        "price": {
+          "amount": "3.900 CLP",
+          "currencyAmount": {
+            "amountE5": {
+              "type": "Buffer",
+              "data": [
+                0,
+                0,
+                0,
+                0,
+                23,
+                62,
+                237,
+                128
+              ]
+            },
+            "currencyCode": "CLP",
+            "formatted": "3.900 CLP",
+            "__typename": "CurrencyAmount"
+          },
+          "priceModification": null,
+          "__typename": "Price"
+        },
+        "quantity": {
+          "amount": 1,
+          "__typename": "Quantity"
+        },
+        "__typename": "CartItem"
+      }
+    ]
+  },
+  "payment": {
+    "lineItems": [
+      {
+        "label": {
+          "content": {
+            "richTextElements": [
+              {
+                "__typename": "TextElement",
+                "predefinedDecorations": null,
+                "text": {
+                  "text": "Subtotal",
+                  "font": {
+                    "style": "LABEL_DEFAULT",
+                    "weight": "MEDIUM",
+                    "__typename": "SemanticFont"
+                  },
+                  "color": "CONTENT_TERTIARY",
+                  "__typename": "StyledText"
+                }
+              }
+            ],
+            "accessibilityText": null,
+            "__typename": "RichText"
+          },
+          "__typename": "LabelViewModel"
+        },
+        "value": {
+          "content": {
+            "richTextElements": [
+              {
+                "__typename": "TextElement",
+                "predefinedDecorations": null,
+                "text": {
+                  "text": "19.700 CLP",
+                  "font": {
+                    "style": "MONO_LABEL_DEFAULT",
+                    "weight": "MEDIUM",
+                    "__typename": "SemanticFont"
+                  },
+                  "color": "CONTENT_TERTIARY",
+                  "__typename": "StyledText"
+                }
+              }
+            ],
+            "accessibilityText": null,
+            "__typename": "RichText"
+          },
+          "__typename": "LabelViewModel"
+        },
+        "__typename": "PaymentLineItems"
+      },
+      {
+        "label": {
+          "content": {
+            "richTextElements": [
+              {
+                "__typename": "TextElement",
+                "predefinedDecorations": null,
+                "text": {
+                  "text": "Total",
+                  "font": {
+                    "style": "LABEL_DEFAULT",
+                    "weight": "MEDIUM",
+                    "__typename": "SemanticFont"
+                  },
+                  "color": "CONTENT_PRIMARY",
+                  "__typename": "StyledText"
+                }
+              }
+            ],
+            "accessibilityText": null,
+            "__typename": "RichText"
+          },
+          "__typename": "LabelViewModel"
+        },
+        "value": {
+          "content": {
+            "richTextElements": [
+              {
+                "__typename": "TextElement",
+                "predefinedDecorations": null,
+                "text": {
+                  "text": "19.700 CLP",
+                  "font": {
+                    "style": "MONO_LABEL_DEFAULT",
+                    "weight": "MEDIUM",
+                    "__typename": "SemanticFont"
+                  },
+                  "color": "CONTENT_PRIMARY",
+                  "__typename": "StyledText"
+                }
+              }
+            ],
+            "accessibilityText": null,
+            "__typename": "RichText"
+          },
+          "__typename": "LabelViewModel"
+        },
+        "__typename": "PaymentLineItems"
+      }
+    ],
+    "orderTotal": {
+      "amountE5": {
+        "type": "Buffer",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          117,
+          107,
+          208,
+          128
+        ]
+      },
+      "currencyCode": "CLP",
+      "formatted": "19.700 CLP",
+      "__typename": "CurrencyAmount"
+    },
+    "orderSubTotal": {
+      "amountE5": {
+        "type": "Buffer",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          117,
+          107,
+          208,
+          128
+        ]
+      },
+      "currencyCode": "CLP",
+      "formatted": "19.700 CLP",
+      "__typename": "CurrencyAmount"
+    },
+    "__typename": "Payment"
+  },
+  "estimatedReadyTime": {
+    "relativeFromNowSecs": 0,
+    "isTimeIncrease": false,
+    "timestamp": "2026-04-26T20:13:31-04:00",
+    "__typename": "TimeRelativity"
+  },
+  "estimatedUnfulfilledAt": {
+    "relativeFromNowSecs": 0,
+    "isTimeIncrease": false,
+    "timestamp": "2026-04-26T20:11:43-04:00",
+    "__typename": "TimeRelativity"
+  },
+  "banners": null,
+  "tags": [
+    {
+      "text": "No",
+      "identifier": null,
+      "isToggleable": true,
+      "isDismissable": false,
+      "leadingIcon": "RESTAURANT",
+      "size": null,
+      "style": {
+        "__typename": "TagViewModelCustomStyleData",
+        "activeBackgroundColor": "BACKGROUND_LIGHT_NEGATIVE",
+        "activeBorderColor": "BORDER_NEGATIVE",
+        "activeContentColor": {
+          "__typename": "SemanticTextColorUnionValue",
+          "value": "NEGATIVE"
+        },
+        "inactiveBackgroundColor": "BACKGROUND_LIGHT_NEGATIVE",
+        "inactiveBorderColor": "BORDER_NEGATIVE",
+        "inactiveContentColor": {
+          "__typename": "SemanticTextColorUnionValue",
+          "value": "NEGATIVE"
+        }
+      },
+      "__typename": "TagViewModel"
+    },
+    {
+      "text": "Cliente fiel (22 pedidos)",
+      "identifier": null,
+      "isToggleable": true,
+      "isDismissable": false,
+      "leadingIcon": null,
+      "size": null,
+      "style": {
+        "__typename": "TagViewModelCustomStyleData",
+        "activeBackgroundColor": "BACKGROUND_LIGHT_POSITIVE",
+        "activeBorderColor": "BORDER_POSITIVE",
+        "activeContentColor": {
+          "__typename": "SemanticTextColorUnionValue",
+          "value": "POSITIVE"
+        },
+        "inactiveBackgroundColor": "BACKGROUND_LIGHT_POSITIVE",
+        "inactiveBorderColor": "BORDER_POSITIVE",
+        "inactiveContentColor": {
+          "__typename": "SemanticTextColorUnionValue",
+          "value": "POSITIVE"
+        }
+      },
+      "__typename": "TagViewModel"
+    }
+  ],
+  "adjustOrderOptions": {
+    "priceAdjustment": {
+      "isDisabled": false,
+      "disabledReason": "",
+      "__typename": "OptionUIState"
+    },
+    "outOfItem": {
+      "isDisabled": true,
+      "disabledReason": "Repartidor coincidente",
+      "__typename": "OptionUIState"
+    },
+    "cantComplete": {
+      "isDisabled": true,
+      "disabledReason": "No hay instrucciones para el pedido",
+      "__typename": "OptionUIState"
+    },
+    "adjustReadyTime": {
+      "isDisabled": true,
+      "disabledReason": "Repartidor coincidente",
+      "__typename": "OptionUIState"
+    },
+    "cancelOrder": {
+      "isDisabled": true,
+      "disabledReason": "Los negocios con PDV integrados no pueden cancelar pedidos a través de Pedidos de Uber Eats",
+      "__typename": "OptionUIState"
+    },
+    "adjustETDTime": {
+      "isDisabled": false,
+      "disabledReason": "",
+      "__typename": "OptionUIState"
+    },
+    "customerRequestETD": {
+      "isDisabled": true,
+      "disabledReason": "ueopresentation.adjust.no_etd_update_request",
+      "__typename": "OptionUIState"
+    },
+    "__typename": "AdjustOrderOptions"
+  },
+  "taxRateOptions": [
+    "19%"
+  ],
+  "scheduledOrderInfo": null,
+  "prepTimeSecs": 740,
+  "cannotAdjustReadyForPickupTime": true,
+  "shopperAssignment": {
+    "isAssigned": false,
+    "assignedShoppers": null,
+    "__typename": "ShopperAssignment"
+  },
+  "shoppingCart": null,
+  "orderTrackingMetadata": null,
+  "cancellationConfig": {
+    "cancellationReasons": [
+      {
+        "displayText": "Artículos agotados",
+        "reasonCode": "ITEM_ISSUE",
+        "__typename": "CancellationReasonOption"
+      },
+      {
+        "displayText": "El negocio está cerrado",
+        "reasonCode": "KITCHEN_CLOSED",
+        "__typename": "CancellationReasonOption"
+      },
+      {
+        "displayText": "El cliente ha llamado para cancelar el pedido ",
+        "reasonCode": "CUSTOMER_CALLED_TO_CANCEL",
+        "__typename": "CancellationReasonOption"
+      },
+      {
+        "displayText": "El establecimiento está muy ocupado",
+        "reasonCode": "RESTAURANT_TOO_BUSY",
+        "__typename": "CancellationReasonOption"
+      },
+      {
+        "displayText": "No se pueden completar instrucciones especiales",
+        "reasonCode": "SPECIAL_INSTRUCTIONS",
+        "__typename": "CancellationReasonOption"
+      },
+      {
+        "displayText": "Otra",
+        "reasonCode": "OTHER",
+        "__typename": "CancellationReasonOption"
+      }
+    ],
+    "__typename": "CancellationConfig"
+  },
+  "feedbackConfig": null,
+  "estimatedThirdPartyDeliveryTime": null,
+  "estimatedBYOCDeliveryTime": null,
+  "posInjectionFailureInfo": null,
+  "dmcOrderInfo": null,
+  "orderOverviewTags": null,
+  "__typename": "MerchantOrder"
+}

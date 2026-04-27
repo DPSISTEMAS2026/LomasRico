@@ -1,0 +1,30 @@
+require('dotenv').config({ path: 'apps/api/.env' });
+console.log('Script started!');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function main() {
+    console.log('Buscando pedido ED2DD en la base de datos...');
+    const order = await prisma.externalOrder.findFirst({
+        where: { externalOrderId: 'UE-ED2DD' }
+    });
+    
+    if (order) {
+        console.log('✅ Pedido encontrado en la BD!');
+        console.log(order);
+        
+        const sale = await prisma.sale.findUnique({
+            where: { id: order.saleId },
+            include: { items: true, kitchenTicket: true }
+        });
+        
+        console.log('\n--- Venta generada ---');
+        console.log(`Estado Venta: ${sale?.status}`);
+        console.log(`Ticket de Cocina: ${sale?.kitchenTicket?.status}`);
+        console.log(`Items:`, sale?.items.map((i: any) => `${i.quantity}x ${i.productName}`));
+    } else {
+        console.log('❌ Pedido NO encontrado en la base de datos.');
+    }
+}
+
+main().finally(() => prisma.$disconnect());

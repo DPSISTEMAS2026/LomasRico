@@ -1,0 +1,453 @@
+﻿TOTAL RECETAS EN DB: 53
+
+================================================================================
+RECETAS DE PRODUCCI├ôN (sub-recetas): 7
+================================================================================
+
+­ƒôï "Formula Base S├│lida LomasRico (4KG)" ÔåÆ produce: Base Ceviche LoMASRico 4kg (2480g)
+   BASE             Leche de Tigre Tradicional   1.2LT ÔåÆ $4195
+   VEGGIE           Palta                        0.16KG ÔåÆ $720
+   VEGGIE           Piment├│n                     0.24KG ÔåÆ $6000
+   VEGGIE           Choclo Normal                0.4KG ÔåÆ $788
+   VEGGIE           Cebolla Morada               0.48KG ÔåÆ $432
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $12135
+
+­ƒôï "Formula Base S├│lida LomasRico (Tradicional)" ÔåÆ produce: Base Ceviche Tradicional (2480g)
+   BASE             Leche de Tigre Tradicional   1.2LT ÔåÆ $4195
+   VEGGIE           Palta                        0.16KG ÔåÆ $720
+   VEGGIE           Piment├│n                     0.24KG ÔåÆ $6000
+   VEGGIE           Choclo Normal                0.4KG ÔåÆ $788
+   VEGGIE           Cebolla Morada               0.48KG ÔåÆ $432
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $12135
+
+­ƒôï "Formula Base S├│lida Peruano (4KG)" ÔåÆ produce: Base Ceviche Peruano 4kg (2280g)
+   BASE             Leche de Tigre Peruana       1.2LT ÔåÆ $4560
+   VEGGIE           Choclo Peruano               0.5KG ÔåÆ $1220
+   VEGGIE           Cebolla Morada               0.58KG ÔåÆ $522
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $6302
+
+­ƒôï "Formula Base S├│lida Peruano (Tradicional)" ÔåÆ produce: Base Ceviche Peruano (2280g)
+   BASE             Leche de Tigre Peruana       1.2LT ÔåÆ $4560
+   VEGGIE           Choclo Peruano               0.5KG ÔåÆ $1220
+   VEGGIE           Cebolla Morada               0.58KG ÔåÆ $522
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $6302
+
+­ƒôï "Formula Leche Tigre Base (Tradicional)" ÔåÆ produce: Leche de Tigre Tradicional (1200g)
+   PROTEIN_MAIN     Reineta                      0.35KG ÔåÆ $2450
+   VEGGIE           Cilantro                     0.05KG ÔåÆ $50
+   VEGGIE           Apio                         0.1UN ÔåÆ $120
+   VEGGIE           Jengibre                     0.05KG ÔåÆ $75
+   VEGGIE           Ajo                          0.05KG ÔåÆ $150
+   VEGGIE           Lim├│n Sutil                  0.6KG ÔåÆ $1500
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $4345
+
+­ƒôï "Formula Leche Tigre Peruana (1.2L)" ÔåÆ produce: Leche de Tigre Peruana (1200g)
+   PROTEIN_MAIN     Reineta                      0.38KG ÔåÆ $2660
+   VEGGIE           Ajo                          0.06KG ÔåÆ $180
+   VEGGIE           Lim├│n Sutil                  0.6KG ÔåÆ $1500
+   VEGGIE           Rocoto                       0.1KG ÔåÆ $585
+   VEGGIE           Jengibre                     0.06KG ÔåÆ $89
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $5014
+
+­ƒôï "Formula Leche Tigre Tropical (1.2L)" ÔåÆ produce: Leche de Tigre Tropical (1200g)
+   BASE             Leche de Tigre Tradicional   0.8LT ÔåÆ $2797
+   BASE             Pulpa Mango                  0.4KG ÔåÆ $2160
+   ÔöÇÔöÇÔöÇ COSTO TOTAL: $4957
+
+================================================================================
+RECETAS DE PRODUCTOS DE VENTA: 46
+================================================================================
+
+Ô£à "2 Bowls LoMASRico" | BOWLS | $11.900 | base:700g
+   PROTEIN_MAIN     Salm├│n                       0.16KG ÔåÆ $1360
+   BASE             Arroz Sushi (Vinagreta)      0.24KG ÔåÆ $857
+   BASE             Leche de Tigre Tradicional   0.16LT ÔåÆ $559
+   VEGGIE           Palta                        0.06KG ÔåÆ $270
+   VEGGIE           Cebolla Morada               0.08KG ÔåÆ $72
+   ÔöÇÔöÇÔöÇ COSTO: $3118 | MARGEN: 74%
+
+Ô£à "Agua Cachantun" | BEBIDAS | $1.400 | base:1g
+   RETAIL           Agua Mineral Puyehue         1UN ÔåÆ $400
+   ÔöÇÔöÇÔöÇ COSTO: $400 | MARGEN: 71%
+
+ÔØî "Agua Mineral Cachantun" | BEBIDAS | $1.400 | base:1g
+   RETAIL           Agua Mineral Puyehue         1UN ÔåÆ $400
+   ÔöÇÔöÇÔöÇ COSTO: $400 | MARGEN: 71%
+
+Ô£à "Apanados LoMASRico" | PROMOS | $5.900 | base:400g
+   BASE             Aceite Vegetal               0.08LT ÔåÆ $163
+   BASE             Camarones Apanados           0.15KG ÔåÆ $882
+   BASE             Papas Fritas (Congeladas)    0.2KG ÔåÆ $1020
+   ÔöÇÔöÇÔöÇ COSTO: $2065 | MARGEN: 65%
+
+Ô£à "Aros de Cebolla" | PAPAS / FRITOS | $3.500 | base:200g
+   BASE             Aros de Cebolla              0.2KG ÔåÆ $1724
+   BASE             Aceite Vegetal               0.05LT ÔåÆ $102
+   ÔöÇÔöÇÔöÇ COSTO: $1826 | MARGEN: 48%
+
+Ô£à "Bebida Individual" | BEBIDAS | $1.400 | base:1g
+   RETAIL           Coca Cola 591cc              1UN ÔåÆ $700
+   ÔöÇÔöÇÔöÇ COSTO: $700 | MARGEN: 50%
+
+Ô£à "Bowl Acevichado" | BOWLS | $6.900 | base:350g
+   PROTEIN_MAIN     Salm├│n                       0.08KG ÔåÆ $680
+   BASE             Arroz Sushi (Vinagreta)      0.12KG ÔåÆ $428
+   BASE             Leche de Tigre Tradicional   0.08LT ÔåÆ $280
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   VEGGIE           Cebolla Morada               0.04KG ÔåÆ $36
+   ÔöÇÔöÇÔöÇ COSTO: $1559 | MARGEN: 77%
+
+Ô£à "Camarones Apanados" | PAPAS / FRITOS | $6.500 | base:200g
+   BASE             Camarones Apanados           0.18KG ÔåÆ $1058
+   BASE             Aceite Vegetal               0.05LT ÔåÆ $102
+   ÔöÇÔöÇÔöÇ COSTO: $1160 | MARGEN: 82%
+
+Ô£à "Cevichada" | PROMOS | $29.900 | base:1500g
+   PROTEIN_MAIN     Reineta                      0.18KG ÔåÆ $1260
+   PROTEIN_MAIN     Salm├│n                       0.18KG ÔåÆ $1530
+   BASE             Leche de Tigre Tradicional   0.3LT ÔåÆ $1049
+   BASE             Papas Fritas (Congeladas)    0.25KG ÔåÆ $1275
+   VEGGIE           Piment├│n Rojo                0.06KG ÔåÆ $1500
+   VEGGIE           Choclo Peruano               0.1KG ÔåÆ $244
+   VEGGIE           Cebolla Morada               0.12KG ÔåÆ $108
+   VEGGIE           Palta                        0.04KG ÔåÆ $180
+   ÔöÇÔöÇÔöÇ COSTO: $7146 | MARGEN: 76%
+
+Ô£à "Ceviche + Pisco Sour" | PROMOS | $15.000 | base:750g
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   BASE             Leche de Tigre Tradicional   0.2LT ÔåÆ $699
+   VEGGIE           Cebolla Morada               0.08KG ÔåÆ $72
+   VEGGIE           Piment├│n Rojo                0.04KG ÔåÆ $1000
+   ÔöÇÔöÇÔöÇ COSTO: $3631 | MARGEN: 76%
+
+Ô£à "Ceviche Peruano Base 1KG" | CEVICHE PERUANO | $10.900 | base:1000g
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_SPECIAL  Pulpo                        0.12KG ÔåÆ $1428
+   BASE             Leche de Tigre Peruana       0.225LT ÔåÆ $855
+   BASE             Canchita                     0.05UN ÔåÆ $150
+   VEGGIE           Choclo Peruano               0.1KG ÔåÆ $244
+   VEGGIE           Cebolla Morada               0.12KG ÔåÆ $108
+   ÔöÇÔöÇÔöÇ COSTO: $4645 | MARGEN: 57%
+
+Ô£à "Ceviche Sin Verduras Base 1KG" | CEVICHE SIN VERDE | $8.900 | base:1000g
+   PROTEIN_MAIN     Salm├│n                       0.18KG ÔåÆ $1530
+   PROTEIN_MAIN     Reineta                      0.18KG ÔåÆ $1260
+   PROTEIN_SPECIAL  Pulpo                        0.12KG ÔåÆ $1428
+   BASE             Leche de Tigre Tradicional   0.3LT ÔåÆ $1049
+   ÔöÇÔöÇÔöÇ COSTO: $5267 | MARGEN: 41%
+
+Ô£à "Ceviche Tropical Base 1KG" | CEVICHE TROPICAL | $8.900 | base:1000g
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   PROTEIN_SPECIAL  Pulpo                        0.12KG ÔåÆ $1428
+   BASE             Leche de Tigre Tropical      0.225LT ÔåÆ $945
+   VEGGIE           Mango (Cubo)                 0.08KG ÔåÆ $184
+   VEGGIE           Cebolla Morada               0.1KG ÔåÆ $90
+   VEGGIE           Piment├│n Rojo                0.06KG ÔåÆ $1500
+   ÔöÇÔöÇÔöÇ COSTO: $6007 | MARGEN: 33%
+
+Ô£à "Ceviche Vegano Base 500g" | CEVICHE VEG | $12.900 | base:500g
+   BASE             Leche de Tigre Tradicional   0.15LT ÔåÆ $524
+   BASE             Champi├▒├│n                    0.07KG ÔåÆ $88
+   VEGGIE           Piment├│n Rojo                0.03KG ÔåÆ $750
+   VEGGIE           Choclo Peruano               0.05KG ÔåÆ $122
+   VEGGIE           Cebolla Morada               0.06KG ÔåÆ $54
+   VEGGIE           Palta                        0.02KG ÔåÆ $90
+   ÔöÇÔöÇÔöÇ COSTO: $1628 | MARGEN: 87%
+
+Ô£à "Crudo de At├║n" | CRUDOS | $8.900 | base:200g
+   PROTEIN_MAIN     At├║n                         0.15KG ÔåÆ $1463
+   BASE             Salsa Soya                   0.02LT ÔåÆ $46
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1643 | MARGEN: 82%
+
+Ô£à "Crudo de Salm├│n" | CRUDOS | $8.900 | base:200g
+   PROTEIN_MAIN     Salm├│n                       0.15KG ÔåÆ $1275
+   BASE             Salsa Soya                   0.02LT ÔåÆ $46
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1456 | MARGEN: 84%
+
+Ô£à "Degustaci├│n LoMASRico" | PROMOS | $18.900 | base:750g
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   BASE             Leche de Tigre Tradicional   0.2LT ÔåÆ $699
+   VEGGIE           Cebolla Morada               0.09KG ÔåÆ $81
+   ÔöÇÔöÇÔöÇ COSTO: $2640 | MARGEN: 86%
+
+Ô£à "D├║o Gourmet" | PROMOS | $21.900 | base:600g
+   PROTEIN_MAIN     Reineta                      0.1KG ÔåÆ $700
+   PROTEIN_MAIN     Salm├│n                       0.1KG ÔåÆ $850
+   BASE             Leche de Tigre Tradicional   0.15LT ÔåÆ $524
+   VEGGIE           Cebolla Morada               0.08KG ÔåÆ $72
+   ÔöÇÔöÇÔöÇ COSTO: $2146 | MARGEN: 90%
+
+Ô£à "Elige tu Gohan" | GOHAN | $6.900 | base:350g
+   PROTEIN_MAIN     Salm├│n                       0.1KG ÔåÆ $850
+   BASE             Arroz Sushi (Vinagreta)      0.18KG ÔåÆ $643
+   BASE             Salsa Soya                   0.02LT ÔåÆ $46
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1673 | MARGEN: 76%
+
+Ô£à "Empanada Frita (1 un)" | EMPANADAS | $2.000 | base:1g
+   BASE             Masa Empanada                1UN ÔåÆ $178
+   BASE             Aceite Vegetal               0.15LT ÔåÆ $306
+   BASE             Queso                        0.04KG ÔåÆ $313
+   ÔöÇÔöÇÔöÇ COSTO: $797 | MARGEN: 60%
+
+Ô£à "Full Baj├│n" | PROMOS | $12.900 | base:800g
+   PROTEIN_MAIN     Reineta                      0.1KG ÔåÆ $700
+   PROTEIN_MAIN     Salm├│n                       0.1KG ÔåÆ $850
+   BASE             Leche de Tigre Tradicional   0.15LT ÔåÆ $524
+   BASE             Papas Fritas (Congeladas)    0.2KG ÔåÆ $1020
+   BASE             Masa Empanada                1UN ÔåÆ $178
+   ÔöÇÔöÇÔöÇ COSTO: $3272 | MARGEN: 75%
+
+ÔØî "Gohan" | GOHAN | $6.900 | base:350g
+   PROTEIN_MAIN     Salm├│n                       0.1KG ÔåÆ $850
+   BASE             Arroz Sushi (Vinagreta)      0.18KG ÔåÆ $643
+   BASE             Salsa Soya                   0.02LT ÔåÆ $46
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1673 | MARGEN: 76%
+
+Ô£à "Handroll" | EXTRAS | $4.000 | base:150g
+   PROTEIN_MAIN     Salm├│n                       0.06KG ÔåÆ $510
+   BASE             Arroz Sushi (Vinagreta)      0.06KG ÔåÆ $214
+   VEGGIE           Palta                        0.02KG ÔåÆ $90
+   ÔöÇÔöÇÔöÇ COSTO: $814 | MARGEN: 80%
+
+Ô£à "Leche de Tigre (vaso)" | PAPAS / FRITOS | $4.900 | base:250g
+   BASE             Leche de Tigre Tradicional   0.25LT ÔåÆ $874
+   ÔöÇÔöÇÔöÇ COSTO: $874 | MARGEN: 82%
+
+Ô£à "Limonada Artesanal" | BEBIDAS | $3.000 | base:1g
+   BASE             Lim├│n Sutil                  0.15KG ÔåÆ $375
+   ÔöÇÔöÇÔöÇ COSTO: $375 | MARGEN: 88%
+
+ÔØî "MEGA PROMO" | PROMOS | $45.900 | base:1200g
+   PROTEIN_MAIN     Reineta                      0.18KG ÔåÆ $1260
+   PROTEIN_MAIN     Salm├│n                       0.18KG ÔåÆ $1530
+   BASE             Leche de Tigre Tradicional   0.3LT ÔåÆ $1049
+   BASE             Papas Fritas (Congeladas)    0.3KG ÔåÆ $1530
+   ÔöÇÔöÇÔöÇ COSTO: $5369 | MARGEN: 88%
+
+Ô£à "MEGA PROMO!" | PROMOS | $25.900 | base:1200g
+   PROTEIN_MAIN     Reineta                      0.18KG ÔåÆ $1260
+   PROTEIN_MAIN     Salm├│n                       0.18KG ÔåÆ $1530
+   BASE             Leche de Tigre Tradicional   0.3LT ÔåÆ $1049
+   BASE             Papas Fritas (Congeladas)    0.3KG ÔåÆ $1530
+   ÔöÇÔöÇÔöÇ COSTO: $5369 | MARGEN: 79%
+
+Ô£à "Mix Empanadas (4 un)" | EMPANADAS | $8.900 | base:4g
+   BASE             Masa Empanada                4UN ÔåÆ $712
+   BASE             Aceite Vegetal               0.6LT ÔåÆ $1223
+   BASE             Queso                        0.16KG ÔåÆ $1251
+   ÔöÇÔöÇÔöÇ COSTO: $3186 | MARGEN: 64%
+
+Ô£à "Monster 475cc" | BEBIDAS | $2.400 | base:1g
+   RETAIL           Monster 475cc                1UN ÔåÆ $1200
+   ÔöÇÔöÇÔöÇ COSTO: $1200 | MARGEN: 50%
+
+Ô£à "Pancitos (10 un)" | PANCITOS | $1.500 | base:10g
+   BASE             Pan de Ajo                   10UN ÔåÆ $1500
+   ÔöÇÔöÇÔöÇ COSTO: $1500 | MARGEN: 0%
+
+Ô£à "Papas a la crema" | PAPAS / FRITOS | $5.900 | base:400g
+   BASE             Papas Fritas (Congeladas)    0.3KG ÔåÆ $1530
+   BASE             Salsa Bechamel               0.1KG ÔåÆ $200
+   ÔöÇÔöÇÔöÇ COSTO: $1730 | MARGEN: 71%
+
+Ô£à "Papas a la crema (1-2p)" | PAPAS / FRITOS | $4.500 | base:250g
+   BASE             Papas Fritas (Congeladas)    0.2KG ÔåÆ $1020
+   BASE             Salsa Bechamel               0.06KG ÔåÆ $120
+   ÔöÇÔöÇÔöÇ COSTO: $1140 | MARGEN: 75%
+
+Ô£à "Papas Fritas LoMASRico" | PAPAS / FRITOS | $4.500 | base:300g
+   BASE             Papas Fritas (Congeladas)    0.25KG ÔåÆ $1275
+   BASE             Aceite Vegetal               0.05LT ÔåÆ $102
+   ÔöÇÔöÇÔöÇ COSTO: $1377 | MARGEN: 69%
+
+Ô£à "Papas Fritas XL" | PAPAS / FRITOS | $4.900 | base:500g
+   BASE             Papas Fritas (Congeladas)    0.4KG ÔåÆ $2040
+   BASE             Aceite Vegetal               0.08LT ÔåÆ $163
+   ÔöÇÔöÇÔöÇ COSTO: $2203 | MARGEN: 55%
+
+ÔØî "Papas LoMASRico" | PAPAS / FRITOS | $4.500 | base:300g
+   BASE             Papas Fritas (Congeladas)    0.25KG ÔåÆ $1275
+   BASE             Aceite Vegetal               0.05LT ÔåÆ $102
+   ÔöÇÔöÇÔöÇ COSTO: $1377 | MARGEN: 69%
+
+Ô£à "PROMO DEL DIA" | PROMOS | $15.000 | base:800g
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   BASE             Leche de Tigre Tradicional   0.2LT ÔåÆ $699
+   BASE             Papas Fritas (Congeladas)    0.2KG ÔåÆ $1020
+   ÔöÇÔöÇÔöÇ COSTO: $3579 | MARGEN: 76%
+
+Ô£à "Promo Express" | PROMOS | $9.900 | base:500g
+   PROTEIN_MAIN     Reineta                      0.09KG ÔåÆ $630
+   PROTEIN_MAIN     Salm├│n                       0.09KG ÔåÆ $765
+   BASE             Leche de Tigre Tradicional   0.15LT ÔåÆ $524
+   ÔöÇÔöÇÔöÇ COSTO: $1919 | MARGEN: 81%
+
+ÔØî "Receta Maestra Ceviche LMR (Base 1KG)" | CEVICHE SIN VERDE | $11.400 | base:1000g
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_SPECIAL  Pulpo                        0.12KG ÔåÆ $1428
+   BASE             Leche de Tigre Tradicional   0.225LT ÔåÆ $787
+   VEGGIE           Palta                        0.04KG ÔåÆ $180
+   VEGGIE           Cebolla Morada               0.12KG ÔåÆ $108
+   VEGGIE           Choclo Peruano               0.1KG ÔåÆ $244
+   VEGGIE           Piment├│n Rojo                0.06KG ÔåÆ $1500
+   ÔöÇÔöÇÔöÇ COSTO: $6107 | MARGEN: 46%
+
+ÔØî "Receta Maestra Simulada" | CEVICHE LOMASRICO | $23.900 | base:500g
+   PROTEIN_SPECIAL  Camar├│n Calibre 30/40        0.1KG ÔåÆ $685
+   BASE             Leche de Tigre               0.15LT ÔåÆ $524
+   VEGGIE           Cebolla Morada               0.05KG ÔåÆ $45
+   ÔöÇÔöÇÔöÇ COSTO: $1254 | MARGEN: 95%
+
+Ô£à "Recipe for 5c464a84-9dfc-460c-9bfa-8adc059d602a" | CEVICHE LOMASRICO | $8.900 | base:1000g
+   PROTEIN_MAIN     Salm├│n                       0.12KG ÔåÆ $1020
+   PROTEIN_MAIN     Reineta                      0.12KG ÔåÆ $840
+   PROTEIN_SPECIAL  Pulpo                        0.12KG ÔåÆ $1428
+   BASE             Leche de Tigre Tradicional   0.225LT ÔåÆ $787
+   VEGGIE           Piment├│n Rojo                0.06KG ÔåÆ $1500
+   VEGGIE           Cebolla Morada               0.12KG ÔåÆ $108
+   VEGGIE           Choclo Peruano               0.1KG ÔåÆ $244
+   VEGGIE           Palta                        0.04KG ÔåÆ $180
+   ÔöÇÔöÇÔöÇ COSTO: $6107 | MARGEN: 31%
+
+Ô£à "Roll Acevichado" | ROLLS PREMIUM | $7.900 | base:300g
+   PROTEIN_MAIN     Salm├│n                       0.08KG ÔåÆ $680
+   BASE             Queso Crema                  0.03KG ÔåÆ $380
+   BASE             Arroz Sushi (Vinagreta)      0.12KG ÔåÆ $428
+   BASE             Leche de Tigre Tradicional   0.04LT ÔåÆ $140
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1763 | MARGEN: 78%
+
+Ô£à "Roll Black Pacific" | ROLLS PREMIUM | $7.490 | base:300g
+   PROTEIN_MAIN     Salm├│n                       0.1KG ÔåÆ $850
+   BASE             Queso Crema                  0.04KG ÔåÆ $506
+   BASE             Salsa Soya                   0.02LT ÔåÆ $46
+   VEGGIE           Palta                        0.04KG ÔåÆ $180
+   ÔöÇÔöÇÔöÇ COSTO: $1582 | MARGEN: 79%
+
+Ô£à "Roll Mango Fuego" | ROLLS PREMIUM | $6.900 | base:300g
+   PROTEIN_MAIN     Salm├│n                       0.08KG ÔåÆ $680
+   BASE             Queso Crema                  0.03KG ÔåÆ $380
+   BASE             Arroz Sushi (Vinagreta)      0.12KG ÔåÆ $428
+   BASE             Salsa Merqu├®n                0.02LT ÔåÆ $30
+   VEGGIE           Mango (Cubo)                 0.04KG ÔåÆ $92
+   ÔöÇÔöÇÔöÇ COSTO: $1610 | MARGEN: 77%
+
+Ô£à "Roll Pink Nikkei" | ROLLS PREMIUM | $6.900 | base:300g
+   PROTEIN_MAIN     Salm├│n                       0.08KG ÔåÆ $680
+   BASE             Queso Crema                  0.03KG ÔåÆ $380
+   BASE             Arroz Sushi (Vinagreta)      0.12KG ÔåÆ $428
+   VEGGIE           Palta                        0.03KG ÔåÆ $135
+   ÔöÇÔöÇÔöÇ COSTO: $1623 | MARGEN: 76%
+
+Ô£à "Sopaipillas" | EXTRAS | $1.990 | base:3g
+   BASE             Sopaipillas                  3UN ÔåÆ $960
+   ÔöÇÔöÇÔöÇ COSTO: $960 | MARGEN: 52%
+
+ÔØî "Sopaipillas 10 uni" | EXTRAS | $5.900 | base:10g
+   BASE             Sopaipillas                  10UN ÔåÆ $3200
+   ÔöÇÔöÇÔöÇ COSTO: $3200 | MARGEN: 46%
+
+================================================================================
+INVENTARIO COMPLETO: 91 items
+================================================================================
+  PROTEIN_MAIN       At├║n                           $  9.750/KG stock:5
+  PROTEIN_MAIN       Reineta                        $  7.000/KG stock:10
+  PROTEIN_MAIN       Salm├│n                         $  8.500/KG stock:10
+  PROTEIN_MAIN       Pollo                          $  4.750/KG stock:5
+  PROTEIN_SPECIAL    Camar├│n                        $  6.850/KG stock:5
+  PROTEIN_SPECIAL    Pulpo                          $ 11.900/KG stock:5
+  PROTEIN_SPECIAL    Macha                          $  8.300/KG stock:3
+  PROTEIN_SPECIAL    Camar├│n Calibre 30/40          $  6.850/KG stock:3
+  BASE               Lim├│n Soda 350cc               $    500/UN stock:20
+  BASE               Monster 475cc                  $  1.200/UN stock:20
+  BASE               Agua Mineral Puyehue           $    400/UN stock:20
+  BASE               Salsa Rosada                   $  1.200/LT stock:20
+  BASE               Queso Crema                    $ 12.650/KG stock:20
+  BASE               Base Ceviche Peruano           $      0/KG stock:20
+  BASE               Crema ├ücida                    $      0/LT stock:20
+  BASE               bowls 750                      $    100/UN stock:20
+  BASE               bolsa grande                   $  6.767/UN stock:20
+  BASE               bowls                          $     30/KG stock:20
+  BASE               Salsa Aj├¡ Casera               $      0/LT stock:20
+  BASE               Salsa T├írtara                  $  1.500/LT stock:20
+  BASE               Huevo Deshidratado             $ 14.000/KG stock:20
+  BASE               Mantequilla                    $  2.500/UN stock:20
+  BASE               Az├║car Flor                    $  1.920/KG stock:20
+  BASE               Az├║car Granulada               $  5.730/UN stock:20
+  BASE               Leche de Tigre                 $  3.496/LT stock:10
+  BASE               Pulpa Frambuesa                $  5.400/KG stock:20
+  BASE               Canchita                       $  3.000/UN stock:20
+  BASE               Leche de Tigre Peruana         $  3.800/LT stock:20
+  BASE               Leche de Tigre LoMASRico       $  3.500/LT stock:20
+  BASE               Salsa Bechamel                 $  2.000/KG stock:20
+  BASE               Salsa Merqu├®n                  $  1.500/LT stock:20
+  BASE               Salsa Verde                    $  1.200/LT stock:20
+  BASE               Salsa Ajo Confitado            $  1.500/LT stock:20
+  BASE               Salsa Agridulce                $  1.200/LT stock:20
+  BASE               Vinagre                        $  1.500/LT stock:20
+  BASE               Base Ceviche LoMASRico 4kg     $  4.500/KG stock:20
+  BASE               Base Ceviche Peruano 4kg       $  4.800/KG stock:20
+  BASE               Arroz Sushi (Vinagreta)        $  3.570/KG stock:10
+  BASE               Queso Mozzarella               $  7.820/KG stock:20
+  BASE               Pepinillos                     $  5.850/KG stock:20
+  BASE               Leche Entera                   $  1.050/LT stock:20
+  BASE               Leche Evaporada                $  1.250/KG stock:20
+  BASE               Salsa Soya                     $  2.280/LT stock:20
+  BASE               Panko                          $  3.150/KG stock:20
+  BASE               Harina                         $  1.100/KG stock:20
+  BASE               Pulpa Maracuy├í                 $  5.800/KG stock:20
+  BASE               Arroz                          $  3.570/KG stock:20
+  BASE               Base Ceviche Tradicional       $      0/KG stock:0
+  BASE               Sopaipillas                    $    320/UN stock:20
+  BASE               Pan de Ajo                     $    150/UN stock:20
+  BASE               Coca Cola Zero 591cc           $    700/UN stock:20
+  BASE               Kem Pi├▒a 350cc                 $    500/UN stock:20
+  BASE               Leche de Tigre Tradicional     $  3.496/LT stock:5
+  BASE               Choclo Normal                  $  1.970/KG stock:20
+  BASE               Papas Fritas (Congeladas)      $  5.100/KG stock:20
+  BASE               Pulpa Mango                    $  5.400/KG stock:20
+  BASE               Ali├▒o                          $  3.600/KG stock:20
+  BASE               Aceite Vegetal                 $  2.038/LT stock:19.85
+  BASE               Aceite Maravilla               $  2.140/LT stock:20
+  BASE               Pote 500g                      $    220/UN stock:20
+  BASE               Leche de Tigre Tropical        $  4.200/LT stock:20
+  BASE               Masa Empanada                  $    178/UN stock:40
+  BASE               Camarones Apanados             $  5.880/KG stock:20
+  BASE               Papas Fritas                   $  5.100/UN stock:20
+  BASE               Queso                          $  7.820/KG stock:19.96
+  BASE               Aros de Cebolla                $  8.620/KG stock:20
+  BASE               Sal                            $    690/KG stock:20
+  BASE               Masas                          $  3.200/UN stock:20
+  VEGGIE             Repollo                        $  1.000/UN stock:20
+  VEGGIE             Aj├¡ Ojo de Aguila              $  5.390/KG stock:20
+  VEGGIE             Apio                           $  1.200/UN stock:20
+  VEGGIE             Piment├│n                       $ 25.000/KG stock:20
+  VEGGIE             Aj├¡ Limo                       $  5.390/KG stock:20
+  VEGGIE             Mango (Cubo)                   $  2.300/KG stock:20
+  VEGGIE             Choclo Peruano (Grano)         $  2.440/KG stock:20
+  VEGGIE             Ajo                            $  3.000/KG stock:20
+  VEGGIE             Choclo Peruano                 $  2.440/KG stock:19.7
+  VEGGIE             Rocoto                         $  5.850/KG stock:20
+  VEGGIE             Palta                          $  4.500/KG stock:10
+  VEGGIE             Cebolla Morada                 $    900/KG stock:10
+  VEGGIE             Piment├│n Rojo                  $ 25.000/KG stock:19.82
+  VEGGIE             Lim├│n Sutil                    $  2.500/KG stock:20
+  VEGGIE             Lechuga                        $  1.000/UN stock:20
+  VEGGIE             Camote                         $  1.200/KG stock:20
+  VEGGIE             Champi├▒├│n                      $  1.250/KG stock:20
+  VEGGIE             Cilantro                       $  1.000/KG stock:20
+  VEGGIE             Zanahoria                      $  1.190/KG stock:20
+  VEGGIE             Jengibre                       $  1.490/KG stock:20
+  VEGGIE             Lim├│n Amarillo                 $  1.100/KG stock:20
+  VEGGIE             Ceboll├¡n                       $  1.490/UN stock:20
+  RETAIL             Coca Cola 591cc                $    700/UN stock:20
