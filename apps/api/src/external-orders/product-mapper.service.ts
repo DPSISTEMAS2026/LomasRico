@@ -110,6 +110,14 @@ export class ProductMapperService implements OnModuleInit {
         'sopaipillas 3 uni salsa verde': 'sopaipillas',
         'sopaipillas 3 uni': 'sopaipillas',
         'sopaipillas 10 uni': 'sopaipillas 10 (uni)',
+        'sopaipillas salsa verde y merquen 10 uni': 'sopaipillas 10 (uni)',
+        'sopaipillas salsa verde y merquen 3 uni': 'sopaipillas',
+        'sopaipillas salsa verde 10 uni': 'sopaipillas 10 (uni)',
+        'sopaipillas salsa verde 3 uni': 'sopaipillas',
+        'sopaipillas salsa merquen 10 uni': 'sopaipillas 10 (uni)',
+        'sopaipillas salsa merquen 3 uni': 'sopaipillas',
+        'sopaipillas 10 unidades': 'sopaipillas 10 (uni)',
+        'sopaipillas con salsa': 'sopaipillas',
 
         // ═══════════════════════════════════════════════════════════
         // SALSAS EXTRAS (modifier en Uber)
