@@ -116,6 +116,7 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
                 topKeys: Object.keys(data || {}),
                 hasData: !!data.data,
                 dataKeys: data.data ? Object.keys(data.data) : [],
+                errors: data.errors || null,
                 success: result?.success,
                 code: result?.code,
                 message: result?.message,
