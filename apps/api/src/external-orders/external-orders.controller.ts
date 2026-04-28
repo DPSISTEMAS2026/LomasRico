@@ -171,4 +171,14 @@ export class ExternalOrdersController {
     getCronStatus() {
         return this.uberCron.getStatus();
     }
+
+    /**
+     * POST /external-orders/cron-debug
+     * Perform a live poll and return the raw Uber response.
+     */
+    @Post('cron-debug')
+    @HttpCode(HttpStatus.OK)
+    async cronDebug() {
+        return this.uberCron.debugPoll();
+    }
 }

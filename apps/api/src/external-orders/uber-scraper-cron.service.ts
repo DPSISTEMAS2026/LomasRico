@@ -88,6 +88,52 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
         };
     }
 
+    /**
+     * Debug: perform a single manual poll and return the raw response.
+     */
+    async debugPoll() {
+        try {
+            const res = await fetch(UBER_GRAPHQL_URL, {
+                method: 'POST',
+                headers: {
+                    'Cookie': this.cookie,
+                    'Content-Type': 'application/json',
+                    'X-Csrf-Token': this.csrfToken,
+                    'Origin': 'https://merchants-beta.ubereats.com',
+                    'Referer': 'https://merchants-beta.ubereats.com/orders/overview',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+                },
+                body: JSON.stringify(this.gqlPayload),
+            });
+
+            const status = res.status;
+            const data = await res.json();
+            const result = data.data?.getActiveOrders;
+            const orders = result?.result?.orders || [];
+
+            return {
+                httpStatus: status,
+                topKeys: Object.keys(data || {}),
+                hasData: !!data.data,
+                dataKeys: data.data ? Object.keys(data.data) : [],
+                success: result?.success,
+                code: result?.code,
+                message: result?.message,
+                orderCount: orders.length,
+                orders: orders.map((o: any) => ({
+                    key: o.key,
+                    displayID: o.value?.displayID,
+                    state: o.value?.state,
+                    customer: o.value?.customers?.[0]?.name,
+                    itemCount: o.value?.itemCount,
+                })),
+                cookieUsed: this.cookie.substring(0, 30) + '...',
+            };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    }
+
     onModuleDestroy() {
         if (this.pollTimer) {
             clearTimeout(this.pollTimer);
