@@ -192,8 +192,18 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
 
             const data = await res.json();
             const result = data.data?.getActiveOrders;
+
+            // --- DIAGNOSTIC LOGGING (remove after fix) ---
+            if (this.pollCount <= 5 || this.pollCount % 10 === 0) {
+                const topKeys = Object.keys(data || {});
+                const dataKeys = data.data ? Object.keys(data.data) : [];
+                const orderCount = result?.result?.orders?.length ?? 'N/A';
+                this.logger.log(`🔍 Poll #${this.pollCount} diagnostic: topKeys=[${topKeys}] dataKeys=[${dataKeys}] success=${result?.success} orderCount=${orderCount}`);
+            }
+            // --- END DIAGNOSTIC ---
+
             if (!result?.success) {
-                this.logger.debug(`Poll #${this.pollCount}: API responded but no success flag`);
+                this.logger.warn(`Poll #${this.pollCount}: API responded but no success flag. Keys: ${JSON.stringify(Object.keys(data || {}))}`);
                 this.scheduleNext();
                 return;
             }
