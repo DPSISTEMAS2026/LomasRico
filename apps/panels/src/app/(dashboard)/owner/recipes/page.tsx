@@ -222,7 +222,7 @@ export default function RecipesMasterPage() {
                         </button>
                     )}
 
-                    {(activeTab === 'PRODUCTS' ? products : bases)
+                    {(activeTab === 'PRODUCTS' ? products.filter(p => p.isActive).sort((a: any, b: any) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name)) : bases)
                         .filter(p => !productSearchTerm || p.name.toLowerCase().includes(productSearchTerm.toLowerCase()))
                         .map(p => (
                             <div
