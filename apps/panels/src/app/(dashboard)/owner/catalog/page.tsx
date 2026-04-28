@@ -52,6 +52,7 @@ export default function CatalogManagementPage() {
     const [showSortModal, setShowSortModal] = useState(false);
     const [sortItems, setSortItems] = useState<any[]>([]);
     const [savingSort, setSavingSort] = useState(false);
+    const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
 
     const CATEGORIES = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
@@ -365,12 +366,17 @@ export default function CatalogManagementPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => {
-                                setSortItems(products.filter(p => p.isActive).sort((a: any, b: any) => {
+                                const sorted = products.filter(p => p.isActive).sort((a: any, b: any) => {
                                     if (a.sortOrder > 0 && b.sortOrder > 0) return a.sortOrder - b.sortOrder;
                                     if (a.sortOrder > 0) return -1;
                                     if (b.sortOrder > 0) return 1;
                                     return a.name.localeCompare(b.name);
-                                }));
+                                });
+                                setSortItems(sorted);
+                                // Derive category order from the sorted products
+                                const cats: string[] = [];
+                                sorted.forEach(p => { if (p.category && !cats.includes(p.category)) cats.push(p.category); });
+                                setCategoryOrder(cats);
                                 setShowSortModal(true);
                             }}
                             className="bg-white text-slate-600 border border-slate-200 px-5 py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-wider hover:border-orange-400 hover:text-orange-600 transition-all flex items-center gap-2 whitespace-nowrap"
@@ -850,7 +856,7 @@ export default function CatalogManagementPage() {
 
             {/* ════════════ SORT / ORGANIZE MODAL ════════════ */}
             {showSortModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowSortModal(false)} />
                     <div className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-300">
                         {/* Modal Header */}
@@ -860,7 +866,7 @@ export default function CatalogManagementPage() {
                                     ORGANIZAR <span className="text-orange-500">CATÁLOGO</span>
                                 </h2>
                                 <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
-                                    Arrastra o usa las flechas para reordenar dentro de cada categoría
+                                    Reordena categorías y productos con flechas o arrastrando
                                 </p>
                             </div>
                             <button onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50">
@@ -868,117 +874,169 @@ export default function CatalogManagementPage() {
                             </button>
                         </div>
 
-                        {/* Products List with Drag & Drop */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                            {(() => {
-                                const categories = Array.from(new Set(sortItems.map(p => p.category))).filter(Boolean);
-                                return categories.map(cat => {
-                                    const catItems = sortItems.filter(p => p.category === cat);
-                                    return (
-                                        <div key={cat}>
-                                            <div className="flex items-center gap-2 mb-2 px-2">
-                                                <div className="w-6 h-[2px] bg-orange-500" />
-                                                <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">{cat}</p>
-                                                <p className="text-[9px] font-bold text-slate-300 uppercase">({catItems.length})</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                {catItems.map((item, catIdx) => {
-                                                    const globalIdx = sortItems.findIndex(s => s.id === item.id);
-                                                    return (
-                                                        <div
-                                                            key={item.id}
-                                                            draggable
-                                                            onDragStart={(e) => {
-                                                                e.dataTransfer.setData('text/plain', item.id);
-                                                                e.dataTransfer.setData('category', cat);
-                                                                e.dataTransfer.effectAllowed = 'move';
-                                                                (e.target as HTMLElement).style.opacity = '0.4';
-                                                            }}
-                                                            onDragEnd={(e) => {
-                                                                (e.target as HTMLElement).style.opacity = '1';
-                                                            }}
-                                                            onDragOver={(e) => {
-                                                                e.preventDefault();
-                                                                const dragCat = e.dataTransfer.types.includes('category') ? 'ok' : '';
-                                                                if (dragCat) {
-                                                                    e.dataTransfer.dropEffect = 'move';
-                                                                    (e.currentTarget as HTMLElement).style.borderTop = '3px solid #f97316';
-                                                                }
-                                                            }}
-                                                            onDragLeave={(e) => {
-                                                                (e.currentTarget as HTMLElement).style.borderTop = '';
-                                                            }}
-                                                            onDrop={(e) => {
-                                                                e.preventDefault();
-                                                                (e.currentTarget as HTMLElement).style.borderTop = '';
-                                                                const draggedId = e.dataTransfer.getData('text/plain');
-                                                                const draggedCat = e.dataTransfer.getData('category');
-                                                                if (draggedCat !== cat) return; // Only within same category
-
-                                                                const newItems = [...sortItems];
-                                                                const fromIdx = newItems.findIndex(s => s.id === draggedId);
-                                                                const toIdx = newItems.findIndex(s => s.id === item.id);
-                                                                if (fromIdx === toIdx || fromIdx === -1) return;
-
-                                                                const [moved] = newItems.splice(fromIdx, 1);
-                                                                newItems.splice(toIdx, 0, moved);
-                                                                setSortItems(newItems);
-                                                            }}
-                                                            className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group cursor-grab active:cursor-grabbing select-none"
-                                                        >
-                                                            <GripVertical size={14} className="text-slate-300 shrink-0 hover:text-orange-500 transition-colors" />
-                                                            <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">
-                                                                {catIdx + 1}
-                                                            </span>
-                                                            {item.imageUrl && (
-                                                                <img src={item.imageUrl} className="w-8 h-8 rounded-lg object-cover shrink-0" alt="" />
-                                                            )}
-                                                            <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
-                                                            <span className="text-[10px] font-bold text-slate-400 shrink-0">${Number(item.price).toLocaleString()}</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    disabled={catIdx === 0}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (catIdx === 0) return;
-                                                                        // Find the previous item in same category and swap in global array
-                                                                        const prevItem = catItems[catIdx - 1];
-                                                                        const fromGlobal = sortItems.findIndex(s => s.id === item.id);
-                                                                        const toGlobal = sortItems.findIndex(s => s.id === prevItem.id);
-                                                                        const newItems = [...sortItems];
-                                                                        [newItems[toGlobal], newItems[fromGlobal]] = [newItems[fromGlobal], newItems[toGlobal]];
-                                                                        setSortItems(newItems);
-                                                                    }}
-                                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                                >
-                                                                    <ArrowUp size={12} />
-                                                                </button>
-                                                                <button
-                                                                    disabled={catIdx === catItems.length - 1}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (catIdx === catItems.length - 1) return;
-                                                                        // Find the next item in same category and swap in global array
-                                                                        const nextItem = catItems[catIdx + 1];
-                                                                        const fromGlobal = sortItems.findIndex(s => s.id === item.id);
-                                                                        const toGlobal = sortItems.findIndex(s => s.id === nextItem.id);
-                                                                        const newItems = [...sortItems];
-                                                                        [newItems[fromGlobal], newItems[toGlobal]] = [newItems[toGlobal], newItems[fromGlobal]];
-                                                                        setSortItems(newItems);
-                                                                    }}
-                                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                                >
-                                                                    <ArrowDown size={12} />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {categoryOrder.map((cat, catOrderIdx) => {
+                                const catItems = sortItems.filter(p => p.category === cat);
+                                if (catItems.length === 0) return null;
+                                return (
+                                    <div
+                                        key={cat}
+                                        draggable
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData('dragType', 'category');
+                                            e.dataTransfer.setData('dragCat', cat);
+                                            e.dataTransfer.effectAllowed = 'move';
+                                            (e.currentTarget as HTMLElement).style.opacity = '0.5';
+                                        }}
+                                        onDragEnd={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                                        onDragOver={(e) => {
+                                            if (!e.dataTransfer.types.includes('dragtype')) return;
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = 'move';
+                                            (e.currentTarget as HTMLElement).style.outline = '2px solid #f97316';
+                                            (e.currentTarget as HTMLElement).style.outlineOffset = '2px';
+                                        }}
+                                        onDragLeave={(e) => { (e.currentTarget as HTMLElement).style.outline = ''; (e.currentTarget as HTMLElement).style.outlineOffset = ''; }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            (e.currentTarget as HTMLElement).style.outline = '';
+                                            (e.currentTarget as HTMLElement).style.outlineOffset = '';
+                                            const dragType = e.dataTransfer.getData('dragType');
+                                            if (dragType === 'category') {
+                                                const fromCat = e.dataTransfer.getData('dragCat');
+                                                if (fromCat === cat) return;
+                                                const newOrder = [...categoryOrder];
+                                                const fromIdx = newOrder.indexOf(fromCat);
+                                                const toIdx = newOrder.indexOf(cat);
+                                                if (fromIdx === -1) return;
+                                                newOrder.splice(fromIdx, 1);
+                                                newOrder.splice(toIdx, 0, fromCat);
+                                                setCategoryOrder(newOrder);
+                                            }
+                                        }}
+                                        className="bg-white border border-slate-100 rounded-2xl overflow-hidden"
+                                    >
+                                        {/* Category Header — draggable + arrows */}
+                                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-900 cursor-grab active:cursor-grabbing select-none">
+                                            <GripVertical size={16} className="text-slate-500 hover:text-orange-400 transition-colors shrink-0" />
+                                            <div className="w-6 h-[2px] bg-orange-500 shrink-0" />
+                                            <p className="text-[11px] font-black uppercase text-white tracking-widest italic flex-1">{cat}</p>
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase">{catItems.length}</span>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    disabled={catOrderIdx === 0}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const newOrder = [...categoryOrder];
+                                                        [newOrder[catOrderIdx - 1], newOrder[catOrderIdx]] = [newOrder[catOrderIdx], newOrder[catOrderIdx - 1]];
+                                                        setCategoryOrder(newOrder);
+                                                    }}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-slate-500 hover:text-orange-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                >
+                                                    <ArrowUp size={12} />
+                                                </button>
+                                                <button
+                                                    disabled={catOrderIdx === categoryOrder.length - 1}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const newOrder = [...categoryOrder];
+                                                        [newOrder[catOrderIdx], newOrder[catOrderIdx + 1]] = [newOrder[catOrderIdx + 1], newOrder[catOrderIdx]];
+                                                        setCategoryOrder(newOrder);
+                                                    }}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-slate-500 hover:text-orange-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                >
+                                                    <ArrowDown size={12} />
+                                                </button>
                                             </div>
                                         </div>
-                                    );
-                                });
-                            })()}
+
+                                        {/* Products within category */}
+                                        <div className="divide-y divide-slate-50">
+                                            {catItems.map((item, catIdx) => (
+                                                <div
+                                                    key={item.id}
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                        e.stopPropagation();
+                                                        e.dataTransfer.setData('dragType', 'product');
+                                                        e.dataTransfer.setData('text/plain', item.id);
+                                                        e.dataTransfer.setData('productCat', cat);
+                                                        e.dataTransfer.effectAllowed = 'move';
+                                                        (e.currentTarget as HTMLElement).style.opacity = '0.4';
+                                                    }}
+                                                    onDragEnd={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                                                    onDragOver={(e) => {
+                                                        if (!e.dataTransfer.types.includes('productcat')) return;
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        (e.currentTarget as HTMLElement).style.borderTop = '3px solid #f97316';
+                                                    }}
+                                                    onDragLeave={(e) => { (e.currentTarget as HTMLElement).style.borderTop = ''; }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        (e.currentTarget as HTMLElement).style.borderTop = '';
+                                                        const dragType = e.dataTransfer.getData('dragType');
+                                                        if (dragType !== 'product') return;
+                                                        const draggedId = e.dataTransfer.getData('text/plain');
+                                                        const draggedCat = e.dataTransfer.getData('productCat');
+                                                        if (draggedCat !== cat) return;
+                                                        const newItems = [...sortItems];
+                                                        const fromIdx = newItems.findIndex(s => s.id === draggedId);
+                                                        const toIdx = newItems.findIndex(s => s.id === item.id);
+                                                        if (fromIdx === toIdx || fromIdx === -1) return;
+                                                        const [moved] = newItems.splice(fromIdx, 1);
+                                                        newItems.splice(toIdx, 0, moved);
+                                                        setSortItems(newItems);
+                                                    }}
+                                                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors cursor-grab active:cursor-grabbing select-none"
+                                                >
+                                                    <GripVertical size={12} className="text-slate-200 shrink-0" />
+                                                    <span className="w-5 h-5 rounded bg-slate-100 text-slate-400 text-[9px] font-black flex items-center justify-center shrink-0">
+                                                        {catIdx + 1}
+                                                    </span>
+                                                    {item.imageUrl && <img src={item.imageUrl} className="w-7 h-7 rounded-lg object-cover shrink-0" alt="" />}
+                                                    <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">${Number(item.price).toLocaleString()}</span>
+                                                    <div className="flex gap-0.5">
+                                                        <button
+                                                            disabled={catIdx === 0}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const prev = catItems[catIdx - 1];
+                                                                const newItems = [...sortItems];
+                                                                const a = newItems.findIndex(s => s.id === item.id);
+                                                                const b = newItems.findIndex(s => s.id === prev.id);
+                                                                [newItems[a], newItems[b]] = [newItems[b], newItems[a]];
+                                                                setSortItems(newItems);
+                                                            }}
+                                                            className="w-6 h-6 rounded border border-slate-100 flex items-center justify-center text-slate-300 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                        >
+                                                            <ArrowUp size={10} />
+                                                        </button>
+                                                        <button
+                                                            disabled={catIdx === catItems.length - 1}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const next = catItems[catIdx + 1];
+                                                                const newItems = [...sortItems];
+                                                                const a = newItems.findIndex(s => s.id === item.id);
+                                                                const b = newItems.findIndex(s => s.id === next.id);
+                                                                [newItems[a], newItems[b]] = [newItems[b], newItems[a]];
+                                                                setSortItems(newItems);
+                                                            }}
+                                                            className="w-6 h-6 rounded border border-slate-100 flex items-center justify-center text-slate-300 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                        >
+                                                            <ArrowDown size={10} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* Footer */}
@@ -993,12 +1051,16 @@ export default function CatalogManagementPage() {
                                 onClick={async () => {
                                     setSavingSort(true);
                                     try {
-                                        const items = sortItems.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
+                                        // Rebuild sortItems ordered by categoryOrder
+                                        const finalItems: any[] = [];
+                                        categoryOrder.forEach(cat => {
+                                            sortItems.filter(p => p.category === cat).forEach(p => finalItems.push(p));
+                                        });
+                                        const items = finalItems.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
                                         await authFetch(`${API_URL}/products/reorder/bulk`, {
                                             method: 'PATCH',
                                             body: JSON.stringify({ items })
                                         });
-                                        // Update local state
                                         setProducts(prev => prev.map(p => {
                                             const sorted = items.find(s => s.id === p.id);
                                             return sorted ? { ...p, sortOrder: sorted.sortOrder } : p;
