@@ -166,35 +166,10 @@ export class ProductsService implements OnModuleInit {
     };
 
     private sortProducts(products: any[]) {
-        const CATEGORY_PRIORITY: Record<string, number> = {
-            'PROMOS': 1,
-            'CEVICHE PERUANO': 2,
-            'CEVICHE LOMASRICO': 3,
-            'CEVICHE TROPICAL': 4,
-            'CEVICHE VEG': 5,
-            'CEVICHE SIN VERDE': 6,
-            'BOWLS': 7,
-            'GOHAN': 8,
-            'ROLLS PREMIUM': 9,
-            'HAND ROLLS': 10,
-            'EMPANADAS': 11,
-            'PAPAS / FRITOS': 12,
-            'PANCITOS': 13,
-            'BEBIDAS': 14,
-            'EXTRAS': 15,
-            'CRUDOS': 16
-        };
-
         return products.sort((a, b) => {
-            // 1. Si ambos tienen sortOrder custom (>0), usar ese
-            if (a.sortOrder > 0 && b.sortOrder > 0) return a.sortOrder - b.sortOrder;
-            // 2. Items con sortOrder van antes que los sin orden
-            if (a.sortOrder > 0) return -1;
-            if (b.sortOrder > 0) return 1;
-            // 3. Fallback: prioridad por categoría + nombre
-            const pa = CATEGORY_PRIORITY[a.category] || 999;
-            const pb = CATEGORY_PRIORITY[b.category] || 999;
-            if (pa !== pb) return pa - pb;
+            const sa = a.sortOrder ?? 9999;
+            const sb = b.sortOrder ?? 9999;
+            if (sa !== sb) return sa - sb;
             return a.name.localeCompare(b.name);
         });
     }

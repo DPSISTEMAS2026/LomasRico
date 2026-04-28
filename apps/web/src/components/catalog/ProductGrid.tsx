@@ -10,29 +10,93 @@ import { API_URL } from '../../services/api';
 
 
 
-import { LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda } from 'lucide-react';
+import {
+    LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda,
+    UtensilsCrossed, Flame, Salad, Shell, Sparkles
+} from 'lucide-react';
 
-const CATEGORIES = [
-    { id: 'PROMOS', name: 'Promociones', icon: <Gift size={20} strokeWidth={2.5} /> },
-    { id: 'CEVICHE LOMASRICO', name: 'Lo Más Rico', icon: <Fish size={20} strokeWidth={2.5} /> },
-    { id: 'CEVICHE PERUANO', name: 'Peruanos', icon: <ChefHat size={20} strokeWidth={2.5} /> },
-    { id: 'CEVICHE VEG', name: 'Vegano/Veg', icon: <Fish size={20} strokeWidth={2.5} className="text-green-500" /> },
-    { id: 'CEVICHE TROPICAL', name: 'Tropicales', icon: <Fish size={20} strokeWidth={2.5} className="rotate-45" /> },
-    { id: 'CEVICHE SIN VERDE', name: 'Sin Verduras', icon: <Fish size={20} strokeWidth={2.5} className="opacity-50" /> },
-    { id: 'CRUDOS', name: 'Crudos', icon: <Fish size={20} strokeWidth={2.5} /> },
-    { id: 'GOHAN', name: 'Gohan', icon: <ChefHat size={20} strokeWidth={2.5} /> },
-    { id: 'BOWLS', name: 'Bowls', icon: <Fish size={20} strokeWidth={2.5} /> },
-    { id: 'ROLLS PREMIUM', name: 'Rolls Premium', icon: <Fish size={20} strokeWidth={2.5} /> },
-    { id: 'HAND ROLLS', name: 'Hand Rolls', icon: <Fish size={20} strokeWidth={2.5} /> },
-    { id: 'EMPANADAS', name: 'Empanadas', icon: <Wheat size={20} strokeWidth={2.5} /> },
-    { id: 'PAPAS / FRITOS', name: 'Papas & Fritos', icon: <Plus size={20} strokeWidth={3} /> },
-    { id: 'PANCITOS', name: 'Pancitos horneados', icon: <ChefHat size={20} strokeWidth={2.5} /> },
-    { id: 'EXTRAS', name: 'Extras', icon: <Plus size={20} strokeWidth={3} /> },
-    { id: 'AGREGADOS', name: 'Agregados', icon: <Plus size={20} strokeWidth={3} /> },
-    { id: 'BEBIDAS', name: 'Bebidas', icon: <CupSoda size={20} strokeWidth={2.5} /> },
-];
+/**
+ * Icon mapping for known categories.
+ * New/unknown categories get a generic icon automatically.
+ */
+const CATEGORY_ICONS: Record<string, JSX.Element> = {
+    'PROMOS': <Gift size={20} strokeWidth={2.5} />,
+    'CEVICHE LOMASRICO': <Fish size={20} strokeWidth={2.5} />,
+    'CEVICHE PERUANO': <ChefHat size={20} strokeWidth={2.5} />,
+    'CEVICHE VEG': <Salad size={20} strokeWidth={2.5} className="text-green-500" />,
+    'CEVICHE TROPICAL': <Fish size={20} strokeWidth={2.5} className="rotate-45" />,
+    'CEVICHE SIN VERDE': <Fish size={20} strokeWidth={2.5} className="opacity-50" />,
+    'CRUDOS': <Shell size={20} strokeWidth={2.5} />,
+    'GOHAN': <ChefHat size={20} strokeWidth={2.5} />,
+    'BOWLS': <Fish size={20} strokeWidth={2.5} />,
+    'ROLLS PREMIUM': <Sparkles size={20} strokeWidth={2.5} />,
+    'HAND ROLLS': <Fish size={20} strokeWidth={2.5} />,
+    'HANDROLL': <Fish size={20} strokeWidth={2.5} />,
+    'EMPANADAS': <Wheat size={20} strokeWidth={2.5} />,
+    'PAPAS / FRITOS': <Flame size={20} strokeWidth={2.5} />,
+    'PANCITOS': <ChefHat size={20} strokeWidth={2.5} />,
+    'EXTRAS': <Plus size={20} strokeWidth={3} />,
+    'AGREGADOS': <Plus size={20} strokeWidth={3} />,
+    'BEBIDAS': <CupSoda size={20} strokeWidth={2.5} />,
+};
 
+/**
+ * Friendly display names for known categories.
+ * Unknown categories get a cleaned version of their ID.
+ */
+const CATEGORY_NAMES: Record<string, string> = {
+    'PROMOS': 'Promociones',
+    'CEVICHE LOMASRICO': 'Lo Más Rico',
+    'CEVICHE PERUANO': 'Peruanos',
+    'CEVICHE VEG': 'Vegano/Veg',
+    'CEVICHE TROPICAL': 'Tropicales',
+    'CEVICHE SIN VERDE': 'Sin Verduras',
+    'CRUDOS': 'Crudos',
+    'GOHAN': 'Gohan',
+    'BOWLS': 'Bowls',
+    'ROLLS PREMIUM': 'Rolls Premium',
+    'HAND ROLLS': 'Hand Rolls',
+    'HANDROLL': 'Hand Rolls',
+    'EMPANADAS': 'Empanadas',
+    'PAPAS / FRITOS': 'Papas & Fritos',
+    'PANCITOS': 'Pancitos Horneados',
+    'EXTRAS': 'Extras',
+    'AGREGADOS': 'Agregados',
+    'BEBIDAS': 'Bebidas',
+};
 
+const DEFAULT_ICON = <UtensilsCrossed size={20} strokeWidth={2.5} />;
+
+/**
+ * Build dynamic categories from the product data.
+ * Categories are derived from the actual products, ordered by their
+ * minimum sortOrder — so admin reordering is respected automatically.
+ */
+function buildCategories(products: Product[]) {
+    const catMap = new Map<string, { minSort: number; count: number }>();
+
+    for (const p of products) {
+        const cat = p.category;
+        if (!cat) continue;
+        const existing = catMap.get(cat);
+        const pSort = (p as any).sortOrder ?? 9999;
+        if (!existing) {
+            catMap.set(cat, { minSort: pSort, count: 1 });
+        } else {
+            existing.count++;
+            if (pSort < existing.minSort) existing.minSort = pSort;
+        }
+    }
+
+    // Sort categories by their minimum product sortOrder
+    const sorted = [...catMap.entries()].sort((a, b) => a[1].minSort - b[1].minSort);
+
+    return sorted.map(([id]) => ({
+        id,
+        name: CATEGORY_NAMES[id] || id.charAt(0).toUpperCase() + id.slice(1).toLowerCase(),
+        icon: CATEGORY_ICONS[id] || DEFAULT_ICON,
+    }));
+}
 
 export const ProductGrid = () => {
     const { addToCart } = useCart();
@@ -84,6 +148,9 @@ export const ProductGrid = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // ─── Dynamic categories derived from products ───
+    const categories = useMemo(() => buildCategories(products), [products]);
+
     const scrollToCategory = (categoryId: string) => {
         const element = document.getElementById(categoryId);
         if (element) {
@@ -121,7 +188,7 @@ export const ProductGrid = () => {
         </div>
     );
 
-    const activeMenuCategories = CATEGORIES.filter(cat => products.some(p => p.category === cat.id));
+    const activeMenuCategories = categories.filter(cat => products.some(p => p.category === cat.id));
     const currentCat = activeMenuCategories.find(c => c.id === selectedCategory);
 
 
@@ -193,7 +260,7 @@ export const ProductGrid = () => {
 
             {/* CONTENT CONTAINER */}
             <div className="max-w-7xl mx-auto px-6 space-y-16">
-                {CATEGORIES.map(category => {
+                {categories.map(category => {
                     const displayProducts = products.filter(p => p.category === category.id);
                     if (displayProducts.length === 0) return null;
 
