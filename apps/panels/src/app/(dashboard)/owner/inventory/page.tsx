@@ -907,6 +907,7 @@ export default function InventoryManagementPage() {
                         </div>
                     </div>
                 </div>
+            )}
 
         </div>
     );
