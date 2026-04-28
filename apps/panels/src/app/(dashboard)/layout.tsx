@@ -113,6 +113,13 @@ export default function DashboardLayout({
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (isInitialized && !user) {
+            router.push('/login');
+        }
+    }, [isInitialized, user, router]);
+
     if (!isInitialized || !user) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-slate-900 border-b-8 border-b-orange-500">

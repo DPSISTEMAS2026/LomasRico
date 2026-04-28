@@ -21,26 +21,16 @@ export class InventoryService {
 
     private mapToUi(item: any) {
         if (!item) return null;
-        let cat = 'VARIOS';
-
-        // Map DB Role to UI Category
-        if (item.role === 'VEGGIE') cat = 'VERDURAS';
-        if (item.role === 'PROTEIN_MAIN' || item.role === 'PROTEIN_SPECIAL') cat = 'PROTEINAS';
-        if (item.role === 'BASE') cat = 'ABARROTES';
-
-        const nameLower = item.name.toLowerCase();
-        if (nameLower.includes('congelado') || nameLower.includes('mango') || nameLower.includes('pulpa')) cat = 'CONGELADOS';
-        if (nameLower.includes('pote') || nameLower.includes('bolsa') || nameLower.includes('envase')) cat = 'PACKAGING';
-
         return {
             id: item.id,
             name: item.name,
-            category: cat,
+            category: item.category || 'GENERAL',
             currentStock: Number(item.currentStock) || 0,
             unit: item.unit,
             costPerUnit: Number(item.costPerUnit) || 0,
             type: item.type,
             role: item.role,
+            minStockThreshold: Number(item.minStockThreshold) || 0,
             isActive: item.isActive !== false,
             productionRecipe: item.productionRecipe || undefined,
             recipe: item.productionRecipe || undefined // Alias for frontend
@@ -95,6 +85,7 @@ export class InventoryService {
                 name: data.name,
                 type: data.type || 'RAW',
                 unit: data.unit || 'UN',
+                category: data.category || 'GENERAL',
                 currentStock: parseFloat(data.currentStock) || 0,
                 costPerUnit: parseFloat(data.costPerUnit) || 0,
                 role: data.role || 'BASE',
@@ -123,6 +114,7 @@ export class InventoryService {
             where: { id },
             data: {
                 name: data.name,
+                category: data.category,
                 costPerUnit: data.costPerUnit !== undefined ? parseFloat(data.costPerUnit) : undefined,
                 currentStock: data.currentStock !== undefined ? parseFloat(data.currentStock) : undefined,
                 role: data.role,

@@ -860,7 +860,7 @@ export default function CatalogManagementPage() {
                                     ORGANIZAR <span className="text-orange-500">CATÁLOGO</span>
                                 </h2>
                                 <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
-                                    Define el orden en que los clientes ven los productos
+                                    Arrastra o usa las flechas para reordenar dentro de cada categoría
                                 </p>
                             </div>
                             <button onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50">
@@ -868,7 +868,7 @@ export default function CatalogManagementPage() {
                             </button>
                         </div>
 
-                        {/* Products List */}
+                        {/* Products List with Drag & Drop */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-6">
                             {(() => {
                                 const categories = Array.from(new Set(sortItems.map(p => p.category))).filter(Boolean);
@@ -882,26 +882,71 @@ export default function CatalogManagementPage() {
                                                 <p className="text-[9px] font-bold text-slate-300 uppercase">({catItems.length})</p>
                                             </div>
                                             <div className="space-y-1">
-                                                {catItems.map((item, idx) => {
+                                                {catItems.map((item, catIdx) => {
                                                     const globalIdx = sortItems.findIndex(s => s.id === item.id);
                                                     return (
-                                                        <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group">
-                                                            <GripVertical size={14} className="text-slate-300 shrink-0" />
+                                                        <div
+                                                            key={item.id}
+                                                            draggable
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData('text/plain', item.id);
+                                                                e.dataTransfer.setData('category', cat);
+                                                                e.dataTransfer.effectAllowed = 'move';
+                                                                (e.target as HTMLElement).style.opacity = '0.4';
+                                                            }}
+                                                            onDragEnd={(e) => {
+                                                                (e.target as HTMLElement).style.opacity = '1';
+                                                            }}
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault();
+                                                                const dragCat = e.dataTransfer.types.includes('category') ? 'ok' : '';
+                                                                if (dragCat) {
+                                                                    e.dataTransfer.dropEffect = 'move';
+                                                                    (e.currentTarget as HTMLElement).style.borderTop = '3px solid #f97316';
+                                                                }
+                                                            }}
+                                                            onDragLeave={(e) => {
+                                                                (e.currentTarget as HTMLElement).style.borderTop = '';
+                                                            }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                (e.currentTarget as HTMLElement).style.borderTop = '';
+                                                                const draggedId = e.dataTransfer.getData('text/plain');
+                                                                const draggedCat = e.dataTransfer.getData('category');
+                                                                if (draggedCat !== cat) return; // Only within same category
+
+                                                                const newItems = [...sortItems];
+                                                                const fromIdx = newItems.findIndex(s => s.id === draggedId);
+                                                                const toIdx = newItems.findIndex(s => s.id === item.id);
+                                                                if (fromIdx === toIdx || fromIdx === -1) return;
+
+                                                                const [moved] = newItems.splice(fromIdx, 1);
+                                                                newItems.splice(toIdx, 0, moved);
+                                                                setSortItems(newItems);
+                                                            }}
+                                                            className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group cursor-grab active:cursor-grabbing select-none"
+                                                        >
+                                                            <GripVertical size={14} className="text-slate-300 shrink-0 hover:text-orange-500 transition-colors" />
                                                             <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">
-                                                                {globalIdx + 1}
+                                                                {catIdx + 1}
                                                             </span>
                                                             {item.imageUrl && (
                                                                 <img src={item.imageUrl} className="w-8 h-8 rounded-lg object-cover shrink-0" alt="" />
                                                             )}
                                                             <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
                                                             <span className="text-[10px] font-bold text-slate-400 shrink-0">${Number(item.price).toLocaleString()}</span>
-                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="flex items-center gap-1">
                                                                 <button
-                                                                    disabled={globalIdx === 0}
-                                                                    onClick={() => {
-                                                                        if (globalIdx === 0) return;
+                                                                    disabled={catIdx === 0}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (catIdx === 0) return;
+                                                                        // Find the previous item in same category and swap in global array
+                                                                        const prevItem = catItems[catIdx - 1];
+                                                                        const fromGlobal = sortItems.findIndex(s => s.id === item.id);
+                                                                        const toGlobal = sortItems.findIndex(s => s.id === prevItem.id);
                                                                         const newItems = [...sortItems];
-                                                                        [newItems[globalIdx - 1], newItems[globalIdx]] = [newItems[globalIdx], newItems[globalIdx - 1]];
+                                                                        [newItems[toGlobal], newItems[fromGlobal]] = [newItems[fromGlobal], newItems[toGlobal]];
                                                                         setSortItems(newItems);
                                                                     }}
                                                                     className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
@@ -909,11 +954,16 @@ export default function CatalogManagementPage() {
                                                                     <ArrowUp size={12} />
                                                                 </button>
                                                                 <button
-                                                                    disabled={globalIdx === sortItems.length - 1}
-                                                                    onClick={() => {
-                                                                        if (globalIdx === sortItems.length - 1) return;
+                                                                    disabled={catIdx === catItems.length - 1}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (catIdx === catItems.length - 1) return;
+                                                                        // Find the next item in same category and swap in global array
+                                                                        const nextItem = catItems[catIdx + 1];
+                                                                        const fromGlobal = sortItems.findIndex(s => s.id === item.id);
+                                                                        const toGlobal = sortItems.findIndex(s => s.id === nextItem.id);
                                                                         const newItems = [...sortItems];
-                                                                        [newItems[globalIdx], newItems[globalIdx + 1]] = [newItems[globalIdx + 1], newItems[globalIdx]];
+                                                                        [newItems[fromGlobal], newItems[toGlobal]] = [newItems[toGlobal], newItems[fromGlobal]];
                                                                         setSortItems(newItems);
                                                                     }}
                                                                     className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"

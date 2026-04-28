@@ -31,6 +31,7 @@ model InventoryItem {
   name              String
   type              ItemType
   unit              MeasureUnit
+  category          String      @default("GENERAL") // User-defined category (editable)
   currentStock      Float       @default(0) // Stock real (puede ser negativo en POS)
   minStockThreshold Float       @default(0) // Nivel de alerta
   costPerUnit       Float       @default(0) // Costo neto por unidad (KG/UN/LT)

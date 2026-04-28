@@ -37,14 +37,16 @@ export default function InventoryManagementPage() {
     const [adjustItem, setAdjustItem] = useState<any>(null);
     const [wasteItem, setWasteItem] = useState<any>(null);
     const [editItem, setEditItem] = useState<any>(null);
-    const [editData, setEditData] = useState({ name: '', role: 'BASE', type: 'RAW', unit: 'KG', costPerUnit: '', minStockThreshold: '10' });
+    const [editData, setEditData] = useState({ name: '', role: 'BASE', type: 'RAW', unit: 'KG', costPerUnit: '', minStockThreshold: '10', category: 'GENERAL' });
 
 
     // Form States
     const [newItem, setNewItem] = useState({
-        name: '', category: 'VERDURAS', unit: 'KG', yield: '100',
+        name: '', category: '', unit: 'KG', yield: '100',
         purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10'
     });
+    const [newCategoryInput, setNewCategoryInput] = useState('');
+    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
     const [restockData, setRestockData] = useState({ quantity: '', unitCost: '', yieldPercent: '100' });
     const [adjustValue, setAdjustValue] = useState('');
     const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
@@ -82,6 +84,7 @@ export default function InventoryManagementPage() {
                     unit: newItem.unit,
                     role: newItem.role,
                     type: newItem.type,
+                    category: newItem.category || 'GENERAL',
                     costPerUnit: Math.round(netCost),
                     currentStock: Number(newItem.currentStock) || 0,
                     minStockThreshold: Number(newItem.minStock) || 10,
@@ -91,7 +94,7 @@ export default function InventoryManagementPage() {
             if (res.ok) {
                 loadData();
                 setIsCreating(false);
-                setNewItem({ name: '', category: 'VERDURAS', unit: 'KG', yield: '100', purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10' });
+                setNewItem({ name: '', category: '', unit: 'KG', yield: '100', purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10' });
             }
         } catch (e) {
             alert('Error al crear insumo');
@@ -203,7 +206,9 @@ export default function InventoryManagementPage() {
         }
     };
 
-    const categoriesList = ['TODOS', 'VERDURAS', 'PROTEINAS', 'ABARROTES', 'PACKAGING', 'CONGELADOS'];
+    // Dynamic categories from actual data
+    const dynamicCategories = Array.from(new Set(items.map((i: any) => i.category || 'GENERAL'))).sort() as string[];
+    const categoriesList = ['TODOS', ...dynamicCategories];
 
     const filteredItems = items.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(filter.toLowerCase());
@@ -353,14 +358,12 @@ export default function InventoryManagementPage() {
                                 <tr key={item.id} className="group hover:bg-slate-50 transition-all">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] text-white shadow-sm
-                                                ${item.category === 'PROTEINAS' ? 'bg-red-500' : item.category === 'VERDURAS' ? 'bg-green-500' : 'bg-slate-400'}
-                                            `}>
-                                                {item.category.substring(0, 3)}
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] text-white shadow-sm bg-slate-700">
+                                                {(item.category || 'GEN').substring(0, 3)}
                                             </div>
                                             <div>
                                                 <p className="font-black text-slate-900 uppercase italic text-sm tracking-tight">{item.name}</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">ID: {item.id.substring(0, 8)}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{item.category}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -381,7 +384,7 @@ export default function InventoryManagementPage() {
                                             <button
                                                 onClick={() => {
                                                     setEditItem(item);
-                                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10' });
+                                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10', category: item.category || 'GENERAL' });
                                                 }}
                                                 className="px-3 py-2 bg-blue-50 text-blue-600 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5"
                                             >
@@ -431,12 +434,12 @@ export default function InventoryManagementPage() {
                     <div key={item.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
                         <div className="flex justify-between items-start">
                             <div className="flex gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] text-white shrink-0 ${item.category === 'PROTEINAS' ? 'bg-red-500' : 'bg-slate-400'}`}>
-                                    {item.category.substring(0, 3)}
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] text-white shrink-0 bg-slate-700">
+                                    {(item.category || 'GEN').substring(0, 3)}
                                 </div>
                                 <div>
                                     <h4 className="font-black text-slate-900 uppercase italic text-sm">{item.name}</h4>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">ID: {item.id.substring(0, 8)}</p>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -451,7 +454,7 @@ export default function InventoryManagementPage() {
                             <button
                                 onClick={() => {
                                     setEditItem(item);
-                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10' });
+                                    setEditData({ name: item.name, role: item.role || 'BASE', type: item.type || 'RAW', unit: item.unit || 'KG', costPerUnit: item.costPerUnit?.toString() || '0', minStockThreshold: item.minStockThreshold?.toString() || '10', category: item.category || 'GENERAL' });
                                 }}
                                 className="bg-blue-50 text-blue-600 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 border border-blue-100 active:scale-95"
                             >
@@ -506,16 +509,71 @@ export default function InventoryManagementPage() {
                                 <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} placeholder="Ej: Salmón Fresco" autoFocus />
                             </div>
 
+                            {/* Categoría */}
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Categoría</label>
+                                {!showNewCategoryInput ? (
+                                    <div className="flex gap-2">
+                                        <select className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.category} onChange={e => setNewItem({ ...newItem, category: e.target.value })}>
+                                            <option value="">Seleccionar categoría...</option>
+                                            {dynamicCategories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewCategoryInput(true)}
+                                            className="px-4 py-2 bg-orange-500 text-white rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all whitespace-nowrap"
+                                        >
+                                            + Nueva
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <input
+                                            className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent uppercase"
+                                            value={newCategoryInput}
+                                            onChange={e => setNewCategoryInput(e.target.value.toUpperCase())}
+                                            placeholder="Ej: ÚTILES DE ASEO"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (newCategoryInput.trim()) {
+                                                    setNewItem({ ...newItem, category: newCategoryInput.trim() });
+                                                    setShowNewCategoryInput(false);
+                                                    setNewCategoryInput('');
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-green-500 text-white rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-green-600 transition-all"
+                                        >
+                                            OK
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowNewCategoryInput(false); setNewCategoryInput(''); }}
+                                            className="px-3 py-2 bg-slate-200 text-slate-500 rounded-2xl font-black uppercase text-[9px] tracking-widest hover:bg-slate-300 transition-all"
+                                        >
+                                            X
+                                        </button>
+                                    </div>
+                                )}
+                                {newItem.category && (
+                                    <p className="text-[9px] font-bold text-orange-500 mt-1 italic">Categoría seleccionada: {newItem.category}</p>
+                                )}
+                            </div>
+
                             {/* Rol */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol en Producción</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.role} onChange={e => setNewItem({ ...newItem, role: e.target.value })}>
-                                    <option value="BASE">🍚 Base / Abarrote</option>
-                                    <option value="PROTEIN_MAIN">🥩 Proteína Principal</option>
-                                    <option value="PROTEIN_SPECIAL">🦐 Proteína Premium</option>
-                                    <option value="VEGGIE">🥬 Verdura / Vegetal</option>
-                                    <option value="SAUCE">🌶️ Salsa / Aderezo</option>
-                                    <option value="PACKAGING">📦 Packaging</option>
+                                    <option value="BASE">Base / Abarrote</option>
+                                    <option value="PROTEIN_MAIN">Proteína Principal</option>
+                                    <option value="PROTEIN_SPECIAL">Proteína Premium</option>
+                                    <option value="VEGGIE">Verdura / Vegetal</option>
+                                    <option value="SAUCE">Salsa / Aderezo</option>
+                                    <option value="PACKAGING">Packaging</option>
                                 </select>
                             </div>
 
@@ -831,16 +889,41 @@ export default function InventoryManagementPage() {
                                 <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
                             </div>
 
+                            {/* Categoría (editable) */}
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Categoría</label>
+                                <div className="flex gap-2">
+                                    <select className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.category} onChange={e => setEditData({ ...editData, category: e.target.value })}>
+                                        {dynamicCategories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                        {editData.category && !dynamicCategories.includes(editData.category) && (
+                                            <option value={editData.category}>{editData.category}</option>
+                                        )}
+                                    </select>
+                                    <input
+                                        className="w-40 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent uppercase text-[11px]"
+                                        placeholder="O escribir nueva..."
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                const val = (e.target as HTMLInputElement).value.trim().toUpperCase();
+                                                if (val) { setEditData({ ...editData, category: val }); (e.target as HTMLInputElement).value = ''; }
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
                             {/* Rol */}
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol en Producción</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.role} onChange={e => setEditData({ ...editData, role: e.target.value })}>
-                                    <option value="PROTEIN_MAIN">🥩 Proteína Principal</option>
-                                    <option value="PROTEIN_SPECIAL">🦑 Proteína Especial</option>
-                                    <option value="VEGGIE">🥬 Vegetal / Fresco</option>
-                                    <option value="BASE">🍚 Base / Cereal</option>
-                                    <option value="SAUCE">🫙 Salsa / Aderezo</option>
-                                    <option value="PACKAGING">📦 Envase / Packaging</option>
+                                    <option value="PROTEIN_MAIN">Proteína Principal</option>
+                                    <option value="PROTEIN_SPECIAL">Proteína Especial</option>
+                                    <option value="VEGGIE">Vegetal / Fresco</option>
+                                    <option value="BASE">Base / Cereal</option>
+                                    <option value="SAUCE">Salsa / Aderezo</option>
+                                    <option value="PACKAGING">Envase / Packaging</option>
                                 </select>
                             </div>
 
