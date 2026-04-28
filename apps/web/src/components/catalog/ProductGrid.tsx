@@ -27,7 +27,8 @@ const CATEGORIES = [
     { id: 'EMPANADAS', name: 'Empanadas', icon: <Wheat size={20} strokeWidth={2.5} /> },
     { id: 'PAPAS / FRITOS', name: 'Papas & Fritos', icon: <Plus size={20} strokeWidth={3} /> },
     { id: 'PANCITOS', name: 'Pancitos horneados', icon: <ChefHat size={20} strokeWidth={2.5} /> },
-    { id: 'EXTRAS', name: 'Agregados', icon: <Plus size={20} strokeWidth={3} /> },
+    { id: 'EXTRAS', name: 'Extras', icon: <Plus size={20} strokeWidth={3} /> },
+    { id: 'AGREGADOS', name: 'Agregados', icon: <Plus size={20} strokeWidth={3} /> },
     { id: 'BEBIDAS', name: 'Bebidas', icon: <CupSoda size={20} strokeWidth={2.5} /> },
 ];
 
