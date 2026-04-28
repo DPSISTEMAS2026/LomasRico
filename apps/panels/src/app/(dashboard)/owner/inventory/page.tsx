@@ -19,8 +19,8 @@ import {
     ClipboardCheck,
     History,
     Trash2,
-    Factory,
-    Pencil
+    Pencil,
+    Percent
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
@@ -38,15 +38,14 @@ export default function InventoryManagementPage() {
     const [wasteItem, setWasteItem] = useState<any>(null);
     const [editItem, setEditItem] = useState<any>(null);
     const [editData, setEditData] = useState({ name: '', role: 'BASE', type: 'RAW', unit: 'KG', costPerUnit: '', minStockThreshold: '10' });
-    const [produceItem, setProduceItem] = useState<any>(null);
-    const [produceBatches, setProduceBatches] = useState('1');
+
 
     // Form States
     const [newItem, setNewItem] = useState({
         name: '', category: 'VERDURAS', unit: 'KG', yield: '100',
         purchasePrice: '', role: 'BASE', type: 'RAW', currentStock: '', minStock: '10'
     });
-    const [restockData, setRestockData] = useState({ quantity: '', unitCost: '' });
+    const [restockData, setRestockData] = useState({ quantity: '', unitCost: '', yieldPercent: '100' });
     const [adjustValue, setAdjustValue] = useState('');
     const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
 
@@ -101,26 +100,40 @@ export default function InventoryManagementPage() {
 
     const handleRestock = async () => {
         if (!restockItem) return;
-        if (!restockData.quantity || isNaN(Number(restockData.quantity))) {
+        const rawQty = Number(restockData.quantity);
+        if (!rawQty || isNaN(rawQty)) {
             alert('Por favor, ingrese una cantidad válida.');
             return;
         }
+        const yieldPct = Number(restockData.yieldPercent) || 100;
+        const actualQty = Math.round((rawQty * (yieldPct / 100)) * 100) / 100;
+        const mermaQty = Math.round((rawQty - actualQty) * 100) / 100;
+
+        const confirmMsg = yieldPct < 100
+            ? `Compra: ${rawQty} ${restockItem.unit}\nRendimiento: ${yieldPct}%\nMerma: ${mermaQty} ${restockItem.unit}\n\n→ Se agregarán ${actualQty} ${restockItem.unit} útiles al stock\n\n¿Confirmar?`
+            : `Se agregarán ${rawQty} ${restockItem.unit} al stock. ¿Confirmar?`;
+
+        if (!confirm(confirmMsg)) return;
+
         try {
             const res = await authFetch(`${API_URL}/inventory/${restockItem.id}/restock`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    quantity: Number(restockData.quantity),
+                    quantity: actualQty,
                     unitCost: Number(restockData.unitCost)
                 })
             });
 
             if (res.ok) {
-                alert('✓ Inventario actualizado correctamente.');
+                const summary = yieldPct < 100
+                    ? `✓ Stock actualizado\n${rawQty} ${restockItem.unit} comprados → ${actualQty} ${restockItem.unit} útiles (${mermaQty} merma)`
+                    : `✓ Stock actualizado: +${actualQty} ${restockItem.unit}`;
+                alert(summary);
                 loadData();
                 setRestockItem(null);
-                setRestockData({ quantity: '', unitCost: '' });
+                setRestockData({ quantity: '', unitCost: '', yieldPercent: '100' });
             } else {
-                alert('Error al procesar la reposición. Intente nuevamente.');
+                alert('Error al procesar la reposición.');
             }
         } catch (e) {
             alert('Error de conexión en reposición');
@@ -387,7 +400,7 @@ export default function InventoryManagementPage() {
                                             <button
                                                 onClick={() => {
                                                     setRestockItem(item);
-                                                    setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' });
+                                                    setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '', yieldPercent: '100' });
                                                 }}
                                                 className="px-3 py-2 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-1.5 shadow-sm"
                                             >
@@ -402,14 +415,7 @@ export default function InventoryManagementPage() {
                                             >
                                                 <Trash2 size={12} /> Merma
                                             </button>
-                                            {(item.type === 'PREPARED' || item.type === 'PREPARATION') && (
-                                                <button
-                                                    onClick={() => { setProduceItem(item); setProduceBatches('1'); }}
-                                                    className="px-3 py-2 bg-green-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-green-600 transition-all flex items-center gap-1.5 shadow-sm"
-                                                >
-                                                    <Factory size={12} /> Producir
-                                                </button>
-                                            )}
+
                                         </div>
                                     </td>
                                 </tr>
@@ -478,14 +484,7 @@ export default function InventoryManagementPage() {
                             >
                                 <Trash2 size={12} /> Merma
                             </button>
-                            {(item.type === 'PREPARED' || item.type === 'PREPARATION') && (
-                                <button
-                                    onClick={() => { setProduceItem(item); setProduceBatches('1'); }}
-                                    className="col-span-4 bg-green-500 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1.5 shadow-lg active:scale-95"
-                                >
-                                    <Factory size={12} /> Producir Lote
-                                </button>
-                            )}
+
                         </div>
                     </div>
                 ))}
@@ -599,7 +598,7 @@ export default function InventoryManagementPage() {
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Se registrará una compra y se recalculará el PMP en la base de datos</p>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad Comprada ({restockItem.unit})</label>
                                 <input
@@ -616,13 +615,64 @@ export default function InventoryManagementPage() {
                                 <input
                                     type="number"
                                     placeholder="$ 0.00"
-                                    className="w-full bg-slate-50 p-5 rounded-2xl font-black italic text-3xl outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all text-center border border-transparent shadow-inner"
+                                    className="w-full bg-slate-50 p-4 rounded-2xl font-black italic text-xl outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all text-center border border-transparent shadow-inner"
                                     value={restockData.unitCost}
                                     onChange={e => setRestockData({ ...restockData, unitCost: e.target.value })}
                                 />
                             </div>
 
-                            <div className="flex flex-col gap-3 mt-8">
+                            {/* Rendimiento / Yield */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic flex items-center gap-2">
+                                    <Percent size={12} className="text-orange-500" /> Rendimiento del Insumo (%)
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        min="1" max="100"
+                                        placeholder="100"
+                                        className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic text-xl outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all text-center border border-transparent shadow-inner"
+                                        value={restockData.yieldPercent}
+                                        onChange={e => setRestockData({ ...restockData, yieldPercent: e.target.value })}
+                                    />
+                                    <div className="flex gap-1">
+                                        {[70, 80, 90, 100].map(pct => (
+                                            <button
+                                                key={pct}
+                                                onClick={() => setRestockData({ ...restockData, yieldPercent: pct.toString() })}
+                                                className={`px-3 py-2 rounded-xl font-black text-[9px] transition-all ${
+                                                    restockData.yieldPercent === pct.toString()
+                                                        ? 'bg-orange-500 text-white shadow-md'
+                                                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {pct}%
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Live Preview */}
+                            {restockData.quantity && Number(restockData.yieldPercent) < 100 && (
+                                <div className="bg-green-50 border border-green-100 rounded-2xl p-4 space-y-1 animate-in fade-in">
+                                    <p className="text-[10px] font-black uppercase text-green-700 tracking-widest italic">📊 Resumen con Merma</p>
+                                    <div className="flex justify-between text-xs font-bold text-slate-600">
+                                        <span>Compra bruta:</span>
+                                        <span>{restockData.quantity} {restockItem.unit}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-bold text-red-500">
+                                        <span>Merma ({100 - Number(restockData.yieldPercent)}%):</span>
+                                        <span>-{(Number(restockData.quantity) * (1 - Number(restockData.yieldPercent) / 100)).toFixed(2)} {restockItem.unit}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm font-black text-green-700 pt-1 border-t border-green-200">
+                                        <span>Stock útil a ingresar:</span>
+                                        <span>{(Number(restockData.quantity) * Number(restockData.yieldPercent) / 100).toFixed(2)} {restockItem.unit}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col gap-3 mt-4">
                                 <button onClick={handleRestock} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase italic tracking-widest shadow-xl text-xs hover:bg-green-600 transition-all flex items-center justify-center gap-3">
                                     <Save size={18} /> Confirmar Ingreso Stock
                                 </button>
@@ -857,62 +907,7 @@ export default function InventoryManagementPage() {
                         </div>
                     </div>
                 </div>
-            )}
 
-            {/* Produce Sub-Recipe Modal */}
-            {produceItem && (
-                <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
-                    <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-500">
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-50">
-                            <h3 className="text-xl font-black italic uppercase text-slate-900 tracking-tighter">Producir <span className="text-green-500">{produceItem.name}</span></h3>
-                            <button onClick={() => setProduceItem(null)} className="p-2 hover:bg-slate-50 rounded-full transition-colors"><X size={20} /></button>
-                        </div>
-
-                        <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-6">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-green-700 mb-1 italic">⚙️ Producción de Sub-Receta</p>
-                            <p className="text-xs text-green-600 font-bold">Al producir, se descontarán automáticamente los ingredientes base del inventario y se incrementará el stock de <strong>{produceItem.name}</strong>.</p>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad de Lotes</label>
-                            <input
-                                type="number"
-                                min="1"
-                                value={produceBatches}
-                                onChange={e => setProduceBatches(e.target.value)}
-                                className="w-full bg-slate-50 p-5 rounded-2xl font-black italic text-3xl text-center outline-none focus:bg-white focus:ring-2 focus:ring-green-500 transition-all border border-transparent"
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-3 mt-8">
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const res = await authFetch(`${API_URL}/inventory/${produceItem.id}/produce`, {
-                                            method: 'POST',
-                                            body: JSON.stringify({ batches: parseInt(produceBatches) || 1 })
-                                        });
-                                        if (res.ok) {
-                                            const result = await res.json();
-                                            alert(`✅ Producción completada\n${result.produced}: +${result.quantityProduced} ${produceItem.unit}\nInsumos consumidos: ${result.ingredientsConsumed?.length || 0}`);
-                                            setProduceItem(null);
-                                            loadData();
-                                        } else {
-                                            const err = await res.json().catch(() => ({}));
-                                            alert(`❌ Error: ${err.message || 'No se pudo producir'}`);
-                                        }
-                                    } catch { alert('Error de conexión'); }
-                                }}
-                                className="w-full bg-green-500 text-white py-5 rounded-[2rem] font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-green-200 hover:bg-green-600 transition-all flex items-center justify-center gap-4 active:scale-95"
-                            >
-                                <Factory size={18} /> INICIAR PRODUCCIÓN
-                            </button>
-                            <button onClick={() => setProduceItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-green-500 transition-colors italic">Cancelar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
