@@ -498,14 +498,6 @@ export class UberScraperCronService implements OnModuleInit, OnModuleDestroy {
   __typename
 }
 
-fragment RichTextFields on RichText {
-  richTextElements {
-    ...RichTextElement
-    __typename
-  }
-  accessibilityText
-  __typename
-}
 
 fragment PriceFields on Price {
   amount
@@ -673,11 +665,6 @@ fragment DeliveriesFields on Delivery {
   __typename
 }
 
-fragment OptionUI on OptionUIState {
-  isDisabled
-  disabledReason
-  __typename
-}
 
 fragment OrderDetails on MerchantOrder {
   fulfillmentType
