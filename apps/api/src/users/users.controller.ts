@@ -10,6 +10,18 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     /**
+     * GET /users/customers/list
+     * Protected: only OWNER and ADMIN can list all customers
+     * IMPORTANT: This must be BEFORE :userId routes to avoid parameter collision
+     */
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('OWNER', 'ADMIN')
+    @Get('customers/list')
+    async findAllCustomers(@Query('search') search?: string) {
+        return this.usersService.findAllCustomers(search);
+    }
+
+    /**
      * GET /users/:userId/addresses
      * Protected: user can only see their own addresses, unless OWNER/ADMIN
      */
@@ -44,17 +56,6 @@ export class UsersController {
     async getOrders(@Param('userId') userId: string, @Request() req: any) {
         this.assertOwnershipOrAdmin(req.user, userId);
         return this.usersService.getOrders(userId);
-    }
-
-    /**
-     * GET /users/customers/list
-     * Protected: only OWNER and ADMIN can list all customers
-     */
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('OWNER', 'ADMIN')
-    @Get('customers/list')
-    async findAllCustomers(@Query('search') search?: string) {
-        return this.usersService.findAllCustomers(search);
     }
 
     // ── Helpers ──

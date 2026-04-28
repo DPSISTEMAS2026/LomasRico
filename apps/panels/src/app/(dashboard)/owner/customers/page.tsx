@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchCustomers } from '../../../../services/api';
+import { API_URL } from '../../../../services/api';
+import { authFetch } from '../../../../services/authFetch';
 import {
     Users,
     Search,
@@ -50,8 +51,13 @@ export default function CustomersPage() {
     const loadCustomers = async () => {
         setLoading(true);
         try {
-            const data = await fetchCustomers();
-            setCustomers(data);
+            const res = await authFetch(`${API_URL}/users/customers/list`, { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                setCustomers(data);
+            } else {
+                console.error('Error loading customers:', res.status);
+            }
         } catch (e) {
             console.error('Error loading customers:', e);
         } finally {
