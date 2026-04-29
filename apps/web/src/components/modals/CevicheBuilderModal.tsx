@@ -31,6 +31,7 @@ export const CevicheBuilderModal = ({
     const [isSuccess, setIsSuccess] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [quantity, setQuantity] = useState(1);
 
     // Selections State (Map: groupId -> selected Option IDs)
     const [selections, setSelections] = useState<Record<string, string[]>>({});
@@ -73,6 +74,7 @@ export const CevicheBuilderModal = ({
         if (isOpen) {
             setIsSuccess(false);
             setSearchQuery('');
+            setQuantity(1);
             
             if (hasDynamicModifiers) {
                 setStep(0);
@@ -204,7 +206,7 @@ export const CevicheBuilderModal = ({
             variantId: 'default',
             name: product.name,
             price: finalPrice,
-            quantity: 1,
+            quantity: quantity,
             modifiers: {
                 selectedProteins: [],
                 selectedProteinNames: [],
@@ -569,11 +571,36 @@ export const CevicheBuilderModal = ({
                                         </div>
                                     )}
 
+                                    {/* Quantity Selector */}
+                                    <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Cantidad</span>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                                    className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black text-lg transition-all active:scale-90 ${
+                                                        quantity <= 1 ? 'border-slate-100 text-slate-200 cursor-not-allowed' : 'border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
+                                                    }`}
+                                                    disabled={quantity <= 1}
+                                                >
+                                                    <Minus size={16} strokeWidth={3} />
+                                                </button>
+                                                <span className="w-8 text-center text-xl font-black italic text-slate-900 tabular-nums">{quantity}</span>
+                                                <button
+                                                    onClick={() => setQuantity(quantity + 1)}
+                                                    className="w-10 h-10 rounded-xl border-2 border-slate-200 flex items-center justify-center font-black text-lg text-slate-600 hover:border-orange-300 hover:text-orange-500 transition-all active:scale-90"
+                                                >
+                                                    <Plus size={16} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Total */}
-                                    <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
+                                    <div className="flex justify-between items-center">
                                         <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Total Personalizado</span>
                                         <span className="text-2xl font-black italic text-slate-900 tracking-tighter">
-                                            ${finalPrice.toLocaleString()}
+                                            ${(finalPrice * quantity).toLocaleString()}
                                         </span>
                                     </div>
                                     

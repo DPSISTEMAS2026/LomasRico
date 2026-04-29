@@ -29,7 +29,7 @@ if (typeof window !== 'undefined') {
 
 export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const { user, isLoggedIn } = useAuth();
-    const { items, clearCart, removeFromCart, addToCart } = useCart();
+    const { items, clearCart, removeFromCart, updateQuantity, addToCart } = useCart();
 
     const [address, setAddress] = useState('');
     const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
@@ -313,8 +313,26 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                             </p>
                                         ))}
                                         <div className="flex justify-between items-center mt-3">
-                                            <div className="text-[10px] font-black bg-white px-2 py-1 rounded border border-slate-100 text-slate-500">
-                                                x{item.quantity}
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        if (item.quantity <= 1) {
+                                                            removeFromCart(item.tempId);
+                                                        } else {
+                                                            updateQuantity(item.tempId, item.quantity - 1);
+                                                        }
+                                                    }}
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 transition-all active:scale-90"
+                                                >
+                                                    {item.quantity <= 1 ? <Trash2 size={12} /> : <span className="text-sm font-black leading-none">−</span>}
+                                                </button>
+                                                <span className="w-6 text-center text-sm font-black text-slate-900 tabular-nums">{item.quantity}</span>
+                                                <button
+                                                    onClick={() => updateQuantity(item.tempId, item.quantity + 1)}
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-all active:scale-90"
+                                                >
+                                                    <span className="text-sm font-black leading-none">+</span>
+                                                </button>
                                             </div>
                                             <button
                                                 onClick={() => removeFromCart(item.tempId)}

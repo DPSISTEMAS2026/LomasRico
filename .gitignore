@@ -19,6 +19,8 @@ out/
 .env
 .env.*
 !.env.example
+keys/
+*.pem
 
 # === OS ===
 .DS_Store

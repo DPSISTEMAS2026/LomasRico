@@ -99,4 +99,24 @@ La forma segura:
 
 ---
 
+## ✅ ESTADO DE RECEPCIÓN (Actualizado: 29 abril 2026)
+
+| Servicio | Clave | Estado | Validación |
+|----------|-------|--------|------------|
+| **MercadoPago** | Public Key (`APP_USR-814959be...`) | ✅ Recibida | — |
+| **MercadoPago** | Access Token (`APP_USR-667605...`) | ✅ Recibida | ✅ Verificado: LOMASRICO SPA (MLC) |
+| **PedidosYa Envíos** | Token API (`9545-282326...`) | ✅ Recibida | ✅ Verificado: Auth válido |
+
+### Configuración en Ambientes:
+
+| Ambiente | Archivo | Estado |
+|----------|---------|--------|
+| Local (API) | `apps/api/.env` | ✅ Configurado |
+| Local (Web) | `apps/web/.env.local` | ✅ Configurado |
+| Local (Root) | `.env` | ✅ Configurado |
+| **Render (Producción API)** | Environment vars | ⏳ **Pendiente — Configurar manualmente** |
+| **Vercel (Producción Web)** | Environment vars | ⏳ **Pendiente — Configurar manualmente** |
+
+---
+
 *¿Dudas? Escríbeme directamente. — Daniel* 📱
