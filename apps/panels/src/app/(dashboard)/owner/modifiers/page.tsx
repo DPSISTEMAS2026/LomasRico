@@ -118,7 +118,7 @@ export default function ModifiersPage() {
             });
             if (res.ok) {
                 const created = await res.json();
-                setGroups((prev) => [...prev, { ...created, assignedProductsCount: 0 }]);
+                setGroups((prev) => [{ ...created, assignedProductsCount: 0 }, ...prev]);
                 setEditingGroup(created);
                 setExpandedGroupId(created.id);
                 setShowCreateModal(false);

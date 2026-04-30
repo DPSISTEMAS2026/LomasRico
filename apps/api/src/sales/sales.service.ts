@@ -265,11 +265,25 @@ export class SalesService {
             costSnapshot = Math.round(costSnapshot * 100) / 100;
             // -------------------------------------------------------
 
-            // Accumulate inventory requirements
+            // Accumulate inventory requirements (with unit conversion)
             for (const bomItem of bom) {
-                const totalQty = bomItem.quantity * itemDto.quantity;
+                let qty = bomItem.quantity * itemDto.quantity;
+
+                // ✅ CONVERSIÓN DE UNIDADES: BOM puede devolver en 'g' pero inventario está en 'KG'
+                // Si el BOM dice gramos y el inventario está en KG, convertir
+                if (bomItem.unit === 'g') {
+                    // Buscar la unidad real del inventario
+                    const invItem = await this.prisma.inventoryItem.findUnique({
+                        where: { id: bomItem.inventoryItemId },
+                        select: { unit: true }
+                    });
+                    if (invItem && invItem.unit === 'KG') {
+                        qty = qty / 1000; // g → KG
+                    }
+                }
+
                 const currentReq = totalRequirements.get(bomItem.inventoryItemId) || 0;
-                totalRequirements.set(bomItem.inventoryItemId, currentReq + totalQty);
+                totalRequirements.set(bomItem.inventoryItemId, currentReq + qty);
             }
 
             processedItems.push({

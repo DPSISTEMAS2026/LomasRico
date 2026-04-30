@@ -221,15 +221,27 @@ export class PaymentsService {
                 include: { recipeSnapshot: true }
             });
 
-            // Reunir todos los requerimientos
+            // Reunir todos los requerimientos (con conversión de unidades)
             const requirements = new Map<string, number>();
             for (const item of items) {
                 if (item.recipeSnapshot && item.recipeSnapshot.resolvedBoM) {
                     const bom = item.recipeSnapshot.resolvedBoM as any[];
                     for (const bomItem of bom) {
-                        const totalQty = bomItem.quantity * item.quantity;
+                        let qty = bomItem.quantity * item.quantity;
+
+                        // ✅ CONVERSIÓN DE UNIDADES: BOM en 'g', inventario en 'KG'
+                        if (bomItem.unit === 'g') {
+                            const invItem = await tx.inventoryItem.findUnique({
+                                where: { id: bomItem.inventoryItemId },
+                                select: { unit: true }
+                            });
+                            if (invItem && invItem.unit === 'KG') {
+                                qty = qty / 1000;
+                            }
+                        }
+
                         const current = requirements.get(bomItem.inventoryItemId) || 0;
-                        requirements.set(bomItem.inventoryItemId, current + totalQty);
+                        requirements.set(bomItem.inventoryItemId, current + qty);
                     }
                 }
             }
