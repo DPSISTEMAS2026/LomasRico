@@ -26,7 +26,8 @@ import {
     Printer,
     Coins,
     MessageSquare,
-    AlertTriangle
+    AlertTriangle,
+    Settings2
 } from 'lucide-react';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
@@ -74,6 +75,9 @@ export default function POSPage() {
     // Delivery Mode
     const [deliveryMode, setDeliveryMode] = useState<'EXTERNAL' | 'INTERNAL'>('EXTERNAL');
     const [loadingDeliveryMode, setLoadingDeliveryMode] = useState(false);
+    const [deliveryRadius, setDeliveryRadius] = useState(8);
+    const [showRadiusConfig, setShowRadiusConfig] = useState(false);
+    const [tempRadius, setTempRadius] = useState(8);
 
     // Discount State
     const [discount, setDiscount] = useState(0);
@@ -133,6 +137,10 @@ export default function POSPage() {
             const res = await authFetch(`${API_URL}/shipping/config/mode`);
             const data = await res.json();
             setDeliveryMode(data.mode);
+            if (data.maxDistanceKm) {
+                setDeliveryRadius(data.maxDistanceKm);
+                setTempRadius(data.maxDistanceKm);
+            }
         } catch (e) {
             console.error('Error loading delivery mode:', e);
         }
@@ -364,6 +372,71 @@ export default function POSPage() {
                                 <Truck size={14} className="shrink-0" />
                                 {loadingDeliveryMode ? '...' : (deliveryMode === 'EXTERNAL' ? 'PedidosYa' : 'Propio')}
                             </button>
+
+                            {/* Gear: Delivery Radius Config */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => { setTempRadius(deliveryRadius); setShowRadiusConfig(!showRadiusConfig); }}
+                                    className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all shrink-0 active:scale-90 ${
+                                        showRadiusConfig ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600'
+                                    }`}
+                                    title="Configurar radio de delivery"
+                                >
+                                    <Settings2 size={16} className={showRadiusConfig ? 'animate-spin' : ''} />
+                                </button>
+                                {showRadiusConfig && (
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white rounded-2xl shadow-2xl border-2 border-slate-900 p-5 w-[280px] animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Radio Delivery</span>
+                                            <button onClick={() => setShowRadiusConfig(false)} className="text-slate-300 hover:text-red-500">
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <button
+                                                onClick={() => setTempRadius(Math.max(1, tempRadius - 1))}
+                                                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-600 hover:bg-slate-200 active:scale-90 transition-all"
+                                            >
+                                                <Minus size={16} />
+                                            </button>
+                                            <div className="flex-1 text-center">
+                                                <span className="text-3xl font-black text-slate-900 tabular-nums">{tempRadius}</span>
+                                                <span className="text-sm font-black text-slate-400 ml-1">km</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setTempRadius(Math.min(50, tempRadius + 1))}
+                                                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-600 hover:bg-slate-200 active:scale-90 transition-all"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <input
+                                            type="range" min={1} max={50} value={tempRadius}
+                                            onChange={(e) => setTempRadius(Number(e.target.value))}
+                                            className="w-full h-2 bg-slate-100 rounded-full appearance-none cursor-pointer accent-orange-500 mb-4"
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await authFetch(`${API_URL}/shipping/config/radius`, {
+                                                        method: 'POST',
+                                                        body: JSON.stringify({ km: tempRadius })
+                                                    });
+                                                    const data = await res.json();
+                                                    setDeliveryRadius(data.maxDistanceKm);
+                                                    setShowRadiusConfig(false);
+                                                } catch (e) {
+                                                    alert('Error al guardar radio');
+                                                }
+                                            }}
+                                            className="w-full py-3 bg-orange-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-orange-600 transition-all active:scale-95 italic"
+                                        >
+                                            Guardar ({tempRadius}km)
+                                        </button>
+                                        <p className="text-[8px] font-bold text-slate-300 text-center mt-2 uppercase">Actual: {deliveryRadius}km · Web se actualiza en tiempo real</p>
+                                    </div>
+                                )}
+                            </div>
 
                             {activeShift && (
                                 <>

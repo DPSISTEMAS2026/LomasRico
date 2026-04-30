@@ -1,26 +1,21 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale } from '../../services/api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, fetchCatalog } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn } from 'lucide-react';
+import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
+
+// Categorías cuyos productos aparecen como upsell
+const UPSELL_CATEGORIES = ['EXTRAS', 'BEBIDAS', 'AGREGADOS', 'LIMONADAS'];
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     total: number;
 }
-
-// Productos rápidos para upsell (Mock - idealmente vendrían del backend)
-const UPSELL_ITEMS = [
-    { id: 'upsell-coca', name: 'Coca Cola 591cc', price: 1600, img: '/assets/Coca Cola 591cc.jpg' },
-    { id: 'upsell-empanada', name: 'Empanada Queso', price: 2000, img: '/assets/Empanada Queso.jpg' },
-    { id: 'upsell-papas', name: 'Papas Fritas', price: 2900, img: '/assets/Papas Fritas LoMASRico.png' },
-];
 
 // Initialize MercadoPago SDK once
 if (typeof window !== 'undefined') {
@@ -45,6 +40,37 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [status, setStatus] = useState<'idle' | 'checking' | 'ready' | 'error' | 'out-of-range' | 'paying' | 'success'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
     const [preferenceId, setPreferenceId] = useState<string | null>(null);
+
+    // Dynamic Upsell
+    const [upsellProducts, setUpsellProducts] = useState<any[]>([]);
+    const upsellRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchCatalog().then((catalog: any[]) => {
+                const upsells = catalog.filter((p: any) =>
+                    p.isActive && UPSELL_CATEGORIES.some(cat => (p.category || '').toUpperCase().includes(cat))
+                );
+                setUpsellProducts(upsells);
+            }).catch(() => {});
+        }
+    }, [isOpen]);
+
+    // Auto-scroll upsell strip
+    useEffect(() => {
+        if (!isOpen || upsellProducts.length <= 3) return;
+        const interval = setInterval(() => {
+            const el = upsellRef.current;
+            if (!el) return;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            if (el.scrollLeft >= maxScroll - 10) {
+                el.scrollTo({ left: 0, behavior: 'smooth' });
+            } else {
+                el.scrollBy({ left: 200, behavior: 'smooth' });
+            }
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [isOpen, upsellProducts.length]);
 
     useEffect(() => {
         if (isOpen && isLoggedIn && user) {
@@ -230,17 +256,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         }
     };
 
-    const addUpsellItem = (item: any) => {
-        addToCart({
-            productId: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: 1,
-            variantId: 'default',
-            modifiers: { selectedProteins: [], removedIngredients: [] }
-        });
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -364,30 +379,51 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         )}
                     </div>
 
-                    {/* Upsell Strip */}
-                    <div className="p-6 bg-slate-50 border-t border-slate-100">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-3 ml-1">¿TE FALTA ALGO?</p>
-                        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                            {UPSELL_ITEMS.map((u) => (
-                                <button
-                                    key={u.id}
-                                    onClick={() => addUpsellItem(u)}
-                                    className="flex items-center gap-3 bg-white p-2 pr-4 rounded-xl border border-slate-100 shadow-sm min-w-[180px] hover:border-[#f2642e]/30 group transition-all"
-                                >
-                                    <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden">
-                                        <img src={u.img} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="font-black text-[10px] uppercase text-slate-800 leading-tight group-hover:text-[#f2642e] transition-colors">{u.name}</p>
-                                        <p className="font-bold text-[10px] text-slate-400">+ ${u.price.toLocaleString()}</p>
-                                    </div>
-                                    <div className="ml-auto bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-[#f2642e] group-hover:text-white transition-all">
-                                        <Plus size={12} strokeWidth={3} />
-                                    </div>
-                                </button>
-                            ))}
+                                    {/* Upsell Strip — Dynamic from Catalog */}
+                    {upsellProducts.length > 0 && (
+                        <div className="p-6 bg-slate-50 border-t border-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-3 ml-1">¿TE FALTA ALGO?</p>
+                            <div ref={upsellRef} className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
+                                {upsellProducts.map((u: any) => (
+                                    <button
+                                        key={u.id}
+                                        onClick={() => addToCart({
+                                            productId: u.id,
+                                            name: u.name,
+                                            price: u.variants?.[0]?.price ?? u.price ?? 0,
+                                            quantity: 1,
+                                            variantId: u.variants?.[0]?.id || 'default',
+                                            modifiers: { selectedProteins: [], removedIngredients: [] },
+                                            imageUrl: u.imageUrl,
+                                            maxQuantity: u.maxQuantity
+                                        })}
+                                        disabled={u.available === false}
+                                        className={`flex items-center gap-3 bg-white p-2 pr-4 rounded-xl border border-slate-100 shadow-sm min-w-[180px] shrink-0 group transition-all ${
+                                            u.available === false ? 'opacity-40 cursor-not-allowed' : 'hover:border-[#f2642e]/30'
+                                        }`}
+                                    >
+                                        <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden">
+                                            <img
+                                                src={u.imageUrl || `/assets/${u.name}.jpg`}
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/Logo Restaurante.png'; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-1.5 opacity-20'; }}
+                                                className="w-full h-full object-cover"
+                                                alt={u.name}
+                                            />
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                            <p className="font-black text-[10px] uppercase text-slate-800 leading-tight group-hover:text-[#f2642e] transition-colors truncate">{u.name}</p>
+                                            <p className="font-bold text-[10px] text-slate-400">+ ${(u.variants?.[0]?.price ?? u.price ?? 0).toLocaleString()}</p>
+                                        </div>
+                                        <div className={`ml-auto w-6 h-6 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                                            u.available === false ? 'bg-red-100 text-red-300' : 'bg-slate-100 text-slate-400 group-hover:bg-[#f2642e] group-hover:text-white'
+                                        }`}>
+                                            <Plus size={12} strokeWidth={3} />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* RIGHT COLUMN: Actions & Summary */}

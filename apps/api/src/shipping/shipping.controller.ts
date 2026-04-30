@@ -20,4 +20,9 @@ export class ShippingController {
     getMode() {
         return this.shippingService.getDeliveryMode();
     }
+
+    @Post('config/radius')
+    setRadius(@Body() body: { km: number }) {
+        return this.shippingService.setMaxDistance(body.km);
+    }
 }

@@ -15,7 +15,7 @@ export class ShippingService {
     private readonly logger = new Logger(ShippingService.name);
     private readonly ORIGIN_COORDS = { lat: LOCATION.lat, lng: LOCATION.lng };
     private readonly ORIGIN_ADDRESS = LOCATION.address;
-    private readonly MAX_DISTANCE_KM = LOCATION.maxDeliveryRadiusKm;
+    private maxDistanceKm = LOCATION.maxDeliveryRadiusKm;
 
     private readonly PEDIDOSYA_API_URL = process.env.PEDIDOSYA_API_URL || 'https://api.pedidosya.com/v1';
     private readonly PEDIDOSYA_TOKEN = process.env.PEDIDOSYA_TOKEN;
@@ -32,7 +32,13 @@ export class ShippingService {
     }
 
     getDeliveryMode() {
-        return { mode: this.deliveryMode };
+        return { mode: this.deliveryMode, maxDistanceKm: this.maxDistanceKm };
+    }
+
+    setMaxDistance(km: number) {
+        this.maxDistanceKm = Math.max(1, Math.min(km, 50)); // 1-50km
+        this.logger.log(`[SHIPPING] Radio de delivery cambiado a: ${this.maxDistanceKm}km`);
+        return { maxDistanceKm: this.maxDistanceKm };
     }
 
     async calculateQuote(dto: ShippingQuoteDto): Promise<ShippingQuoteResponse> {
@@ -48,16 +54,16 @@ export class ShippingService {
             distanceKm = await this.mockDistanceCalculation(address);
         }
 
-        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Max: ${this.MAX_DISTANCE_KM}km | Mode: ${this.deliveryMode}`);
+        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Max: ${this.maxDistanceKm}km | Mode: ${this.deliveryMode}`);
 
         // 2. Validate Radius
-        if (distanceKm > this.MAX_DISTANCE_KM && channel !== 'POS') {
+        if (distanceKm > this.maxDistanceKm && channel !== 'POS') {
             return {
                 valid: false,
                 distanceKm,
                 cost: 0,
                 deliveryTimeEstimate: 'N/A',
-                reason: `¡Uf! Lo sentimos, estás fuera de nuestro radio de entrega actual (${this.MAX_DISTANCE_KM}km). Tu distancia aproximada es de ${distanceKm.toFixed(1)}km.`,
+                reason: `¡Uf! Lo sentimos, estás fuera de nuestro radio de entrega actual (${this.maxDistanceKm}km). Tu distancia aproximada es de ${distanceKm.toFixed(1)}km.`,
             };
         }
 

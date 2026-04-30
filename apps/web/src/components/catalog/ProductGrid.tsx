@@ -94,7 +94,7 @@ function buildCategories(products: Product[]) {
     return sorted.map(([id]) => ({
         id,
         name: CATEGORY_NAMES[id] || id.charAt(0).toUpperCase() + id.slice(1).toLowerCase(),
-        icon: CATEGORY_ICONS[id] || DEFAULT_ICON,
+        icon: CATEGORY_ICONS[id] || null,
     }));
 }
 
@@ -229,7 +229,7 @@ export const ProductGrid = () => {
                                         : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                                     }`}
                             >
-                                <span className={selectedCategory === cat.id ? 'text-white' : 'text-[#f2642e]'}>{cat.icon}</span>
+                                {cat.icon && <span className={selectedCategory === cat.id ? 'text-white' : 'text-[#f2642e]'}>{cat.icon}</span>}
                                 {cat.name}
                             </button>
                         ))}
@@ -242,7 +242,7 @@ export const ProductGrid = () => {
                             className="w-full flex items-center justify-between px-6 py-4 bg-slate-900 text-white rounded-[1.2rem] font-black uppercase text-xs italic tracking-widest shadow-xl shadow-slate-200 active:scale-[0.98] transition-all"
                         >
                             <div className="flex items-center gap-3">
-                                <span className="text-[#f2642e]">{currentCat?.icon || <LayoutGrid size={18} />}</span>
+                                {(currentCat?.icon || !currentCat) && <span className="text-[#f2642e]">{currentCat?.icon || <LayoutGrid size={18} />}</span>}
                                 <span>{currentCat?.name || 'Explorar Menú'}</span>
                             </div>
                             <div className={`transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}>
@@ -263,7 +263,7 @@ export const ProductGrid = () => {
                                                     ? 'bg-orange-50 text-[#f2642e] border-l-4 border-[#f2642e]'
                                                     : 'hover:bg-slate-50 text-slate-600'}`}
                                         >
-                                            <span className={`${selectedCategory === cat.id ? 'text-[#f2642e]' : 'text-slate-400'}`}>{cat.icon}</span>
+                                            {cat.icon && <span className={`${selectedCategory === cat.id ? 'text-[#f2642e]' : 'text-slate-400'}`}>{cat.icon}</span>}
                                             <span className="font-black uppercase text-[11px] tracking-widest italic">{cat.name}</span>
                                             {selectedCategory === cat.id && <div className="ml-auto w-2 h-2 rounded-full bg-[#f2642e] animate-pulse" />}
                                         </button>
