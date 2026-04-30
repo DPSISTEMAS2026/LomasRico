@@ -5,7 +5,7 @@ import {
     Plus, X, Save, Trash2, ChevronDown, ChevronUp,
     ToggleLeft, ToggleRight, Layers, Settings2,
     Loader2, CheckCircle2, DollarSign, GripVertical,
-    Package, ArrowUp, ArrowDown
+    Package, ArrowUp, ArrowDown, Search
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
@@ -39,9 +39,21 @@ export default function ModifiersPage() {
     const [editingGroup, setEditingGroup] = useState<ModifierGroup | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+    const [newGroupDisplayName, setNewGroupDisplayName] = useState('');
+    const [newGroupType, setNewGroupType] = useState<'SINGLE_SELECT' | 'MULTI_SELECT'>('SINGLE_SELECT');
     // New option form
     const [newOptionName, setNewOptionName] = useState('');
     const [newOptionPrice, setNewOptionPrice] = useState(0);
+
+    const filteredGroups = groups.filter(g =>
+        !searchQuery.trim() ||
+        g.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.options.some(o => o.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     useEffect(() => {
         loadGroups();
@@ -64,12 +76,13 @@ export default function ModifiersPage() {
     };
 
     const handleCreateGroup = async () => {
+        if (!newGroupDisplayName.trim()) return;
         const newGroup: any = {
-            name: `modificador-${Date.now()}`,
-            displayName: 'Nuevo Modificador',
-            type: 'SINGLE_SELECT',
+            name: newGroupName.trim() || `mod-${Date.now()}`,
+            displayName: newGroupDisplayName.trim(),
+            type: newGroupType,
             minSelections: 0,
-            maxSelections: 1,
+            maxSelections: newGroupType === 'SINGLE_SELECT' ? 1 : 5,
             sortOrder: groups.length,
             options: [],
         };
@@ -85,6 +98,10 @@ export default function ModifiersPage() {
                 setGroups((prev) => [...prev, { ...created, assignedProductsCount: 0 }]);
                 setEditingGroup(created);
                 setExpandedGroupId(created.id);
+                setShowCreateModal(false);
+                setNewGroupName('');
+                setNewGroupDisplayName('');
+                setNewGroupType('SINGLE_SELECT');
             }
         } catch (e) {
             console.error(e);
@@ -224,25 +241,36 @@ export default function ModifiersPage() {
     return (
         <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
             {/* Header */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div>
-                    <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                        GESTIÓN DE <span className="text-orange-500">MODIFICADORES</span>
-                    </h1>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="w-8 h-[2px] bg-orange-500"></span>
-                        <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1">
-                            Formato · Proteínas · Extras · Salsas · y más
-                        </p>
+            <header className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+                            GESTIÓN DE <span className="text-orange-500">MODIFICADORES</span>
+                        </h1>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="w-8 h-[2px] bg-orange-500"></span>
+                            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1">
+                                {groups.length} grupos · {groups.reduce((a, g) => a + g.options.length, 0)} opciones totales
+                            </p>
+                        </div>
                     </div>
                 </div>
-                <button
-                    onClick={handleCreateGroup}
-                    className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
-                >
-                    <Plus size={18} />
-                    Nuevo Grupo
-                </button>
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar modificador o opción..."
+                        className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-slate-100 focus:border-orange-500 rounded-2xl font-bold text-sm text-slate-700 outline-none transition-colors shadow-sm"
+                    />
+                    {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </header>
 
             {/* Empty State */}
@@ -256,7 +284,7 @@ export default function ModifiersPage() {
                         Crea tu primer grupo: Formato, Proteínas, Extras, etc.
                     </p>
                     <button
-                        onClick={handleCreateGroup}
+                        onClick={() => setShowCreateModal(true)}
                         className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-600 transition-all"
                     >
                         <Plus size={16} className="inline mr-2" />
@@ -267,7 +295,15 @@ export default function ModifiersPage() {
 
             {/* Groups List */}
             <div className="space-y-4">
-                {groups.map((group) => (
+                {filteredGroups.length === 0 && groups.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
+                        <Search className="mx-auto text-slate-200 mb-4" size={40} />
+                        <p className="font-black text-slate-300 uppercase text-xs tracking-widest italic">
+                            No se encontraron modificadores para "{searchQuery}"
+                        </p>
+                    </div>
+                )}
+                {filteredGroups.map((group) => (
                     <div
                         key={group.id}
                         className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md"
@@ -543,8 +579,93 @@ export default function ModifiersPage() {
                         )}
                     </div>
                 ))}
+
+                {/* Create Button at Bottom */}
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="w-full bg-white rounded-2xl md:rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-orange-400 p-6 flex items-center justify-center gap-3 transition-all hover:bg-orange-50/50 group"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-orange-500 flex items-center justify-center transition-colors">
+                        <Plus size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                    </div>
+                    <span className="font-black uppercase text-xs tracking-widest text-slate-400 group-hover:text-orange-600 italic transition-colors">
+                        Crear Nuevo Grupo
+                    </span>
+                </button>
             </div>
 
+            {/* Create Group Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">
+                                Nuevo <span className="text-orange-500">Modificador</span>
+                            </h2>
+                            <button
+                                onClick={() => { setShowCreateModal(false); setNewGroupName(''); setNewGroupDisplayName(''); }}
+                                className="p-2 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Nombre Visible *</span>
+                                <input
+                                    value={newGroupDisplayName}
+                                    onChange={(e) => setNewGroupDisplayName(e.target.value)}
+                                    placeholder="Ej: Elige tu Proteína"
+                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none transition-colors"
+                                    autoFocus
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Nombre Interno</span>
+                                <input
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    placeholder="Ej: proteinas (se genera automático)"
+                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none transition-colors"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Tipo de Selección</span>
+                                <select
+                                    value={newGroupType}
+                                    onChange={(e) => setNewGroupType(e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT')}
+                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none appearance-none"
+                                >
+                                    <option value="SINGLE_SELECT">Selección Única</option>
+                                    <option value="MULTI_SELECT">Multi Selección</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => { setShowCreateModal(false); setNewGroupName(''); setNewGroupDisplayName(''); }}
+                                className="flex-1 px-6 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCreateGroup}
+                                disabled={!newGroupDisplayName.trim()}
+                                className={`flex-1 px-6 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${
+                                    newGroupDisplayName.trim()
+                                        ? 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
+                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                }`}
+                            >
+                                <Plus size={14} />
+                                Crear Grupo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
