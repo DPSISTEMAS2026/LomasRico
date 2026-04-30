@@ -27,12 +27,18 @@ export interface Product {
     description?: string;
     price: number;
     imageUrl?: string;
+    hoverVideoUrl?: string;
     category: string;
     variants?: ProductVariant[];
     allowsModifiers?: boolean; // Para activar modal
     maxProteins?: number; // Regla de negocio
     isConfigurable?: boolean;
     modifiers?: ModifierGroup[];
+    // Disponibilidad por inventario
+    maxQuantity?: number;       // Cuántas unidades se pueden producir
+    available?: boolean;         // ¿Se puede vender al menos 1?
+    stockAlert?: string;         // Alerta legible (ej: "🟡 Quedan 5")
+    bottleneck?: string;         // Ingrediente limitante
 }
 
 export interface ProductVariant {
@@ -62,6 +68,7 @@ export interface CartItem {
     };
     totalModifierPrice?: number;
     imageUrl?: string;
+    maxQuantity?: number;       // Límite por inventario
 }
 
 export interface User {

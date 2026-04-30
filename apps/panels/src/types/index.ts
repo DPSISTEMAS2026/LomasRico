@@ -32,6 +32,11 @@ export interface Product {
     isConfigurable?: boolean;
     modifiers?: ModifierGroup[]; // NUEVO: Modificadores dinámicos
     hoverVideoUrl?: string; // Video de hover para catálogo POS
+    // Disponibilidad por inventario
+    maxQuantity?: number;       // Cuántas unidades se pueden producir
+    available?: boolean;         // ¿Se puede vender al menos 1?
+    stockAlert?: string;         // Alerta legible (ej: "🟡 Quedan 5")
+    bottleneck?: string;         // Ingrediente limitante
 }
 
 export interface ProductVariant {

@@ -25,7 +25,8 @@ import {
     Clock,
     Printer,
     Coins,
-    MessageSquare
+    MessageSquare,
+    AlertTriangle
 } from 'lucide-react';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
@@ -192,12 +193,19 @@ export default function POSPage() {
     const removeFromCart = (tempId: string) => setCart(prev => prev.filter(i => i.tempId !== tempId));
 
     const updateQuantity = (tempId: string, delta: number) => {
-        setCart(prev => prev.map(item =>
-            item.tempId === tempId ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-        ));
+        setCart(prev => prev.map(item => {
+            if (item.tempId !== tempId) return item;
+            const newQty = item.quantity + delta;
+            // Respetar límite de maxQuantity del inventario
+            const maxQ = (item as any).maxQuantity || 999;
+            return { ...item, quantity: Math.max(1, Math.min(newQty, maxQ)) };
+        }));
     };
 
     const handleProductClick = (product: Product) => {
+        // Bloquear productos agotados
+        if (product.available === false) return;
+
         const needsConfig = product.isConfigurable || product.allowsModifiers;
         if (needsConfig) {
             setSelectedProductForConfig(product);
@@ -208,7 +216,8 @@ export default function POSPage() {
                 name: product.name,
                 price: product.price,
                 quantity: 1,
-                modifiers: { selectedProteins: [], removedIngredients: [] }
+                modifiers: { selectedProteins: [], removedIngredients: [] },
+                maxQuantity: product.maxQuantity
             });
         }
     };
@@ -249,6 +258,8 @@ export default function POSPage() {
             setDiscountType('FIXED');
             setSelectedCustomer(null);
             setOrderNote('');
+            // Refrescar catálogo para actualizar disponibilidad después de venta
+            loadProducts();
         } catch (e: any) {
             alert(`Error en la venta: ${e.message}`);
         } finally {
@@ -420,7 +431,12 @@ export default function POSPage() {
                                 <button
                                     key={product.id}
                                     onClick={() => handleProductClick(product)}
-                                    className="group relative bg-white rounded-[2rem] shadow-sm border border-slate-100 p-3 hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col gap-3 text-left overflow-hidden active:scale-95"
+                                    disabled={product.available === false}
+                                    className={`group relative rounded-[2rem] shadow-sm border p-3 transition-all flex flex-col gap-3 text-left overflow-hidden
+                                        ${product.available === false
+                                            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                                            : 'bg-white border-slate-100 hover:shadow-2xl hover:-translate-y-1 active:scale-95'
+                                        }`}
                                 >
                                     <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 relative shrink-0">
                                         <img
@@ -436,12 +452,30 @@ export default function POSPage() {
                                         </div>
                                     </div>
                                     <div className="px-1 flex flex-col flex-1">
-                                        <h3 className="font-black text-slate-800 uppercase italic tracking-tighter text-xs md:text-sm leading-tight line-clamp-2 md:truncate mb-1">{product.name}</h3>
+                                        <h3 className={`font-black uppercase italic tracking-tighter text-xs md:text-sm leading-tight line-clamp-2 md:truncate mb-1 ${product.available === false ? 'text-slate-300' : 'text-slate-800'}`}>{product.name}</h3>
+                                        {/* Stock Alert Badge */}
+                                        {product.stockAlert && (
+                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg inline-block w-fit mb-1
+                                                ${product.available === false
+                                                    ? 'bg-red-50 text-red-500 border border-red-100'
+                                                    : product.maxQuantity && product.maxQuantity <= 3
+                                                        ? 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse'
+                                                        : 'bg-orange-50 text-orange-500 border border-orange-100'
+                                                }`}>
+                                                {product.stockAlert}
+                                            </span>
+                                        )}
                                         <div className="mt-auto flex justify-between items-center">
-                                            <span className="text-orange-500 font-black text-base md:text-xl italic tracking-tighter">${product.price.toLocaleString()}</span>
-                                            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg group-hover:bg-orange-500 transition-colors">
-                                                <Plus size={16} />
-                                            </div>
+                                            <span className={`font-black text-base md:text-xl italic tracking-tighter ${product.available === false ? 'text-slate-300' : 'text-orange-500'}`}>${product.price.toLocaleString()}</span>
+                                            {product.available === false ? (
+                                                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-100 text-red-400 flex items-center justify-center">
+                                                    <AlertTriangle size={14} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg group-hover:bg-orange-500 transition-colors">
+                                                    <Plus size={16} />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </button>

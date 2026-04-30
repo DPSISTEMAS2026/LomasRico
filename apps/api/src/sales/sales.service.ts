@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ShippingService } from '../shipping/shipping.service';
+import { AvailabilityService } from '../availability/availability.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { ValidateSaleItemDto } from './dto/validate-item.dto';
 
@@ -30,6 +31,7 @@ export class SalesService {
         private recipeResolver: RecipeResolverService,
         private inventoryService: InventoryService,
         private shippingService: ShippingService, // Injected for server-side validation
+        private availabilityService: AvailabilityService,
     ) { }
 
     async validateItem(dto: ValidateSaleItemDto) {
@@ -462,11 +464,10 @@ export class SalesService {
                     if (!item) throw new BadRequestException(`Inventory item ${itemId} not found`);
 
                     if (item.currentStock < qty) {
-                        // DESACTIVADO TEMPORALMENTE A PETICION DEL USUARIO
-                        // throw new BadRequestException(
-                        //    `Insufficient stock for ${item.name}. Available: ${item.currentStock}, Required: ${qty}`
-                        // );
-                        console.warn(`[WARNING] Ventas sin stock. Inventario irá a negativo para: ${item.name}`);
+                        // ✅ VALIDACIÓN REACTIVADA — Rechazar ventas sin stock suficiente
+                        throw new BadRequestException(
+                            `Stock insuficiente para "${item.name}". Disponible: ${Number(item.currentStock).toFixed(2)}, Requerido: ${qty.toFixed(2)}`
+                        );
                     }
                 }
 
@@ -550,6 +551,11 @@ export class SalesService {
                         });
                     }
                 }
+            }
+
+            // Invalidar cache de disponibilidad después de descontar inventario
+            if (!isPending) {
+                this.availabilityService.invalidateCache();
             }
 
             return sale;

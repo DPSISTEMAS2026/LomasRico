@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { AvailabilityService } from '../availability/availability.service';
 
 import { MOCK_PRODUCTS } from './products.seed';
 import { seedMasterRecipes } from '../recipe-engineering/master-recipes.seed';
@@ -8,7 +9,10 @@ import { seedMasterRecipes } from '../recipe-engineering/master-recipes.seed';
 export class ProductsService implements OnModuleInit {
     private readonly logger = new Logger(ProductsService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private availabilityService: AvailabilityService,
+    ) { }
 
     async onModuleInit() {
         // En producción, NO ejecutar seed automático
@@ -202,7 +206,31 @@ export class ProductsService implements OnModuleInit {
             }
         });
 
-        const enriched = products.map(this.enrichProduct);
+        // Calcular disponibilidad de todos los productos
+        let availabilityMap: Map<string, any>;
+        try {
+            availabilityMap = await this.availabilityService.calculateAll();
+        } catch (error) {
+            this.logger.error('Error calculating availability, returning all as available', error);
+            availabilityMap = new Map();
+        }
+
+        const enriched = products.map(p => {
+            const product = this.enrichProduct(p);
+            const avail = availabilityMap.get(product.id);
+            if (avail) {
+                product.maxQuantity = avail.maxQuantity;
+                product.available = avail.available;
+                product.stockAlert = avail.stockAlert || undefined;
+                product.bottleneck = avail.bottleneck || undefined;
+            } else {
+                // Sin datos de disponibilidad → asumir disponible
+                product.maxQuantity = 999;
+                product.available = true;
+            }
+            return product;
+        });
+
         return this.sortProducts(enriched);
     }
 

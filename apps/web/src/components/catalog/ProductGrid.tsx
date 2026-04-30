@@ -136,6 +136,21 @@ export const ProductGrid = () => {
             }
         };
         fetchData();
+
+        // Polling cada 30 segundos para refrescar disponibilidad
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API_URL}/products/active`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        setProducts(data);
+                    }
+                }
+            } catch { /* silently ignore polling errors */ }
+        }, 30_000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -162,6 +177,9 @@ export const ProductGrid = () => {
     };
 
     const handleAddClick = (product: Product) => {
+        // Guard: no permitir agregar productos agotados
+        if (product.available === false) return;
+
         // Only open builder modal if there are modifiers with actual options
         const hasRealModifiers = product.modifiers && 
             product.modifiers.some(m => m.options && m.options.length > 0);
@@ -177,7 +195,8 @@ export const ProductGrid = () => {
                 price: Number(product.price),
                 quantity: 1,
                 modifiers: { selectedProteins: [], removedIngredients: [] },
-                imageUrl: product.imageUrl
+                imageUrl: product.imageUrl,
+                maxQuantity: product.maxQuantity
             });
         }
     };

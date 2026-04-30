@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete, Query, Logger, UseGuards } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
+import { AvailabilityService } from '../availability/availability.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('inventory')
@@ -7,7 +8,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class InventoryController {
     private readonly logger = new Logger(InventoryController.name);
 
-    constructor(private readonly service: InventoryService) { }
+    constructor(
+        private readonly service: InventoryService,
+        private readonly availabilityService: AvailabilityService,
+    ) { }
 
     @Get('fix-recipes')
     fixRecipes() {
@@ -35,31 +39,41 @@ export class InventoryController {
     findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() data: any) { return this.service.update(id, data); }
+    async update(@Param('id') id: string, @Body() data: any) {
+        const result = await this.service.update(id, data);
+        this.availabilityService.invalidateCache();
+        return result;
+    }
 
     @Post(':id/restock')
-    restock(@Param('id') id: string, @Body() body: { quantity: number; unitCost: number }) {
-        return this.service.restock(id, body.quantity, body.unitCost);
+    async restock(@Param('id') id: string, @Body() body: { quantity: number; unitCost: number }) {
+        const result = await this.service.restock(id, body.quantity, body.unitCost);
+        this.availabilityService.invalidateCache();
+        return result;
     }
 
     // ─── MERMA / WASTE ──────────────────────────────────────
     @Post(':id/waste')
-    registerWaste(
+    async registerWaste(
         @Param('id') id: string,
         @Body() body: { quantity: number; reason: string; note?: string },
     ) {
         this.logger.log(`POST /inventory/${id}/waste — qty: ${body.quantity}, reason: ${body.reason}`);
-        return this.service.registerWaste(id, body.quantity, body.reason, body.note);
+        const result = await this.service.registerWaste(id, body.quantity, body.reason, body.note);
+        this.availabilityService.invalidateCache();
+        return result;
     }
 
     // ─── PRODUCCIÓN DE SUB-RECETA ───────────────────────────
     @Post(':id/produce')
-    produceSubRecipe(
+    async produceSubRecipe(
         @Param('id') id: string,
         @Body() body: { batches?: number },
     ) {
         this.logger.log(`POST /inventory/${id}/produce — batches: ${body.batches || 1}`);
-        return this.service.produceSubRecipe(id, body.batches || 1);
+        const result = await this.service.produceSubRecipe(id, body.batches || 1);
+        this.availabilityService.invalidateCache();
+        return result;
     }
 
     // ─── HISTORIAL DE MOVIMIENTOS ────────────────────────────
