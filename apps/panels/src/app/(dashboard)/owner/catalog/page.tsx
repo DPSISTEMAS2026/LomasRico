@@ -47,7 +47,7 @@ export default function CatalogManagementPage() {
     const [supabaseAssets, setSupabaseAssets] = useState<string[]>([]);
     const [loadingAssets, setLoadingAssets] = useState(false);
     const [allModifierGroups, setAllModifierGroups] = useState<any[]>([]);
-    const [productModifierIds, setProductModifierIds] = useState<string[]>([]);
+    const [productModifiers, setProductModifiers] = useState<{groupId: string, sortOrder: number}[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [modifierSearchQuery, setModifierSearchQuery] = useState('');
@@ -104,7 +104,7 @@ export default function CatalogManagementPage() {
             const res = await authFetch(`${API_URL}/modifiers/product/${productId}`);
             if (res.ok) {
                 const data = await res.json();
-                setProductModifierIds(data.map((m: any) => m.groupId));
+                setProductModifiers(data.map((m: any) => ({ groupId: m.groupId, sortOrder: m.sortOrder ?? 0 })));
             }
         } catch (e) {
             console.error('Error loading product modifiers:', e);
@@ -115,16 +115,46 @@ export default function CatalogManagementPage() {
         try {
             if (isCurrentlyAssigned) {
                 await authFetch(`${API_URL}/modifiers/product/${productId}/remove/${groupId}`, { method: 'DELETE' });
-                setProductModifierIds(prev => prev.filter(id => id !== groupId));
+                setProductModifiers(prev => {
+                    const filtered = prev.filter(m => m.groupId !== groupId);
+                    // Reindex sort orders
+                    return filtered.map((m, i) => ({ ...m, sortOrder: i }));
+                });
             } else {
+                const newSortOrder = productModifiers.length;
                 await authFetch(`${API_URL}/modifiers/product/${productId}/assign`, {
                     method: 'POST',
-                    body: JSON.stringify({ modifierGroupId: groupId, isRequired: false, sortOrder: productModifierIds.length }),
+                    body: JSON.stringify({ modifierGroupId: groupId, isRequired: false, sortOrder: newSortOrder }),
                 });
-                setProductModifierIds(prev => [...prev, groupId]);
+                setProductModifiers(prev => [...prev, { groupId, sortOrder: newSortOrder }]);
             }
         } catch (e) {
             console.error('Error toggling modifier:', e);
+        }
+    };
+
+    const handleReorderProductModifier = async (productId: string, groupId: string, direction: 'up' | 'down') => {
+        const sorted = [...productModifiers].sort((a, b) => a.sortOrder - b.sortOrder);
+        const idx = sorted.findIndex(m => m.groupId === groupId);
+        if (idx === -1) return;
+        if (direction === 'up' && idx === 0) return;
+        if (direction === 'down' && idx === sorted.length - 1) return;
+
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+        [sorted[idx], sorted[swapIdx]] = [sorted[swapIdx], sorted[idx]];
+
+        const reordered = sorted.map((m, i) => ({ ...m, sortOrder: i }));
+        setProductModifiers(reordered);
+
+        try {
+            await authFetch(`${API_URL}/modifiers/product/${productId}/reorder`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    items: reordered.map(m => ({ groupId: m.groupId, sortOrder: m.sortOrder }))
+                })
+            });
+        } catch (e) {
+            console.error('Error reordering product modifiers:', e);
         }
     };
 
@@ -240,7 +270,7 @@ export default function CatalogManagementPage() {
             maxProteins: 0,
             order: products.length + 1
         });
-        setProductModifierIds([]);
+        setProductModifiers([]);
         setModifierSearchQuery('');
         loadModifierGroups();
     };
@@ -764,7 +794,7 @@ export default function CatalogManagementPage() {
                                                 Modificadores Activos
                                             </h4>
                                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white px-2 py-1 rounded-full">
-                                                {productModifierIds.length} asignados
+                                                {productModifiers.length} asignados
                                             </span>
                                         </div>
 
@@ -787,55 +817,114 @@ export default function CatalogManagementPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {/* ── ASSIGNED MODIFIERS (ordered by sortOrder) ── */}
+                                        {productModifiers.length > 0 && (
+                                            <div className="mb-4">
+                                                <p className="text-[9px] font-black uppercase text-orange-500 tracking-widest mb-2 px-1 flex items-center gap-2">
+                                                    <GripVertical size={10} /> Orden de aparición en el producto
+                                                </p>
+                                                <div className="space-y-1.5">
+                                                    {[...productModifiers]
+                                                        .sort((a, b) => a.sortOrder - b.sortOrder)
+                                                        .map((pm, pmIdx) => {
+                                                            const group = allModifierGroups.find((g: any) => g.id === pm.groupId);
+                                                            if (!group) return null;
+                                                            // Apply search filter
+                                                            if (modifierSearchQuery && 
+                                                                !group.displayName.toLowerCase().includes(modifierSearchQuery.toLowerCase()) &&
+                                                                !group.name.toLowerCase().includes(modifierSearchQuery.toLowerCase())) return null;
+                                                            return (
+                                                                <div
+                                                                    key={pm.groupId}
+                                                                    className="flex items-center gap-2 p-3 rounded-2xl bg-orange-50 border-2 border-orange-200 transition-all group"
+                                                                >
+                                                                    <span className="w-6 h-6 rounded-lg bg-orange-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                                        {pmIdx + 1}
+                                                                    </span>
+                                                                    <div className="flex flex-col gap-0.5 shrink-0">
+                                                                        <button
+                                                                            disabled={pmIdx === 0}
+                                                                            onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'up'); }}
+                                                                            className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                        >
+                                                                            <ArrowUp size={10} />
+                                                                        </button>
+                                                                        <button
+                                                                            disabled={pmIdx === productModifiers.length - 1}
+                                                                            onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'down'); }}
+                                                                            className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                        >
+                                                                            <ArrowDown size={10} />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                        <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0">
+                                                                            <Layers size={16} />
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="font-black italic uppercase tracking-tighter text-sm truncate">
+                                                                                {group.displayName}
+                                                                            </p>
+                                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                                                                {group.type === 'SINGLE_SELECT' ? 'Única' : 'Multi'} · {group.options?.length || 0} opciones
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); toggleModifierForProduct(editingProduct.id, pm.groupId, true); }}
+                                                                        className="p-1.5 text-orange-300 hover:text-red-500 transition-colors"
+                                                                        title="Quitar modificador"
+                                                                    >
+                                                                        <X size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── SEPARATOR ── */}
+                                        {productModifiers.length > 0 && (
+                                            <div className="flex items-center gap-3 py-2">
+                                                <div className="flex-1 h-px bg-slate-200" />
+                                                <span className="text-[8px] font-black uppercase text-slate-300 tracking-widest">Disponibles</span>
+                                                <div className="flex-1 h-px bg-slate-200" />
+                                            </div>
+                                        )}
+
+                                        {/* ── UNASSIGNED MODIFIERS ── */}
                                         {allModifierGroups
+                                            .filter(g => !productModifiers.some(pm => pm.groupId === g.id))
                                             .filter(g => 
                                                 !modifierSearchQuery || 
                                                 g.displayName.toLowerCase().includes(modifierSearchQuery.toLowerCase()) ||
                                                 g.name.toLowerCase().includes(modifierSearchQuery.toLowerCase())
                                             )
-                                            .sort((a, b) => {
-                                                const isAssignedA = productModifierIds.includes(a.id);
-                                                const isAssignedB = productModifierIds.includes(b.id);
-                                                if (isAssignedA && !isAssignedB) return -1;
-                                                if (!isAssignedA && isAssignedB) return 1;
-                                                return a.displayName.localeCompare(b.displayName);
-                                            })
-                                            .map((group: any) => {
-                                                const isAssigned = productModifierIds.includes(group.id);
-                                                return (
-                                                    <div
-                                                        key={group.id}
-                                                        onClick={() => toggleModifierForProduct(editingProduct.id, group.id, isAssigned)}
-                                                        className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                                                            isAssigned
-                                                                ? 'bg-orange-50 border-orange-200 hover:border-orange-400'
-                                                                : 'bg-white border-slate-100 hover:border-slate-200'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                                                                isAssigned ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'
-                                                            }`}>
-                                                                <Layers size={16} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-black italic uppercase tracking-tighter text-sm">
-                                                                    {group.displayName}
-                                                                </p>
-                                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                                    {group.type === 'SINGLE_SELECT' ? 'Única' : 'Multi'} · {group.options?.length || 0} opciones
-                                                                </p>
-                                                            </div>
+                                            .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                                            .map((group: any) => (
+                                                <div
+                                                    key={group.id}
+                                                    onClick={() => toggleModifierForProduct(editingProduct.id, group.id, false)}
+                                                    className="flex items-center justify-between p-4 rounded-2xl border-2 bg-white border-slate-100 hover:border-slate-200 cursor-pointer transition-all"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                                                            <Layers size={16} />
                                                         </div>
-                                                        {isAssigned ? (
-                                                            <ToggleRight size={24} className="text-orange-500" />
-                                                        ) : (
-                                                            <ToggleLeft size={24} className="text-slate-300" />
-                                                        )}
+                                                        <div>
+                                                            <p className="font-black italic uppercase tracking-tighter text-sm">
+                                                                {group.displayName}
+                                                            </p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                                                {group.type === 'SINGLE_SELECT' ? 'Única' : 'Multi'} · {group.options?.length || 0} opciones
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                );
-                                            })}
+                                                    <Plus size={20} className="text-slate-300" />
+                                                </div>
+                                            ))}
                                         {allModifierGroups.length > 0 && 
                                          allModifierGroups.filter(g => 
                                             !modifierSearchQuery || 

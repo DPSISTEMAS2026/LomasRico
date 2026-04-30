@@ -117,6 +117,15 @@ export class ModifiersController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Patch('product/:productId/reorder')
+    reorderProductModifiers(
+        @Param('productId') productId: string,
+        @Body() data: { items: { groupId: string; sortOrder: number }[] },
+    ) {
+        return this.modifiersService.reorderProductModifiers(productId, data.items);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post('product/:productId/bulk-assign')
     bulkAssignToProduct(
         @Param('productId') productId: string,

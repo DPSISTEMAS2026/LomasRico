@@ -235,6 +235,26 @@ export class ModifiersService {
         }));
     }
 
+    /**
+     * Reordena los modificadores asignados a un producto específico.
+     */
+    async reorderProductModifiers(productId: string, items: { groupId: string; sortOrder: number }[]) {
+        this.logger.log(`Reordering ${items.length} modifiers for product ${productId}`);
+        const updates = items.map(item =>
+            this.prisma.productModifier.update({
+                where: {
+                    sellingProductId_modifierGroupId: {
+                        sellingProductId: productId,
+                        modifierGroupId: item.groupId,
+                    },
+                },
+                data: { sortOrder: item.sortOrder },
+            })
+        );
+        await this.prisma.$transaction(updates);
+        return { success: true, updated: items.length };
+    }
+
     // Bulk assign multiple modifiers to a product
     async bulkAssignToProduct(
         productId: string,
