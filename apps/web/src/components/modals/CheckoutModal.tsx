@@ -328,11 +328,28 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                 </button>
                                                 <span className="w-6 text-center text-sm font-black text-slate-900 tabular-nums">{item.quantity}</span>
                                                 <button
-                                                    onClick={() => updateQuantity(item.tempId, item.quantity + 1)}
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-all active:scale-90"
+                                                    onClick={() => {
+                                                        const max = item.maxQuantity ?? 999;
+                                                        if (item.quantity < max) {
+                                                            updateQuantity(item.tempId, item.quantity + 1);
+                                                        }
+                                                    }}
+                                                    disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
+                                                    className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all active:scale-90 ${
+                                                        item.maxQuantity != null && item.quantity >= item.maxQuantity
+                                                            ? 'border-red-200 text-red-300 cursor-not-allowed bg-red-50'
+                                                            : 'border-slate-200 text-slate-400 hover:border-orange-300 hover:text-orange-500'
+                                                    }`}
                                                 >
                                                     <span className="text-sm font-black leading-none">+</span>
                                                 </button>
+                                                {item.maxQuantity != null && item.maxQuantity < 999 && (
+                                                    <span className={`text-[8px] font-black uppercase tracking-wider ml-1 ${
+                                                        item.quantity >= item.maxQuantity ? 'text-red-400' : 'text-slate-300'
+                                                    }`}>
+                                                        máx {item.maxQuantity}
+                                                    </span>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={() => removeFromCart(item.tempId)}

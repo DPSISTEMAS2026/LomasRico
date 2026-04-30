@@ -214,7 +214,8 @@ export const CevicheBuilderModal = ({
                 dynamicSelections,
             },
             totalModifierPrice: dynamicModifiersTotal,
-            imageUrl: product.imageUrl
+            imageUrl: product.imageUrl,
+            maxQuantity: product.maxQuantity
         };
 
         try {
@@ -574,7 +575,16 @@ export const CevicheBuilderModal = ({
                                     {/* Quantity Selector */}
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Cantidad</span>
+                                            <div className="flex flex-col">
+                                                <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Cantidad</span>
+                                                {product.maxQuantity != null && product.maxQuantity < 999 && (
+                                                    <span className={`text-[9px] font-black uppercase tracking-wider mt-0.5 ${
+                                                        product.maxQuantity <= 3 ? 'text-amber-500' : 'text-slate-300'
+                                                    }`}>
+                                                        Stock: {product.maxQuantity} disponible{product.maxQuantity !== 1 ? 's' : ''}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -587,13 +597,26 @@ export const CevicheBuilderModal = ({
                                                 </button>
                                                 <span className="w-8 text-center text-xl font-black italic text-slate-900 tabular-nums">{quantity}</span>
                                                 <button
-                                                    onClick={() => setQuantity(quantity + 1)}
-                                                    className="w-10 h-10 rounded-xl border-2 border-slate-200 flex items-center justify-center font-black text-lg text-slate-600 hover:border-orange-300 hover:text-orange-500 transition-all active:scale-90"
+                                                    onClick={() => {
+                                                        const max = product.maxQuantity ?? 999;
+                                                        setQuantity(Math.min(quantity + 1, max));
+                                                    }}
+                                                    disabled={product.maxQuantity != null && quantity >= product.maxQuantity}
+                                                    className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black text-lg transition-all active:scale-90 ${
+                                                        product.maxQuantity != null && quantity >= product.maxQuantity
+                                                            ? 'border-red-100 text-red-300 cursor-not-allowed bg-red-50'
+                                                            : 'border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
+                                                    }`}
                                                 >
                                                     <Plus size={16} strokeWidth={3} />
                                                 </button>
                                             </div>
                                         </div>
+                                        {product.maxQuantity != null && quantity >= product.maxQuantity && product.maxQuantity < 999 && (
+                                            <p className="text-[9px] font-black text-red-500 uppercase tracking-wider text-right mt-1 animate-in fade-in">
+                                                Máximo disponible por inventario
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Total */}
