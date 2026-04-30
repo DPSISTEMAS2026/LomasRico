@@ -284,8 +284,10 @@ export class AvailabilityService {
     }
 
     /**
-     * Calcula la disponibilidad de TODAS las opciones de modificadores que tengan receta vinculada.
-     * Esto permite deshabilitar opciones como "Coca Cola" si no hay stock de Coca Cola.
+     * Calcula la disponibilidad de TODAS las opciones de modificadores.
+     * Soporta 2 modos de vinculación:
+     *   1. inventoryItemId → chequeo directo de stock del ítem (ej: Salmón, Camarón, Monster)
+     *   2. recipeId → chequeo de todos los ingredientes de la receta vinculada
      */
     async calculateModifierOptionsAvailability(
         stockMap?: Map<string, { name: string; stock: number; unit: string }>
@@ -302,11 +304,14 @@ export class AvailabilityService {
             }]));
         }
 
-        // Obtener opciones de modificadores que tienen receta vinculada
+        // Obtener opciones que tienen receta O inventario vinculado
         const modifierOptions = await this.prisma.modifierOption.findMany({
             where: {
                 isActive: true,
-                recipeId: { not: null }
+                OR: [
+                    { recipeId: { not: null } },
+                    { inventoryItemId: { not: null } }
+                ]
             },
             include: {
                 recipe: {
@@ -322,6 +327,30 @@ export class AvailabilityService {
         const result = new Map<string, ModifierOptionAvailability>();
 
         for (const option of modifierOptions) {
+            // MODO 1: Enlace directo a inventario (proteínas, retail, salsas, etc.)
+            if (option.inventoryItemId) {
+                const invItem = stockMap.get(option.inventoryItemId);
+                if (!invItem) {
+                    result.set(option.id, {
+                        optionId: option.id,
+                        available: false,
+                        maxQuantity: 0,
+                        bottleneck: 'Item no encontrado'
+                    });
+                    continue;
+                }
+
+                const stockAvailable = Math.max(0, Math.floor(invItem.stock));
+                result.set(option.id, {
+                    optionId: option.id,
+                    available: invItem.stock > 0,
+                    maxQuantity: stockAvailable,
+                    bottleneck: invItem.stock <= 5 ? invItem.name : undefined
+                });
+                continue;
+            }
+
+            // MODO 2: Receta vinculada (para opciones con BOM complejo)
             if (!option.recipe || option.recipe.items.length === 0) {
                 result.set(option.id, {
                     optionId: option.id,
@@ -372,7 +401,9 @@ export class AvailabilityService {
             });
         }
 
-        this.logger.debug(`📊 Modifier availability: ${result.size} options checked`);
+        const directCount = modifierOptions.filter(o => o.inventoryItemId).length;
+        const recipeCount = modifierOptions.filter(o => !o.inventoryItemId && o.recipeId).length;
+        this.logger.debug(`📊 Modifier availability: ${result.size} options checked (${directCount} direct, ${recipeCount} recipe-based)`);
         return result;
     }
 }

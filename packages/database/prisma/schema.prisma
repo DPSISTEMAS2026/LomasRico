@@ -46,6 +46,9 @@ model InventoryItem {
   // Historial de movimientos (Log Operativo)
   movements         StockMovement[]
 
+  // Opciones de modificadores que dependen de este inventario
+  modifierOptions   ModifierOption[]
+
   updatedAt         DateTime    @updatedAt
   createdAt         DateTime    @default(now())
 }
@@ -156,6 +159,11 @@ model ModifierOption {
   // Enlace opcional a receta (ej: "Opción 250g" dispara la receta de 250g)
   recipeId         String?
   recipe           Recipe?        @relation(fields: [recipeId], references: [id])
+
+  // Enlace directo a inventario (ej: "Salmón" verifica stock de Salmón)
+  // Si está vinculado, la opción se desactiva cuando el stock <= 0
+  inventoryItemId  String?
+  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 
   createdAt        DateTime       @default(now())
 }
