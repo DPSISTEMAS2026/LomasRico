@@ -15,7 +15,7 @@ export class ShippingService {
     private readonly logger = new Logger(ShippingService.name);
     private readonly ORIGIN_COORDS = { lat: LOCATION.lat, lng: LOCATION.lng };
     private readonly ORIGIN_ADDRESS = LOCATION.address;
-    private maxDistanceKm = LOCATION.maxDeliveryRadiusKm;
+    private maxDistanceKm: number = LOCATION.maxDeliveryRadiusKm;
 
     private readonly PEDIDOSYA_API_URL = process.env.PEDIDOSYA_API_URL || 'https://api.pedidosya.com/v1';
     private readonly PEDIDOSYA_TOKEN = process.env.PEDIDOSYA_TOKEN;
