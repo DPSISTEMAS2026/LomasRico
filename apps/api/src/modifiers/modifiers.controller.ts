@@ -53,6 +53,15 @@ export class ModifiersController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Patch('groups/:id/reorder-options')
+    reorderOptions(
+        @Param('id') id: string,
+        @Body() data: { items: { id: string; sortOrder: number }[] },
+    ) {
+        return this.modifiersService.reorderOptions(id, data.items);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Delete('groups/:id')
     deleteGroup(@Param('id') id: string) {
         return this.modifiersService.deleteGroup(id);

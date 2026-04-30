@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -45,5 +45,19 @@ export class ProductsController {
     @Patch(':id')
     update(@Param('id') id: string, @Body() data: UpdateProductDto) {
         return this.productsService.update(id, data);
+    }
+
+    // Solo autenticados — Eliminar todos los productos de una categoría (debe ir ANTES de :id)
+    @UseGuards(JwtAuthGuard)
+    @Delete('category/:category')
+    deleteCategory(@Param('category') category: string) {
+        return this.productsService.deleteCategory(category);
+    }
+
+    // Solo autenticados — Eliminar producto permanentemente
+    @UseGuards(JwtAuthGuard)
+    @Delete(':id')
+    hardDelete(@Param('id') id: string) {
+        return this.productsService.hardDelete(id);
     }
 }

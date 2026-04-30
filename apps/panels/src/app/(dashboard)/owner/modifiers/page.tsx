@@ -5,7 +5,7 @@ import {
     Plus, X, Save, Trash2, ChevronDown, ChevronUp,
     ToggleLeft, ToggleRight, Layers, Settings2,
     Loader2, CheckCircle2, DollarSign, GripVertical,
-    Package
+    Package, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
@@ -177,6 +177,36 @@ export default function ModifiersPage() {
             if (groupRes.ok) setEditingGroup(await groupRes.json());
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const handleReorderOption = async (groupId: string, optionId: string, direction: 'up' | 'down') => {
+        if (!editingGroup) return;
+        const options = [...editingGroup.options];
+        const idx = options.findIndex(o => o.id === optionId);
+        if (idx === -1) return;
+        if (direction === 'up' && idx === 0) return;
+        if (direction === 'down' && idx === options.length - 1) return;
+
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+        [options[idx], options[swapIdx]] = [options[swapIdx], options[idx]];
+
+        // Update local state immediately
+        const reordered = options.map((o, i) => ({ ...o, sortOrder: i }));
+        setEditingGroup({ ...editingGroup, options: reordered });
+
+        // Persist
+        try {
+            await authFetch(`${API_URL}/modifiers/groups/${groupId}/reorder-options`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: reordered.map(o => ({ id: o.id, sortOrder: o.sortOrder }))
+                })
+            });
+            loadGroups();
+        } catch (e) {
+            console.error('Error reordering options:', e);
         }
     };
 
@@ -405,12 +435,30 @@ export default function ModifiersPage() {
                                         Opciones del Grupo
                                     </h4>
 
-                                    {editingGroup.options.map((option) => (
+                                    {editingGroup.options.map((option, optIdx) => (
                                         <div
                                             key={option.id}
                                             className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 group hover:border-orange-200 transition-all"
                                         >
-                                            <GripVertical size={16} className="text-slate-200 shrink-0" />
+                                            <span className="w-6 h-6 rounded-md bg-slate-100 text-slate-400 text-[9px] font-black flex items-center justify-center shrink-0">
+                                                {optIdx + 1}
+                                            </span>
+                                            <div className="flex flex-col gap-0.5 shrink-0">
+                                                <button
+                                                    disabled={optIdx === 0}
+                                                    onClick={() => handleReorderOption(editingGroup.id, option.id, 'up')}
+                                                    className="w-5 h-4 rounded flex items-center justify-center text-slate-300 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                >
+                                                    <ArrowUp size={10} />
+                                                </button>
+                                                <button
+                                                    disabled={optIdx === editingGroup.options.length - 1}
+                                                    onClick={() => handleReorderOption(editingGroup.id, option.id, 'down')}
+                                                    className="w-5 h-4 rounded flex items-center justify-center text-slate-300 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                >
+                                                    <ArrowDown size={10} />
+                                                </button>
+                                            </div>
                                             <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 min-w-0">
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-black text-sm italic text-slate-800 truncate">
@@ -424,9 +472,6 @@ export default function ModifiersPage() {
                                                         </span>
                                                     )}
                                                 </div>
-
-
-
                                                 {option.isDefault && (
                                                     <span className="text-[8px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full shrink-0 uppercase">
                                                         DEFAULT

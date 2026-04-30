@@ -274,4 +274,114 @@ export class ProductsService implements OnModuleInit {
         await this.prisma.$transaction(updates);
         return { success: true, updated: items.length };
     }
+
+    /**
+     * Elimina permanentemente un producto y todas sus dependencias.
+     * Cascada: RecipeSnapshots → SaleItems → Recipes → RecipeItems → Variants → ProductModifiers → Product
+     */
+    async hardDelete(id: string) {
+        this.logger.warn(`HARD DELETE product ${id} — this is irreversible!`);
+
+        return this.prisma.$transaction(async (tx: any) => {
+            // 1. Encontrar el producto con todas sus relaciones
+            const product = await tx.sellingProduct.findUnique({
+                where: { id },
+                include: {
+                    saleItems: { select: { id: true } },
+                    variants: { select: { id: true, saleItems: { select: { id: true } } } },
+                    recipe: { select: { id: true } },
+                }
+            });
+
+            if (!product) {
+                throw new Error(`Producto ${id} no encontrado`);
+            }
+
+            // 2. Eliminar RecipeSnapshots de SaleItems del producto
+            const allSaleItemIds = [
+                ...product.saleItems.map((si: any) => si.id),
+                ...product.variants.flatMap((v: any) => v.saleItems.map((si: any) => si.id))
+            ];
+
+            if (allSaleItemIds.length > 0) {
+                await tx.recipeSnapshot.deleteMany({
+                    where: { saleItemId: { in: allSaleItemIds } }
+                });
+            }
+
+            // 3. Eliminar SaleItems del producto (directos y de variantes)
+            await tx.saleItem.deleteMany({
+                where: { sellingProductId: id }
+            });
+
+            for (const variant of product.variants) {
+                await tx.saleItem.deleteMany({
+                    where: { productVariantId: variant.id }
+                });
+            }
+
+            // 4. Eliminar Variants
+            await tx.productVariant.deleteMany({
+                where: { sellingProductId: id }
+            });
+
+            // 5. Eliminar ProductModifiers
+            await tx.productModifier.deleteMany({
+                where: { sellingProductId: id }
+            });
+
+            // 6. Eliminar Recipe y sus items
+            if (product.recipe) {
+                await tx.recipeItem.deleteMany({
+                    where: { recipeId: product.recipe.id }
+                });
+                // Desenlazar antes de borrar
+                await tx.sellingProduct.update({
+                    where: { id },
+                    data: { recipeId: null }
+                });
+                await tx.recipe.delete({
+                    where: { id: product.recipe.id }
+                });
+            }
+
+            // 7. Finalmente, eliminar el producto
+            await tx.sellingProduct.delete({ where: { id } });
+
+            return { success: true, deleted: product.name };
+        }, { maxWait: 10000, timeout: 30000 });
+    }
+
+    /**
+     * Elimina permanentemente todos los productos de una categoría.
+     */
+    async deleteCategory(category: string) {
+        this.logger.warn(`HARD DELETE all products in category "${category}"`);
+
+        const products = await this.prisma.sellingProduct.findMany({
+            where: { category },
+            select: { id: true, name: true }
+        });
+
+        if (products.length === 0) {
+            return { success: true, deleted: 0, category };
+        }
+
+        const results = [];
+        for (const p of products) {
+            try {
+                await this.hardDelete(p.id);
+                results.push({ id: p.id, name: p.name, status: 'deleted' });
+            } catch (e: any) {
+                results.push({ id: p.id, name: p.name, status: 'error', error: e.message });
+            }
+        }
+
+        return {
+            success: true,
+            category,
+            totalProcessed: results.length,
+            results
+        };
+    }
 }

@@ -25,7 +25,9 @@ import {
     Pencil,
     ArrowUp,
     ArrowDown,
-    GripVertical
+    GripVertical,
+    Trash2,
+    AlertTriangle
 } from 'lucide-react';
 
 import { API_URL } from '../../../../services/api';
@@ -53,6 +55,8 @@ export default function CatalogManagementPage() {
     const [sortItems, setSortItems] = useState<any[]>([]);
     const [savingSort, setSavingSort] = useState(false);
     const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+    const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+    const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
     const CATEGORIES = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
@@ -304,6 +308,56 @@ export default function CatalogManagementPage() {
         }
     };
 
+    const handleDeleteProduct = async (id: string, name: string) => {
+        const confirmed = window.confirm(
+            `⚠️ ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsto borrará el producto, sus variantes, recetas, modificadores asignados y su historial de ventas asociado.\n\nEsta acción NO se puede deshacer.`
+        );
+        if (!confirmed) return;
+
+        setDeletingProductId(id);
+        try {
+            const res = await authFetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setProducts(prev => prev.filter(p => p.id !== id));
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(`Error al eliminar: ${data.message || res.statusText}`);
+            }
+        } catch (e: any) {
+            alert('Error de conexión al eliminar.');
+        } finally {
+            setDeletingProductId(null);
+        }
+    };
+
+    const handleDeleteCategory = async (category: string) => {
+        const productCount = products.filter(p => p.category === category).length;
+        const confirmed = window.confirm(
+            `⚠️ ELIMINAR CATEGORÍA "${category}"?\n\nEsto eliminará PERMANENTEMENTE los ${productCount} productos de esta categoría, incluyendo sus recetas, variantes e historial.\n\nEsta acción NO se puede deshacer.`
+        );
+        if (!confirmed) return;
+
+        const doubleConfirm = window.confirm(
+            `🔴 ÚLTIMA CONFIRMACIÓN\n\nVas a eliminar ${productCount} productos de "${category}".\n\n¿Estás ABSOLUTAMENTE seguro?`
+        );
+        if (!doubleConfirm) return;
+
+        setDeletingCategory(category);
+        try {
+            const res = await authFetch(`${API_URL}/products/category/${encodeURIComponent(category)}`, { method: 'DELETE' });
+            if (res.ok) {
+                setProducts(prev => prev.filter(p => p.category !== category));
+                if (selectedCategory === category) setSelectedCategory('ALL');
+            } else {
+                alert('Error al eliminar la categoría.');
+            }
+        } catch (e) {
+            alert('Error de conexión.');
+        } finally {
+            setDeletingCategory(null);
+        }
+    };
+
     const selectAsset = (asset: string) => {
         if (!editingProduct) return;
         const { data } = supabase.storage.from('assets').getPublicUrl(asset);
@@ -429,18 +483,33 @@ export default function CatalogManagementPage() {
                         {showCategoryDropdown && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 py-2 animate-in fade-in slide-in-from-top-2">
                                 {CATEGORIES.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => {
-                                            setSelectedCategory(cat.id);
-                                            setShowCategoryDropdown(false);
-                                        }}
-                                        className={`w-full text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-colors
-                                            ${selectedCategory === cat.id ? 'bg-orange-50 text-orange-600' : 'text-slate-500 hover:bg-slate-50'}`}
-                                    >
-                                        {cat.name}
-                                        {selectedCategory === cat.id && <CheckCircle2 size={14} />}
-                                    </button>
+                                    <div key={cat.id} className="flex items-center group">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCategory(cat.id);
+                                                setShowCategoryDropdown(false);
+                                            }}
+                                            className={`flex-1 text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-colors
+                                                ${selectedCategory === cat.id ? 'bg-orange-50 text-orange-600' : 'text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            {cat.name}
+                                            {selectedCategory === cat.id && <CheckCircle2 size={14} />}
+                                        </button>
+                                        {cat.id !== 'ALL' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowCategoryDropdown(false);
+                                                    handleDeleteCategory(cat.id);
+                                                }}
+                                                disabled={deletingCategory === cat.id}
+                                                className="px-2 py-3 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                title={`Eliminar categoría ${cat.name}`}
+                                            >
+                                                {deletingCategory === cat.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -494,16 +563,26 @@ export default function CatalogManagementPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 md:px-10 py-4 md:py-5 text-right">
-                                        <button
-                                            onClick={() => {
-                                                setEditingProduct(p);
-                                                loadModifierGroups();
-                                                if (p.id !== 'NEW') loadProductModifiers(p.id);
-                                            }}
-                                            className="bg-white text-slate-900 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 border-slate-100 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-90 group-hover:shadow-lg ml-auto"
-                                        >
-                                            <Pencil className="w-[18px] h-[18px] md:w-5 md:h-5" />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => handleDeleteProduct(p.id, p.name)}
+                                                disabled={deletingProductId === p.id}
+                                                className="bg-white text-slate-300 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all active:scale-90"
+                                                title="Eliminar permanentemente"
+                                            >
+                                                {deletingProductId === p.id ? <Loader2 className="w-[18px] h-[18px] md:w-5 md:h-5 animate-spin" /> : <Trash2 className="w-[18px] h-[18px] md:w-5 md:h-5" />}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingProduct(p);
+                                                    loadModifierGroups();
+                                                    if (p.id !== 'NEW') loadProductModifiers(p.id);
+                                                }}
+                                                className="bg-white text-slate-900 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 border-slate-100 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-90 group-hover:shadow-lg"
+                                            >
+                                                <Pencil className="w-[18px] h-[18px] md:w-5 md:h-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

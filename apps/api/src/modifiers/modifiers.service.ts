@@ -110,6 +110,21 @@ export class ModifiersService {
         return this.prisma.modifierGroup.delete({ where: { id } });
     }
 
+    /**
+     * Reordena las opciones de un grupo de modificadores.
+     */
+    async reorderOptions(groupId: string, items: { id: string; sortOrder: number }[]) {
+        this.logger.log(`Reordering ${items.length} options in group ${groupId}`);
+        const updates = items.map(item =>
+            this.prisma.modifierOption.update({
+                where: { id: item.id },
+                data: { sortOrder: item.sortOrder }
+            })
+        );
+        await this.prisma.$transaction(updates);
+        return { success: true, updated: items.length };
+    }
+
     // ===============================================
     // MODIFIER OPTIONS CRUD
     // ===============================================
