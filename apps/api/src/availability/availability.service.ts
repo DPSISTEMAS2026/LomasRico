@@ -88,7 +88,6 @@ export class AvailabilityService {
                                 ingredientId: true,
                                 quantity: true,
                                 role: true,
-                                isOptional: true,
                                 ingredient: {
                                     select: { name: true, unit: true }
                                 }
@@ -128,7 +127,6 @@ export class AvailabilityService {
                     ingredientId: string;
                     quantity: number;
                     role: string;
-                    isOptional?: boolean;
                     ingredient: { name: string; unit: string };
                 }[];
             } | null;
@@ -165,8 +163,6 @@ export class AvailabilityService {
         const ingredientDetails: ProductAvailability['ingredients'] = [];
 
         for (const recipeItem of product.recipe.items) {
-            // ✅ Ingredientes opcionales no limitan la disponibilidad
-            if (recipeItem.isOptional) continue;
             const invItem = stockMap.get(recipeItem.ingredientId);
             if (!invItem) {
                 // Ingrediente no encontrado en inventario → 0 disponible
