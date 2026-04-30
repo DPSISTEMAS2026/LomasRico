@@ -24,6 +24,13 @@ export interface ProductAvailability {
     }[];
 }
 
+export interface ModifierOptionAvailability {
+    optionId: string;
+    available: boolean;
+    maxQuantity: number;
+    bottleneck?: string;
+}
+
 interface CacheEntry {
     data: Map<string, ProductAvailability>;
     timestamp: number;
@@ -274,5 +281,98 @@ export class AvailabilityService {
             outOfStock,
             lowStock: lowStock.slice(0, 15) // Top 15 alertas
         };
+    }
+
+    /**
+     * Calcula la disponibilidad de TODAS las opciones de modificadores que tengan receta vinculada.
+     * Esto permite deshabilitar opciones como "Coca Cola" si no hay stock de Coca Cola.
+     */
+    async calculateModifierOptionsAvailability(
+        stockMap?: Map<string, { name: string; stock: number; unit: string }>
+    ): Promise<Map<string, ModifierOptionAvailability>> {
+        // Cargar stock si no se proporcionó
+        if (!stockMap) {
+            const allInventory = await this.prisma.inventoryItem.findMany({
+                select: { id: true, name: true, currentStock: true, unit: true }
+            });
+            stockMap = new Map(allInventory.map(i => [i.id, {
+                name: i.name,
+                stock: Number(i.currentStock),
+                unit: i.unit
+            }]));
+        }
+
+        // Obtener opciones de modificadores que tienen receta vinculada
+        const modifierOptions = await this.prisma.modifierOption.findMany({
+            where: {
+                isActive: true,
+                recipeId: { not: null }
+            },
+            include: {
+                recipe: {
+                    include: {
+                        items: {
+                            include: { ingredient: { select: { name: true, unit: true } } }
+                        }
+                    }
+                }
+            }
+        });
+
+        const result = new Map<string, ModifierOptionAvailability>();
+
+        for (const option of modifierOptions) {
+            if (!option.recipe || option.recipe.items.length === 0) {
+                result.set(option.id, {
+                    optionId: option.id,
+                    available: true,
+                    maxQuantity: 999
+                });
+                continue;
+            }
+
+            let minUnits = Infinity;
+            let bottleneckName = '';
+
+            for (const recipeItem of option.recipe.items) {
+                const invItem = stockMap.get(recipeItem.ingredientId);
+                if (!invItem) {
+                    minUnits = 0;
+                    bottleneckName = recipeItem.ingredient?.name || 'Desconocido';
+                    continue;
+                }
+
+                const requiredPerUnit = recipeItem.quantity;
+                if (requiredPerUnit <= 0) continue;
+
+                let availableStock = invItem.stock;
+                const invUnit = invItem.unit.toUpperCase();
+                const recipeUnit = (recipeItem.ingredient?.unit || '').toUpperCase();
+
+                if ((recipeUnit === 'G' || recipeUnit === 'ML') && (invUnit === 'KG' || invUnit === 'LT')) {
+                    availableStock = availableStock * 1000;
+                } else if ((recipeUnit === 'KG' || recipeUnit === 'LT') && (invUnit === 'G' || invUnit === 'ML')) {
+                    availableStock = availableStock / 1000;
+                }
+
+                const maxFromThis = Math.max(0, Math.floor(availableStock / requiredPerUnit));
+                if (maxFromThis < minUnits) {
+                    minUnits = maxFromThis;
+                    bottleneckName = invItem.name;
+                }
+            }
+
+            if (minUnits === Infinity) minUnits = 999;
+
+            result.set(option.id, {
+                optionId: option.id,
+                available: minUnits > 0,
+                maxQuantity: minUnits,
+                bottleneck: minUnits <= 5 ? bottleneckName : undefined
+            });
+        }
+
+        this.logger.debug(`📊 Modifier availability: ${result.size} options checked`);
+        return result;
     }
 }

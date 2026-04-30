@@ -43,7 +43,7 @@ export const CevicheBuilderModal = ({
                 const initial: Record<string, string[]> = {};
                 product.modifiers!.forEach(group => {
                     const defaults = group.options
-                        .filter(opt => opt.isDefault)
+                        .filter(opt => opt.isDefault && opt.available !== false)
                         .map(opt => opt.id);
                     initial[group.groupId] = defaults;
                 });
@@ -265,33 +265,45 @@ export const CevicheBuilderModal = ({
                                     {filteredOptions.length > 0 ? (
                                         filteredOptions.map((option) => {
                                             const isSelected = (selections[currentModifier.groupId] || []).includes(option.id);
+                                            const isUnavailable = option.available === false;
                                             return (
                                                 <button
                                                     key={option.id}
-                                                    onClick={() => toggleOption(
+                                                    onClick={() => !isUnavailable && toggleOption(
                                                         currentModifier.groupId, 
                                                         option.id, 
                                                         currentModifier.type,
                                                         currentModifier.maxSelections
                                                     )}
+                                                    disabled={isUnavailable}
                                                     className={`p-4 rounded-2xl border-2 transition-all flex items-center justify-between group active:scale-[0.98] ${
-                                                        isSelected 
+                                                        isUnavailable
+                                                        ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                                                        : isSelected 
                                                         ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
                                                         : 'bg-white border-slate-50 text-slate-500 hover:border-orange-200'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-4">
                                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                            isUnavailable ? 'border-slate-200 bg-slate-100' :
                                                             isSelected ? 'bg-orange-500 border-orange-500' : 'border-slate-200 group-hover:border-orange-300'
                                                         }`}>
-                                                            {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
+                                                            {isSelected && !isUnavailable && <Check size={12} className="text-white" strokeWidth={4} />}
+                                                            {isUnavailable && <X size={10} className="text-slate-300" strokeWidth={3} />}
                                                         </div>
-                                                        <span className="font-bold uppercase text-xs tracking-tight">
+                                                        <span className={`font-bold uppercase text-xs tracking-tight ${isUnavailable ? 'line-through' : ''}`}>
                                                             {option.name}
                                                         </span>
+                                                        {isUnavailable && (
+                                                            <span className="text-[8px] font-black uppercase bg-red-50 text-red-400 px-2 py-0.5 rounded-full tracking-widest">
+                                                                Sin stock
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     {option.priceAdjustment !== 0 && (
                                                         <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
+                                                            isUnavailable ? 'bg-slate-100 text-slate-300' :
                                                             isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                         }`}>
                                                             {option.priceAdjustment > 0 ? '+' : ''}

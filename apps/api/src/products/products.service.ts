@@ -208,11 +208,14 @@ export class ProductsService implements OnModuleInit {
 
         // Calcular disponibilidad de todos los productos
         let availabilityMap: Map<string, any>;
+        let modifierAvailMap: Map<string, any>;
         try {
             availabilityMap = await this.availabilityService.calculateAll();
+            modifierAvailMap = await this.availabilityService.calculateModifierOptionsAvailability();
         } catch (error) {
             this.logger.error('Error calculating availability, returning all as available', error);
             availabilityMap = new Map();
+            modifierAvailMap = new Map();
         }
 
         const enriched = products.map(p => {
@@ -228,6 +231,24 @@ export class ProductsService implements OnModuleInit {
                 product.maxQuantity = 999;
                 product.available = true;
             }
+
+            // Enriquecer opciones de modificadores con disponibilidad
+            if (product.modifiers && modifierAvailMap.size > 0) {
+                for (const modifier of product.modifiers) {
+                    if (modifier.options) {
+                        modifier.options = modifier.options.map((opt: any) => {
+                            const optAvail = modifierAvailMap.get(opt.id);
+                            return {
+                                ...opt,
+                                available: optAvail ? optAvail.available : true,
+                                maxQuantity: optAvail ? optAvail.maxQuantity : 999,
+                                bottleneck: optAvail?.bottleneck || undefined
+                            };
+                        });
+                    }
+                }
+            }
+
             return product;
         });
 
