@@ -458,20 +458,29 @@ export class SalesService {
             const isPending = (initialStatus || OrderStatus.CONFIRMED) === 'PENDING';
 
             if (!isPending) {
-                // Verify stock available first
-                for (const [itemId, qty] of totalRequirements.entries()) {
-                    const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
-                    if (!item) throw new BadRequestException(`Inventory item ${itemId} not found`);
+                // ✅ LOCK + VERIFY: Usa SELECT FOR UPDATE para prevenir race conditions
+                // Si POS y Web intentan comprar el último producto, solo la primera pasa.
+                const itemIds = [...totalRequirements.keys()];
+                
+                if (itemIds.length > 0) {
+                    // Lock rows — la segunda transacción esperará hasta que la primera haga commit
+                    const lockedItems: any[] = await tx.$queryRawUnsafe(
+                        `SELECT id, name, "currentStock" FROM "InventoryItem" WHERE id IN (${itemIds.map((_: any, i: number) => `$${i + 1}`).join(',')}) FOR UPDATE`,
+                        ...itemIds
+                    );
 
-                    if (item.currentStock < qty) {
-                        // ✅ VALIDACIÓN REACTIVADA — Rechazar ventas sin stock suficiente
-                        throw new BadRequestException(
-                            `Stock insuficiente para "${item.name}". Disponible: ${Number(item.currentStock).toFixed(2)}, Requerido: ${qty.toFixed(2)}`
-                        );
+                    // Verificar stock con los datos lockeados (garantizado sin race condition)
+                    for (const lockedItem of lockedItems) {
+                        const requiredQty = totalRequirements.get(lockedItem.id) || 0;
+                        if (Number(lockedItem.currentStock) < requiredQty) {
+                            throw new BadRequestException(
+                                `Stock insuficiente para "${lockedItem.name}". Disponible: ${Number(lockedItem.currentStock).toFixed(2)}, Requerido: ${requiredQty.toFixed(2)}`
+                            );
+                        }
                     }
                 }
 
-                // Deduct inventory
+                // Deduct inventory (safe — rows are locked)
                 for (const [itemId, qty] of totalRequirements.entries()) {
                     await tx.inventoryItem.update({
                         where: { id: itemId },
@@ -487,6 +496,9 @@ export class SalesService {
                         }
                     });
                 }
+
+                // Invalidar cache de disponibilidad después de descontar stock
+                this.availabilityService.invalidateCache();
 
                 // ✅ REGISTRAR EN FLUJO DE CAJA — TODOS LOS CANALES con turno activo
                 if (finalShiftId) {

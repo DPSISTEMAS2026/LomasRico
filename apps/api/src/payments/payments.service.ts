@@ -214,33 +214,57 @@ export class PaymentsService {
                 });
             }
 
-            // Descontar inventario (Solo si no se hizo al crear la venta)
+            // Descontar inventario con LOCK para evitar race conditions
             // Nota: El SalesService pone status PENDING para MP, así que no se descontó.
-            // Necesitamos los items para resolver BoM o usar el snapshot guardado.
             const items = await tx.saleItem.findMany({
                 where: { saleId: orderId },
                 include: { recipeSnapshot: true }
             });
 
+            // Reunir todos los requerimientos
+            const requirements = new Map<string, number>();
             for (const item of items) {
                 if (item.recipeSnapshot && item.recipeSnapshot.resolvedBoM) {
                     const bom = item.recipeSnapshot.resolvedBoM as any[];
                     for (const bomItem of bom) {
                         const totalQty = bomItem.quantity * item.quantity;
-                        await tx.inventoryItem.update({
-                            where: { id: bomItem.inventoryItemId },
-                            data: {
-                                currentStock: { decrement: totalQty },
-                                movements: {
-                                    create: {
-                                        quantity: -totalQty,
-                                        reason: 'SALE',
-                                        referenceId: sale.id
-                                    }
+                        const current = requirements.get(bomItem.inventoryItemId) || 0;
+                        requirements.set(bomItem.inventoryItemId, current + totalQty);
+                    }
+                }
+            }
+
+            if (requirements.size > 0) {
+                const itemIds = [...requirements.keys()];
+                // Lock rows para prevenir race conditions con POS
+                const lockedItems: any[] = await tx.$queryRawUnsafe(
+                    `SELECT id, name, "currentStock" FROM "InventoryItem" WHERE id IN (${itemIds.map((_: any, i: number) => `$${i + 1}`).join(',')}) FOR UPDATE`,
+                    ...itemIds
+                );
+
+                // Verificar stock (si no hay suficiente, loguear warning pero continuar — pago ya fue aprobado)
+                for (const lockedItem of lockedItems) {
+                    const requiredQty = requirements.get(lockedItem.id) || 0;
+                    if (Number(lockedItem.currentStock) < requiredQty) {
+                        this.logger.warn(`⚠️ Stock insuficiente para "${lockedItem.name}" en pago aprobado. Stock: ${lockedItem.currentStock}, Requerido: ${requiredQty}. Se descontará de igual forma.`);
+                    }
+                }
+
+                // Descontar inventario
+                for (const [itemId, qty] of requirements.entries()) {
+                    await tx.inventoryItem.update({
+                        where: { id: itemId },
+                        data: {
+                            currentStock: { decrement: qty },
+                            movements: {
+                                create: {
+                                    quantity: -qty,
+                                    reason: 'SALE',
+                                    referenceId: sale.id
                                 }
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
 
