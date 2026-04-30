@@ -17,6 +17,7 @@ export class ModifiersService {
                 options: {
                     where: { isActive: true },
                     orderBy: { sortOrder: 'asc' },
+                    include: { inventoryItem: { select: { id: true, name: true } } },
                 },
                 _count: {
                     select: { productModifiers: true },
@@ -28,9 +29,11 @@ export class ModifiersService {
         return groups.map((g) => ({
             ...g,
             assignedProductsCount: g._count.productModifiers,
-            options: g.options.map((o) => ({
+            options: g.options.map((o: any) => ({
                 ...o,
                 priceAdjustment: Number(o.priceAdjustment),
+                inventoryItemId: o.inventoryItemId || null,
+                inventoryItemName: o.inventoryItem?.name || null,
             })),
         }));
     }
@@ -39,7 +42,10 @@ export class ModifiersService {
         const group = await this.prisma.modifierGroup.findUnique({
             where: { id },
             include: {
-                options: { orderBy: { sortOrder: 'asc' } },
+                options: {
+                    orderBy: { sortOrder: 'asc' },
+                    include: { inventoryItem: { select: { id: true, name: true } } },
+                },
                 productModifiers: {
                     include: { sellingProduct: { select: { id: true, name: true, category: true } } },
                 },
@@ -145,7 +151,7 @@ export class ModifiersService {
         });
     }
 
-    async updateOption(optionId: string, data: { name?: string; priceAdjustment?: number; isDefault?: boolean; isActive?: boolean; sortOrder?: number; recipeId?: string | null }) {
+    async updateOption(optionId: string, data: { name?: string; priceAdjustment?: number; isDefault?: boolean; isActive?: boolean; sortOrder?: number; recipeId?: string | null; inventoryItemId?: string | null }) {
         return this.prisma.modifierOption.update({
             where: { id: optionId },
             data,

@@ -18,6 +18,15 @@ interface ModifierOption {
     isActive?: boolean;
     sortOrder: number;
     recipeId?: string | null;
+    inventoryItemId?: string | null;
+    inventoryItemName?: string | null;
+}
+
+interface InventoryItem {
+    id: string;
+    name: string;
+    type: string;
+    currentStock: number;
 }
 
 interface ModifierGroup {
@@ -47,6 +56,7 @@ export default function ModifiersPage() {
     // New option form
     const [newOptionName, setNewOptionName] = useState('');
     const [newOptionPrice, setNewOptionPrice] = useState(0);
+    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
     const filteredGroups = groups.filter(g =>
         !searchQuery.trim() ||
@@ -57,6 +67,7 @@ export default function ModifiersPage() {
 
     useEffect(() => {
         loadGroups();
+        loadInventoryItems();
     }, []);
 
 
@@ -72,6 +83,18 @@ export default function ModifiersPage() {
             console.error('Error loading modifier groups:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadInventoryItems = async () => {
+        try {
+            const res = await authFetch(`${API_URL}/inventory`);
+            if (res.ok) {
+                const data = await res.json();
+                setInventoryItems(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+            }
+        } catch (e) {
+            console.error('Error loading inventory:', e);
         }
     };
 
@@ -254,6 +277,13 @@ export default function ModifiersPage() {
                             </p>
                         </div>
                     </div>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
+                    >
+                        <Plus size={18} />
+                        Nuevo Grupo
+                    </button>
                 </div>
                 {/* Search Bar */}
                 <div className="relative">
@@ -495,8 +525,8 @@ export default function ModifiersPage() {
                                                     <ArrowDown size={10} />
                                                 </button>
                                             </div>
-                                            <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 min-w-0">
-                                                <div className="flex items-center gap-3">
+                                            <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                                                <div className="flex items-center gap-3 flex-wrap">
                                                     <span className="font-black text-sm italic text-slate-800 truncate">
                                                         {option.name}
                                                     </span>
@@ -507,12 +537,35 @@ export default function ModifiersPage() {
                                                             {option.priceAdjustment.toLocaleString()}
                                                         </span>
                                                     )}
+                                                    {option.isDefault && (
+                                                        <span className="text-[8px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full shrink-0 uppercase">
+                                                            DEFAULT
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                {option.isDefault && (
-                                                    <span className="text-[8px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full shrink-0 uppercase">
-                                                        DEFAULT
-                                                    </span>
-                                                )}
+                                                {/* Inventory Link Selector */}
+                                                <div className="flex items-center gap-2">
+                                                    <Package size={11} className={option.inventoryItemId ? 'text-blue-500' : 'text-slate-300'} />
+                                                    <select
+                                                        value={option.inventoryItemId || ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value || null;
+                                                            handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: val });
+                                                        }}
+                                                        className={`text-[10px] font-bold py-0.5 px-1.5 rounded-lg border outline-none cursor-pointer transition-colors ${
+                                                            option.inventoryItemId
+                                                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                                                : 'bg-slate-50 border-slate-200 text-slate-400'
+                                                        }`}
+                                                    >
+                                                        <option value="">Sin inventario</option>
+                                                        {inventoryItems.map(inv => (
+                                                            <option key={inv.id} value={inv.id}>
+                                                                {inv.name} ({inv.currentStock} {inv.type})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                             <button
                                                 onClick={() =>
