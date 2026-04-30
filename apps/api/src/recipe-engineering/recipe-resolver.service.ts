@@ -320,11 +320,20 @@ export class RecipeResolverService {
         }
 
         for (const p of selectedDetails) {
+            let qty = distribution.get(p.id) || 0;
+
+            // ✅ Normalizar a la unidad del inventario (las reglas de ceviche dan gramos)
+            const invUnit = await this.prisma.inventoryItem.findUnique({
+                where: { id: p.id }, select: { unit: true }
+            });
+            const targetUnit = invUnit?.unit || 'g';
+            if (targetUnit === 'KG') qty = qty / 1000; // g → KG
+
             bom.push({
                 inventoryItemId: p.id,
                 name: p.name,
-                quantity: distribution.get(p.id) || 0,
-                unit: 'g'
+                quantity: qty,
+                unit: targetUnit
             });
         }
 
