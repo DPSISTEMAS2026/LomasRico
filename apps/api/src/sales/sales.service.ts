@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -26,6 +26,8 @@ const OrderChannel = {
 
 @Injectable()
 export class SalesService {
+    private readonly logger = new Logger(SalesService.name);
+
     constructor(
         private prisma: PrismaService,
         private recipeResolver: RecipeResolverService,
@@ -476,6 +478,9 @@ export class SalesService {
                 // Si POS y Web intentan comprar el último producto, solo la primera pasa.
                 const itemIds = [...totalRequirements.keys()];
                 
+                // Canales externos ya fueron aceptados por la plataforma → solo alertar, no bloquear
+                const isExternalChannel = channel === 'UBER_EATS' || channel === 'PEDIDOS_YA';
+
                 if (itemIds.length > 0) {
                     // Lock rows — la segunda transacción esperará hasta que la primera haga commit
                     const lockedItems: any[] = await tx.$queryRawUnsafe(
@@ -483,13 +488,23 @@ export class SalesService {
                         ...itemIds
                     );
 
-                    // Verificar stock con los datos lockeados (garantizado sin race condition)
+                    // Verificar stock con los datos lockeados
                     for (const lockedItem of lockedItems) {
                         const requiredQty = totalRequirements.get(lockedItem.id) || 0;
                         if (Number(lockedItem.currentStock) < requiredQty) {
-                            throw new BadRequestException(
-                                `Stock insuficiente para "${lockedItem.name}". Disponible: ${Number(lockedItem.currentStock).toFixed(2)}, Requerido: ${requiredQty.toFixed(2)}`
-                            );
+                            if (isExternalChannel) {
+                                // ⚠️ Órdenes externas: alertar pero NO bloquear (ya fueron aceptadas en la app)
+                                this.logger.warn(
+                                    `⚠️ [${channel}] Stock insuficiente para "${lockedItem.name}" ` +
+                                    `(Disponible: ${Number(lockedItem.currentStock).toFixed(2)}, Requerido: ${requiredQty.toFixed(2)}) ` +
+                                    `— Pedido ingresado de igual forma`
+                                );
+                            } else {
+                                // 🔴 POS/WEB: bloquear — el operador puede resolver en el momento
+                                throw new BadRequestException(
+                                    `Stock insuficiente para "${lockedItem.name}". Disponible: ${Number(lockedItem.currentStock).toFixed(2)}, Requerido: ${requiredQty.toFixed(2)}`
+                                );
+                            }
                         }
                     }
                 }
