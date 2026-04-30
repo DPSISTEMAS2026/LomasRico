@@ -234,9 +234,15 @@ export class RecipeResolverService {
             weightsFound.push(product.recipe.baseWeight);
         }
 
-        // El peso final será el máximo detectado en la configuración (Greedy weight detection)
-        if (weightsFound.length > 0) {
-            resolvedWeight = Math.max(...weightsFound);
+        // Peso final: Los modificadores y variantes tienen PRIORIDAD sobre el baseWeight de la receta.
+        // baseWeight es solo un fallback (la receta base puede ser de 1KG pero el cliente pide 500g).
+        const explicitWeights = weightsFound.filter(w => w !== product.recipe!.baseWeight);
+        if (explicitWeights.length > 0) {
+            // Usar el peso explícito del formato seleccionado (variante o modificador)
+            resolvedWeight = Math.max(...explicitWeights);
+        } else if (weightsFound.length > 0) {
+            // Fallback: solo el baseWeight de la receta
+            resolvedWeight = product.recipe.baseWeight;
         }
 
         console.log(`[RecipeResolver] Gramaje final detectado: ${resolvedWeight}g para el producto "${product.name}"`);
@@ -295,22 +301,32 @@ export class RecipeResolverService {
         if (count === 1) {
             distribution.set(selectedDetails[0].id, targetProteinTotal);
         } else if (count === 2) {
-            if (hasPremium && premiums.length === 1 && standards.length === 1) {
+            if (hasPremium && premiums.length !== standards.length) {
+                // Mix: 1 premium + 1 standard (o 2 premium + 0 standard)
                 const pRule = RULE.distribution[2].withPremium;
                 const addPerSlot = (targetProteinTotal - RULE.proteinTotal) / 2;
-                distribution.set(standards[0].id, pRule.std + addPerSlot);
-                distribution.set(premiums[0].id, pRule.premium + addPerSlot);
+                if (standards.length > 0 && premiums.length > 0) {
+                    distribution.set(standards[0].id, pRule.std + addPerSlot);
+                    distribution.set(premiums[0].id, pRule.premium + addPerSlot);
+                } else {
+                    // Todos premium → distribución equal con peso premium
+                    const weight = targetProteinTotal / 2;
+                    selectedDetails.forEach(p => distribution.set(p.id, weight));
+                }
             } else {
                 const weight = targetProteinTotal / 2;
                 selectedDetails.forEach(p => distribution.set(p.id, weight));
             }
         } else if (count === 3) {
-            if (hasPremium && premiums.length === 1 && standards.length === 2) {
+            if (hasPremium && standards.length > 0) {
+                // Mix con premium: aplicar regla withPremium
+                // Premium recibe peso premium, Standard recibe peso standard
                 const pRule = RULE.distribution[3].withPremium;
                 const addPerSlot = (targetProteinTotal - RULE.proteinTotal) / 3;
-                distribution.set(premiums[0].id, pRule.premium + addPerSlot);
+                premiums.forEach(p => distribution.set(p.id, pRule.premium + addPerSlot));
                 standards.forEach(p => distribution.set(p.id, pRule.std + addPerSlot));
             } else {
+                // Todos iguales (3 standard o 3 premium)
                 const weight = targetProteinTotal / 3;
                 selectedDetails.forEach(p => distribution.set(p.id, weight));
             }
