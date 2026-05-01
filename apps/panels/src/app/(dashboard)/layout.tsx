@@ -20,6 +20,7 @@ import {
     Layers,
     PanelLeftClose,
     PanelLeftOpen,
+    BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -82,6 +83,7 @@ export default function DashboardLayout({
         { href: '/owner/customers', icon: Users, label: 'Clientes', moduleId: 'customers', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/inbox/whatsapp', icon: MessageSquare, label: 'WhatsApp Bot', moduleId: 'whatsapp', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/cashiers', icon: User, label: 'Personal', moduleId: 'cashiers', roles: ['OWNER', 'ADMIN'] },
+        { href: '/owner/manual', icon: BookOpen, label: 'Manual', moduleId: 'manual', roles: ['OWNER', 'ADMIN'] },
     ];
 
     // Parsear módulos individuales del usuario

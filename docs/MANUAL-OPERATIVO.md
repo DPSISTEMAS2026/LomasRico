@@ -1,7 +1,7 @@
 # 📘 MANUAL OPERATIVO — Lo Más Rico V3
 
 **Plataforma Digital de Ventas y Gestión Operativa**
-Versión 2.3.0 | Abril 2026
+Versión 2.3.0 | Mayo 2026
 
 ---
 
@@ -14,7 +14,8 @@ Versión 2.3.0 | Abril 2026
 5. [Panel Cocina (KDS)](#5-panel-cocina-kds)
 6. [WhatsApp Bot "Maxi"](#6-whatsapp-bot-maxi)
 7. [Integraciones Externas](#7-integraciones-externas)
-8. [Preguntas Frecuentes y Soporte](#8-preguntas-frecuentes-y-soporte)
+8. [Monitoreo Automático (Health Check)](#8-monitoreo-automático-health-check)
+9. [Preguntas Frecuentes y Soporte](#9-preguntas-frecuentes-y-soporte)
 
 ---
 
@@ -25,7 +26,7 @@ Versión 2.3.0 | Abril 2026
 | Plataforma | URL | Para quién |
 |------------|-----|-----------|
 | **Web Tienda** | https://lomasrico.cl | Clientes |
-| **Panel de Gestión** | https://panel.lomasrico.cl | Dueño, Admin, Cajeros, Cocina |
+| **Panel de Gestión** | https://lomasrico-panels.netlify.app | Dueño, Admin, Cajeros, Cocina |
 | **API (Backend)** | https://pro-lomasrico-api-69je.onrender.com | Automático (no acceder manualmente) |
 
 ### 1.2 Roles de Usuario
@@ -39,9 +40,11 @@ El sistema maneja **4 roles** con permisos diferenciados:
 | **CASHIER** (Cajero) | POS + Cocina | Personal de caja |
 | **KITCHEN** (Cocina) | Solo panel de cocina | Personal de preparación |
 
+Además, cada usuario puede tener **módulos individuales** asignados, lo que permite acceso granular a secciones específicas independiente de su rol base.
+
 ### 1.3 Cómo Ingresar
 
-1. Ir a **panel.lomasrico.cl**
+1. Ir a **lomasrico-panels.netlify.app**
 2. Ingresar **usuario** y **contraseña** proporcionados
 3. El sistema redirige automáticamente al panel correspondiente según su rol
 
@@ -60,13 +63,13 @@ La web pública del negocio donde los clientes pueden ver el menú, armar su ped
 ```
 El cliente ingresa a lomasrico.cl
         ↓
-Navega el catálogo por categorías
+Navega el catálogo por categorías (dinámicas desde la base de datos)
         ↓
 Selecciona un producto → personaliza (proteínas, extras, sin ingredientes)
         ↓
 Agrega al carrito
         ↓
-Ingresa su dirección → el sistema cotiza envío automáticamente
+Ingresa su dirección → el sistema cotiza envío automáticamente (PedidosYa)
         ↓
 Elige método de pago → MercadoPago (tarjeta/débito)
         ↓
@@ -76,12 +79,18 @@ Confirma pedido → aparece en el Panel Cocina automáticamente
 ### 2.3 Lo que el Cliente Ve
 
 - **Banners promocionales** en la parte superior (administrables desde el panel)
-- **Catálogo** organizado por categorías con fotos y precios
+- **Catálogo** organizado por categorías dinámicas con fotos y precios
 - **Constructor de Ceviche**: permite elegir proteínas, quitar ingredientes, agregar extras
 - **Carrito de compra** con resumen y cálculo de envío
 - **Pasarela de pago** de MercadoPago
+- **Páginas legales** (términos y condiciones)
+- **Perfil de usuario** para clientes registrados
 
-### 2.4 ¿Quién administra el contenido?
+### 2.4 Disponibilidad Automática
+
+El sistema verifica el stock de ingredientes en tiempo real. Si un producto no tiene suficiente inventario para ser preparado, se **desactiva automáticamente** de la web y no aparece disponible para el cliente.
+
+### 2.5 ¿Quién administra el contenido?
 
 Usted. Todo el contenido visible en la web (productos, precios, fotos, banners) se administra desde el **Panel de Administración** sin necesidad de soporte técnico.
 
@@ -89,7 +98,26 @@ Usted. Todo el contenido visible en la web (productos, precios, fotos, banners) 
 
 ## 3. Panel de Administración
 
-Se accede desde **panel.lomasrico.cl** con rol OWNER o ADMIN. La barra lateral izquierda muestra todos los módulos disponibles.
+Se accede desde **lomasrico-panels.netlify.app** con rol OWNER o ADMIN. La barra lateral izquierda muestra todos los módulos disponibles.
+
+### Módulos del Menú Lateral
+
+| Icono | Módulo | Ruta |
+|-------|--------|------|
+| 📊 | Resumen | `/owner` |
+| 👨‍🍳 | Cocina | `/kitchen` |
+| 📱 | Punto de Venta | `/pos` |
+| 📦 | Catálogo | `/owner/catalog` |
+| 🔲 | Modificadores | `/owner/modifiers` |
+| 📺 | Marketing | `/owner/banners` |
+| 📋 | Inventario | `/owner/inventory` |
+| 🔥 | Recetas | `/owner/recipes` |
+| 📈 | Reportes | `/owner/reports` |
+| 👥 | Clientes | `/owner/customers` |
+| 💬 | WhatsApp Bot | `/owner/inbox/whatsapp` |
+| 👤 | Personal | `/owner/cashiers` |
+
+> **Tip:** En la vista de Cocina, el sidebar se colapsa automáticamente para maximizar el espacio de trabajo.
 
 ### 3.1 Resumen (Dashboard)
 
@@ -97,12 +125,12 @@ Se accede desde **panel.lomasrico.cl** con rol OWNER o ADMIN. La barra lateral i
 
 Vista ejecutiva del estado del negocio con:
 
-- **Ingresos del día** y del mes con tendencia
+- **Ingresos del día** y del mes con tendencia porcentual
 - **Órdenes activas** en cocina
 - **Alertas de stock bajo** (ingredientes que necesitan reposición)
-- **Gráfico de canales de venta** (Web, POS, WhatsApp, Uber Eats)
-- **Top 5 productos más vendidos**
-- **Distribución horaria** de demanda (horas peak)
+- **Gráfico de canales de venta** — distribución tipo pie (Web, POS, WhatsApp, Uber Eats)
+- **Top 5 productos más vendidos** — ranking con barras de progreso
+- **Distribución horaria** de demanda — gráfico de barras por hora del día
 
 ### 3.2 Catálogo de Productos
 
@@ -117,9 +145,9 @@ Permite gestionar todos los productos a la venta:
 | **Activar/Desactivar** | Toggle de disponibilidad en cada producto |
 | **Subir foto** | Click en la imagen del producto → seleccionar archivo |
 | **Crear variante** | Dentro del producto → "Agregar Variante" (ej: 350g, 500g, 1kg) |
-| **Ordenar categorías** | Las categorías se muestran en el orden configurado |
+| **Ordenar productos** | El orden de visualización (sortOrder) se puede ajustar por producto |
 
-> **Importante:** Los cambios en el catálogo se reflejan **inmediatamente** en la web, WhatsApp y POS.
+> **Importante:** Los cambios en el catálogo se reflejan **inmediatamente** en la web, WhatsApp y POS. Las categorías se generan dinámicamente desde la base de datos.
 
 ### 3.3 Modificadores
 
@@ -133,12 +161,14 @@ Los modificadores son las opciones de personalización de cada producto (proteí
 | **Opciones dentro del grupo** | Salmón, Reineta, Camarón, Pulpo... |
 | **Precio adicional** | Cada opción puede tener un recargo (ej: Extra Palta +$1.500) |
 | **Mín/Máx selecciones** | Cuántas opciones puede elegir el cliente (ej: mín 1, máx 3 proteínas) |
+| **Orden personalizado** | Los modificadores se pueden reordenar por producto |
 
 Para editar:
 1. Click en un grupo de modificadores
 2. Agregar/editar/eliminar opciones
 3. Configurar precios y límites
-4. Guardar cambios
+4. Reordenar con flechas (orden por producto)
+5. Guardar cambios
 
 ### 3.4 Marketing (Banners)
 
@@ -159,28 +189,89 @@ Administre los banners promocionales que aparecen en la parte superior de la web
 
 **Ubicación:** Menú → Inventario
 
-Control de stock de todos los insumos del negocio:
+Control completo de stock de todos los insumos del negocio:
 
-| Función | Descripción |
-|---------|-------------|
-| **Ver stock actual** | Lista de todos los insumos con cantidad disponible |
-| **Alertas de stock bajo** | Indicador visual cuando un insumo está bajo el mínimo |
-| **Registrar ingreso** | "Agregar Stock" → ingresar cantidad recibida |
-| **Tipos de insumo** | Materia prima, preparaciones, insumos de empaque |
+#### Vista Principal
 
-> **El descuento de inventario es automático.** Cada vez que se realiza una venta (web, POS o Uber Eats), el sistema descuenta los ingredientes según la receta del producto.
+| Dato | Descripción |
+|------|-------------|
+| **Insumos totales** | Cantidad total de items registrados |
+| **Valor total del stock** | Suma de (stock × costo unitario PMP) de todos los insumos |
+| **Alertas de stock** | Items con stock menor a 10 unidades |
 
-### 3.6 Recetas
+#### Acciones por Insumo
+
+| Acción | Descripción |
+|--------|-------------|
+| **Editar** | Modificar nombre, rol, tipo, unidad, costo y umbral mínimo |
+| **Ajustar** | Corregir el stock real verificado manualmente (inventario físico) |
+| **Reponer** | Registrar una compra con cantidad, costo y **rendimiento (%)** |
+| **Merma** | Registrar pérdida con motivo (vencido, dañado, etc.) y nota |
+
+#### Sistema de Rendimiento
+
+Al reponer stock, puede configurar el **rendimiento del insumo** (yield):
+- **100%** = sin merma, todo el producto comprado es utilizable
+- **70%** = 30% se pierde en limpieza/procesamiento
+- El sistema calcula automáticamente el stock útil y el costo neto real (PMP)
+
+**Ejemplo:** Si compra 10 kg de salmón a $8.000/kg con rendimiento 80%:
+- Stock útil ingresado: 8 kg
+- Merma: 2 kg
+- Costo neto real (PMP): $10.000/kg
+
+#### Crear Nuevo Insumo
+
+Al crear un insumo se configuran:
+
+| Campo | Opciones |
+|-------|----------|
+| **Nombre** | Nombre descriptivo del insumo |
+| **Categoría** | Seleccionar existente o crear nueva categoría |
+| **Rol** | Base/Abarrote, Proteína Principal, Proteína Premium, Verdura, Salsa, Packaging |
+| **Tipo** | 🪨 Materia Prima, 🍳 Preparado/Sub-receta, 📦 Envase/Empaque |
+| **Unidad** | KG, GR, LT, ML, UN |
+| **Rendimiento %** | Porcentaje de aprovechamiento |
+| **Precio compra** | Precio por unidad de medida |
+| **Stock inicial** | Cantidad inicial disponible |
+| **Alerta mínima** | Umbral para alertas de stock bajo |
+
+> **El descuento de inventario es automático.** Cada vez que se realiza una venta (web, POS o Uber Eats), el sistema descuenta los ingredientes según la receta del producto. Si el stock llega a cero, el producto se desactiva automáticamente.
+
+### 3.6 Recetas Maestras
 
 **Ubicación:** Menú → Recetas
 
-Visualización de las recetas de producción de cada producto:
+Módulo avanzado de **ingeniería de producto** con dos secciones:
 
-- Ver los ingredientes y gramajes de cada receta
-- Las recetas determinan el descuento automático de inventario
-- Los gramajes varían según el tamaño y las proteínas seleccionadas
+#### Platos Finales
+Recetas de los productos que se venden al cliente. Muestra:
+- Lista de todos los productos activos, ordenados por categoría
+- Indicador visual de si tiene receta configurada (✅) o pendiente (⚠️)
+- Filtro de búsqueda por nombre
 
-> **Nota:** Las recetas están configuradas según los estándares operativos del negocio. Para modificaciones, contactar al soporte técnico.
+#### Bases & Preparaciones
+Recetas de sub-preparaciones usadas como ingredientes (ej: Base Ceviche, Salsas):
+- Botón "Nueva Base Maestro" para crear preparaciones
+- Cada base tiene su propia receta de ingredientes
+
+#### Editor de Receta
+
+Al hacer click en cualquier producto/base, se abre el editor con:
+
+| Sección | Descripción |
+|---------|-------------|
+| **Peso Objetivo (KG)** | Peso base de la porción |
+| **Proteínas Permitidas** | Máximo de proteínas seleccionables (solo platos) |
+| **Componentes** | Buscador de ingredientes del inventario para agregar |
+| **Tabla de ingredientes** | Rol, nombre, cantidad, unidad de cada componente |
+| **Análisis Maestro** | Costo de producción, precio de venta y margen de utilidad |
+
+El **Análisis Maestro** muestra en tiempo real:
+- **Costo de producción** neto basado en los ingredientes
+- **Precio de venta** configurado
+- **Margen de utilidad** con indicador verde (>50%) o rojo (<50%)
+- **Desglose de costos** por ingrediente individual
 
 ### 3.7 Reportes
 
@@ -263,12 +354,16 @@ El POS funciona con un sistema de **cajas y turnos**:
 |--------|-------------|
 | **Abrir Caja** | Al iniciar turno, el cajero abre caja con un monto inicial |
 | **Operar** | Todas las ventas se asocian a la caja abierta |
+| **Registrar gasto** | Se pueden registrar gastos y retiros durante el turno |
 | **Cerrar Caja** | Al terminar turno, se cierra la caja con el resumen de ventas |
 
 El resumen de cierre muestra:
 - Total de ventas del turno
 - Desglose por método de pago (efectivo, tarjeta, transferencia)
 - Número de transacciones
+- Gastos y retiros registrados
+
+> **Importante:** Si un turno lleva más de 24 horas abierto, el sistema de Health Check genera una alerta automática.
 
 ### 4.6 Flujo al Confirmar una Venta
 
@@ -301,8 +396,7 @@ El Kitchen Display System (KDS) es la pantalla de cocina donde llegan **todos lo
 | **Web (lomasrico.cl)** | Automático al pagar | Etiqueta "WEB" |
 | **POS (local)** | Automático al confirmar venta | Etiqueta "POS" |
 | **WhatsApp (Maxi)** | Automático al confirmar pedido | Etiqueta "WHATSAPP" |
-| **Uber Eats** | Automático (scraping cada 60s) | Etiqueta "UBER_EATS" |
-| **PedidosYa** | Automático (por implementar) | Etiqueta "PEDIDOS_YA" |
+| **Uber Eats** | Automático (scraping cada 30-60s) | Etiqueta "UBER_EATS" |
 
 ### 5.3 Estados de un Pedido
 
@@ -375,18 +469,19 @@ Desde el panel se puede ver:
 El sistema **captura automáticamente** los pedidos que llegan por Uber Eats y los envía al panel de cocina.
 
 - Los pedidos aparecen con la etiqueta **"UBER EATS"** en color verde
-- El mapeo de productos de Uber Eats a productos internos es automático
+- El mapeo de productos de Uber Eats a productos internos es automático (vía aliases)
 - El inventario se descuenta automáticamente
+- Los pedidos de Uber generan alertas de inventario (no bloquean) para mantener el flujo
 
-> **Nota técnica:** Esta integración requiere renovación periódica de sesión. Este proceso está cubierto por el soporte técnico.
+> **Nota técnica:** Esta integración requiere renovación periódica de cookie (cada 24-48h). El sistema de Health Check diario detecta automáticamente cuando la cookie expira y genera una alerta. La renovación está cubierta por el soporte técnico.
 
 ### 7.2 PedidosYa
 
-**Estado actual:** En proceso de habilitación vía API oficial.
+**Integración activa para cotización de envío:**
 
-Una vez activo:
-- Los pedidos de PedidosYa llegarán automáticamente al panel de cocina
 - La cotización de envío con motoristas de PedidosYa funciona desde la web
+- El cliente ingresa su dirección y el sistema cotiza el delivery vía API de PedidosYa
+- Envíos vía Google Maps para cálculo de cobertura y geocodificación
 
 ### 7.3 MercadoPago
 
@@ -403,11 +498,37 @@ Pasarela de pagos para cobros online:
 - Cálculo automático de cobertura de delivery
 - Geocodificación para cotización de envío
 
+### 7.5 Supabase
+
+- **Base de datos PostgreSQL** en la nube (almacenamiento de todos los datos)
+- **Storage** para imágenes de productos y banners (subida directa desde el panel)
+
 ---
 
-## 8. Preguntas Frecuentes y Soporte
+## 8. Monitoreo Automático (Health Check)
 
-### 8.1 Preguntas Frecuentes
+El sistema ejecuta un **chequeo diario automático a las 10:00 AM (hora de Chile)** que verifica:
+
+| Chequeo | Qué valida |
+|---------|------------|
+| **Cookie Uber Eats** | Si la sesión está vigente o requiere renovación |
+| **Mapeo de Productos** | Si todos los alias de Uber apuntan a productos existentes |
+| **Modificadores** | Que los grupos tengan opciones activas y no estén asignados a productos inactivos |
+| **Turno de Caja** | Si hay un turno abierto (necesario para registrar ventas externas) |
+| **Inventario Crítico** | Items con stock en 0 o negativo |
+
+Los resultados se categorizan como:
+- ✅ **OK** — Sin problemas
+- ⚠️ **WARNING** — Requiere atención pero no es crítico
+- 🔴 **CRITICAL** — Requiere acción inmediata
+
+> Este sistema es transparente para el usuario. El soporte técnico monitorea las alertas y actúa proactivamente.
+
+---
+
+## 9. Preguntas Frecuentes y Soporte
+
+### 9.1 Preguntas Frecuentes
 
 **¿Cómo cambio el precio de un producto?**
 Panel → Catálogo → Click en el producto → Editar precio → Guardar
@@ -425,12 +546,24 @@ Panel → Personal → "Nuevo Usuario" → Asignar rol "Cajero"
 Panel → Resumen (dashboard) → "Ingresos Hoy"
 
 **¿Cómo sé si falta stock?**
-Panel → Inventario → Los items con stock bajo aparecen destacados en rojo
+Panel → Inventario → Los items con stock bajo aparecen destacados en rojo, y en la parte superior aparece la sección "Reposición Urgente Necesaria"
+
+**¿Cómo registro una compra de insumos?**
+Panel → Inventario → Botón "Reponer" en el insumo → Ingresar cantidad, costo y rendimiento → Confirmar
+
+**¿Cómo registro merma/pérdida de producto?**
+Panel → Inventario → Botón "Merma" en el insumo → Ingresar cantidad, motivo y nota → Confirmar
+
+**¿Cómo edito la receta de un producto?**
+Panel → Recetas → Click en el producto → Agregar/editar ingredientes y cantidades → "Deploy Receta Maestra"
+
+**¿Qué pasa si un producto se queda sin stock?**
+El sistema lo desactiva automáticamente en la web. Aparecerá nuevamente cuando se reponga el inventario suficiente.
 
 **¿Qué pasa si se cae el internet?**
 Los pedidos web y de plataformas externas se pausan. Las ventas por POS se pueden seguir registrando y se sincronizan al volver la conexión.
 
-### 8.2 ¿Qué Cubre el Soporte?
+### 9.2 ¿Qué Cubre el Soporte?
 
 | ✅ SÍ cubre | ❌ NO cubre |
 |-------------|------------|
@@ -440,8 +573,10 @@ Los pedidos web y de plataformas externas se pausan. Las ventas por POS se puede
 | Actualizaciones de seguridad | Creación de usuarios |
 | Errores en pasarela de pago | Consulta de reportes |
 | Problemas con pedidos automáticos | Subir fotos de productos |
+| Renovación de cookie Uber Eats | Registro de merma y reposición |
+| Configuración de recetas complejas | Ajustes manuales de stock |
 
-### 8.3 Horario de Soporte
+### 9.3 Horario de Soporte
 
 **Lunes a Sábado: 10:00 a 20:30 hrs**
 
@@ -456,12 +591,26 @@ Las solicitudes fuera de horario se atienden al día hábil siguiente.
 | Dato | Valor |
 |------|-------|
 | **URL Web** | https://lomasrico.cl |
-| **URL Panel** | https://panel.lomasrico.cl |
+| **URL Panel** | https://lomasrico-panels.netlify.app |
+| **URL API** | https://pro-lomasrico-api-69je.onrender.com |
 | **Versión** | 2.3.0 |
 | **Soporte** | WhatsApp con Daniel |
 | **Horario Soporte** | Lun-Sáb 10:00 - 20:30 |
+| **Health Check** | Diario a las 10:00 AM (automático) |
 
 ---
 
-*Documento generado el 29 de abril de 2026.*
+## Arquitectura de Despliegue
+
+| Componente | Plataforma | Plan |
+|------------|-----------|------|
+| **API Backend** (NestJS + Prisma) | Render.com | Starter (always-on) |
+| **Web Storefront** (Next.js) | Render.com / Netlify | Free |
+| **Panel Admin/POS/Cocina** (Next.js) | Netlify | Free |
+| **Base de Datos** (PostgreSQL) | Supabase | Cloud |
+| **Storage de Imágenes** | Supabase Storage | Cloud |
+
+---
+
+*Documento actualizado el 1 de mayo de 2026.*
 *Lo Más Rico V3 — Plataforma de Gestión Integral*
