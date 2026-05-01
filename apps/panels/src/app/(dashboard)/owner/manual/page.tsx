@@ -1,369 +1,329 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
     BookOpen, LayoutDashboard, ChefHat, MonitorSmartphone, Package,
     Layers, ClipboardList, Flame, BarChart3, Users, MessageSquare,
-    User, ExternalLink, ShieldCheck, ArrowRight, Zap, AlertCircle,
-    CheckCircle2, HelpCircle, Clock, Phone
+    User, ExternalLink, ArrowRight, Zap, ShieldCheck, HelpCircle,
+    Clock, ChevronRight
 } from 'lucide-react';
 
-const PANEL_URL = 'https://lomasrico-panels.netlify.app';
-const WEB_URL = 'https://lomasrico.cl';
+interface ActionItem { label: string; desc: string; href: string }
 
 interface Section {
     id: string;
     title: string;
     icon: React.ElementType;
     color: string;
-    href?: string;
-    content: { label: string; desc: string; href?: string; external?: boolean }[];
+    href: string;
+    intro: string;
+    actions: ActionItem[];
 }
 
 const sections: Section[] = [
     {
-        id: 'dashboard', title: 'Resumen del Negocio', icon: LayoutDashboard, color: 'orange',
-        href: '/owner',
-        content: [
-            { label: 'Ingresos del día y mes', desc: 'Ver ventas totales con tendencia porcentual', href: '/owner' },
-            { label: 'Órdenes activas', desc: 'Pedidos actualmente en cocina', href: '/kitchen' },
-            { label: 'Alertas de stock', desc: 'Insumos que necesitan reposición urgente', href: '/owner/inventory' },
-            { label: 'Canales de venta', desc: 'Distribución por Web, POS, WhatsApp, Uber Eats', href: '/owner' },
-            { label: 'Top 5 productos', desc: 'Ranking de los más vendidos', href: '/owner' },
-            { label: 'Horas peak', desc: 'Distribución horaria de la demanda', href: '/owner' },
+        id: 'dashboard', title: 'Resumen', icon: LayoutDashboard, color: '#f97316',
+        href: '/owner', intro: 'Vista ejecutiva del estado del negocio: ingresos, órdenes activas, alertas de stock, canales de venta, productos top y distribución horaria.',
+        actions: [
+            { label: 'Ingresos del día y mes', desc: 'Ventas totales con tendencia %', href: '/owner' },
+            { label: 'Órdenes activas en cocina', desc: 'Pedidos en preparación', href: '/kitchen' },
+            { label: 'Alertas de stock bajo', desc: 'Insumos que necesitan reposición', href: '/owner/inventory' },
+            { label: 'Canales de venta', desc: 'Distribución Web, POS, WhatsApp, Uber', href: '/owner' },
+            { label: 'Top 5 productos', desc: 'Ranking de más vendidos', href: '/owner' },
+            { label: 'Horas peak', desc: 'Demanda por hora del día', href: '/owner' },
         ]
     },
     {
-        id: 'catalog', title: 'Catálogo de Productos', icon: Package, color: 'blue',
-        href: '/owner/catalog',
-        content: [
-            { label: 'Crear producto', desc: 'Botón "Nuevo Producto" → nombre, precio, categoría, foto', href: '/owner/catalog' },
-            { label: 'Editar producto', desc: 'Click en el producto → modificar → Guardar', href: '/owner/catalog' },
-            { label: 'Activar/Desactivar', desc: 'Toggle de disponibilidad en cada producto', href: '/owner/catalog' },
-            { label: 'Subir foto', desc: 'Click en la imagen → seleccionar archivo', href: '/owner/catalog' },
-            { label: 'Ordenar', desc: 'Las categorías se generan dinámicamente desde la BD', href: '/owner/catalog' },
+        id: 'catalog', title: 'Catálogo', icon: Package, color: '#3b82f6',
+        href: '/owner/catalog', intro: 'Gestione todos los productos: crear, editar, activar/desactivar, subir fotos y organizar por categorías dinámicas.',
+        actions: [
+            { label: 'Crear producto', desc: 'Nombre, precio, categoría, foto', href: '/owner/catalog' },
+            { label: 'Editar producto', desc: 'Click → modificar → Guardar', href: '/owner/catalog' },
+            { label: 'Activar / Desactivar', desc: 'Toggle de disponibilidad', href: '/owner/catalog' },
+            { label: 'Subir foto', desc: 'Click en imagen → seleccionar archivo', href: '/owner/catalog' },
+            { label: 'Ordenar', desc: 'Categorías dinámicas desde BD', href: '/owner/catalog' },
         ]
     },
     {
-        id: 'modifiers', title: 'Modificadores', icon: Layers, color: 'purple',
-        href: '/owner/modifiers',
-        content: [
-            { label: 'Grupos', desc: '"Elige tus Proteínas", "Extras", "Sin ingredientes"', href: '/owner/modifiers' },
-            { label: 'Opciones', desc: 'Salmón, Reineta, Camarón, Pulpo con precio adicional', href: '/owner/modifiers' },
-            { label: 'Límites', desc: 'Mín/Máx selecciones por grupo (ej: 1-3 proteínas)', href: '/owner/modifiers' },
-            { label: 'Reordenar', desc: 'Orden personalizado por producto con flechas', href: '/owner/modifiers' },
+        id: 'modifiers', title: 'Modificadores', icon: Layers, color: '#8b5cf6',
+        href: '/owner/modifiers', intro: 'Opciones de personalización: proteínas, extras, ingredientes removibles con precios y límites.',
+        actions: [
+            { label: 'Grupos', desc: '"Proteínas", "Extras", "Sin ingredientes"', href: '/owner/modifiers' },
+            { label: 'Opciones con precio', desc: 'Salmón, Reineta, Camarón...', href: '/owner/modifiers' },
+            { label: 'Límites mín/máx', desc: 'Ej: mín 1, máx 3 proteínas', href: '/owner/modifiers' },
+            { label: 'Reordenar por producto', desc: 'Orden personalizado con flechas', href: '/owner/modifiers' },
         ]
     },
     {
-        id: 'inventory', title: 'Gestión de Inventario', icon: ClipboardList, color: 'green',
-        href: '/owner/inventory',
-        content: [
-            { label: 'Nuevo Insumo', desc: 'Crear con nombre, categoría, rol, tipo, unidad, rendimiento', href: '/owner/inventory' },
-            { label: 'Reponer stock', desc: 'Registrar compra con cantidad, costo y rendimiento (%)', href: '/owner/inventory' },
-            { label: 'Ajustar stock', desc: 'Corregir stock real tras inventario físico', href: '/owner/inventory' },
-            { label: 'Registrar merma', desc: 'Pérdida por vencimiento, daño u otra razón', href: '/owner/inventory' },
-            { label: 'Editar insumo', desc: 'Modificar nombre, rol, tipo, costo y umbral', href: '/owner/inventory' },
+        id: 'inventory', title: 'Inventario', icon: ClipboardList, color: '#22c55e',
+        href: '/owner/inventory', intro: 'Control total de stock con rendimiento, merma, reposición y ajustes manuales. Descuento automático por receta.',
+        actions: [
+            { label: 'Nuevo insumo', desc: 'Nombre, categoría, rol, tipo, unidad, rendimiento', href: '/owner/inventory' },
+            { label: 'Reponer stock', desc: 'Compra con cantidad, costo y rendimiento %', href: '/owner/inventory' },
+            { label: 'Ajustar stock', desc: 'Corregir tras inventario físico', href: '/owner/inventory' },
+            { label: 'Registrar merma', desc: 'Pérdida por vencimiento o daño', href: '/owner/inventory' },
+            { label: 'Editar insumo', desc: 'Nombre, rol, tipo, costo, umbral', href: '/owner/inventory' },
         ]
     },
     {
-        id: 'recipes', title: 'Recetas Maestras', icon: Flame, color: 'red',
-        href: '/owner/recipes',
-        content: [
-            { label: 'Platos finales', desc: 'Recetas de productos de venta con costo y margen', href: '/owner/recipes' },
-            { label: 'Bases & Preps', desc: 'Sub-recetas (Base Ceviche, Salsas)', href: '/owner/recipes' },
-            { label: 'Editor de receta', desc: 'Agregar ingredientes, cantidades y roles', href: '/owner/recipes' },
-            { label: 'Análisis económico', desc: 'Costo producción, precio venta, margen utilidad', href: '/owner/recipes' },
+        id: 'recipes', title: 'Recetas', icon: Flame, color: '#ef4444',
+        href: '/owner/recipes', intro: 'Ingeniería de producto: ingredientes, gramajes, costos y márgenes de utilidad en tiempo real.',
+        actions: [
+            { label: 'Platos finales', desc: 'Recetas de productos de venta', href: '/owner/recipes' },
+            { label: 'Bases & Preps', desc: 'Sub-recetas (salsas, bases)', href: '/owner/recipes' },
+            { label: 'Editor de receta', desc: 'Agregar ingredientes y cantidades', href: '/owner/recipes' },
+            { label: 'Análisis económico', desc: 'Costo, precio, margen %', href: '/owner/recipes' },
         ]
     },
     {
-        id: 'pos', title: 'Punto de Venta (POS)', icon: MonitorSmartphone, color: 'slate',
-        href: '/pos',
-        content: [
-            { label: 'Crear venta', desc: 'Seleccionar productos → personalizar → pagar', href: '/pos' },
-            { label: 'Métodos de pago', desc: 'Efectivo, Tarjeta, Transferencia, MercadoPago', href: '/pos' },
+        id: 'pos', title: 'Punto de Venta', icon: MonitorSmartphone, color: '#475569',
+        href: '/pos', intro: 'Venta presencial en el local. Seleccionar productos, personalizar, procesar pagos y gestionar turnos de caja.',
+        actions: [
+            { label: 'Crear venta', desc: 'Seleccionar → personalizar → pagar', href: '/pos' },
+            { label: 'Métodos de pago', desc: 'Efectivo, tarjeta, transferencia, MP', href: '/pos' },
             { label: 'Abrir caja', desc: 'Iniciar turno con monto inicial', href: '/pos' },
-            { label: 'Cerrar caja', desc: 'Finalizar turno con resumen de ventas', href: '/pos' },
+            { label: 'Cerrar caja', desc: 'Resumen de ventas del turno', href: '/pos' },
         ]
     },
     {
-        id: 'kitchen', title: 'Cocina (KDS)', icon: ChefHat, color: 'amber',
-        href: '/kitchen',
-        content: [
-            { label: 'Pedidos entrantes', desc: 'Llegan de Web, POS, WhatsApp y Uber Eats', href: '/kitchen' },
-            { label: 'Aceptar pedido', desc: 'Mover a "Preparando"', href: '/kitchen' },
-            { label: 'Marcar listo', desc: 'Mover a "Entrega" para despacho', href: '/kitchen' },
-            { label: 'Imprimir comanda', desc: 'Impresión con gramajes y personalizaciones', href: '/kitchen' },
+        id: 'kitchen', title: 'Cocina (KDS)', icon: ChefHat, color: '#f59e0b',
+        href: '/kitchen', intro: 'Pantalla de cocina con pedidos en tiempo real de todos los canales: Web, POS, WhatsApp y Uber Eats.',
+        actions: [
+            { label: 'Pedidos entrantes', desc: 'Llegan de todos los canales', href: '/kitchen' },
+            { label: 'Aceptar → Preparando', desc: 'Iniciar preparación', href: '/kitchen' },
+            { label: 'Listo → Entrega', desc: 'Marcar para despacho', href: '/kitchen' },
+            { label: 'Imprimir comanda', desc: 'Con gramajes y personalizaciones', href: '/kitchen' },
         ]
     },
     {
-        id: 'banners', title: 'Marketing (Banners)', icon: MonitorSmartphone, color: 'pink',
-        href: '/owner/banners',
-        content: [
-            { label: 'Subir banner', desc: '"Nuevo Banner" → imagen 1200×400px JPG/PNG', href: '/owner/banners' },
-            { label: 'Reordenar', desc: 'Arrastrar y soltar para cambiar orden', href: '/owner/banners' },
-            { label: 'Activar/Desactivar', desc: 'Toggle de visibilidad', href: '/owner/banners' },
+        id: 'banners', title: 'Marketing', icon: MonitorSmartphone, color: '#ec4899',
+        href: '/owner/banners', intro: 'Banners promocionales de la web. Subir, reordenar y activar/desactivar.',
+        actions: [
+            { label: 'Subir banner', desc: 'Imagen 1200×400px JPG/PNG', href: '/owner/banners' },
+            { label: 'Reordenar', desc: 'Arrastrar y soltar', href: '/owner/banners' },
+            { label: 'Activar / Desactivar', desc: 'Toggle de visibilidad', href: '/owner/banners' },
         ]
     },
     {
-        id: 'reports', title: 'Reportes', icon: BarChart3, color: 'cyan',
-        href: '/owner/reports',
-        content: [
-            { label: 'Ventas por período', desc: 'Día, semana, mes con desglose', href: '/owner/reports' },
-            { label: 'Por canal', desc: 'Web, POS, WhatsApp, Uber Eats', href: '/owner/reports' },
-            { label: 'Productos top', desc: 'Ranking de más vendidos', href: '/owner/reports' },
+        id: 'reports', title: 'Reportes', icon: BarChart3, color: '#06b6d4',
+        href: '/owner/reports', intro: 'Informes de ventas por período, canal, productos top e historial de transacciones.',
+        actions: [
+            { label: 'Ventas por período', desc: 'Día, semana, mes', href: '/owner/reports' },
+            { label: 'Por canal de venta', desc: 'Web, POS, WhatsApp, Uber', href: '/owner/reports' },
+            { label: 'Historial', desc: 'Transacciones detalladas', href: '/owner/reports' },
         ]
     },
     {
-        id: 'customers', title: 'Clientes', icon: Users, color: 'teal',
-        href: '/owner/customers',
-        content: [
-            { label: 'Base de clientes', desc: 'Nombre, teléfono, email, dirección', href: '/owner/customers' },
-            { label: 'Historial', desc: 'Pedidos anteriores de cada cliente', href: '/owner/customers' },
+        id: 'customers', title: 'Clientes', icon: Users, color: '#14b8a6',
+        href: '/owner/customers', intro: 'Base de clientes con datos de contacto e historial de pedidos.',
+        actions: [
+            { label: 'Base de clientes', desc: 'Nombre, teléfono, email', href: '/owner/customers' },
+            { label: 'Historial de pedidos', desc: 'Compras anteriores', href: '/owner/customers' },
         ]
     },
     {
-        id: 'whatsapp', title: 'WhatsApp Bot "Maxi"', icon: MessageSquare, color: 'emerald',
-        href: '/owner/inbox/whatsapp',
-        content: [
-            { label: 'Conversaciones', desc: 'Ver chats activos del bot', href: '/owner/inbox/whatsapp' },
+        id: 'whatsapp', title: 'WhatsApp Bot', icon: MessageSquare, color: '#10b981',
+        href: '/owner/inbox/whatsapp', intro: 'Maxi: asistente IA que atiende clientes, toma pedidos y genera links de pago por WhatsApp.',
+        actions: [
+            { label: 'Conversaciones activas', desc: 'Chats del bot en tiempo real', href: '/owner/inbox/whatsapp' },
             { label: 'Pedidos del bot', desc: 'Órdenes generadas por Maxi', href: '/owner/inbox/whatsapp' },
         ]
     },
     {
-        id: 'staff', title: 'Personal', icon: User, color: 'indigo',
-        href: '/owner/cashiers',
-        content: [
-            { label: 'Crear usuario', desc: '"Nuevo Usuario" → nombre, email, contraseña, rol', href: '/owner/cashiers' },
-            { label: 'Asignar rol', desc: 'Owner, Admin, Cashier o Kitchen', href: '/owner/cashiers' },
-            { label: 'Módulos individuales', desc: 'Seleccionar secciones visibles por usuario', href: '/owner/cashiers' },
-            { label: 'Resetear contraseña', desc: 'Botón de reseteo en cada usuario', href: '/owner/cashiers' },
+        id: 'staff', title: 'Personal', icon: User, color: '#6366f1',
+        href: '/owner/cashiers', intro: 'Gestión de usuarios del sistema: crear, asignar roles, módulos y resetear contraseñas.',
+        actions: [
+            { label: 'Crear usuario', desc: 'Nombre, email, contraseña, rol', href: '/owner/cashiers' },
+            { label: 'Asignar rol', desc: 'Owner, Admin, Cashier, Kitchen', href: '/owner/cashiers' },
+            { label: 'Módulos individuales', desc: 'Secciones visibles por usuario', href: '/owner/cashiers' },
+            { label: 'Resetear contraseña', desc: 'Botón de reseteo', href: '/owner/cashiers' },
         ]
     },
 ];
 
-const colorMap: Record<string, { bg: string; text: string; border: string; light: string }> = {
-    orange: { bg: 'bg-orange-500', text: 'text-orange-500', border: 'border-orange-200', light: 'bg-orange-50' },
-    blue: { bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-200', light: 'bg-blue-50' },
-    purple: { bg: 'bg-purple-500', text: 'text-purple-500', border: 'border-purple-200', light: 'bg-purple-50' },
-    green: { bg: 'bg-green-500', text: 'text-green-500', border: 'border-green-200', light: 'bg-green-50' },
-    red: { bg: 'bg-red-500', text: 'text-red-500', border: 'border-red-200', light: 'bg-red-50' },
-    slate: { bg: 'bg-slate-700', text: 'text-slate-700', border: 'border-slate-200', light: 'bg-slate-50' },
-    amber: { bg: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-200', light: 'bg-amber-50' },
-    pink: { bg: 'bg-pink-500', text: 'text-pink-500', border: 'border-pink-200', light: 'bg-pink-50' },
-    cyan: { bg: 'bg-cyan-500', text: 'text-cyan-500', border: 'border-cyan-200', light: 'bg-cyan-50' },
-    teal: { bg: 'bg-teal-500', text: 'text-teal-500', border: 'border-teal-200', light: 'bg-teal-50' },
-    emerald: { bg: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-200', light: 'bg-emerald-50' },
-    indigo: { bg: 'bg-indigo-500', text: 'text-indigo-500', border: 'border-indigo-200', light: 'bg-indigo-50' },
-};
-
 export default function ManualPage() {
+    const [active, setActive] = useState('dashboard');
+    const current = sections.find(s => s.id === active)!;
+    const Icon = current.icon;
+
     return (
-        <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-20">
-            {/* Header */}
-            <header>
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-orange-500 text-white rounded-2xl shadow-lg shadow-orange-200">
-                        <BookOpen size={24} />
+        <div className="animate-in fade-in duration-500 h-[calc(100vh-80px)] flex flex-col overflow-hidden">
+            {/* Header compacto */}
+            <div className="flex items-center justify-between mb-4 shrink-0 px-1">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-200">
+                        <BookOpen size={20} />
                     </div>
                     <div>
-                        <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+                        <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             MANUAL <span className="text-orange-500">OPERATIVO</span>
                         </h1>
-                        <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-1">
-                            Guía completa — Click en cualquier acción para ir directo al módulo
+                        <p className="text-slate-400 font-bold uppercase text-[8px] tracking-widest mt-0.5">
+                            Seleccione un módulo → Haga click en una acción para ir directo
                         </p>
                     </div>
                 </div>
-            </header>
-
-            {/* Quick Links */}
-            <div className="bg-white p-4 md:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 italic">Accesos Directos</p>
-                <div className="flex flex-wrap gap-2">
-                    {sections.map(s => {
-                        const c = colorMap[s.color];
-                        return (
-                            <a key={s.id} href={`#${s.id}`} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest italic border ${c.border} ${c.light} ${c.text} hover:shadow-md transition-all`}>
-                                {s.title}
-                            </a>
-                        );
-                    })}
+                <div className="hidden md:flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-300 italic">
+                    <Clock size={12} /> v2.3.0 · Mayo 2026
                 </div>
             </div>
 
-            {/* URLs del Sistema */}
-            <div className="bg-slate-900 p-6 md:p-8 rounded-[2rem] text-white shadow-xl">
-                <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 italic flex items-center gap-2">
-                    <ExternalLink size={14} className="text-orange-500" /> URLs del Sistema
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a href={WEB_URL} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/10 p-5 rounded-2xl transition-all group">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Web Tienda</p>
-                        <p className="font-black italic tracking-tight text-orange-400 group-hover:text-orange-300">{WEB_URL}</p>
-                        <p className="text-[9px] text-slate-500 mt-2 italic">Para clientes</p>
-                    </a>
-                    <a href={PANEL_URL} target="_blank" rel="noopener noreferrer" className="bg-white/5 hover:bg-white/10 border border-white/10 p-5 rounded-2xl transition-all group">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Panel de Gestión</p>
-                        <p className="font-black italic tracking-tight text-orange-400 group-hover:text-orange-300 text-sm break-all">{PANEL_URL}</p>
-                        <p className="text-[9px] text-slate-500 mt-2 italic">Dueño, Admin, Cajeros, Cocina</p>
-                    </a>
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Roles</p>
-                        <div className="space-y-1 mt-2">
-                            {[
-                                { role: 'OWNER', desc: 'Todo el sistema', who: 'Oscar' },
-                                { role: 'ADMIN', desc: 'Todo el sistema', who: 'Encargado' },
-                                { role: 'CASHIER', desc: 'POS + Cocina', who: 'Cajero' },
-                                { role: 'KITCHEN', desc: 'Solo cocina', who: 'Cocina' },
-                            ].map(r => (
-                                <div key={r.role} className="flex items-center gap-2 text-[9px]">
-                                    <span className="font-black text-orange-400 w-16">{r.role}</span>
-                                    <span className="text-slate-400">{r.desc}</span>
-                                </div>
+            {/* Layout principal: tabs izquierda + contenido derecha */}
+            <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+                {/* Tabs laterales */}
+                <div className="w-44 md:w-52 shrink-0 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                        {sections.map(s => {
+                            const SIcon = s.icon;
+                            const isActive = active === s.id;
+                            return (
+                                <button
+                                    key={s.id}
+                                    onClick={() => setActive(s.id)}
+                                    className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-all duration-200 ${
+                                        isActive
+                                            ? 'bg-slate-900 text-white'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                    }`}
+                                >
+                                    <SIcon size={16} style={isActive ? { color: s.color } : undefined} className="shrink-0" />
+                                    <span className="text-[10px] font-black uppercase tracking-tight italic truncate">{s.title}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {/* Info rápida al fondo */}
+                    <div className="border-t border-slate-100 p-3 space-y-1.5 shrink-0">
+                        <a href="https://lomasrico.cl" target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-500 transition-colors">
+                            <ExternalLink size={10} /> lomasrico.cl
+                        </a>
+                        <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-slate-300">
+                            <HelpCircle size={10} /> Soporte: Lun-Sáb 10-20:30
+                        </div>
+                    </div>
+                </div>
+
+                {/* Panel de contenido */}
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    {/* Cabecera del módulo activo */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 md:p-6 mb-4 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
+                        style={{ borderBottom: `3px solid ${current.color}` }}>
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="p-3 rounded-xl text-white shadow-lg shrink-0" style={{ backgroundColor: current.color }}>
+                                <Icon size={24} />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">{current.title}</h2>
+                                <p className="text-[10px] text-slate-400 font-bold italic mt-1 leading-snug">{current.intro}</p>
+                            </div>
+                        </div>
+                        <Link href={current.href}
+                            className="px-5 py-3 text-white rounded-xl font-black uppercase text-[10px] tracking-widest italic shadow-md hover:opacity-90 transition-all flex items-center gap-2 active:scale-95 shrink-0"
+                            style={{ backgroundColor: current.color }}>
+                            Ir al módulo <ArrowRight size={14} />
+                        </Link>
+                    </div>
+
+                    {/* Acciones del módulo */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            {current.actions.map((action, i) => (
+                                <Link key={i} href={action.href}
+                                    className="bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition-all group flex items-center justify-between gap-3 active:scale-[0.98]">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-2 h-2 rounded-full shrink-0 group-hover:scale-150 transition-transform" style={{ backgroundColor: current.color }} />
+                                        <div className="min-w-0">
+                                            <p className="font-black italic uppercase text-xs tracking-tight text-slate-900 group-hover:text-orange-600 transition-colors truncate">{action.label}</p>
+                                            <p className="text-[9px] text-slate-400 font-bold italic truncate">{action.desc}</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={16} className="text-slate-200 group-hover:text-slate-900 shrink-0 group-hover:translate-x-0.5 transition-all" />
+                                </Link>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Sections */}
-            {sections.map(section => {
-                const c = colorMap[section.color];
-                const Icon = section.icon;
-                return (
-                    <div key={section.id} id={section.id} className="scroll-mt-8">
-                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-lg transition-all duration-500">
-                            {/* Section Header */}
-                            <div className="p-6 md:p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 ${c.bg} text-white rounded-2xl shadow-lg`}>
-                                        <Icon size={22} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-slate-900">{section.title}</h2>
-                                    </div>
-                                </div>
-                                {section.href && (
-                                    <Link href={section.href} className={`px-5 py-3 ${c.bg} text-white rounded-2xl font-black uppercase text-[10px] tracking-widest italic shadow-md hover:opacity-90 transition-all flex items-center gap-2 active:scale-95 shrink-0`}>
-                                        Ir al módulo <ArrowRight size={14} />
-                                    </Link>
-                                )}
-                            </div>
-                            {/* Actions List */}
-                            <div className="divide-y divide-slate-50">
-                                {section.content.map((item, i) => (
-                                    <Link
-                                        key={i}
-                                        href={item.href || '#'}
-                                        target={item.external ? '_blank' : undefined}
-                                        className="flex items-center justify-between p-4 md:px-8 md:py-5 hover:bg-slate-50 transition-all group"
-                                    >
-                                        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-                                            <div className={`w-2 h-2 rounded-full ${c.bg} shrink-0 group-hover:scale-150 transition-transform`} />
-                                            <div className="min-w-0">
-                                                <p className="font-black italic uppercase text-xs md:text-sm tracking-tight text-slate-900 truncate">{item.label}</p>
-                                                <p className="text-[9px] md:text-[10px] text-slate-400 font-bold italic truncate">{item.desc}</p>
-                                            </div>
+                        {/* Sección extra contextual */}
+                        {active === 'dashboard' && (
+                            <div className="mt-4 bg-slate-900 rounded-xl p-5 text-white">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-3 italic flex items-center gap-2">
+                                    <Zap size={12} className="text-orange-500" /> Integraciones Activas
+                                </p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {['Uber Eats', 'MercadoPago', 'PedidosYa', 'Google Maps'].map(name => (
+                                        <div key={name} className="bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-center">
+                                            <p className="text-[9px] font-black uppercase italic tracking-tight">{name}</p>
+                                            <p className="text-[8px] text-green-400 font-bold mt-0.5">● Activo</p>
                                         </div>
-                                        <ArrowRight size={16} className="text-slate-200 group-hover:text-slate-900 transition-colors shrink-0 ml-2 group-hover:translate-x-1 transition-transform" />
-                                    </Link>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                );
-            })}
+                        )}
 
-            {/* Integraciones */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 md:p-8">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 mb-6 flex items-center gap-3">
-                    <Zap className="text-orange-500" size={22} /> Integraciones Externas
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                        { name: 'Uber Eats', desc: 'Captura automática de pedidos cada 30-60s. Cookie requiere renovación periódica (soporte técnico).', status: 'Activo' },
-                        { name: 'MercadoPago', desc: 'Pasarela de pagos online: tarjeta, débito y saldo. Confirmación automática vía webhook.', status: 'Activo' },
-                        { name: 'PedidosYa', desc: 'Cotización de envío integrada en el checkout de la web.', status: 'Activo' },
-                        { name: 'Google Maps', desc: 'Autocompletado de direcciones y cálculo de cobertura de delivery.', status: 'Activo' },
-                    ].map(int => (
-                        <div key={int.name} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="font-black italic uppercase text-sm tracking-tight text-slate-900">{int.name}</p>
-                                <span className="text-[8px] font-black uppercase tracking-widest bg-green-100 text-green-600 px-2 py-1 rounded-full">{int.status}</span>
+                        {active === 'inventory' && (
+                            <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-green-600 mb-2 italic flex items-center gap-2">
+                                    <ShieldCheck size={12} /> Sistema de Rendimiento
+                                </p>
+                                <p className="text-[10px] text-green-700 font-bold italic leading-relaxed">
+                                    Al reponer stock, configure el rendimiento (%). Ej: 10 kg salmón a $8.000/kg con 80% rendimiento = 8 kg útiles, costo real $10.000/kg. El sistema calcula automáticamente.
+                                </p>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-bold italic leading-relaxed">{int.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
+                        )}
 
-            {/* Health Check */}
-            <div className="bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white shadow-xl">
-                <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 italic flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-green-400" /> Health Check Diario (10:00 AM automático)
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    {[
-                        { check: 'Cookie Uber', desc: 'Sesión vigente' },
-                        { check: 'Mapeo Productos', desc: 'Aliases válidos' },
-                        { check: 'Modificadores', desc: 'Grupos consistentes' },
-                        { check: 'Turno Caja', desc: 'Caja abierta' },
-                        { check: 'Stock Crítico', desc: 'Sin items en 0' },
-                    ].map(h => (
-                        <div key={h.check} className="bg-white/5 border border-white/10 p-4 rounded-xl">
-                            <CheckCircle2 size={14} className="text-green-400 mb-2" />
-                            <p className="font-black italic text-xs uppercase tracking-tight">{h.check}</p>
-                            <p className="text-[9px] text-slate-500 italic mt-1">{h.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
+                        {active === 'kitchen' && (
+                            <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-2 italic">Flujo de estados</p>
+                                <div className="flex items-center gap-2 text-xs font-black italic text-amber-700">
+                                    <span className="bg-amber-100 px-3 py-1.5 rounded-lg">📥 Entrante</span>
+                                    <ArrowRight size={14} />
+                                    <span className="bg-amber-100 px-3 py-1.5 rounded-lg">🔥 Preparando</span>
+                                    <ArrowRight size={14} />
+                                    <span className="bg-amber-100 px-3 py-1.5 rounded-lg">✅ Entrega</span>
+                                </div>
+                            </div>
+                        )}
 
-            {/* FAQ */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 md:p-8">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 mb-6 flex items-center gap-3">
-                    <HelpCircle className="text-orange-500" size={22} /> Preguntas Frecuentes
-                </h2>
-                <div className="space-y-3">
-                    {[
-                        { q: '¿Cómo cambio el precio de un producto?', a: 'Catálogo → Click en el producto → Editar precio → Guardar', href: '/owner/catalog' },
-                        { q: '¿Cómo desactivo un producto?', a: 'Catálogo → Toggle de disponibilidad', href: '/owner/catalog' },
-                        { q: '¿Cómo agrego un banner?', a: 'Marketing → "Nuevo Banner" → Subir imagen → Guardar', href: '/owner/banners' },
-                        { q: '¿Cómo creo un cajero?', a: 'Personal → "Nuevo Usuario" → Rol "Cajero"', href: '/owner/cashiers' },
-                        { q: '¿Cómo registro una compra de insumos?', a: 'Inventario → Botón "Reponer" → Cantidad, costo y rendimiento', href: '/owner/inventory' },
-                        { q: '¿Cómo registro merma?', a: 'Inventario → Botón "Merma" → Cantidad, motivo y nota', href: '/owner/inventory' },
-                        { q: '¿Cómo edito una receta?', a: 'Recetas → Click producto → Agregar ingredientes → "Deploy Receta Maestra"', href: '/owner/recipes' },
-                        { q: '¿Qué pasa si un producto se queda sin stock?', a: 'Se desactiva automáticamente en la web hasta reponer inventario', href: '/owner/inventory' },
-                    ].map((faq, i) => (
-                        <Link key={i} href={faq.href} className="block bg-slate-50 hover:bg-orange-50 p-4 rounded-2xl transition-all group border border-transparent hover:border-orange-200">
-                            <p className="font-black italic text-sm text-slate-900 mb-1 group-hover:text-orange-600 transition-colors">{faq.q}</p>
-                            <p className="text-[10px] text-slate-400 font-bold italic flex items-center gap-1">
-                                <ArrowRight size={10} className="text-orange-400" /> {faq.a}
-                            </p>
-                        </Link>
-                    ))}
-                </div>
-            </div>
+                        {active === 'pos' && (
+                            <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 italic">Flujo de venta</p>
+                                <p className="text-[10px] text-slate-600 font-bold italic leading-relaxed">
+                                    Seleccionar productos → Personalizar → Agregar al carrito → Pagar → Se descuenta inventario automáticamente → Aparece en Cocina
+                                </p>
+                            </div>
+                        )}
 
-            {/* Soporte */}
-            <div className="bg-orange-500 rounded-[2rem] p-6 md:p-8 text-white shadow-xl">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-1">¿Necesitas Ayuda?</h2>
-                        <p className="text-orange-100 text-sm font-bold italic">WhatsApp directo con Daniel — Soporte Técnico</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
-                            <Clock size={14} /> <span className="text-xs font-black uppercase tracking-widest">Lun-Sáb 10:00 - 20:30</span>
-                        </div>
+                        {active === 'recipes' && (
+                            <div className="mt-4 bg-red-50 border border-red-100 rounded-xl p-5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-red-600 mb-2 italic">Análisis Maestro</p>
+                                <p className="text-[10px] text-red-700 font-bold italic leading-relaxed">
+                                    Cada receta muestra costo de producción, precio de venta y margen de utilidad en tiempo real. Margen verde (&gt;50%) o rojo (&lt;50%).
+                                </p>
+                            </div>
+                        )}
+
+                        {active === 'staff' && (
+                            <div className="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-5">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-600 mb-2 italic">Roles del sistema</p>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {[
+                                        { role: 'OWNER', desc: 'Todo el sistema', who: 'Oscar' },
+                                        { role: 'ADMIN', desc: 'Todo el sistema', who: 'Encargado' },
+                                        { role: 'CASHIER', desc: 'POS + Cocina', who: 'Cajero' },
+                                        { role: 'KITCHEN', desc: 'Solo cocina', who: 'Cocina' },
+                                    ].map(r => (
+                                        <div key={r.role} className="bg-white px-3 py-2 rounded-lg border border-indigo-100">
+                                            <span className="text-[9px] font-black text-indigo-600">{r.role}</span>
+                                            <span className="text-[9px] text-slate-400 font-bold ml-2">{r.desc}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-
-            {/* Version */}
-            <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-300 italic">
-                Lo Más Rico V3 — Manual Operativo v2.3.0 — Mayo 2026
-            </p>
         </div>
     );
 }
