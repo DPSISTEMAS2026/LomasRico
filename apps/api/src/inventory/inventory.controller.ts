@@ -35,6 +35,26 @@ export class InventoryController {
         return this.service.getAlerts();
     }
 
+    // ─── CATEGORY MANAGEMENT ────────────────────────────────
+    @Patch('category/rename')
+    async renameCategory(@Body() body: { oldName: string; newName: string }) {
+        this.logger.log(`PATCH /inventory/category/rename — ${body.oldName} → ${body.newName}`);
+        const result = await this.service.renameCategory(body.oldName, body.newName);
+        this.availabilityService.invalidateCache();
+        return result;
+    }
+
+    @Delete('category/:name')
+    async deleteCategory(
+        @Param('name') name: string,
+        @Query('action') action?: string,
+    ) {
+        this.logger.log(`DELETE /inventory/category/${name} — action: ${action || 'reassign'}`);
+        const result = await this.service.deleteCategory(name, action || 'reassign');
+        this.availabilityService.invalidateCache();
+        return result;
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) { return this.service.findOne(id); }
 

@@ -20,7 +20,11 @@ import {
     History,
     Trash2,
     Pencil,
-    Percent
+    Percent,
+    Settings,
+    Tag,
+    Check,
+    FolderX
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
@@ -52,6 +56,13 @@ export default function InventoryManagementPage() {
     const [restockData, setRestockData] = useState({ quantity: '', unitCost: '', yieldPercent: '100' });
     const [adjustValue, setAdjustValue] = useState('');
     const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
+
+    // Category management state
+    const [showCategoryManager, setShowCategoryManager] = useState(false);
+    const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+    const [categoryLoading, setCategoryLoading] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -234,6 +245,67 @@ export default function InventoryManagementPage() {
     const dynamicCategories = Array.from(new Set(items.map((i: any) => i.category || 'GENERAL'))).sort() as string[];
     const categoriesList = ['TODOS', ...dynamicCategories];
 
+    // Category item counts
+    const categoryCounts: Record<string, number> = {};
+    items.forEach((item: any) => {
+        const cat = item.category || 'GENERAL';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+
+    const handleRenameCategory = async (oldName: string) => {
+        if (!renameValue.trim()) { alert('Ingrese un nombre válido.'); return; }
+        const newName = renameValue.trim().toUpperCase();
+        if (newName === oldName) { setRenamingCategory(null); return; }
+        try {
+            setCategoryLoading(true);
+            const res = await authFetch(`${API_URL}/inventory/category/rename`, {
+                method: 'PATCH',
+                body: JSON.stringify({ oldName, newName }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                alert(`✅ Categoría renombrada: "${oldName}" → "${newName}" (${data.itemsUpdated} insumos actualizados)`);
+                if (selectedCategory === oldName) setSelectedCategory(newName);
+                loadData();
+                setRenamingCategory(null);
+                setRenameValue('');
+            } else {
+                alert('Error al renombrar categoría');
+            }
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setCategoryLoading(false);
+        }
+    };
+
+    const handleDeleteCategory = async (name: string, action: 'reassign' | 'delete') => {
+        const count = categoryCounts[name] || 0;
+        const msg = action === 'delete'
+            ? `⚠️ ELIMINAR CATEGORÍA "${name}"\n\nEsto BORRARÁ permanentemente los ${count} insumos de esta categoría.\n\n¿Está seguro?`
+            : `Eliminar categoría "${name}"\n\nLos ${count} insumos serán movidos a la categoría GENERAL.\n\n¿Confirmar?`;
+        if (!confirm(msg)) return;
+        try {
+            setCategoryLoading(true);
+            const res = await authFetch(`${API_URL}/inventory/category/${encodeURIComponent(name)}?action=${action}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                const data = await res.json();
+                alert(`✅ Categoría "${name}" eliminada. ${data.itemsAffected} insumos ${action === 'delete' ? 'eliminados' : 'reasignados a GENERAL'}.`);
+                if (selectedCategory === name) setSelectedCategory('TODOS');
+                loadData();
+                setDeletingCategory(null);
+            } else {
+                alert('Error al eliminar categoría');
+            }
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setCategoryLoading(false);
+        }
+    };
+
     const filteredItems = items.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(filter.toLowerCase());
         const matchesCategory = selectedCategory === 'TODOS' || item.category === selectedCategory;
@@ -339,7 +411,7 @@ export default function InventoryManagementPage() {
 
             {/* Filter Bar */}
             <div className="flex flex-col xl:flex-row gap-4 items-center bg-white p-3 rounded-[2.5rem] border border-slate-100 shadow-sm sticky top-4 z-[40] backdrop-blur-md">
-                <div className="flex gap-2 bg-slate-50 p-1 rounded-full overflow-x-auto no-scrollbar w-full xl:w-auto">
+                <div className="flex gap-2 bg-slate-50 p-1 rounded-full overflow-x-auto no-scrollbar w-full xl:w-auto items-center">
                     {categoriesList.map(cat => (
                         <button
                             key={cat}
@@ -350,8 +422,21 @@ export default function InventoryManagementPage() {
                                     : 'text-slate-400 hover:bg-white hover:text-slate-900'}`}
                         >
                             {cat}
+                            {cat !== 'TODOS' && <span className="ml-1 text-[8px] opacity-60">({categoryCounts[cat] || 0})</span>}
                         </button>
                     ))}
+                    {/* Category Manager Toggle */}
+                    <button
+                        onClick={() => setShowCategoryManager(!showCategoryManager)}
+                        className={`p-2.5 rounded-full transition-all shrink-0 ${
+                            showCategoryManager
+                                ? 'bg-orange-500 text-white shadow-lg'
+                                : 'text-slate-400 hover:bg-white hover:text-slate-900'
+                        }`}
+                        title="Gestionar Categorías"
+                    >
+                        <Settings size={16} />
+                    </button>
                 </div>
                 <div className="flex items-center gap-3 bg-white px-6 py-2.5 rounded-full border border-slate-100 w-full xl:flex-1 shadow-inner">
                     <Search size={18} className="text-slate-300" />
@@ -363,6 +448,131 @@ export default function InventoryManagementPage() {
                     />
                 </div>
             </div>
+
+            {/* Category Management Panel */}
+            {showCategoryManager && (
+                <div className="bg-white border border-slate-100 rounded-[2.5rem] p-6 md:p-8 shadow-sm animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
+                                <Tag size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black italic uppercase text-slate-900 tracking-tighter">Gestión de <span className="text-orange-500">Categorías</span></h3>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Renombrar, eliminar o reorganizar categorías de insumos</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowCategoryManager(false)} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                            <X size={20} className="text-slate-400" />
+                        </button>
+                    </div>
+
+                    {dynamicCategories.length === 0 ? (
+                        <p className="text-center text-slate-400 text-sm italic py-8">No hay categorías creadas aún.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            {dynamicCategories.map(cat => (
+                                <div
+                                    key={cat}
+                                    className="bg-slate-50 rounded-2xl p-4 border border-slate-100 hover:border-slate-200 transition-all group"
+                                >
+                                    {renamingCategory === cat ? (
+                                        /* Rename Mode */
+                                        <div className="space-y-3">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-orange-500 italic">Renombrar categoría</label>
+                                            <input
+                                                className="w-full bg-white p-3 rounded-xl font-black italic text-sm outline-none ring-2 ring-orange-500 uppercase"
+                                                value={renameValue}
+                                                onChange={e => setRenameValue(e.target.value.toUpperCase())}
+                                                onKeyDown={e => { if (e.key === 'Enter') handleRenameCategory(cat); }}
+                                                placeholder={cat}
+                                                autoFocus
+                                            />
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleRenameCategory(cat)}
+                                                    disabled={categoryLoading}
+                                                    className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+                                                >
+                                                    {categoryLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                                    Confirmar
+                                                </button>
+                                                <button
+                                                    onClick={() => { setRenamingCategory(null); setRenameValue(''); }}
+                                                    className="px-4 py-2.5 bg-slate-200 text-slate-500 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-slate-300 transition-all"
+                                                >
+                                                    X
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : deletingCategory === cat ? (
+                                        /* Delete Mode */
+                                        <div className="space-y-3">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-red-500 italic">¿Eliminar "{cat}"?</label>
+                                            <p className="text-[10px] font-bold text-slate-500">
+                                                Esta categoría tiene <strong className="text-slate-900">{categoryCounts[cat] || 0}</strong> insumos.
+                                            </p>
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    onClick={() => handleDeleteCategory(cat, 'reassign')}
+                                                    disabled={categoryLoading}
+                                                    className="w-full bg-orange-500 text-white py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    {categoryLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                                    Mover a GENERAL
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteCategory(cat, 'delete')}
+                                                    disabled={categoryLoading}
+                                                    className="w-full bg-red-600 text-white py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    {categoryLoading ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                                    Eliminar Todo
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeletingCategory(null)}
+                                                    className="w-full py-2 text-slate-400 font-black uppercase text-[9px] tracking-widest hover:text-slate-600 transition-colors"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Normal Display */
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-slate-700 flex items-center justify-center font-black text-[9px] text-white shadow-sm">
+                                                    {cat.substring(0, 3)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-slate-900 uppercase italic text-xs tracking-tight">{cat}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400">{categoryCounts[cat] || 0} insumo{(categoryCounts[cat] || 0) !== 1 ? 's' : ''}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => { setRenamingCategory(cat); setRenameValue(cat); }}
+                                                    className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all"
+                                                    title="Renombrar"
+                                                >
+                                                    <Pencil size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeletingCategory(cat)}
+                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                                                    title="Eliminar categoría"
+                                                >
+                                                    <FolderX size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Desktop Table View */}
             <div className="hidden lg:block bg-white border border-slate-100 rounded-[3rem] overflow-hidden shadow-sm border-b-8 border-b-slate-900">

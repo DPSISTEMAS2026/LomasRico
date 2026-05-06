@@ -196,6 +196,56 @@ export class InventoryService {
         }));
     }
 
+    // ─── CATEGORY MANAGEMENT ────────────────────────────────
+
+    async renameCategory(oldName: string, newName: string) {
+        if (!oldName || !newName) throw new NotFoundException('Debe especificar nombre antiguo y nuevo');
+        const normalized = newName.trim().toUpperCase();
+
+        const result = await this.tryPrisma(() => (this.prisma as any).inventoryItem.updateMany({
+            where: { category: oldName },
+            data: { category: normalized },
+        }));
+
+        if (!result) throw new InternalServerErrorException('Error al renombrar categoría');
+
+        this.logger.log(`📝 CATEGORÍA RENOMBRADA: "${oldName}" → "${normalized}" — ${(result as any).count} items actualizados`);
+
+        return { success: true, oldName, newName: normalized, itemsUpdated: (result as any).count };
+    }
+
+    async deleteCategory(name: string, action: string = 'reassign') {
+        if (!name) throw new NotFoundException('Debe especificar un nombre de categoría');
+
+        const items = await this.tryPrisma(() => (this.prisma as any).inventoryItem.findMany({
+            where: { category: name },
+            select: { id: true, name: true },
+        }));
+
+        const count = Array.isArray(items) ? items.length : 0;
+
+        if (action === 'delete') {
+            // Delete all stock movements first, then items
+            const itemIds = (items as any[]).map((i: any) => i.id);
+            await this.tryPrisma(() => (this.prisma as any).stockMovement.deleteMany({
+                where: { inventoryItemId: { in: itemIds } },
+            }));
+            await this.tryPrisma(() => (this.prisma as any).inventoryItem.deleteMany({
+                where: { category: name },
+            }));
+            this.logger.warn(`🗑️ CATEGORÍA ELIMINADA: "${name}" — ${count} items BORRADOS`);
+        } else {
+            // Reassign to GENERAL
+            await this.tryPrisma(() => (this.prisma as any).inventoryItem.updateMany({
+                where: { category: name },
+                data: { category: 'GENERAL' },
+            }));
+            this.logger.log(`📦 CATEGORÍA ELIMINADA: "${name}" — ${count} items reasignados a GENERAL`);
+        }
+
+        return { success: true, category: name, action, itemsAffected: count };
+    }
+
     async delete(id: string) {
         const result = await this.tryPrisma(() => (this.prisma as any).inventoryItem.delete({ where: { id } }));
         if (!result) throw new NotFoundException(`No se pudo eliminar el item ${id}`);
