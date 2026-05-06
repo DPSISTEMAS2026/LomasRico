@@ -37,6 +37,8 @@ export default function InventoryManagementPage() {
     const [adjustItem, setAdjustItem] = useState<any>(null);
     const [wasteItem, setWasteItem] = useState<any>(null);
     const [editItem, setEditItem] = useState<any>(null);
+    const [deleteItem, setDeleteItem] = useState<any>(null);
+    const [deleting, setDeleting] = useState(false);
     const [editData, setEditData] = useState({ name: '', role: 'BASE', type: 'RAW', unit: 'KG', costPerUnit: '', minStockThreshold: '10', category: 'GENERAL' });
 
 
@@ -203,6 +205,28 @@ export default function InventoryManagementPage() {
             }
         } catch (e) {
             alert('Error de conexión.');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteItem) return;
+        try {
+            setDeleting(true);
+            const res = await authFetch(`${API_URL}/inventory/${deleteItem.id}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                alert(`✓ "${deleteItem.name}" eliminado permanentemente del inventario.`);
+                loadData();
+                setDeleteItem(null);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(`Error al eliminar: ${err.message || 'Este insumo podría estar vinculado a recetas. Verifique y reintente.'}`);
+            }
+        } catch (e) {
+            alert('Error de conexión al eliminar.');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -418,6 +442,12 @@ export default function InventoryManagementPage() {
                                             >
                                                 <Trash2 size={12} /> Merma
                                             </button>
+                                            <button
+                                                onClick={() => setDeleteItem(item)}
+                                                className="px-3 py-2 bg-red-600 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-red-700 transition-all flex items-center gap-1.5 shadow-sm"
+                                            >
+                                                <X size={12} /> Eliminar
+                                            </button>
 
                                         </div>
                                     </td>
@@ -486,6 +516,12 @@ export default function InventoryManagementPage() {
                                 className="bg-red-50 text-red-500 py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 border border-red-100 active:scale-95"
                             >
                                 <Trash2 size={12} /> Merma
+                            </button>
+                            <button
+                                onClick={() => setDeleteItem(item)}
+                                className="bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 shadow-lg active:scale-95 col-span-4"
+                            >
+                                <X size={12} /> Eliminar Producto
                             </button>
 
                         </div>
@@ -987,6 +1023,46 @@ export default function InventoryManagementPage() {
                                 <Save size={18} /> GUARDAR CAMBIOS
                             </button>
                             <button onClick={() => setEditItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-blue-500 transition-colors italic">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteItem && (
+                <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white rounded-[3rem] p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-500 overflow-hidden relative">
+                        <X size={120} className="absolute -top-10 -right-10 text-red-50 opacity-20 rotate-12" />
+
+                        <div className="text-center mb-8 relative z-10">
+                            <div className="w-20 h-20 rounded-[2rem] bg-red-600 flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-red-200 animate-pulse">
+                                <AlertCircle size={36} />
+                            </div>
+                            <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">ELIMINAR <span className="text-red-600">PRODUCTO</span></h3>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{deleteItem.name}</p>
+                        </div>
+
+                        <div className="space-y-5 relative z-10">
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+                                <p className="text-[10px] font-black uppercase text-red-600 tracking-widest italic mb-3">⚠️ ACCIÓN IRREVERSIBLE</p>
+                                <ul className="space-y-2 text-xs font-bold text-slate-600">
+                                    <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">•</span> Se eliminará <strong>"{deleteItem.name}"</strong> permanentemente del inventario.</li>
+                                    <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">•</span> Stock actual: <strong>{deleteItem.currentStock} {deleteItem.unit}</strong></li>
+                                    <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">•</span> Si está vinculado a recetas, podría generar errores.</li>
+                                </ul>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="w-full bg-red-600 text-white py-5 rounded-[2rem] font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-red-200 hover:bg-red-700 transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {deleting ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
+                                    {deleting ? 'ELIMINANDO...' : 'SÍ, ELIMINAR PERMANENTEMENTE'}
+                                </button>
+                                <button onClick={() => setDeleteItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar — No eliminar</button>
+                            </div>
                         </div>
                     </div>
                 </div>

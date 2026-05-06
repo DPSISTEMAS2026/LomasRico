@@ -168,6 +168,23 @@ export class ProductMapperService implements OnModuleInit {
         // Empanada de Marisco (Uber la pone como solo "Marisco")
         'marisco': 'empanada frita',
 
+        // ═══════════════════════════════════════════════════════════
+        // HANDROLLS — Uber los vende por sabor: "HandRoll de Salmón"
+        // Internamente: "Handroll" genérico (configurable)
+        // ═══════════════════════════════════════════════════════════
+        'handroll de salmon': 'handroll',
+        'handroll salmon': 'handroll',
+        'handroll de camaron': 'handroll',
+        'handroll camaron': 'handroll',
+        'handroll de pollo': 'handroll',
+        'handroll pollo': 'handroll',
+        'hand roll de salmon': 'handroll',
+        'hand roll salmon': 'handroll',
+        'hand roll de camaron': 'handroll',
+        'hand roll camaron': 'handroll',
+        'hand roll de pollo': 'handroll',
+        'hand roll pollo': 'handroll',
+
         // Ceviche Tropical variantes
         'ceviche tropical mango': 'ceviche tropical',
         'tropical mango': 'ceviche tropical',

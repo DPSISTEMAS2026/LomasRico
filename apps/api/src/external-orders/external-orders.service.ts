@@ -284,6 +284,25 @@ export class ExternalOrdersService {
         }
 
         // Re-ingest with the stored raw payload
+        // Handle multiple rawPayload formats:
+        // 1. DTO format: rawPayload.items (from API ingestion)
+        // 2. Uber cron format: rawPayload.cartInfo.cartItems (from scraper cron)
+        let items = extOrder.rawPayload?.items || [];
+
+        // Fallback: extract from Uber cron's cartInfo.cartItems
+        if ((!items || items.length === 0) && extOrder.rawPayload?.cartInfo?.cartItems) {
+            items = extOrder.rawPayload.cartInfo.cartItems.map((ci: any) => ({
+                externalName: ci.name || ci.title || 'Producto',
+                quantity: ci.quantity?.amount || ci.quantity || 1,
+                unitPrice: 0, // Price comes from internal catalog
+                notes: ci.modifiers
+                    ?.filter((m: any) => m.nestingDepth === 1 && !m.icon)
+                    ?.map((m: any) => m.name)
+                    ?.join(', ') || undefined,
+            }));
+            this.logger.log(`🔄 Retry: extracted ${items.length} items from cartInfo.cartItems format`);
+        }
+
         const dto: CreateExternalOrderDto = {
             platform: extOrder.platform,
             externalOrderId: extOrder.externalOrderId,
@@ -291,7 +310,10 @@ export class ExternalOrdersService {
             customerName: extOrder.customerName,
             customerPhone: extOrder.customerPhone,
             rawPayload: extOrder.rawPayload,
-            items: extOrder.rawPayload?.items || [],
+            items,
+            externalTotal: extOrder.rawPayload?.payment?.orderTotal?.formatted
+                ? parseInt(extOrder.rawPayload.payment.orderTotal.formatted.replace(/\D/g, ''))
+                : undefined,
         };
 
         // Delete the old record so dedup doesn't block
