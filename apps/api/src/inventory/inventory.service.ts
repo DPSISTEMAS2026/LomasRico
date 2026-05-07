@@ -247,9 +247,51 @@ export class InventoryService {
     }
 
     async delete(id: string) {
-        const result = await this.tryPrisma(() => (this.prisma as any).inventoryItem.delete({ where: { id } }));
-        if (!result) throw new NotFoundException(`No se pudo eliminar el item ${id}`);
-        return { success: true };
+        // Verify the item exists first
+        const item = await this.tryPrisma(() => (this.prisma as any).inventoryItem.findUnique({
+            where: { id },
+            select: { id: true, name: true },
+        }));
+        if (!item) throw new NotFoundException(`Item ${id} no encontrado`);
+
+        try {
+            await this.prisma.$transaction(async (tx: any) => {
+                // 1. Delete StockMovements
+                await tx.stockMovement.deleteMany({ where: { inventoryItemId: id } });
+
+                // 2. Delete RecipeItems where this item is an ingredient
+                await tx.recipeItem.deleteMany({ where: { ingredientId: id } });
+
+                // 3. Unlink ModifierOptions (set inventoryItemId to null instead of deleting)
+                await tx.modifierOption.updateMany({
+                    where: { inventoryItemId: id },
+                    data: { inventoryItemId: null },
+                });
+
+                // 4. Delete productionRecipe (Recipe + its RecipeItems) if this item is an output
+                const productionRecipe = await tx.recipe.findFirst({
+                    where: { outputItemId: id },
+                    select: { id: true },
+                });
+                if (productionRecipe) {
+                    await tx.recipeItem.deleteMany({ where: { recipeId: productionRecipe.id } });
+                    await tx.modifierOption.updateMany({
+                        where: { recipeId: productionRecipe.id },
+                        data: { recipeId: null },
+                    });
+                    await tx.recipe.delete({ where: { id: productionRecipe.id } });
+                }
+
+                // 5. Finally delete the inventory item
+                await tx.inventoryItem.delete({ where: { id } });
+            });
+
+            this.logger.warn(`🗑️ ITEM ELIMINADO: "${(item as any).name}" (${id})`);
+            return { success: true };
+        } catch (e) {
+            this.logger.error(`Error al eliminar item ${id}: ${e.message}`);
+            throw new InternalServerErrorException(`No se pudo eliminar el item ${id}: ${e.message}`);
+        }
     }
 
     async forceSeed() {
