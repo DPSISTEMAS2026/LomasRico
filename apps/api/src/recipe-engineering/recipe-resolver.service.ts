@@ -425,6 +425,44 @@ export class RecipeResolverService {
             }
         }
 
+        // --- INYECTAR ITEMS DE MODIFICADORES CON inventoryItemId ---
+        // Cuando un modificador (ej: "Opciones - Empanada Frita") tiene opciones vinculadas
+        // a items de inventario (ej: "Empanada Queso" → PREPARATION), se agregan al BOM
+        // para descontar stock de producción diaria y prevenir sobreventa.
+        if (effectiveModifiers.dynamicSelections) {
+            for (const selection of effectiveModifiers.dynamicSelections) {
+                const opts = selection.selectedOptions || [];
+                for (const opt of opts) {
+                    // Buscar la ModifierOption por ID para obtener su inventoryItemId
+                    if (opt.id) {
+                        const modOption = await this.prisma.modifierOption.findUnique({
+                            where: { id: opt.id },
+                            select: { inventoryItemId: true, name: true }
+                        });
+
+                        if (modOption?.inventoryItemId) {
+                            // Verificar que no esté ya en el BOM (evitar duplicados)
+                            const alreadyInBom = bom.some(b => b.inventoryItemId === modOption.inventoryItemId);
+                            if (!alreadyInBom) {
+                                const invItem = await this.prisma.inventoryItem.findUnique({
+                                    where: { id: modOption.inventoryItemId },
+                                    select: { id: true, name: true, unit: true }
+                                });
+                                if (invItem) {
+                                    bom.push({
+                                        inventoryItemId: invItem.id,
+                                        name: invItem.name,
+                                        quantity: 1,
+                                        unit: invItem.unit
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return bom;
     }
 

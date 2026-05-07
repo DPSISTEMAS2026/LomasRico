@@ -24,7 +24,8 @@ import {
     Settings,
     Tag,
     Check,
-    FolderX
+    FolderX,
+    Factory
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
@@ -40,6 +41,9 @@ export default function InventoryManagementPage() {
     const [restockItem, setRestockItem] = useState<any>(null);
     const [adjustItem, setAdjustItem] = useState<any>(null);
     const [wasteItem, setWasteItem] = useState<any>(null);
+    const [produceItem, setProduceItem] = useState<any>(null);
+    const [produceBatches, setProduceBatches] = useState('1');
+    const [producing, setProducing] = useState(false);
     const [editItem, setEditItem] = useState<any>(null);
     const [deleteItem, setDeleteItem] = useState<any>(null);
     const [deleting, setDeleting] = useState(false);
@@ -56,6 +60,33 @@ export default function InventoryManagementPage() {
     const [restockData, setRestockData] = useState({ quantity: '', unitCost: '', yieldPercent: '100' });
     const [adjustValue, setAdjustValue] = useState('');
     const [wasteData, setWasteData] = useState({ quantity: '', reason: 'EXPIRED', note: '' });
+
+    const handleProduce = async () => {
+        if (!produceItem) return;
+        const batches = Number(produceBatches) || 1;
+        if (batches < 1) { alert('Mínimo 1 batch'); return; }
+        setProducing(true);
+        try {
+            const res = await authFetch(`${API_URL}/inventory/${produceItem.id}/produce`, {
+                method: 'POST',
+                body: JSON.stringify({ batches })
+            });
+            if (res.ok) {
+                const result = await res.json();
+                alert(`✅ Producidos: ${result.totalProduced} ${produceItem.name}\n\nIngredientes consumidos:\n${result.ingredientsUsed?.map((i: any) => `  • ${i.name}: -${i.qty} ${i.unit}`).join('\n') || 'N/A'}`);
+                setProduceItem(null);
+                setProduceBatches('1');
+                loadData();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(`❌ Error: ${err.message || 'No se pudo producir'}`);
+            }
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setProducing(false);
+        }
+    };
 
     // Category management state
     const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -642,15 +673,27 @@ export default function InventoryManagementPage() {
                                             >
                                                 <RefreshCw size={12} /> Ajustar
                                             </button>
-                                            <button
-                                                onClick={() => {
-                                                    setRestockItem(item);
-                                                    setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '', yieldPercent: '100' });
-                                                }}
-                                                className="px-3 py-2 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-1.5 shadow-sm"
-                                            >
-                                                <TrendingUp size={12} /> Reponer
-                                            </button>
+                                            {item.type === 'PREPARATION' ? (
+                                                <button
+                                                    onClick={() => {
+                                                        setProduceItem(item);
+                                                        setProduceBatches('1');
+                                                    }}
+                                                    className="px-3 py-2 bg-green-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-green-600 transition-all flex items-center gap-1.5 shadow-sm"
+                                                >
+                                                    <Factory size={12} /> Producir
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setRestockItem(item);
+                                                        setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '', yieldPercent: '100' });
+                                                    }}
+                                                    className="px-3 py-2 bg-orange-500 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-1.5 shadow-sm"
+                                                >
+                                                    <TrendingUp size={12} /> Reponer
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => {
                                                     setWasteItem(item);
@@ -989,6 +1032,101 @@ export default function InventoryManagementPage() {
                                     <Save size={18} /> Confirmar Ingreso Stock
                                 </button>
                                 <button onClick={() => setRestockItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Production Modal (PREPARATION items) */}
+            {produceItem && (
+                <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-500">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center text-green-500 mx-auto mb-4">
+                                <Factory size={32} />
+                            </div>
+                            <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Producir <span className="text-green-500">{produceItem.name}</span></h3>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Cada batch produce 1 {produceItem.unit} y descuenta los ingredientes de la receta</p>
+                        </div>
+
+                        {/* Recipe Preview */}
+                        {produceItem.recipe && produceItem.recipe.items && produceItem.recipe.items.length > 0 ? (
+                            <div className="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100">
+                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-3 italic">📋 Receta por unidad</p>
+                                <div className="space-y-2">
+                                    {produceItem.recipe.items.map((ri: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs">
+                                            <span className="font-bold text-slate-700">{ri.ingredient?.name || ri.ingredientId}</span>
+                                            <span className="font-black text-orange-500">{ri.quantity} {ri.ingredient?.unit || ''}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-orange-50 rounded-2xl p-5 mb-6 border border-orange-100 text-center">
+                                <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">⚠️ Sin receta de producción configurada</p>
+                                <p className="text-[9px] text-slate-400 mt-1">Vaya a Recetas Maestras → Bases & Preps para configurar los ingredientes</p>
+                            </div>
+                        )}
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad a Producir (batches)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="1"
+                                    className="w-full bg-slate-50 p-5 rounded-2xl font-black italic text-3xl outline-none focus:bg-white focus:ring-2 focus:ring-green-500 transition-all text-center border border-transparent shadow-inner"
+                                    value={produceBatches}
+                                    onChange={e => setProduceBatches(e.target.value)}
+                                    autoFocus
+                                />
+                                <div className="flex gap-2 mt-3 justify-center">
+                                    {[5, 10, 15, 20, 30].map(n => (
+                                        <button
+                                            key={n}
+                                            onClick={() => setProduceBatches(n.toString())}
+                                            className={`px-4 py-2 rounded-xl font-black text-[9px] transition-all ${
+                                                produceBatches === n.toString()
+                                                    ? 'bg-green-500 text-white shadow-md'
+                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Live Preview */}
+                            {Number(produceBatches) > 0 && produceItem.recipe?.items?.length > 0 && (
+                                <div className="bg-green-50 border border-green-100 rounded-2xl p-4 space-y-1 animate-in fade-in">
+                                    <p className="text-[10px] font-black uppercase text-green-700 tracking-widest italic">🏭 Resultado de producción</p>
+                                    <div className="flex justify-between text-sm font-black text-green-700 pb-2 border-b border-green-200">
+                                        <span>Se producirán:</span>
+                                        <span>+{produceBatches} {produceItem.name}</span>
+                                    </div>
+                                    <p className="text-[9px] font-black uppercase text-red-400 tracking-widest italic pt-2">Ingredientes a consumir:</p>
+                                    {produceItem.recipe.items.map((ri: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between text-xs font-bold text-red-500">
+                                            <span>{ri.ingredient?.name || '?'}</span>
+                                            <span>-{(ri.quantity * Number(produceBatches)).toFixed(2)} {ri.ingredient?.unit || ''}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="flex flex-col gap-3 mt-4">
+                                <button
+                                    onClick={handleProduce}
+                                    disabled={producing || !produceItem.recipe?.items?.length}
+                                    className="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase italic tracking-widest shadow-xl text-xs hover:bg-green-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {producing ? <Loader2 size={18} className="animate-spin" /> : <Factory size={18} />}
+                                    {producing ? 'Produciendo...' : 'Confirmar Producción'}
+                                </button>
+                                <button onClick={() => setProduceItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
                         </div>
                     </div>
