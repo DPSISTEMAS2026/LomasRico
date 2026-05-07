@@ -410,42 +410,50 @@ export default function InventoryManagementPage() {
             )}
 
             {/* Filter Bar */}
-            <div className="flex flex-col xl:flex-row gap-4 items-center bg-white p-3 rounded-[2.5rem] border border-slate-100 shadow-sm sticky top-4 z-[40] backdrop-blur-md">
-                <div className="flex gap-2 bg-slate-50 p-1 rounded-full overflow-x-auto no-scrollbar w-full xl:w-auto items-center">
-                    {categoriesList.map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(cat)}
-                            className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap
-                                ${selectedCategory === cat
-                                    ? 'bg-slate-900 text-white shadow-xl italic'
-                                    : 'text-slate-400 hover:bg-white hover:text-slate-900'}`}
-                        >
-                            {cat}
-                            {cat !== 'TODOS' && <span className="ml-1 text-[8px] opacity-60">({categoryCounts[cat] || 0})</span>}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sticky top-4 z-[40]">
+                {/* Search — Primary */}
+                <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl border border-slate-100 flex-1 shadow-sm hover:shadow-md transition-shadow">
+                    <Search size={22} className="text-orange-500 shrink-0" />
+                    <input
+                        placeholder="Buscar insumo..."
+                        value={filter}
+                        onChange={e => setFilter(e.target.value)}
+                        className="bg-transparent outline-none text-lg font-black text-slate-900 w-full italic placeholder:text-slate-300 placeholder:font-bold"
+                    />
+                    {filter && (
+                        <button onClick={() => setFilter('')} className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0">
+                            <X size={16} className="text-slate-400" />
                         </button>
-                    ))}
-                    {/* Category Manager Toggle */}
+                    )}
+                </div>
+
+                {/* Category Dropdown + Actions */}
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <select
+                            value={selectedCategory}
+                            onChange={e => setSelectedCategory(e.target.value)}
+                            className="appearance-none bg-white border border-slate-100 px-5 py-4 pr-10 rounded-2xl font-black uppercase text-[10px] tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-sm cursor-pointer italic h-full"
+                        >
+                            {categoriesList.map(cat => (
+                                <option key={cat} value={cat}>
+                                    {cat}{cat !== 'TODOS' ? ` (${categoryCounts[cat] || 0})` : ` (${items.length})`}
+                                </option>
+                            ))}
+                        </select>
+                        <Package size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
                     <button
                         onClick={() => setShowCategoryManager(!showCategoryManager)}
-                        className={`p-2.5 rounded-full transition-all shrink-0 ${
+                        className={`p-4 rounded-2xl transition-all shrink-0 shadow-sm ${
                             showCategoryManager
                                 ? 'bg-orange-500 text-white shadow-lg'
-                                : 'text-slate-400 hover:bg-white hover:text-slate-900'
+                                : 'bg-white border border-slate-100 text-slate-400 hover:text-slate-900 hover:border-slate-300'
                         }`}
                         title="Gestionar Categorías"
                     >
-                        <Settings size={16} />
+                        <Settings size={18} />
                     </button>
-                </div>
-                <div className="flex items-center gap-3 bg-white px-6 py-2.5 rounded-full border border-slate-100 w-full xl:flex-1 shadow-inner">
-                    <Search size={18} className="text-slate-300" />
-                    <input
-                        placeholder="Buscar por nombre de insumo..."
-                        value={filter}
-                        onChange={e => setFilter(e.target.value)}
-                        className="bg-transparent outline-none text-sm font-bold text-slate-900 w-full italic"
-                    />
                 </div>
             </div>
 
@@ -611,7 +619,7 @@ export default function InventoryManagementPage() {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <p className="font-black text-xl italic text-slate-900 tracking-tighter">${item.costPerUnit?.toLocaleString() || 0}</p>
-                                        <p className="text-[8px] font-black text-slate-300 uppercase italic">PMP REAL</p>
+                                        <p className="text-[8px] font-black text-slate-300 uppercase italic">ÚLTIMO COSTO</p>
                                     </td>
                                     <td className="px-8 py-6">
                                         <div className="flex justify-center gap-2">
@@ -873,7 +881,7 @@ export default function InventoryManagementPage() {
                             {/* Preview costo neto */}
                             {newItem.purchasePrice && (
                                 <div className="md:col-span-2 bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center">
-                                    <p className="text-[10px] font-black uppercase text-orange-400 tracking-widest italic">Costo Neto Calculado (PMP)</p>
+                                    <p className="text-[10px] font-black uppercase text-orange-400 tracking-widest italic">Costo Neto Unitario</p>
                                     <p className="text-3xl font-black italic text-orange-600 tracking-tighter">
                                         ${Math.round(Number(newItem.purchasePrice) / ((Number(newItem.yield) || 100) / 100)).toLocaleString()}
                                         <span className="text-sm text-orange-400"> /{newItem.unit}</span>
@@ -899,7 +907,7 @@ export default function InventoryManagementPage() {
                                 <TrendingUp size={32} />
                             </div>
                             <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Reponer <span className="text-orange-500">{restockItem.name}</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Se registrará una compra y se recalculará el PMP en la base de datos</p>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Se registrará una compra y se actualizará el costo unitario</p>
                         </div>
 
                         <div className="space-y-5">

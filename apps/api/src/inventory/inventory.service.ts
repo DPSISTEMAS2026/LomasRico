@@ -153,11 +153,8 @@ export class InventoryService {
         const oldStock = (item.currentStock as number) || 0;
         const newStock = oldStock + quantity;
 
-        let newCost = (item.costPerUnit as number);
-        if (unitCost > 0) {
-            const totalValue = (oldStock * ((item.costPerUnit as number) || 0)) + (quantity * unitCost);
-            newCost = totalValue / Math.max(1, newStock);
-        }
+        // Último precio de compra: si se ingresa un costo > 0, se usa como nuevo costo unitario
+        const newCost = unitCost > 0 ? unitCost : (item.costPerUnit as number);
 
         const updated = await this.update(id, {
             currentStock: newStock,
@@ -168,6 +165,7 @@ export class InventoryService {
             data: {
                 inventoryItemId: id,
                 quantity: quantity,
+                unitCost: unitCost > 0 ? unitCost : null,
                 reason: 'RESTOCK'
             }
         }));

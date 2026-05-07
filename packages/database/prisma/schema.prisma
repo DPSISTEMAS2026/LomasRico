@@ -59,6 +59,7 @@ model StockMovement {
   item            InventoryItem @relation(fields: [inventoryItemId], references: [id])
   
   quantity        Float         // Cantidad afectada (+Entrada / -Salida)
+  unitCost        Float?        // Costo unitario de la compra (solo RESTOCK) — historial de precios
   reason          String        // "SALE", "PRODUCTION_INPUT", "PRODUCTION_OUTPUT", "ADJUSTMENT", "WASTE"
   referenceId     String?       // ID de Venta u Orden de Produccion relacionada
   
