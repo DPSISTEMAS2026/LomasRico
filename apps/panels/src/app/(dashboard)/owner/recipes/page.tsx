@@ -21,6 +21,15 @@ import {
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 
+// Ceviche SOP protein distribution rules (mirror of ceviche-rules.ts)
+const CEVICHE_RULES: Record<string, any> = {
+    '1000': { totalWeight: 1000, proteinTotal: 360, baseWeight: 640, distribution: { 1: 360, 2: { equal: 180, withPremium: { std: 240, premium: 120 } }, 3: { equal: 120, withPremium: { std: 140, premium: 80 } } } },
+    '750':  { totalWeight: 750,  proteinTotal: 280, baseWeight: 470, distribution: { 1: 280, 2: { equal: 140, withPremium: { std: 200, premium: 80 } },  3: { equal: 94,  withPremium: { std: 110, premium: 60 } } } },
+    '500':  { totalWeight: 500,  proteinTotal: 180, baseWeight: 320, distribution: { 1: 180, 2: { equal: 90,  withPremium: { std: 120, premium: 60 } },  3: { equal: 60,  withPremium: { std: 70,  premium: 40 } } } },
+    '350':  { totalWeight: 350,  proteinTotal: 140, baseWeight: 210, distribution: { 1: 140, 2: { equal: 70,  withPremium: { std: 100, premium: 40 } },  3: { equal: 46,  withPremium: { std: 56,  premium: 30 } } } },
+    '250':  { totalWeight: 250,  proteinTotal: 100, baseWeight: 150, distribution: { 1: 100, 2: { equal: 50,  withPremium: { std: 70,  premium: 30 } },  3: { equal: 34,  withPremium: { std: 40,  premium: 20 } } } },
+};
+
 export default function RecipesMasterPage() {
     const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'BASES'>('PRODUCTS');
     const [products, setProducts] = useState<any[]>([]);
@@ -35,7 +44,11 @@ export default function RecipesMasterPage() {
 
     const [isCreatingBase, setIsCreatingBase] = useState(false);
     const [newBase, setNewBase] = useState({ name: '', unit: 'KG' });
-    const [deleteConfirm, setDeleteConfirm] = useState<any>(null); // { id, name, type, recipeId }
+    const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+
+    // Simulator state
+    const [simFormat, setSimFormat] = useState('1000');
+    const [simProteins, setSimProteins] = useState<string[]>([]);
 
     useEffect(() => {
         loadData();
@@ -471,15 +484,161 @@ export default function RecipesMasterPage() {
                                 </div>
                             </section>
 
-                            {/* Advanced Economics */}
+                            {/* Protein Cost Simulator (only for PRODUCT type with configurable proteins) */}
+                            {editingTarget.type === 'PRODUCT' && editingTarget.isConfigurable && (() => {
+                                const proteins = inventory.filter((i: any) => i.role === 'PROTEIN_MAIN' || i.role === 'PROTEIN_SPECIAL');
+                                const rule = CEVICHE_RULES[simFormat];
+                                const count = simProteins.length;
+
+                                // Calculate distribution
+                                const simDistribution: { id: string; name: string; role: string; grams: number; cost: number }[] = [];
+                                if (rule && count > 0 && count <= 3) {
+                                    const selected = simProteins.map(id => proteins.find((p: any) => p.id === id)).filter(Boolean);
+                                    const premiums = selected.filter((p: any) => p.role === 'PROTEIN_SPECIAL');
+                                    const standards = selected.filter((p: any) => p.role === 'PROTEIN_MAIN');
+                                    const hasPremium = premiums.length > 0 && standards.length > 0;
+
+                                    if (count === 1) {
+                                        const g = rule.distribution[1];
+                                        simDistribution.push({ id: selected[0].id, name: selected[0].name, role: selected[0].role, grams: g, cost: (g / 1000) * Number(selected[0].costPerUnit || 0) });
+                                    } else if (count === 2) {
+                                        if (hasPremium) {
+                                            const pr = rule.distribution[2].withPremium;
+                                            standards.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: pr.std, cost: (pr.std / 1000) * Number(p.costPerUnit || 0) }));
+                                            premiums.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: pr.premium, cost: (pr.premium / 1000) * Number(p.costPerUnit || 0) }));
+                                        } else {
+                                            const g = rule.distribution[2].equal;
+                                            selected.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: g, cost: (g / 1000) * Number(p.costPerUnit || 0) }));
+                                        }
+                                    } else if (count === 3) {
+                                        if (hasPremium) {
+                                            const pr = rule.distribution[3].withPremium;
+                                            standards.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: pr.std, cost: (pr.std / 1000) * Number(p.costPerUnit || 0) }));
+                                            premiums.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: pr.premium, cost: (pr.premium / 1000) * Number(p.costPerUnit || 0) }));
+                                        } else {
+                                            const g = rule.distribution[3].equal;
+                                            selected.forEach((p: any) => simDistribution.push({ id: p.id, name: p.name, role: p.role, grams: g, cost: (g / 1000) * Number(p.costPerUnit || 0) }));
+                                        }
+                                    }
+                                }
+
+                                const simProteinCost = simDistribution.reduce((s, d) => s + d.cost, 0);
+                                const simTotalGrams = simDistribution.reduce((s, d) => s + d.grams, 0);
+                                const simTotalCost = totalCost + simProteinCost;
+                                const simMargin = editingTarget.price ? ((editingTarget.price - simTotalCost) / editingTarget.price * 100) : 0;
+
+                                return (
+                                    <section className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl md:rounded-[3rem] p-6 md:p-10 text-white shadow-2xl relative overflow-hidden">
+                                        <h4 className="font-black italic uppercase text-[10px] md:text-xs tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                                            <Calculator className="text-cyan-400" size={14} /> 🧪 Simulador de Producción
+                                        </h4>
+
+                                        {/* Format Selector */}
+                                        <div className="mb-6">
+                                            <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic mb-3">Formato</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['250', '350', '500', '750', '1000'].map(f => (
+                                                    <button key={f} onClick={() => setSimFormat(f)}
+                                                        className={`px-4 py-2.5 rounded-xl font-black italic text-sm tracking-tight transition-all ${simFormat === f ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                                                    >{f === '1000' ? '1 KG' : `${f}g`}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Protein Selector */}
+                                        <div className="mb-6">
+                                            <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic mb-3">Proteínas (elige 1 a 3)</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {proteins.map((prot: any) => {
+                                                    const isSelected = simProteins.includes(prot.id);
+                                                    const isPremium = prot.role === 'PROTEIN_SPECIAL';
+                                                    return (
+                                                        <button key={prot.id}
+                                                            onClick={() => {
+                                                                if (isSelected) setSimProteins(simProteins.filter(x => x !== prot.id));
+                                                                else if (simProteins.length < 3) setSimProteins([...simProteins, prot.id]);
+                                                            }}
+                                                            className={`px-3 py-2 rounded-xl font-black italic text-xs tracking-tight transition-all border-2 ${
+                                                                isSelected
+                                                                    ? isPremium ? 'bg-purple-500/20 border-purple-500 text-purple-300' : 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
+                                                                    : 'border-transparent bg-white/5 text-slate-400 hover:bg-white/10'
+                                                            }`}
+                                                        >
+                                                            {prot.name} {isPremium && '⭐'}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Distribution Result */}
+                                        {simDistribution.length > 0 && (
+                                            <div className="bg-white/5 rounded-2xl p-5 mb-6 border border-white/5">
+                                                <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic mb-4">Distribución SOP</p>
+                                                {simDistribution.map((d, i) => (
+                                                    <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${d.role === 'PROTEIN_SPECIAL' ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'}`}>
+                                                                {d.role === 'PROTEIN_SPECIAL' ? 'PREMIUM' : 'MAIN'}
+                                                            </span>
+                                                            <span className="font-black italic text-sm">{d.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-slate-400 font-bold text-sm">{d.grams}g</span>
+                                                            <span className="text-cyan-400 font-black text-sm">${Math.round(d.cost)}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between items-center pt-3 mt-2 border-t border-white/10">
+                                                    <span className="font-black italic text-xs text-slate-400 uppercase">Total Proteínas</span>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-white font-bold text-sm">{simTotalGrams}g</span>
+                                                        <span className="text-cyan-400 font-black text-sm">${Math.round(simProteinCost)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Summary */}
+                                        {simDistribution.length > 0 && (
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest italic mb-1">🧂 Base</p>
+                                                    <p className="text-2xl font-black italic text-white">${Math.round(totalCost)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest italic mb-1">🥩 Proteínas</p>
+                                                    <p className="text-2xl font-black italic text-cyan-400">${Math.round(simProteinCost)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest italic mb-1">💰 Total</p>
+                                                    <p className="text-2xl font-black italic text-orange-500">${Math.round(simTotalCost)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest italic mb-1">📈 Margen</p>
+                                                    <p className={`text-2xl font-black italic ${simMargin > 40 ? 'text-green-400' : 'text-red-400'}`}>{Math.round(simMargin)}%</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {count === 0 && (
+                                            <p className="text-slate-500 font-bold italic text-sm text-center py-4">Selecciona proteínas para simular el costo de producción</p>
+                                        )}
+
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-[80px]" />
+                                    </section>
+                                );
+                            })()}
+
+                            {/* Base Cost Summary */}
                             <section className="bg-slate-900 rounded-3xl md:rounded-[3rem] p-6 md:p-12 text-white shadow-2xl relative overflow-hidden group">
                                 <h4 className="font-black italic uppercase text-[10px] md:text-xs tracking-widest text-slate-500 mb-6 md:mb-10 flex items-center gap-2 relative z-10">
-                                    <Calculator className="text-orange-500" size={14} /> Análisis Maestro
+                                    <Calculator className="text-orange-500" size={14} /> Análisis de Receta Base
                                 </h4>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative z-10">
                                     <div className="space-y-2 md:space-y-4">
-                                        <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic">Costo Producción</p>
+                                        <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic">Costo Base (sin proteínas)</p>
                                         <div className="flex items-end gap-2">
                                             <span className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none">${Math.round(totalCost)}</span>
                                             <span className="text-slate-500 font-bold mb-1 uppercase text-[9px] md:text-[10px] italic">Neto</span>
@@ -497,7 +656,7 @@ export default function RecipesMasterPage() {
                                             </div>
 
                                             <div className={`space-y-2 md:space-y-4 md:border-l border-slate-800 md:pl-12 transition-all ${margin > 50 ? 'border-green-500/30' : 'border-red-500/30'}`}>
-                                                <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic">Margen Utilidad</p>
+                                                <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic">Margen (solo base)</p>
                                                 <div className="flex items-end gap-2">
                                                     <span className={`text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none ${margin > 50 ? 'text-green-500' : 'text-red-500'}`}>{Math.round(margin)}%</span>
                                                     <div className="flex flex-col mb-1">
