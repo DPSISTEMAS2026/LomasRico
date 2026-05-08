@@ -35,6 +35,7 @@ export default function RecipesMasterPage() {
 
     const [isCreatingBase, setIsCreatingBase] = useState(false);
     const [newBase, setNewBase] = useState({ name: '', unit: 'KG' });
+    const [deleteConfirm, setDeleteConfirm] = useState<any>(null); // { id, name, type, recipeId }
 
     useEffect(() => {
         loadData();
@@ -143,6 +144,36 @@ export default function RecipesMasterPage() {
         } catch (e) { alert('Error creando base'); }
     };
 
+    const handleDeleteRecipe = async (target: any, type: 'PRODUCT' | 'BASE') => {
+        const recipeId = target.recipe?.id || target.productionRecipe?.id;
+        setDeleteConfirm({
+            id: target.id,
+            name: target.name,
+            type,
+            recipeId,
+            hasRecipe: !!recipeId
+        });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirm) return;
+        try {
+            // 1. Delete recipe if exists
+            if (deleteConfirm.hasRecipe && deleteConfirm.recipeId) {
+                await authFetch(`${API_URL}/recipes/${deleteConfirm.recipeId}`, { method: 'DELETE' });
+            }
+            // 2. For bases, also delete the inventory item
+            if (deleteConfirm.type === 'BASE') {
+                await authFetch(`${API_URL}/inventory/${deleteConfirm.id}`, { method: 'DELETE' });
+            }
+            setDeleteConfirm(null);
+            setEditingTarget(null);
+            await loadData();
+        } catch (e) {
+            alert('Error al eliminar. Intente nuevamente.');
+        }
+    };
+
     const bases = inventory.filter(i => i.type === 'PREPARATION' || i.category === 'PREPARACIONES');
 
     const ingredientOptions = inventory.filter(i =>
@@ -235,15 +266,26 @@ export default function RecipesMasterPage() {
                                         <span className="text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 bg-slate-100 text-slate-500 rounded-full tracking-widest italic group-hover:bg-slate-900 group-hover:text-white transition-colors">
                                             {p.category || 'Base'}
                                         </span>
-                                        {p.recipe ? (
-                                            <div className="text-green-500 bg-green-50 p-1.5 md:p-2 rounded-lg md:rounded-xl border border-green-100">
-                                                <CheckCircle2 size={14} className="md:w-4 md:h-4" />
-                                            </div>
-                                        ) : (
-                                            <div className="text-orange-400 bg-orange-50 p-1.5 md:p-2 rounded-lg md:rounded-xl border border-orange-100">
-                                                <AlertCircle size={14} className="md:w-4 md:h-4" />
-                                            </div>
-                                        )}
+                                        <div className="flex items-center gap-1.5">
+                                            {activeTab === 'BASES' && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(p, 'BASE'); }}
+                                                    className="p-1.5 md:p-2 rounded-lg md:rounded-xl border border-transparent text-slate-200 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all opacity-0 group-hover:opacity-100"
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 size={14} className="md:w-4 md:h-4" />
+                                                </button>
+                                            )}
+                                            {p.recipe ? (
+                                                <div className="text-green-500 bg-green-50 p-1.5 md:p-2 rounded-lg md:rounded-xl border border-green-100">
+                                                    <CheckCircle2 size={14} className="md:w-4 md:h-4" />
+                                                </div>
+                                            ) : (
+                                                <div className="text-orange-400 bg-orange-50 p-1.5 md:p-2 rounded-lg md:rounded-xl border border-orange-100">
+                                                    <AlertCircle size={14} className="md:w-4 md:h-4" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <h3 className="font-black text-lg md:text-2xl text-slate-900 leading-none uppercase italic tracking-tighter group-hover:text-orange-500 transition-colors">
                                         {p.name}
@@ -523,6 +565,45 @@ export default function RecipesMasterPage() {
                                 <button onClick={() => setIsCreatingBase(false)} className="flex-1 font-black uppercase text-slate-400 text-[10px] md:text-xs">Descartar</button>
                                 <button onClick={createBase} className="flex-1 bg-slate-900 text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase italic tracking-widest text-[10px] md:text-xs">Crear Base</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm && (
+                <div className="fixed inset-0 bg-slate-900/60 z-[120] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white rounded-3xl md:rounded-[3rem] p-6 md:p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center gap-3 mb-6 md:mb-8">
+                            <div className="p-3 bg-red-50 rounded-2xl border border-red-100">
+                                <Trash2 className="text-red-500" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg md:text-2xl font-black italic uppercase text-slate-900">Eliminar</h3>
+                                <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Acción irreversible</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 md:p-6 mb-6 md:mb-8">
+                            <p className="font-black italic uppercase text-sm md:text-base text-slate-900 mb-2">{deleteConfirm.name}</p>
+                            <p className="text-[10px] md:text-xs text-slate-500 font-bold">
+                                ⚠️ Se eliminará esta preparación del inventario y su receta asociada. Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="flex-1 font-black uppercase text-slate-400 text-[10px] md:text-xs hover:text-slate-900 transition-colors py-3"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 bg-red-500 text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase italic tracking-widest text-[10px] md:text-xs hover:bg-red-600 transition-all active:scale-95"
+                            >
+                                Confirmar Eliminación
+                            </button>
                         </div>
                     </div>
                 </div>

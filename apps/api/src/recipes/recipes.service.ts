@@ -182,4 +182,42 @@ export class RecipesService {
             });
         });
     }
+
+    /**
+     * Delete a Recipe by ID.
+     * - Unlinks from SellingProduct (PRODUCT) or InventoryItem (PREPARATION)
+     * - Deletes all RecipeItems, then the Recipe itself
+     */
+    async deleteRecipe(recipeId: string) {
+        const recipe = await this.prisma.recipe.findUnique({
+            where: { id: recipeId },
+            include: { sellingProduct: true, outputItem: true }
+        });
+
+        if (!recipe) throw new NotFoundException(`Recipe ${recipeId} not found`);
+
+        return this.prisma.$transaction(async (tx) => {
+            // 1. Unlink from SellingProduct if it's a product recipe
+            if (recipe.sellingProduct) {
+                await tx.sellingProduct.update({
+                    where: { id: recipe.sellingProduct.id },
+                    data: { recipeId: null }
+                });
+            }
+
+            // 2. Clear ModifierOption links to this recipe
+            await tx.modifierOption.updateMany({
+                where: { recipeId },
+                data: { recipeId: null }
+            });
+
+            // 3. Delete all recipe items
+            await tx.recipeItem.deleteMany({ where: { recipeId } });
+
+            // 4. Delete the recipe
+            await tx.recipe.delete({ where: { id: recipeId } });
+
+            return { deleted: true, id: recipeId, name: recipe.name };
+        });
+    }
 }

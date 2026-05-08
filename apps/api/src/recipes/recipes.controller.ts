@@ -48,4 +48,11 @@ export class RecipesController {
             throw new BadRequestException(`Seed failed: ${e.message}`);
         }
     }
+
+    // Delete a Recipe (unlinks from product/preparation first)
+    @Delete(':id')
+    async deleteRecipe(@Param('id') id: string) {
+        this.logger.log(`Deleting recipe: ${id}`);
+        return this.recipesService.deleteRecipe(id);
+    }
 }
