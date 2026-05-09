@@ -49,7 +49,7 @@ export class SalesService {
             const bom = await this.recipeResolver.resolveBom(
                 dto.productVariantId,
                 dto.modifiers || {},
-                false
+                true  // expandir preparaciones → descontar ingredientes crudos
             );
 
             return {
@@ -221,7 +221,7 @@ export class SalesService {
             const bom = await this.recipeResolver.resolveBom(
                 bomIdentifier,
                 itemDto.modifiers || {},
-                false
+                true  // expandir preparaciones → descontar ingredientes crudos
             );
 
             // ---- CÁLCULO DE COSTO REAL (CONGELADO EN VENTA) ----

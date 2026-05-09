@@ -492,10 +492,20 @@ export class RecipeResolverService {
             }];
         }
 
-        const totalInputWeight = prep.productionRecipe.items.reduce((sum, i) => sum + i.quantity, 0);
-        if (totalInputWeight <= 0) return [];
+        // Usar baseWeight de la receta como referencia de escala
+        // baseWeight = cuánto OUTPUT produce la receta (ej: 2.4 LT de leche de tigre)
+        const outputWeight = prep.productionRecipe.baseWeight;
+        if (!outputWeight || outputWeight <= 0) {
+            // Fallback: descontar la preparación directamente sin expandir
+            return [{
+                inventoryItemId: prepId,
+                name: prep.name,
+                quantity: requiredQty,
+                unit: prep.unit
+            }];
+        }
 
-        const scaleFactor = requiredQty / totalInputWeight;
+        const scaleFactor = requiredQty / outputWeight;
 
         return prep.productionRecipe.items.map(subItem => ({
             inventoryItemId: subItem.ingredientId,
