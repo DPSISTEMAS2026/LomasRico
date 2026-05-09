@@ -49,7 +49,7 @@ export class SalesService {
             const bom = await this.recipeResolver.resolveBom(
                 dto.productVariantId,
                 dto.modifiers || {},
-                true  // expandir preparaciones → descontar ingredientes crudos
+                false // empanadas necesitan descontar como unidad, no expandir
             );
 
             return {
@@ -221,7 +221,7 @@ export class SalesService {
             const bom = await this.recipeResolver.resolveBom(
                 bomIdentifier,
                 itemDto.modifiers || {},
-                true  // expandir preparaciones → descontar ingredientes crudos
+                false // empanadas necesitan descontar como unidad, no expandir
             );
 
             // ---- CÁLCULO DE COSTO REAL (CONGELADO EN VENTA) ----
