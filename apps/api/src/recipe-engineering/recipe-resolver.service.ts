@@ -247,6 +247,12 @@ export class RecipeResolverService {
 
         console.log(`[RecipeResolver] Gramaje final detectado: ${resolvedWeight}g para el producto "${product.name}"`);
 
+        // Factor de escala para ingredientes BASE y VEGGIE
+        // Si la receta es para 1KG (baseWeight=1000) y el cliente pide 500g, ingredientScale = 0.5
+        const recipeBaseWeight = product.recipe.baseWeight || 1000;
+        const ingredientScale = resolvedWeight / recipeBaseWeight;
+        console.log(`[RecipeResolver] Scale factor ingredientes: ${ingredientScale} (${resolvedWeight}/${recipeBaseWeight})`);
+
         let sizeKey = '1000';
         if (resolvedWeight >= 900) sizeKey = '1000';
         else if (resolvedWeight >= 700) sizeKey = '750';
@@ -370,21 +376,22 @@ export class RecipeResolverService {
             bom.push({
                 inventoryItemId: item.ingredientId,
                 name: item.ingredient.name,
-                quantity: item.quantity * veggieScale,
+                quantity: item.quantity * veggieScale * ingredientScale,
                 unit: item.ingredient.unit,
             });
         }
 
-        // 2. Base Estándar (Leche de tigre, etc.) - No cambia por remoción de verduras
+        // 2. Base Estándar (Leche de tigre, etc.) - No cambia por remoción de verduras, pero SÍ escala por formato
         for (const item of validBaseItems) {
+            const scaledQty = item.quantity * ingredientScale;
             if (unrollBases && item.ingredient.type === 'PREPARATION') {
-                const subItems = await this.expandPreparation(item.ingredient.id, item.quantity);
+                const subItems = await this.expandPreparation(item.ingredient.id, scaledQty);
                 bom.push(...subItems);
             } else {
                 bom.push({
                     inventoryItemId: item.ingredientId,
                     name: item.ingredient.name,
-                    quantity: item.quantity,
+                    quantity: scaledQty,
                     unit: item.ingredient.unit,
                 });
             }
