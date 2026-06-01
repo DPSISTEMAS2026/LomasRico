@@ -76,6 +76,19 @@ interface TicketCardProps {
     onPrint: () => void;
 }
 
+// ─── Format Time Helper ─────────────────────────────
+function formatElapsedTime(minutes: number): string {
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    const mins = minutes % 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
+    return parts.join(' ');
+}
+
 // ─── Ticket Card Component ──────────────────────────
 export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onAction, onCancel, onPrint }: TicketCardProps) {
     const sale = ticket.sale;
@@ -100,7 +113,7 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                         {minutesAgo > 15 && ticket.status !== 'READY' && <AlertCircle size={18} className="text-red-500 shrink-0" />}
                     </div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
-                        <Timer size={12} className="shrink-0" /> Hace {minutesAgo}m
+                        <Timer size={12} className="shrink-0" /> Hace {formatElapsedTime(minutesAgo)}
                     </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
