@@ -106,6 +106,26 @@ export default function RecipesMasterPage() {
 
     const updateItem = (idx: number, field: string, val: any) => {
         const n = [...recipeItems];
+        const oldItem = n[idx];
+
+        if (field === 'unit' && oldItem.quantity) {
+            const oldUnit = oldItem.unit;
+            const newUnit = val;
+            let qty = Number(oldItem.quantity) || 0;
+
+            if (qty > 0) {
+                // KG/LT -> G/ML: multiplicar x1000
+                if ((oldUnit === 'KG' || oldUnit === 'LT') && (newUnit === 'G' || newUnit === 'ML')) {
+                    qty = qty * 1000;
+                }
+                // G/ML -> KG/LT: dividir /1000
+                else if ((oldUnit === 'G' || oldUnit === 'ML') && (newUnit === 'KG' || newUnit === 'LT')) {
+                    qty = qty / 1000;
+                }
+                n[idx].quantity = Number(qty.toFixed(4)).toString();
+            }
+        }
+
         n[idx] = { ...n[idx], [field]: val };
         setRecipeItems(n);
     };

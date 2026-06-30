@@ -200,8 +200,16 @@ console.log('🔔 UBER EATS → LO MÁS RICO — LIVE BRIDGE');
 console.log(`📡 Uber: merchants-beta.ubereats.com`);
 console.log(`🏪 Store: 9b61ddd3-f68c-53ad-a1a3-435f20fe87d2`);
 console.log(`🍳 API: ${API_URL}`);
-console.log(`⏰ Polling cada ${POLL_INTERVAL/1000}s | ${ts()}`);
+console.log(`⏰ Polling dinámico (jitter) entre 25s y 45s | ${ts()}`);
 console.log('═'.repeat(60));
 
-poll();
-setInterval(poll, POLL_INTERVAL);
+function scheduleNextPoll() {
+  // Random interval between 25000ms (25s) and 45000ms (45s)
+  const nextInterval = Math.floor(Math.random() * (45000 - 25000 + 1)) + 25000;
+  setTimeout(async () => {
+    await poll();
+    scheduleNextPoll();
+  }, nextInterval);
+}
+
+poll().then(() => scheduleNextPoll());

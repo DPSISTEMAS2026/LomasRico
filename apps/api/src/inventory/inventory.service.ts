@@ -21,13 +21,33 @@ export class InventoryService {
 
     private mapToUi(item: any) {
         if (!item) return null;
+
+        let costPerUnit = Number(item.costPerUnit) || 0;
+
+        // Calcular costo dinámicamente si es preparación y tiene receta
+        if (item.type === 'PREPARATION' && item.productionRecipe) {
+            const recipe = item.productionRecipe;
+            const recipeItems = recipe.items || [];
+            let totalRecipeCost = 0;
+
+            for (const rItem of recipeItems) {
+                const ingredientCost = Number(rItem.ingredient?.costPerUnit) || 0;
+                totalRecipeCost += (Number(rItem.quantity) || 0) * ingredientCost;
+            }
+
+            const baseWeight = Number(recipe.baseWeight) || 1;
+            if (baseWeight > 0) {
+                costPerUnit = totalRecipeCost / baseWeight;
+            }
+        }
+
         return {
             id: item.id,
             name: item.name,
             category: item.category || 'GENERAL',
             currentStock: Number(item.currentStock) || 0,
             unit: item.unit,
-            costPerUnit: Number(item.costPerUnit) || 0,
+            costPerUnit: costPerUnit,
             type: item.type,
             role: item.role,
             minStockThreshold: Number(item.minStockThreshold) || 0,
@@ -122,6 +142,15 @@ export class InventoryService {
                 unit: data.unit,
                 isActive: data.isActive,
                 minStockThreshold: data.minStockThreshold !== undefined ? parseInt(data.minStockThreshold) : undefined
+            },
+            include: {
+                productionRecipe: {
+                    include: {
+                        items: {
+                            include: { ingredient: true }
+                        }
+                    }
+                }
             }
         }));
 

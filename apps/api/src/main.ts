@@ -1,3 +1,4 @@
+import 'dotenv/config';
 // Hot reload trigger — Fase 1: Merma + CRUD
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
