@@ -103,9 +103,9 @@ La forma segura:
 
 | Servicio | Clave | Estado | Validación |
 |----------|-------|--------|------------|
-| **MercadoPago** | Public Key (`APP_USR-814959be...`) | ✅ Recibida | — |
-| **MercadoPago** | Access Token (`APP_USR-667605...`) | ✅ Recibida | ✅ Verificado: LOMASRICO SPA (MLC) |
-| **PedidosYa Envíos** | Token API (`9545-282326...`) | ✅ Recibida | ✅ Verificado: Auth válido |
+| **MercadoPago** | Public Key (`Configurado en variables de entorno`) | ✅ Recibida | — |
+| **MercadoPago** | Access Token (`Configurado en variables de entorno`) | ✅ Recibida | ✅ Verificado: LOMASRICO SPA |
+| **PedidosYa Envíos** | Token API (`Configurado en variables de entorno`) | ✅ Recibida | ✅ Verificado: Conexión establecida |
 
 ### Configuración en Ambientes:
 

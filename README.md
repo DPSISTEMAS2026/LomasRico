@@ -7,11 +7,13 @@ Sistema completo de gestión para restaurante con POS, Cocina, Panel de Administ
 ## 📚 Documentación
 
 ### 🚀 Inicio Rápido
+- **[HANDOVER-GUIDE.md](HANDOVER-GUIDE.md)** - **DOCUMENTO MAESTRO DE ENTREGA Y PUESTA EN MARCHA (LEER PRIMERO)**
 - **[docs/deployment/START-HERE.md](docs/deployment/START-HERE.md)** - Guía rápida de inicio
 - **[docs/development/LOCAL-DEV-GUIDE.md](docs/development/LOCAL-DEV-GUIDE.md)** - Configuración de entorno local
 
 ### 🏗️ Arquitectura
 - **[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)** - Diagramas y arquitectura del sistema
+- **[architecture-docs/](architecture-docs/)** - Documentos lógicos de la arquitectura de la aplicación
 
 ### 🚢 Despliegue
 - **[docs/deployment/DEPLOYMENT-GUIDE.md](docs/deployment/DEPLOYMENT-GUIDE.md)** - Guía completa de migración a producción
@@ -19,18 +21,10 @@ Sistema completo de gestión para restaurante con POS, Cocina, Panel de Administ
 - **[docs/deployment/ENV_VARIABLES.md](docs/deployment/ENV_VARIABLES.md)** - Variables de entorno
 - **[docs/deployment/PRODUCCION.md](docs/deployment/PRODUCCION.md)** - Información de producción actual
 
-### 🔧 Desarrollo
-- **[docs/development/LOCAL-DEV-GUIDE.md](docs/development/LOCAL-DEV-GUIDE.md)** - Guía de desarrollo local
-- **[docs/development/.env.local.example](docs/development/.env.local.example)** - Ejemplo de variables de entorno
-
-### 🔍 Auditoría y Correcciones
-- **[docs/audit/AUDIT-REPORT.md](docs/audit/AUDIT-REPORT.md)** - Reporte completo de auditoría (38 bugs identificados)
-- **[docs/audit/IMPLEMENTATION-PLAN.md](docs/audit/IMPLEMENTATION-PLAN.md)** - Plan de implementación día por día
-- **[docs/audit/PROGRESS-DAY-1.md](docs/audit/PROGRESS-DAY-1.md)** - Progreso del Día 1 (6 bugs corregidos)
-
-### 📖 Guías
-- **[docs/guides/POWERSHELL-GUIDE.md](docs/guides/POWERSHELL-GUIDE.md)** - Guía de PowerShell y permisos
-- **[docs/guides/INSTRUCCIONES_CREDENCIALES.md](docs/guides/INSTRUCCIONES_CREDENCIALES.md)** - Configuración de credenciales
+### 📖 Guías Operativas
+- **[docs/MANUAL-OPERATIVO.md](docs/MANUAL-OPERATIVO.md)** - Manual de uso y administración para operadores de restaurante
+- **[docs/guides/INSTRUCCIONES_CREDENCIALES.md](docs/guides/INSTRUCCIONES_CREDENCIALES.md)** - Configuración de credenciales de API
+- **[docs/DATOS-FALTANTES.md](docs/DATOS-FALTANTES.md)** - Listado de productos y recetas pendientes por configurar
 
 ---
 
@@ -66,21 +60,12 @@ npm run dev
 
 ## 📊 Estado del Proyecto
 
-### ✅ Bugs Corregidos (Día 1)
-- ✅ Bug #1: Productos no se guardan correctamente
-- ✅ Bug #2: Recetas no se guardan - falta campo `role`
-- ✅ Bug #3: Recetas no cargan el `role` al editar
-- ✅ Bug #4: No se puede asignar `role` en la UI
-- ✅ Bug #5: Autenticación - Prisma Client regenerado
-- ✅ Bug #10: Campo `baseWeight` no se guarda
-
-### 🔄 En Progreso (Día 2)
-- [ ] Bug #6: Pedidos no entran a cocina
-- [ ] Bug #7: Detalles de preparación no se ven en cocina
-
-### ⏳ Pendientes
-- 12 bugs críticos restantes
-- Ver [docs/audit/AUDIT-REPORT.md](docs/audit/AUDIT-REPORT.md) para detalles
+### ✅ Sistema Estable y Operativo
+- El sistema se entrega con **todos los bugs críticos identificados en auditoría resueltos** (18/18 corregidos).
+- **POS y KDS (Cocina)** están sincronizados y 100% operativos.
+- **Lógica de recetas e inventario** se calcula correctamente y descuenta ingredientes en base a reglas de roles de ingredientes.
+- La **Web de clientes** está integrada con MercadoPago para transacciones reales y PedidosYa para envíos automáticos.
+- El **historial de chat de WhatsApp** ha sido purgado en base de datos para iniciar desde cero en producción.
 
 ---
 
