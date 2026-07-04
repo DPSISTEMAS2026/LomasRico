@@ -284,18 +284,7 @@ export class PaymentsService {
             if (sale.shippingData && (sale.shippingData as any).estimateId) {
                 try {
                     const estimateId = (sale.shippingData as any).estimateId;
-                    const res = await this.shippingService.confirmDelivery(estimateId);
-                    if (res && res.success && res.trackingId) {
-                        await tx.sale.update({
-                            where: { id: sale.id },
-                            data: {
-                                shippingData: {
-                                    ...(sale.shippingData as any),
-                                    trackingId: res.trackingId
-                                }
-                            }
-                        });
-                    }
+                    await this.shippingService.confirmDelivery(estimateId);
                 } catch (e) {
                     this.logger.error(`Failed to confirm shipping for ${sale.id}`, e);
                 }

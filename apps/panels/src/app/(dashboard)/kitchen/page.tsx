@@ -119,21 +119,6 @@ export default function KitchenPage() {
     const cancelTicket = async (id: string) => { if (confirm('¿Cancelar este pedido?')) await updateStatus(id, 'CANCELLED'); };
     const printTicket = (id: string) => { window.open(`${API_URL}/kitchen/${id}/print`, '_blank', 'width=350,height=600'); };
     const toggleRecipe = (key: string) => setExpandedRecipes(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    const handleDispatchDelivery = async (saleId: string) => {
-        try {
-            const res = await authFetch(`${API_URL}/shipping/dispatch-manual`, {
-                method: 'POST',
-                body: JSON.stringify({ saleId })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Error al solicitar el repartidor');
-            alert(`✓ Repartidor solicitado correctamente! ID Tracking: ${data.trackingId}`);
-            await loadTickets();
-        } catch (e: any) {
-            alert(`Error al despachar: ${e.message}`);
-            throw e;
-        }
-    };
 
     const waitingTickets = tickets.filter(t => t.status === 'WAITING');
     const preparingTickets = tickets.filter(t => t.status === 'PREPARING');
@@ -210,8 +195,7 @@ export default function KitchenPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 auto-rows-min">
                         {current.map(ticket => (
                             <TicketCard key={ticket.id} ticket={ticket} cfg={cfg} expandedRecipes={expandedRecipes} toggleRecipe={toggleRecipe}
-                                onAction={() => updateStatus(ticket.id, cfg.nextStatus)} onCancel={() => cancelTicket(ticket.id)} onPrint={() => printTicket(ticket.id)}
-                                onDispatchDelivery={() => handleDispatchDelivery(ticket.sale.id)} />
+                                onAction={() => updateStatus(ticket.id, cfg.nextStatus)} onCancel={() => cancelTicket(ticket.id)} onPrint={() => printTicket(ticket.id)} />
                         ))}
                     </div>
                 )}
