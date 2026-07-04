@@ -63,6 +63,7 @@ export default function POSPage() {
     const [shippingAddress, setShippingAddress] = useState('');
     const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MP' | 'TRANSFER'>('CASH');
+    const [cashReceived, setCashReceived] = useState<number>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeShift, setActiveShift] = useState<CashierShift | null>(null);
     const [loadingShift, setLoadingShift] = useState(true);
@@ -260,6 +261,7 @@ export default function POSPage() {
             }
             setCart([]);
             setShippingCost(0);
+            setCashReceived(0);
             setShippingAddress('');
             setShippingStatus('idle');
             setDiscount(0);
@@ -836,6 +838,74 @@ export default function POSPage() {
                                 </button>
                             ))}
                         </div>
+
+                        {/* Ayuda Vuelto para Efectivo */}
+                        {paymentMethod === 'CASH' && (
+                            <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex justify-between items-center px-1">
+                                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Total a Cobrar</span>
+                                    <span className="text-sm font-black text-slate-800">${total.toLocaleString()}</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest px-1">Efectivo Recibido</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">$</span>
+                                        <input
+                                            type="text"
+                                            value={cashReceived === 0 ? '' : cashReceived.toLocaleString()}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
+                                                setCashReceived(val);
+                                            }}
+                                            placeholder="Monto entregado por cliente..."
+                                            className="w-full pl-7 pr-3 py-3 bg-white border border-slate-100 rounded-2xl text-xs font-bold text-slate-600 outline-none focus:border-orange-500 shadow-inner tracking-tight placeholder:text-slate-200"
+                                        />
+                                        {cashReceived > 0 && (
+                                            <button 
+                                                onClick={() => setCashReceived(0)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 font-bold text-xs"
+                                            >
+                                                Limpiar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {total > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 px-0.5">
+                                        {[
+                                            total,
+                                            Math.ceil(total / 1000) * 1000,
+                                            Math.ceil(total / 5000) * 5000,
+                                            total <= 5000 ? 5000 : null,
+                                            total <= 10000 ? 10000 : null,
+                                            total <= 20000 ? 20000 : null
+                                        ]
+                                            .filter((val): val is number => val !== null && val >= total)
+                                            .filter((val, idx, self) => self.indexOf(val) === idx)
+                                            .slice(0, 5)
+                                            .map((val) => (
+                                                <button
+                                                    key={val}
+                                                    type="button"
+                                                    onClick={() => setCashReceived(val)}
+                                                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all active:scale-95
+                                                        ${cashReceived === val
+                                                            ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-100 scale-105'
+                                                            : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
+                                                >
+                                                    ${val.toLocaleString()}
+                                                </button>
+                                            ))}
+                                    </div>
+                                )}
+                                {cashReceived >= total && (
+                                    <div className="flex justify-between items-center pt-3 border-t border-slate-100/50 px-1 animate-in zoom-in-95">
+                                        <span className="text-[10px] font-black uppercase text-green-600 tracking-wider">Vuelto a entregar</span>
+                                        <span className="text-base font-black text-green-600 animate-pulse">${(cashReceived - total).toLocaleString()}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Alerta turno */}
                         {!canSell && (

@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import {
     ChefHat, ChevronRight, ChevronDown, MessageSquare, Timer,
-    AlertCircle, XCircle, ArrowRight, CheckCircle2, Printer
+    AlertCircle, XCircle, ArrowRight, CheckCircle2, Printer,
+    MapPin, Truck, Loader2
 } from 'lucide-react';
 import type { KitchenTicket, SaleItem } from '@lomasrico/shared-types';
 
@@ -74,6 +76,7 @@ interface TicketCardProps {
     onAction: () => void;
     onCancel: () => void;
     onPrint: () => void;
+    onDispatchDelivery?: () => Promise<void>;
 }
 
 // ─── Format Time Helper ─────────────────────────────
@@ -90,8 +93,9 @@ function formatElapsedTime(minutes: number): string {
 }
 
 // ─── Ticket Card Component ──────────────────────────
-export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onAction, onCancel, onPrint }: TicketCardProps) {
+export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onAction, onCancel, onPrint, onDispatchDelivery }: TicketCardProps) {
     const sale = ticket.sale;
+    const [isDispatching, setIsDispatching] = useState(false);
     const minutesAgo = Math.floor((Date.now() - new Date(ticket.createdAt).getTime()) / 60000);
     const isUber = sale.channel === 'UBER_EATS';
     const isPedidosYa = sale.channel === 'PEDIDOS_YA';
@@ -139,6 +143,65 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                     </div>
                 </div>
             )}
+
+            {/* Información de Despacho & Botón PedidosYa */}
+            {sale.shippingData && (sale.shippingData as any).address && (() => {
+                const shipping = sale.shippingData as any;
+                return (
+                    <div className="mb-4 pl-2 rounded-2xl overflow-hidden shadow-sm border border-orange-100 bg-orange-50/20 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                        <div className="px-3 py-1.5 flex items-center gap-2 bg-orange-500/10">
+                            <MapPin size={12} className="text-orange-500 shrink-0" />
+                            <p className="text-[9px] font-black uppercase tracking-widest text-orange-600">Dirección de Despacho</p>
+                        </div>
+                        <div className="p-2.5 space-y-2">
+                            <p className="text-[10px] font-black text-slate-700 uppercase tracking-tight leading-snug">
+                                {shipping.address}
+                            </p>
+                            {shipping.cost > 0 && (
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Costo: ${Number(shipping.cost).toLocaleString()}
+                                </p>
+                            )}
+                            
+                            {shipping.trackingId ? (
+                                <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2 py-1.5 rounded-xl border border-green-100 text-[9px] font-black uppercase tracking-wider">
+                                    <Truck size={12} className="shrink-0" /> Despachado (Ref: {shipping.trackingId})
+                                </div>
+                            ) : (
+                                onDispatchDelivery && (
+                                    <button
+                                        onClick={async () => {
+                                            if (isDispatching) return;
+                                            setIsDispatching(true);
+                                            try {
+                                                await onDispatchDelivery();
+                                            } catch (err) {
+                                                console.error(err);
+                                            } finally {
+                                                setIsDispatching(false);
+                                            }
+                                        }}
+                                        disabled={isDispatching}
+                                        className="w-full py-2 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-black uppercase italic tracking-wider text-[9px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.97]"
+                                    >
+                                        {isDispatching ? (
+                                            <>
+                                                <Loader2 size={12} className="animate-spin" />
+                                                <span>Solicitando...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Truck size={12} />
+                                                <span>Solicitar Repartidor PedidosYa</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Items */}
             <div className="space-y-2 mb-4 pl-2 flex-1 overflow-y-auto max-h-[35vh]">

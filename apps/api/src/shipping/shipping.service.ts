@@ -1,6 +1,7 @@
 
 import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
+import { PrismaService } from '../database/prisma.service';
 // Location constants (inlined to avoid cross-package build issues on Render)
 const LOCATION = {
     address: 'Obispo Hipólito Salas 1205, Concepción',
@@ -22,6 +23,8 @@ export class ShippingService {
 
     // Tiempo de preparación por defecto: 20 minutos (Pedido por el usuario)
     private readonly PREPARATION_TIME_MINS = 20;
+
+    constructor(private readonly prisma: PrismaService) {}
 
     private deliveryMode: 'EXTERNAL' | 'INTERNAL' = 'EXTERNAL';
 
@@ -219,5 +222,60 @@ export class ShippingService {
         // Sin token de PedidosYa configurado
         this.logger.warn(`[SHIPPING] No PEDIDOSYA_TOKEN configured. Cannot confirm delivery for ${estimateId}`);
         return { success: false, trackingId: null, reason: 'No delivery provider configured' };
+    }
+
+    async dispatchManual(saleId: string) {
+        const sale = await this.prisma.sale.findUnique({
+            where: { id: saleId }
+        });
+        if (!sale) {
+            throw new Error('La venta no existe.');
+        }
+
+        let shippingData = sale.shippingData as any;
+        if (!shippingData || !shippingData.address) {
+            throw new Error('Esta venta no tiene información de despacho.');
+        }
+
+        let estimateId = shippingData.estimateId;
+
+        // Si no tiene estimateId o es simulado/local, y queremos llamar a PedidosYa, cotizamos uno nuevo
+        if (!estimateId || estimateId.startsWith('internal-') || estimateId.startsWith('mock-') || estimateId.startsWith('fallback-')) {
+            try {
+                const quote = await this.getPedidosYaQuote(shippingData.address, shippingData.coordinates);
+                estimateId = quote.id;
+                shippingData = {
+                    ...shippingData,
+                    estimateId: quote.id,
+                    cost: quote.price
+                };
+            } catch (err: any) {
+                this.logger.error(`Error de cotización para despacho manual: ${err.message}`);
+                // Generamos un fallback si falla para permitir la simulación o manejo
+                estimateId = `fallback-py-${Date.now()}`;
+                shippingData = {
+                    ...shippingData,
+                    estimateId
+                };
+            }
+        }
+
+        const result = await this.confirmDelivery(estimateId);
+        if (result.success) {
+            const updatedShippingData = {
+                ...shippingData,
+                trackingId: result.trackingId,
+                estimateId
+            };
+            await this.prisma.sale.update({
+                where: { id: saleId },
+                data: {
+                    shippingData: updatedShippingData
+                }
+            });
+            return { success: true, trackingId: result.trackingId };
+        } else {
+            throw new Error(result.reason || 'No se pudo confirmar el despacho con el proveedor.');
+        }
     }
 }
