@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "../context/AuthContext";
+import CookieBanner from "../components/common/CookieBanner";
 
 export default function RootLayout({
   children,
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${outfit.variable} font-sans antialiased bg-white`}>
         <AuthProvider>
           {children}
+          <CookieBanner />
         </AuthProvider>
       </body>
     </html>
