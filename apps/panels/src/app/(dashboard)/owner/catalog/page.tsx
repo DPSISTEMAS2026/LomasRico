@@ -72,6 +72,9 @@ export default function CatalogManagementPage() {
 
     useEffect(() => {
         loadData();
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H-width',location:'catalog/page.tsx:mount',message:'Ancho disponible del panel',data:{innerWidth:typeof window!=='undefined'?window.innerWidth:0,cappedAt7xl:false},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }, []);
 
     const loadData = async () => {
@@ -304,6 +307,10 @@ export default function CatalogManagementPage() {
             });
 
             if (res.ok) {
+                const saved = await res.json().catch(() => payload);
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H5',location:'catalog/page.tsx:handleSave',message:'Producto guardado desde admin',data:{id:editingProduct.id,name:saved?.name||payload.name,isActive:saved?.isActive??payload.isActive,descLen:(payload.description||'').length},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
                 setSaveStatus('success');
                 loadData();
                 setTimeout(() => {
@@ -312,8 +319,9 @@ export default function CatalogManagementPage() {
                     setSaveStatus('idle');
                 }, 1000);
             } else {
+                const data = await res.json().catch(() => ({}));
                 setSaveStatus('idle');
-                alert('Error al guardar.');
+                alert(data.message || 'No se pudo guardar el producto.');
             }
         } catch (error) {
             setSaveStatus('idle');
@@ -322,19 +330,25 @@ export default function CatalogManagementPage() {
     };
 
     const toggleProductStatus = async (id: string, currentStatus: boolean, field: 'isActive' | 'isConfigurable') => {
+        const next = !currentStatus;
         setProducts(prev => prev.map(p =>
-            p.id === id ? { ...p, [field]: !currentStatus } : p
+            p.id === id ? { ...p, [field]: next } : p
         ));
 
         try {
-            await authFetch(`${API_URL}/products/${id}`, {
+            const res = await authFetch(`${API_URL}/products/${id}`, {
                 method: 'PATCH',
-                body: JSON.stringify({ [field]: !currentStatus })
+                body: JSON.stringify({ [field]: next })
             });
+            if (!res.ok) throw new Error(String(res.status));
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H3',location:'catalog/page.tsx:toggle',message:'Publicado en web cambiado',data:{id,field,next},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         } catch (e) {
             setProducts(prev => prev.map(p =>
                 p.id === id ? { ...p, [field]: currentStatus } : p
             ));
+            alert('No se pudo cambiar la publicación en la web.');
         }
     };
 
@@ -550,67 +564,77 @@ export default function CatalogManagementPage() {
             {/* Product Table */}
             <div className="bg-white rounded-2xl md:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden border-b-8 border-b-slate-900">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
+                    <table className="w-full text-left border-collapse min-w-[920px]">
                                 <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
-                                <th className="px-6 md:px-10 py-5 md:py-8">Vista Previa</th>
-                                <th className="px-4 md:px-6 py-5 md:py-8">Producto / Descripción</th>
-                                <th className="px-4 md:px-6 py-5 md:py-8">Categoría</th>
-                                <th className="px-4 md:px-6 py-5 md:py-8 text-center text-slate-900">Publicado</th>
-                                <th className="px-6 md:px-10 py-5 md:py-8 text-right">Editor</th>
+                                <th className="px-4 md:px-6 py-5">Foto</th>
+                                <th className="px-4 md:px-6 py-5">Nombre y descripción</th>
+                                <th className="px-4 md:px-6 py-5">Categoría</th>
+                                <th className="px-4 md:px-6 py-5 text-center">En la web</th>
+                                <th className="px-4 md:px-6 py-5 text-right sticky right-0 bg-slate-50/90">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {displayedProducts.map((p) => (
-                                <tr key={p.id} className={`group hover:bg-orange-50/10 transition-colors ${!p.isActive ? 'opacity-60 grayscale' : ''}`}>
-                                    <td className="px-6 md:px-10 py-4 md:py-5">
-                                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-slate-100 overflow-hidden border-2 md:border-4 border-white shadow-sm relative group-hover:scale-110 transition-transform duration-500">
+                                <tr key={p.id} className={`group hover:bg-orange-50/10 transition-colors ${!p.isActive ? 'bg-slate-50/80' : ''}`}>
+                                    <td className="px-4 md:px-6 py-4">
+                                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
                                             {p.imageUrl ? (
                                                 <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
                                             ) : (
-                                                <ImageIcon className="m-auto text-slate-300 w-5 h-5 md:w-6 md:h-6" />
+                                                <ImageIcon className="m-auto text-slate-300 w-5 h-5" />
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-4 md:px-6 py-4 md:py-5">
-                                        <div className="font-black uppercase text-sm md:text-base text-slate-900 italic tracking-tighter mb-1">{p.name}</div>
-                                        <div className="text-[9px] md:text-[10px] text-slate-400 font-bold line-clamp-1 max-w-[150px] md:max-w-sm uppercase">{p.description}</div>
-                                        <div className="text-orange-500 font-black text-xs md:text-sm mt-1 italic">${p.price.toLocaleString()}</div>
+                                    <td className="px-4 md:px-6 py-4">
+                                        <div className="font-black text-sm md:text-base text-slate-900 tracking-tight mb-1">{p.name}</div>
+                                        <div className="text-xs text-slate-500 font-medium leading-relaxed line-clamp-3 whitespace-pre-line">
+                                            {p.description || 'Sin descripción'}
+                                        </div>
+                                        <div className="text-orange-500 font-black text-xs md:text-sm mt-1">${Number(p.price || 0).toLocaleString('es-CL')}</div>
                                     </td>
-                                    <td className="px-4 md:px-6 py-4 md:py-5 text-center sm:text-left">
+                                    <td className="px-4 md:px-6 py-4">
                                         <span className="text-[8px] md:text-[9px] font-black uppercase bg-slate-900 text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full italic tracking-widest whitespace-nowrap">
                                             {p.category}
                                         </span>
                                     </td>
-                                    <td className="px-4 md:px-6 py-4 md:py-5">
-                                        <div className="flex justify-center">
-                                            <button
-                                                onClick={() => toggleProductStatus(p.id, p.isActive, 'isActive')}
-                                                className={`w-10 h-5 md:w-12 md:h-6 rounded-full p-1 transition-all relative ${p.isActive ? 'bg-orange-500 shadow-md shadow-orange-500/20' : 'bg-slate-200'}`}
-                                            >
-                                                <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full bg-white shadow-sm transition-transform ${p.isActive ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
-                                            </button>
-                                        </div>
+                                    <td className="px-4 md:px-6 py-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleProductStatus(p.id, p.isActive, 'isActive')}
+                                            className={`mx-auto flex items-center gap-2 rounded-full px-3 py-2 border transition-all ${p.isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}
+                                            title={p.isActive ? 'Ocultar de la web' : 'Mostrar en la web'}
+                                        >
+                                            <span className={`w-10 h-5 rounded-full p-0.5 transition-all ${p.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                                                <span className={`block w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${p.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
+                                            </span>
+                                            <span className="text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+                                                {p.isActive ? 'Visible' : 'Oculto'}
+                                            </span>
+                                        </button>
                                     </td>
-                                    <td className="px-6 md:px-10 py-4 md:py-5 text-right">
+                                    <td className="px-4 md:px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-orange-50/10">
                                         <div className="flex items-center justify-end gap-2">
                                             <button
-                                                onClick={() => handleDeleteProduct(p.id, p.name)}
-                                                disabled={deletingProductId === p.id}
-                                                className="bg-white text-slate-300 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all active:scale-90"
-                                                title="Eliminar permanentemente"
-                                            >
-                                                {deletingProductId === p.id ? <Loader2 className="w-[18px] h-[18px] md:w-5 md:h-5 animate-spin" /> : <Trash2 className="w-[18px] h-[18px] md:w-5 md:h-5" />}
-                                            </button>
-                                            <button
+                                                type="button"
                                                 onClick={() => {
-                                                    setEditingProduct(p);
+                                                    setEditingProduct({ ...p });
                                                     loadModifierGroups();
                                                     if (p.id !== 'NEW') loadProductModifiers(p.id);
                                                 }}
-                                                className="bg-white text-slate-900 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 border-slate-100 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-90 group-hover:shadow-lg"
+                                                className="bg-slate-900 text-white h-10 px-3 md:px-4 rounded-xl flex items-center gap-2 border-2 border-slate-900 hover:bg-orange-600 hover:border-orange-600 transition-all"
                                             >
-                                                <Pencil className="w-[18px] h-[18px] md:w-5 md:h-5" />
+                                                <Pencil className="w-4 h-4" />
+                                                <span className="text-[10px] font-black uppercase tracking-wider">Editar</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteProduct(p.id, p.name)}
+                                                disabled={deletingProductId === p.id}
+                                                className="bg-white text-slate-400 w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
+                                                title="Eliminar permanentemente"
+                                            >
+                                                {deletingProductId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                         </div>
                                     </td>
@@ -624,13 +648,13 @@ export default function CatalogManagementPage() {
             {/* Editor Modal */}
             {editingProduct && (
                 <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-2 md:p-4 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-4xl h-[95vh] md:h-auto md:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                    <div className="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-[min(96rem,96vw)] h-[95vh] md:h-auto md:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
                         {/* Modal Header */}
                         <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
                             <div>
-                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1 md:mb-2 italic">Product Control Center</p>
-                                <h3 className="font-black uppercase text-xl md:text-3xl italic tracking-tighter text-slate-900 leading-tight">
-                                    {editingProduct.id === 'NEW' ? 'Nuevo Ítem' : editingProduct.name}
+                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1 md:mb-2 italic">Ficha del producto</p>
+                                <h3 className="font-black text-xl md:text-3xl tracking-tight text-slate-900 leading-tight">
+                                    {editingProduct.id === 'NEW' ? 'Nuevo producto' : editingProduct.name}
                                 </h3>
                             </div>
                             <button onClick={() => {
@@ -647,12 +671,12 @@ export default function CatalogManagementPage() {
                             <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 <div className="space-y-4 md:space-y-6">
                                     <label className="block">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Nombre Comercial</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Nombre (así se ve en la web)</span>
                                         <input
                                             value={editingProduct.name || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-black text-slate-900 outline-none transition-all placeholder:text-slate-300 uppercase italic tracking-tighter text-sm md:text-base"
-                                            placeholder="Nombre del Plato..."
+                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-bold text-slate-900 outline-none transition-all placeholder:text-slate-300 text-sm md:text-base"
+                                            placeholder="Nombre del plato"
                                         />
                                     </label>
                                     <label className="block">
@@ -685,12 +709,12 @@ export default function CatalogManagementPage() {
 
                                 <div className="space-y-4 md:space-y-6">
                                     <label className="block">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Descripción del Plato</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Descripción (se puede revisar y editar)</span>
                                         <textarea
                                             value={editingProduct.description || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-bold text-slate-600 outline-none transition-all h-[150px] md:h-[210px] resize-none text-[13px] md:text-sm leading-relaxed"
-                                            placeholder="Detalla los ingredientes y frescura del plato..."
+                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-medium text-slate-700 outline-none transition-all h-[180px] md:h-[240px] resize-y text-sm leading-relaxed whitespace-pre-wrap"
+                                            placeholder="Ingredientes, tamaño y cómo se sirve el plato..."
                                         />
                                     </label>
                                 </div>
@@ -774,8 +798,12 @@ export default function CatalogManagementPage() {
                                             <Power size={18} className="md:w-5 md:h-5" />
                                         </div>
                                         <div>
-                                            <p className="font-black italic uppercase text-slate-900 tracking-tighter text-sm md:text-base">Publicado</p>
-                                            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">Visible en canales</p>
+                                            <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
+                                                {editingProduct.isActive ? 'Visible en la web' : 'Oculto en la web'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400">
+                                                {editingProduct.isActive ? 'Los clientes lo ven en la carta' : 'No aparece en la web ni en el salón'}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all ${editingProduct.isActive ? 'bg-orange-500' : 'bg-slate-200'} shrink-0`}>
@@ -959,7 +987,7 @@ export default function CatalogManagementPage() {
                                     ${saveStatus === 'success' ? 'bg-green-500 text-white' : 'bg-slate-900 text-white hover:bg-orange-600'}`}
                             >
                                 {saveStatus === 'saving' ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
-                                {saveStatus === 'success' ? '¡Actualizado!' : saveStatus === 'saving' ? 'Guardando...' : 'Aplicar Cambios'}
+                                {saveStatus === 'success' ? 'Guardado' : saveStatus === 'saving' ? 'Guardando...' : 'Guardar cambios'}
                             </button>
                         </div>
                     </div>
@@ -969,7 +997,7 @@ export default function CatalogManagementPage() {
             {/* Asset Selector Overlay */}
             {showAssetSelector && (
                 <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-bottom duration-500 p-4 md:p-8 lg:p-16">
-                    <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
+                    <div className="w-full max-w-none flex flex-col h-full">
                         <div className="flex justify-between items-start mb-6 md:mb-12">
                             <div>
                                 <h2 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase italic tracking-tighter leading-none shrink-0">BIBLIOTECA <span className="text-orange-500">ASSETS</span></h2>

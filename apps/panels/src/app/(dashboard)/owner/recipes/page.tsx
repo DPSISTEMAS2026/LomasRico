@@ -347,7 +347,7 @@ export default function RecipesMasterPage() {
             {/* Editor Modal */}
             {editingTarget && (
                 <div className="fixed inset-0 bg-slate-900/40 z-[9999] flex items-center justify-center p-2 md:p-4 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-5xl h-[95vh] md:h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 relative">
+                    <div className="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-[min(96rem,96vw)] h-[95vh] md:h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 relative">
                         {/* Modal Header */}
                         <div className="p-6 md:p-10 border-b border-slate-50 bg-white flex justify-between items-center sticky top-0 z-20">
                             <div>

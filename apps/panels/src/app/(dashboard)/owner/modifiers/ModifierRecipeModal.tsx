@@ -127,7 +127,7 @@ export default function ModifierRecipeModal({
 
     const save = async () => {
         if (items.length === 0) {
-            setError('Primero elige un plato para copiar su receta, o agrega un ingrediente.');
+            setError('Elige un plato o agrega un ingrediente.');
             return;
         }
         setSaving(true);
@@ -154,7 +154,7 @@ export default function ModifierRecipeModal({
             if (!res.ok) throw new Error('No se pudo guardar');
             onSaved();
         } catch {
-            setError('No se pudo guardar. Revisa los gramos e inténtalo de nuevo.');
+            setError('No se pudo guardar.');
         } finally {
             setSaving(false);
         }
@@ -165,7 +165,7 @@ export default function ModifierRecipeModal({
             onClose();
             return;
         }
-        if (!confirm('¿Esta opción deja de cambiar los gramos? El nombre y el precio se mantienen.')) return;
+        if (!confirm('¿Quitar el cambio de gramos?')) return;
         await authFetch(`${API_URL}/modifiers/options/${option.id}/recipe`, { method: 'DELETE' });
         onSaved();
     };
@@ -180,15 +180,11 @@ export default function ModifierRecipeModal({
                 <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-start justify-between gap-4">
                     <div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-1">
-                            Cambia los gramos
+                            Gramos
                         </p>
                         <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">
                             {option.name}
                         </h2>
-                        <p className="text-sm font-bold text-slate-500 mt-2 leading-relaxed">
-                            Si el cliente elige esta opción, el plato no usa la receta normal: usa estos gramos.
-                            Ejemplo: el ceviche trae 500 g de proteína y aquí lo dejas en 1000 g.
-                        </p>
                     </div>
                     <button type="button" onClick={onClose} className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-xl">
                         <X size={20} />
@@ -204,10 +200,7 @@ export default function ModifierRecipeModal({
                     ) : (
                         <>
                             <label className="block">
-                                <span className="text-sm font-black text-slate-800 block mb-1">1. ¿De qué plato copiamos la receta?</span>
-                                <p className="text-xs font-bold text-slate-400 mb-2">
-                                    No es para vender ese plato. Solo sirve para no escribir la receta de cero. Después cambias los gramos.
-                                </p>
+                                <span className="text-sm font-black text-slate-800 block mb-2">Copiar receta de</span>
                                 <select
                                     value={sourceProductId}
                                     onChange={(e) => loadFromProduct(e.target.value)}
@@ -221,30 +214,28 @@ export default function ModifierRecipeModal({
                             </label>
 
                             <div>
-                                <span className="text-sm font-black text-slate-800 block mb-2">2. ¿Qué hace esta opción?</span>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <span className="text-sm font-black text-slate-800 block mb-2">Modo</span>
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setApplyMode('OVERRIDE')}
-                                        className={`text-left p-3 rounded-xl border-2 ${applyMode === 'OVERRIDE' ? 'border-orange-500 bg-orange-50' : 'border-slate-100'}`}
+                                        className={`p-3 rounded-xl border-2 text-sm font-black ${applyMode === 'OVERRIDE' ? 'border-orange-500 bg-orange-50 text-orange-800' : 'border-slate-100 text-slate-700'}`}
                                     >
-                                        <p className="font-black text-sm text-slate-800">Cambia gramos</p>
-                                        <p className="text-xs font-bold text-slate-400 mt-1">El plato sigue igual, pero un ingrediente pesa más o menos. Ej: 500 g → 1000 g.</p>
+                                        Cambiar gramos
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setApplyMode('REPLACE')}
-                                        className={`text-left p-3 rounded-xl border-2 ${applyMode === 'REPLACE' ? 'border-orange-500 bg-orange-50' : 'border-slate-100'}`}
+                                        className={`p-3 rounded-xl border-2 text-sm font-black ${applyMode === 'REPLACE' ? 'border-orange-500 bg-orange-50 text-orange-800' : 'border-slate-100 text-slate-700'}`}
                                     >
-                                        <p className="font-black text-sm text-slate-800">Es otro tamaño</p>
-                                        <p className="text-xs font-bold text-slate-400 mt-1">Reemplaza toda la receta. Ej: pasar de 350 g a 1 kg.</p>
+                                        Otro tamaño
                                     </button>
                                 </div>
                             </div>
 
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-black text-slate-800">3. Ingredientes y gramos</span>
+                                    <span className="text-sm font-black text-slate-800">Ingredientes</span>
                                     <label className="flex items-center gap-2 text-xs font-bold text-slate-400">
                                         Peso del plato
                                         <input
@@ -277,7 +268,7 @@ export default function ModifierRecipeModal({
                                     {items.length === 0 && (
                                         <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400">
                                             <ChefHat className="mx-auto mb-2" size={28} />
-                                            <p className="text-sm font-bold">Elige un plato arriba. Luego cambia los gramos que necesites.</p>
+                                            <p className="text-sm font-bold">Elige un plato</p>
                                         </div>
                                     )}
                                 </div>

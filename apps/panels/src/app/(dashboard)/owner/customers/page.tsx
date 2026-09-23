@@ -23,9 +23,14 @@ export default function CustomersPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('ALL');
+    const [brevo, setBrevo] = useState<any>(null);
+    const [brevoBusy, setBrevoBusy] = useState('');
+    const [brevoMsg, setBrevoMsg] = useState('');
+    const [testEmail, setTestEmail] = useState('d.diazaraya19@gmail.com');
 
     useEffect(() => {
         loadCustomers();
+        loadBrevo();
     }, []);
 
     useEffect(() => {
@@ -62,6 +67,41 @@ export default function CustomersPage() {
             console.error('Error loading customers:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadBrevo = async () => {
+        try {
+            const res = await authFetch(`${API_URL}/mail/status`, { cache: 'no-store' });
+            if (res.ok) setBrevo(await res.json());
+        } catch {
+            setBrevo(null);
+        }
+    };
+
+    const runBrevo = async (path: string, body?: any) => {
+        setBrevoBusy(path);
+        setBrevoMsg('');
+        try {
+            const res = await authFetch(`${API_URL}/mail/${path}`, {
+                method: 'POST',
+                body: body ? JSON.stringify(body) : undefined,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setBrevoMsg(data.message || `Error ${res.status}`);
+                return;
+            }
+            setBrevoMsg(path === 'sync'
+                ? `Listos ${data.imported} contactos en Brevo`
+                : path === 'test'
+                    ? 'Correo de prueba enviado'
+                    : `Aviso enviado a ${data.sent} clientes`);
+            await loadBrevo();
+        } catch (e: any) {
+            setBrevoMsg(e?.message || 'No se pudo hablar con Brevo');
+        } finally {
+            setBrevoBusy('');
         }
     };
 
@@ -109,6 +149,68 @@ export default function CustomersPage() {
                         <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
+            </div>
+
+            <div className="bg-white p-5 md:p-7 rounded-2xl md:rounded-[28px] border border-slate-100 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 italic">Brevo · correo</p>
+                        <h2 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-900">
+                            Aviso de reapertura
+                        </h2>
+                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 max-w-2xl">
+                            Canje de puntos queda apagado. Cuando quieras, sincronizamos la lista y mandamos el correo del nuevo sitio y los puntos.
+                        </p>
+                    </div>
+                    <div className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest italic ${brevo?.readyToSend ? 'bg-emerald-50 text-emerald-600' : brevo?.configured ? 'bg-amber-50 text-amber-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {brevo?.readyToSend ? 'API conectada' : brevo?.configured ? 'Key lista, Brevo bloquea la IP' : 'Falta BREVO_API_KEY'}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+                    <div className="bg-slate-50 rounded-2xl p-3">
+                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Clientes locales</p>
+                        <p className="text-lg font-black italic text-slate-900">{brevo?.localWithEmail ?? '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-2xl p-3">
+                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Lista Brevo</p>
+                        <p className="text-lg font-black italic text-slate-900">{brevo?.listCount ?? '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-2xl p-3 col-span-2">
+                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Remitente</p>
+                        <p className="text-sm font-bold text-slate-700 truncate">{brevo?.senderEmail || 'Sin remitente verificado'}</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-3 mt-5">
+                    <button
+                        disabled={!brevo?.configured || !!brevoBusy}
+                        onClick={() => runBrevo('sync')}
+                        className="bg-slate-900 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic disabled:opacity-40"
+                    >
+                        {brevoBusy === 'sync' ? 'Sincronizando…' : 'Sincronizar contactos'}
+                    </button>
+                    <div className="flex flex-1 gap-2">
+                        <input
+                            type="email"
+                            value={testEmail}
+                            onChange={(e) => setTestEmail(e.target.value)}
+                            placeholder="Tu correo para una prueba"
+                            className="flex-1 bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl text-xs font-bold"
+                        />
+                        <button
+                            disabled={!brevo?.readyToSend || !testEmail || !!brevoBusy}
+                            onClick={() => runBrevo('test', { to: testEmail })}
+                            className="bg-orange-500 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic disabled:opacity-40"
+                        >
+                            {brevoBusy === 'test' ? 'Enviando…' : 'Probar'}
+                        </button>
+                    </div>
+                </div>
+                {brevoMsg && <p className="mt-3 text-xs font-bold text-slate-600">{brevoMsg}</p>}
+                {!!brevo?.missing?.length && (
+                    <p className="mt-2 text-[11px] font-medium text-amber-600">Falta: {brevo.missing.join(', ')}</p>
+                )}
             </div>
 
             {/* Quick Stats Grid */}

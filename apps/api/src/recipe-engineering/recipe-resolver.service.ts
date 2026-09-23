@@ -521,22 +521,24 @@ export class RecipeResolverService {
         }
 
         for (const option of withRecipe) {
+            const optionRecipe = option.recipe;
+            if (!optionRecipe) continue;
             if (replaceFirst && option.id === replaceFirst.id) continue;
-            const apply = (option.recipe?.internalRules as any)?.apply;
+            const apply = (optionRecipe.internalRules as any)?.apply;
             if (apply === 'REPLACE' && !replaceFirst) {
-                recipe = { ...option.recipe, items: [...option.recipe.items] };
+                recipe = { ...optionRecipe, items: [...optionRecipe.items] };
                 continue;
             }
             if (!recipe) {
-                recipe = { ...option.recipe, items: [...option.recipe.items] };
+                recipe = { ...optionRecipe, items: [...optionRecipe.items] };
                 continue;
             }
-            for (const item of option.recipe!.items) {
+            for (const item of optionRecipe.items) {
                 const existing = recipe.items.find((i: any) => i.ingredientId === item.ingredientId);
                 if (existing) existing.quantity = item.quantity;
                 else recipe.items.push(item);
             }
-            if (option.recipe!.baseWeight > 0) recipe.baseWeight = option.recipe!.baseWeight;
+            if (optionRecipe.baseWeight > 0) recipe.baseWeight = optionRecipe.baseWeight;
         }
 
         // #region agent log

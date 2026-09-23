@@ -7,7 +7,7 @@ import {
     ArrowLeft, Plus, Users, Loader2, Printer, CreditCard, Trash2, Search,
     Gift, Fish, ChefHat, Wheat, CupSoda, Flame, Salad, Shell, Sparkles, UtensilsCrossed,
 } from 'lucide-react';
-import { fetchCatalog, API_URL } from '../../../../services/api';
+import { fetchCatalog, API_URL, WEB_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { WaiterDishBuilder } from '../../../../components/modals/WaiterDishBuilder';
 import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
@@ -379,7 +379,7 @@ export default function SalonTablePage() {
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Salón</p>
                         <h1 className="text-2xl font-black italic uppercase tracking-tighter">Mesa {table.number}</h1>
-                        <p className="text-[10px] font-bold text-slate-400">QR comensal: localhost:3000/mesa/{table.number}</p>
+                        <p className="text-[10px] font-bold text-slate-400">QR comensal: {WEB_URL}/mesa/{table.number}</p>
                     </div>
                     <button type="button" onClick={openBill} className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase ${table.billRequest ? 'bg-amber-400 text-slate-900' : 'bg-white border border-slate-100'}`}>
                         {table.billRequest?.guestName

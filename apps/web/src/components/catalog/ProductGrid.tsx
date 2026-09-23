@@ -5,7 +5,7 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL } from '@lomasrico/shared-types';
+import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, WEB_MENU_SECTIONS, webMenuSectionId } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
@@ -13,90 +13,59 @@ import { API_URL } from '../../services/api';
 
 import {
     LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda,
-    UtensilsCrossed, Flame, Salad, Shell, Sparkles
+    UtensilsCrossed, Flame, Sparkles
 } from 'lucide-react';
 
 /**
  * Icon mapping for known categories.
  * New/unknown categories get a generic icon automatically.
  */
-const CATEGORY_ICONS: Record<string, JSX.Element> = {
-    'PROMOS': <Gift size={20} strokeWidth={2.5} />,
-    'CEVICHE LOMASRICO': <Fish size={20} strokeWidth={2.5} />,
-    'CEVICHE PERUANO': <ChefHat size={20} strokeWidth={2.5} />,
-    'CEVICHE VEG': <Salad size={20} strokeWidth={2.5} className="text-green-500" />,
-    'CEVICHE TROPICAL': <Fish size={20} strokeWidth={2.5} className="rotate-45" />,
-    'CEVICHE SIN VERDE': <Fish size={20} strokeWidth={2.5} className="opacity-50" />,
-    'CRUDOS': <Shell size={20} strokeWidth={2.5} />,
-    'GOHAN': <ChefHat size={20} strokeWidth={2.5} />,
-    'BOWLS': <Fish size={20} strokeWidth={2.5} />,
-    'ROLLS PREMIUM': <Sparkles size={20} strokeWidth={2.5} />,
-    'HAND ROLLS': <Fish size={20} strokeWidth={2.5} />,
-    'HANDROLL': <Fish size={20} strokeWidth={2.5} />,
-    'EMPANADAS': <Wheat size={20} strokeWidth={2.5} />,
-    'PAPAS / FRITOS': <Flame size={20} strokeWidth={2.5} />,
-    'PANCITOS': <ChefHat size={20} strokeWidth={2.5} />,
-    'EXTRAS': <Plus size={20} strokeWidth={3} />,
-    'AGREGADOS': <Plus size={20} strokeWidth={3} />,
-    'BEBIDAS': <CupSoda size={20} strokeWidth={2.5} />,
+const SECTION_ICONS: Record<string, JSX.Element> = {
+    promos: <Gift size={20} strokeWidth={2.5} />,
+    ceviches: <Fish size={20} strokeWidth={2.5} />,
+    rolls: <Sparkles size={20} strokeWidth={2.5} />,
+    'bowls-gohan': <ChefHat size={20} strokeWidth={2.5} />,
+    empanadas: <Wheat size={20} strokeWidth={2.5} />,
+    acompanar: <Flame size={20} strokeWidth={2.5} />,
+    bebidas: <CupSoda size={20} strokeWidth={2.5} />,
 };
 
-/**
- * Friendly display names for known categories.
- * Unknown categories get a cleaned version of their ID.
- */
-const CATEGORY_NAMES: Record<string, string> = {
-    'PROMOS': 'Promociones',
-    'CEVICHE LOMASRICO': 'Lo Más Rico',
-    'CEVICHE PERUANO': 'Peruanos',
-    'CEVICHE VEG': 'Vegano/Veg',
-    'CEVICHE TROPICAL': 'Tropicales',
-    'CEVICHE SIN VERDE': 'Sin Verduras',
-    'CRUDOS': 'Crudos',
-    'GOHAN': 'Gohan',
-    'BOWLS': 'Bowls',
-    'ROLLS PREMIUM': 'Rolls Premium',
-    'HAND ROLLS': 'Hand Rolls',
-    'HANDROLL': 'Hand Rolls',
-    'EMPANADAS': 'Empanadas',
-    'PAPAS / FRITOS': 'Papas & Fritos',
-    'PANCITOS': 'Pancitos Horneados',
-    'EXTRAS': 'Extras',
-    'AGREGADOS': 'Agregados',
-    'BEBIDAS': 'Bebidas',
-};
+function buildMenuSections(products: Product[]) {
+    const sections = WEB_MENU_SECTIONS.map((section) => ({
+        id: section.id,
+        name: section.name,
+        icon: SECTION_ICONS[section.id] || <UtensilsCrossed size={20} strokeWidth={2.5} />,
+        productIds: new Set<string>(),
+    }));
 
-const DEFAULT_ICON = <UtensilsCrossed size={20} strokeWidth={2.5} />;
+    const leftovers = new Map<string, { name: string; productIds: Set<string> }>();
 
-/**
- * Build dynamic categories from the product data.
- * Categories are derived from the actual products, ordered by their
- * minimum sortOrder — so admin reordering is respected automatically.
- */
-function buildCategories(products: Product[]) {
-    const catMap = new Map<string, { minSort: number; count: number }>();
-
-    for (const p of products) {
-        const cat = p.category;
-        if (!cat) continue;
-        const existing = catMap.get(cat);
-        const pSort = (p as any).sortOrder ?? 9999;
-        if (!existing) {
-            catMap.set(cat, { minSort: pSort, count: 1 });
-        } else {
-            existing.count++;
-            if (pSort < existing.minSort) existing.minSort = pSort;
+    for (const product of products) {
+        const sectionId = webMenuSectionId(product.category, product.name);
+        if (sectionId) {
+            sections.find((s) => s.id === sectionId)?.productIds.add(product.id);
+            continue;
         }
+        const key = product.category || 'otros';
+        if (!leftovers.has(key)) leftovers.set(key, { name: key, productIds: new Set() });
+        leftovers.get(key)!.productIds.add(product.id);
     }
 
-    // Sort categories by their minimum product sortOrder
-    const sorted = [...catMap.entries()].sort((a, b) => a[1].minSort - b[1].minSort);
+    const visible = sections
+        .filter((s) => s.productIds.size > 0)
+        .map(({ productIds, ...rest }) => rest);
 
-    return sorted.map(([id]) => ({
-        id,
-        name: CATEGORY_NAMES[id] || id.charAt(0).toUpperCase() + id.slice(1).toLowerCase(),
-        icon: CATEGORY_ICONS[id] || null,
-    }));
+    leftovers.forEach((left, key) => {
+        if (left.productIds.size > 0) {
+            visible.push({
+                id: `other-${key}`,
+                name: key,
+                icon: <UtensilsCrossed size={20} strokeWidth={2.5} />,
+            });
+        }
+    });
+
+    return visible;
 }
 
 export const ProductGrid = () => {
@@ -119,6 +88,10 @@ export const ProductGrid = () => {
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
                     if (Array.isArray(data) && data.length > 0) {
+                        const salsas = data.filter((p: any) => /salsa/i.test(p.name || '')).map((p: any) => ({ name: p.name, category: p.category, section: webMenuSectionId(p.category, p.name) }));
+                        // #region agent log
+                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-menu',hypothesisId:'H-SALSA',location:'ProductGrid.tsx:fetch',message:'salsa products mapped',data:{salsas},timestamp:Date.now()})}).catch(()=>{});
+                        // #endregion
                         setProducts(data);
                     } else {
                         setProducts(REAL_PRODUCT_CATALOG.filter(p => p.isActive));
@@ -165,8 +138,13 @@ export const ProductGrid = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // ─── Dynamic categories derived from products ───
-    const categories = useMemo(() => buildCategories(products), [products]);
+    const categories = useMemo(() => {
+        const next = buildMenuSections(products);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-menu',hypothesisId:'H-ORDER',location:'ProductGrid.tsx:sections',message:'web menu sections built',data:{order:next.map((s)=>s.name)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return next;
+    }, [products]);
 
     const scrollToCategory = (categoryId: string) => {
         const element = document.getElementById(categoryId);
@@ -209,13 +187,7 @@ export const ProductGrid = () => {
         </div>
     );
 
-    const activeMenuCategories = [...categories]
-        .filter(cat => products.some(p => p.category === cat.id))
-        .sort((a, b) => {
-            if (!tableSession) return 0;
-            const order = { MAIN: 0, SIDE: 1, DRINK: 2 };
-            return order[categoryRole(a.id)] - order[categoryRole(b.id)];
-        });
+    const activeMenuCategories = categories;
     const currentCat = activeMenuCategories.find(c => c.id === selectedCategory);
 
 
@@ -288,7 +260,11 @@ export const ProductGrid = () => {
             {/* CONTENT CONTAINER */}
             <div className="max-w-7xl mx-auto px-6 space-y-16">
                 {activeMenuCategories.map(category => {
-                    const displayProducts = products.filter(p => p.category === category.id);
+                    const displayProducts = products.filter((p) => {
+                        const sectionId = webMenuSectionId(p.category, p.name);
+                        if (sectionId) return sectionId === category.id;
+                        return category.id === `other-${p.category || 'otros'}`;
+                    });
                     if (displayProducts.length === 0) return null;
 
 

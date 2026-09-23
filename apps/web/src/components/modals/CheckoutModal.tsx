@@ -849,7 +849,8 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         )}
 
                         <div className="flex flex-col items-center gap-2 mt-2">
-                            <p className="text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] italic">Transacción Segura · Mercado Pago</p>
+                            <img src="/assets/mercadopago/horizontal.svg" alt="Mercado Pago" className="h-5 object-contain" />
+                            <p className="text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] italic">Transacción segura</p>
                         </div>
                     </div>
                     </>

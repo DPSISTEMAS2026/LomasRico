@@ -818,7 +818,7 @@ export default function POSPage() {
                         <div className="grid grid-cols-3 gap-2 md:gap-3">
                             {[
                                 { id: 'CASH', label: 'Efectivo', icon: <Banknote size={16} />, color: 'orange' },
-                                { id: 'MP', label: 'Mercado Pago', icon: <img src="https://static.mlstatic.com/org-img/mkt/ms-mercadopago/logos/logos-mp/mercado-pago-icono.png" className="w-5 h-5 grayscale-0" />, color: 'blue' },
+                                { id: 'MP', label: 'Mercado Pago', icon: <img src="/assets/mercadopago/vertical.svg" alt="Mercado Pago" className="w-5 h-5 object-contain" />, color: 'blue' },
                                 { id: 'TRANSFER', label: 'Transferen.', icon: <TrendingUp size={16} />, color: 'purple' },
                             ].map(m => (
                                 <button
@@ -826,16 +826,16 @@ export default function POSPage() {
                                     onClick={() => setPaymentMethod(m.id as any)}
                                     className={`py-3 md:py-4 rounded-2xl font-black italic uppercase text-[9px] md:text-[10px] tracking-widest border-2 transition-all flex flex-col items-center gap-2 shadow-sm
                                         ${paymentMethod === m.id
-                                            ? m.id === 'MP' ? 'bg-[#009EE3] border-[#009EE3] text-white shadow-xl shadow-blue-200 scale-105 z-10'
+                                            ? m.id === 'MP' ? 'bg-[#0a0080] border-[#0a0080] text-white shadow-xl shadow-blue-200 scale-105 z-10'
                                                 : 'bg-white border-orange-500 text-orange-500 shadow-xl shadow-orange-100 scale-105 z-10'
                                             : 'bg-white border-transparent text-slate-300 opacity-60 hover:opacity-100 hover:bg-slate-50'}`}
                                 >
                                     <div className="w-6 h-6 flex items-center justify-center">
                                         {m.id === 'MP' ? (
                                             <img
-                                                src="https://static.mlstatic.com/org-img/mkt/ms-mercadopago/logos/logos-mp/mercado-pago-icono.png"
-                                                alt="MP"
-                                                className={`w-5 h-5 transition-all ${paymentMethod === 'MP' ? 'brightness-0 invert' : 'grayscale opacity-70'}`}
+                                                src={paymentMethod === 'MP' ? '/assets/mercadopago/vertical-pluma.svg' : '/assets/mercadopago/vertical.svg'}
+                                                alt="Mercado Pago"
+                                                className="w-6 h-6 object-contain"
                                             />
                                         ) : m.icon}
                                     </div>

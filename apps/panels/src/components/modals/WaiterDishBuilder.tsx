@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, X, Search } from 'lucide-react';
 import { Product, ModifierGroup } from '../../types';
-
-const SKIP = /extra|agregad|empanad|bebid|upsell|acompañ|promo|combo|quieres/;
-const CORE = /formato|tamaño|tamano|protein|proteín|verdura|sin verde|base|salsa/;
+import { isDishCoreModifier } from '@lomasrico/shared-types';
 
 function isWaiterCoreGroup(group: ModifierGroup) {
+    if (isDishCoreModifier(group.groupName, group.displayName)) return true;
     const label = `${group.groupName || ''} ${group.displayName || ''}`.toLowerCase();
-    if (SKIP.test(label)) return false;
-    if (CORE.test(label)) return true;
+    if (/extras?\s*lomasrico|extras?\s+lo\s*m[aá]s\s*rico|upsell|limonada\s+lomasrico/.test(label)) return false;
     return !!(group.isRequired || (group.minSelections || 0) > 0);
 }
 

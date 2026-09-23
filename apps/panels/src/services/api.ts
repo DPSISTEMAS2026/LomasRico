@@ -17,6 +17,13 @@ const getApiUrl = () => {
 
 export const API_URL = getApiUrl();
 
+export const WEB_URL = (
+    process.env.NEXT_PUBLIC_WEB_URL ||
+    (process.env.NODE_ENV === 'production'
+        ? 'https://lomasricov8.netlify.app'
+        : 'http://localhost:3000')
+).replace(/\/$/, '');
+
 export async function fetchCatalog() {
     const res = await fetch(`${API_URL}/products/active`);
     if (!res.ok) throw new Error('Failed to fetch catalog');

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Instagram } from 'lucide-react';
+import { ArrowDown, Instagram } from 'lucide-react';
 import { useTableSession } from '../../context/TableSessionContext';
+import FloatingDishes from './FloatingDishes';
 
 const ENABLED = process.env.NEXT_PUBLIC_COMING_SOON === 'true';
 const PREVIEW_KEY = 'lr_coming_soon_preview';
@@ -17,15 +18,22 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('preview') === '1') {
+        if (params.get('preview') === '1' || pathname.startsWith('/admin')) {
+            localStorage.setItem(PREVIEW_KEY, '1');
             sessionStorage.setItem(PREVIEW_KEY, '1');
         }
         setMesaQuery(Boolean(params.get('mesa')));
-        setPreview(sessionStorage.getItem(PREVIEW_KEY) === '1');
+        setPreview(
+            localStorage.getItem(PREVIEW_KEY) === '1' ||
+            sessionStorage.getItem(PREVIEW_KEY) === '1',
+        );
         setChecked(true);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon',hypothesisId:'H-SOON',location:'ComingSoonGate.tsx:check',message:'coming soon gate resolved',data:{enabled:ENABLED,preview:localStorage.getItem(PREVIEW_KEY)==='1',path:pathname},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }, [pathname]);
 
-    const tableBypass = pathname.startsWith('/mesa') || Boolean(session) || mesaQuery;
+    const tableBypass = pathname.startsWith('/mesa') || pathname.startsWith('/admin') || Boolean(session) || mesaQuery;
     const hidden = !ENABLED || preview || tableBypass;
 
     if (!ready || !checked) {
@@ -33,20 +41,35 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
     }
 
     if (hidden) {
-        return <>{children}</>;
+        return (
+            <>
+                {children}
+                {ENABLED && preview && (
+                    <div className="fixed bottom-4 left-4 z-[90] flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full shadow-lg">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Vista admin</span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                localStorage.removeItem(PREVIEW_KEY);
+                                sessionStorage.removeItem(PREVIEW_KEY);
+                                window.location.href = '/';
+                            }}
+                            className="text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300"
+                        >
+                            Salir
+                        </button>
+                    </div>
+                )}
+            </>
+        );
     }
 
     return (
-        <div className="relative min-h-screen">
-            <div
-                aria-hidden
-                className="pointer-events-none select-none blur-[18px] brightness-75 saturate-50"
-            >
-                {children}
-            </div>
+        <div className="relative min-h-screen overflow-hidden bg-[#fff6ea]">
+            <FloatingDishes />
 
-            <div className="fixed inset-0 z-[80] flex items-center justify-center p-5 bg-slate-950/45">
-                <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-[2rem] shadow-2xl px-8 py-10 text-center border border-white/60">
+            <div className="relative z-10 min-h-screen flex items-center justify-center p-5">
+                <div className="w-full max-w-md bg-white/92 backdrop-blur-md rounded-[2rem] shadow-2xl px-8 py-10 text-center border border-white/70">
                     <img
                         src="/assets/Logo Restaurante.png"
                         alt="Lo Más Rico"
@@ -56,17 +79,17 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                         Pronto
                     </p>
                     <h1 className="text-3xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-none">
-                        Estamos<br />trabajando
+                        Atento a nuestra<br />reapertura
                     </h1>
                     <p className="mt-4 text-sm font-bold text-slate-500 leading-relaxed">
-                        La nueva web de Lo Más Rico se lanza pronto.
-                        Mientras tanto, síguenos en redes y pide por los canales de siempre.
+                        Nueva dirección. Síguenos y enterate primero.
                     </p>
+                    <ArrowDown className="mx-auto mt-5 mb-2 text-[#f2642e] animate-bounce" size={28} strokeWidth={2.5} />
                     <a
                         href="https://www.instagram.com/cevichelomasrico/"
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-7 inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-[#f2642e] transition-colors"
+                        className="inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-[#f2642e] transition-colors"
                     >
                         <Instagram size={16} />
                         @cevichelomasrico

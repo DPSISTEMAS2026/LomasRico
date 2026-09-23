@@ -1,5 +1,5 @@
 import 'dotenv/config';
-// Hot reload trigger — Fase 1: Merma + CRUD
+// Hot reload trigger — Brevo API key loaded
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';

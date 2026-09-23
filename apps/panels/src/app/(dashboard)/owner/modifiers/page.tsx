@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import {
     Plus, X, Save, Trash2, ChevronDown, ChevronUp,
     Layers, Loader2, CheckCircle2, DollarSign,
-    ArrowUp, ArrowDown, Search, ChefHat, Pencil,
+    ArrowUp, ArrowDown, Search,
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
 import ModifierRecipeModal from './ModifierRecipeModal';
+import EnlargeSizeModal from './EnlargeSizeModal';
 
 interface ModifierOption {
     id: string;
@@ -46,13 +47,6 @@ function optionEffect(option: ModifierOption): 'price' | 'extra' | 'recipe' {
     return 'price';
 }
 
-function effectLabel(option: ModifierOption) {
-    const effect = optionEffect(option);
-    if (effect === 'recipe') return 'Cambia los gramos de la receta';
-    if (effect === 'extra') return `Suma ${option.inventoryItemName || 'un extra'}`;
-    return option.priceAdjustment ? `Cobra $${Number(option.priceAdjustment).toLocaleString()} más` : 'Sin cargo extra';
-}
-
 export default function ModifiersPage() {
     const [groups, setGroups] = useState<ModifierGroup[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +56,7 @@ export default function ModifiersPage() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEnlargeModal, setShowEnlargeModal] = useState(false);
     const [newGroupDisplayName, setNewGroupDisplayName] = useState('');
     const [newGroupType, setNewGroupType] = useState<'SINGLE_SELECT' | 'MULTI_SELECT'>('SINGLE_SELECT');
     const [newOptionName, setNewOptionName] = useState('');
@@ -84,7 +79,14 @@ export default function ModifiersPage() {
     const loadGroups = async () => {
         try {
             const res = await authFetch(`${API_URL}/modifiers/groups`);
-            if (res.ok) setGroups(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setGroups(data);
+                // #region agent log
+                const prueba = (Array.isArray(data) ? data : []).find((g: ModifierGroup) => /prueba/i.test(`${g.displayName} ${g.name}`));
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-COPY',location:'modifiers/page.tsx:loadGroups',message:'slim modifiers ui loaded',data:{copyMode:'slim',groupCount:Array.isArray(data)?data.length:0,pruebaFound:!!prueba,pruebaName:prueba?.displayName||null,pruebaOptions:(prueba?.options||[]).map((o:ModifierOption)=>({id:o.id,name:o.name,price:o.priceAdjustment,hasRecipe:!!o.recipeId,hasExtra:!!o.inventoryItemId}))},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+            }
         } finally {
             setLoading(false);
         }
@@ -200,15 +202,6 @@ export default function ModifiersPage() {
         await refreshGroup(groupId);
     };
 
-    const setPriceOnly = async (option: ModifierOption, groupId: string) => {
-        if (option.recipeId) {
-            if (!confirm('¿Esta opción deja de cambiar los gramos y solo cobra el extra?')) return;
-            await authFetch(`${API_URL}/modifiers/options/${option.id}/recipe`, { method: 'DELETE' });
-        }
-        setPickingExtraFor(null);
-        await handleUpdateOption(option.id, groupId, { inventoryItemId: null });
-    };
-
     const handleReorderOption = async (groupId: string, optionId: string, direction: 'up' | 'down') => {
         if (!editingGroup) return;
         const options = [...editingGroup.options];
@@ -245,32 +238,23 @@ export default function ModifiersPage() {
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             EXTRAS Y <span className="text-orange-500">OPCIONES</span>
                         </h1>
-                        <p className="mt-3 max-w-2xl text-sm font-bold text-slate-500 leading-relaxed">
-                            Aquí armás lo que el cliente elige al pedir: formato, proteína, extra.
-                            Primero la pregunta, después las respuestas, y en cada respuesta decís si solo cobra más, si suma un extra o si cambia los gramos del plato.
-                        </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 flex items-center gap-2"
-                    >
-                        <Plus size={16} /> Nueva pregunta
-                    </button>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-3">
-                    {[
-                        { n: '1', t: 'Pregunta', d: 'Lo que ve el cliente: “Elige tu formato”.' },
-                        { n: '2', t: 'Respuestas', d: '250 g, extra salmón, empanada +$2.000.' },
-                        { n: '3', t: 'Qué hace', d: 'Cobra más, suma un extra, o cambia gramos.' },
-                    ].map((step) => (
-                        <div key={step.n} className="bg-white rounded-2xl border border-slate-100 p-4">
-                            <p className="text-orange-500 font-black text-lg italic">{step.n}</p>
-                            <p className="font-black uppercase italic text-sm text-slate-900">{step.t}</p>
-                            <p className="text-xs font-bold text-slate-400 mt-1">{step.d}</p>
-                        </div>
-                    ))}
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowEnlargeModal(true)}
+                            className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 flex items-center gap-2"
+                        >
+                            Agrandar tamaño
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowCreateModal(true)}
+                            className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 flex items-center gap-2"
+                        >
+                            <Plus size={16} /> Otra pregunta
+                        </button>
+                    </div>
                 </div>
 
                 <div className="relative">
@@ -293,12 +277,15 @@ export default function ModifiersPage() {
                                 const open = expandedGroupId !== group.id;
                                 setExpandedGroupId(open ? group.id : null);
                                 if (open) setEditingGroup(group);
+                                // #region agent log
+                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-COPY',location:'modifiers/page.tsx:toggleGroup',message:'toggled modifier group',data:{copyMode:'slim',open,name:group.displayName,optionCount:group.options.length},timestamp:Date.now()})}).catch(()=>{});
+                                // #endregion
                             }}
                         >
                             <div>
                                 <h3 className="font-black uppercase italic text-lg text-slate-900">{group.displayName}</h3>
                                 <p className="text-xs font-bold text-slate-400 mt-1">
-                                    {group.type === 'SINGLE_SELECT' ? 'Elige una' : 'Puede elegir varias'}
+                                    {group.type === 'SINGLE_SELECT' ? 'Una' : 'Varias'}
                                     {' · '}
                                     {group.options.length} respuesta{group.options.length === 1 ? '' : 's'}
                                     {group.assignedProductsCount ? ` · en ${group.assignedProductsCount} platos` : ''}
@@ -320,7 +307,7 @@ export default function ModifiersPage() {
                             <div className="border-t border-slate-100 p-5 md:p-6 space-y-5 bg-slate-50/40">
                                 <div className="grid md:grid-cols-3 gap-3">
                                     <label className="block md:col-span-2">
-                                        <span className="text-xs font-black text-slate-500 block mb-1">Pregunta que ve el cliente</span>
+                                        <span className="text-xs font-black text-slate-500 block mb-1">Pregunta</span>
                                         <input
                                             value={editingGroup.displayName}
                                             onChange={(e) => setEditingGroup({ ...editingGroup, displayName: e.target.value })}
@@ -328,7 +315,7 @@ export default function ModifiersPage() {
                                         />
                                     </label>
                                     <label className="block">
-                                        <span className="text-xs font-black text-slate-500 block mb-1">¿Cuántas puede elegir?</span>
+                                        <span className="text-xs font-black text-slate-500 block mb-1">Cuántas</span>
                                         <select
                                             value={editingGroup.type}
                                             onChange={(e) => setEditingGroup({
@@ -392,70 +379,44 @@ export default function ModifiersPage() {
                                                     </button>
                                                 </div>
 
-                                                <p className="text-xs font-bold text-slate-400">{effectLabel(option)}</p>
-
-                                                <div className="grid sm:grid-cols-3 gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPriceOnly(option, editingGroup.id)}
-                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'price' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100'}`}
-                                                    >
-                                                        <p className="font-black text-xs">Solo cobra más</p>
-                                                        <p className={`text-[11px] font-bold mt-1 ${effect === 'price' ? 'text-slate-300' : 'text-slate-400'}`}>Empanada +$2.000. El plato no cambia.</p>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPickingExtraFor(option.id)}
-                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'extra' ? 'border-blue-600 bg-blue-50' : 'border-slate-100'}`}
-                                                    >
-                                                        <p className="font-black text-xs text-slate-800">Suma un extra</p>
-                                                        <p className="text-[11px] font-bold text-slate-400 mt-1">Se agrega algo al pedido, como una empanada o un extra de salmón.</p>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            // #region agent log
-                                                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-UI',location:'modifiers/page.tsx:openRecipe',message:'opened recipe modal',data:{optionId:option.id,hasRecipe:!!option.recipeId},timestamp:Date.now()})}).catch(()=>{});
-                                                            // #endregion
-                                                            setRecipeOption(option);
-                                                        }}
-                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'recipe' ? 'border-orange-500 bg-orange-50' : 'border-slate-100'}`}
-                                                    >
-                                                        <p className="font-black text-xs text-slate-800 flex items-center gap-1"><ChefHat size={12} /> Cambia los gramos</p>
-                                                        <p className="text-[11px] font-bold text-slate-400 mt-1">La receta del plato pasa de 500 g a 1000 g, por ejemplo.</p>
-                                                    </button>
-                                                </div>
-
                                                 {(effect === 'extra' || pickingExtraFor === option.id) && (
-                                                    <label className="block">
-                                                        <span className="text-xs font-black text-slate-500 block mb-1">¿Qué extra se suma al pedido?</span>
-                                                        <select
-                                                            value={option.inventoryItemId || ''}
-                                                            onChange={(e) => {
-                                                                handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: e.target.value || null });
-                                                                setPickingExtraFor(null);
-                                                            }}
-                                                            className="w-full p-3 bg-blue-50 rounded-xl font-bold text-sm outline-none"
-                                                        >
-                                                            <option value="">Elegir el extra…</option>
-                                                            {extraItems.map((item) => (
-                                                                <option key={item.id} value={item.id}>{item.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </label>
+                                                    <select
+                                                        value={option.inventoryItemId || ''}
+                                                        onChange={(e) => {
+                                                            handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: e.target.value || null });
+                                                            setPickingExtraFor(null);
+                                                        }}
+                                                        className="w-full p-3 bg-blue-50 rounded-xl font-bold text-sm outline-none"
+                                                    >
+                                                        <option value="">Extra…</option>
+                                                        {extraItems.map((item) => (
+                                                            <option key={item.id} value={item.id}>{item.name}</option>
+                                                        ))}
+                                                    </select>
                                                 )}
-
-                                                {option.recipeId && (
+                                                <div className="flex items-center gap-3">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setRecipeOption(option)}
-                                                        className="inline-flex items-center gap-2 text-xs font-black text-orange-600 bg-orange-50 px-3 py-2 rounded-xl"
+                                                        onClick={() => setPickingExtraFor(pickingExtraFor === option.id ? null : option.id)}
+                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700"
                                                     >
-                                                        <Pencil size={12} />
-                                                        Receta lista
-                                                        {option.recipeApplyMode === 'REPLACE' ? ' · otro tamaño' : ' · cambia gramos'}
+                                                        Extra
                                                     </button>
-                                                )}
+                                                    {option.recipeId && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                // #region agent log
+                                                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-UI',location:'modifiers/page.tsx:openRecipe',message:'opened recipe modal',data:{optionId:option.id,hasRecipe:!!option.recipeId},timestamp:Date.now()})}).catch(()=>{});
+                                                                // #endregion
+                                                                setRecipeOption(option);
+                                                            }}
+                                                            className="text-[10px] font-black uppercase tracking-widest text-orange-500"
+                                                        >
+                                                            Receta
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -464,7 +425,7 @@ export default function ModifiersPage() {
                                         <input
                                             value={newOptionName}
                                             onChange={(e) => setNewOptionName(e.target.value)}
-                                            placeholder="Nueva respuesta: 500 g, Extra salmón, Empanada…"
+                                            placeholder="Nueva respuesta"
                                             className="flex-1 bg-transparent font-bold outline-none placeholder:text-orange-300"
                                             onKeyDown={(e) => { if (e.key === 'Enter') handleAddOption(editingGroup.id); }}
                                         />
@@ -496,14 +457,23 @@ export default function ModifiersPage() {
                 {groups.length === 0 && (
                     <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
                         <Layers className="mx-auto text-slate-200 mb-4" size={48} />
-                        <p className="font-black italic uppercase text-slate-400">Todavía no hay preguntas</p>
-                        <p className="text-sm font-bold text-slate-400 mt-2 mb-6">Empieza con “Elige tu formato” o “Proteínas”.</p>
-                        <button type="button" onClick={() => setShowCreateModal(true)} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs">
-                            Crear la primera
+                        <p className="font-black italic uppercase text-slate-400 mb-6">Sin preguntas</p>
+                        <button type="button" onClick={() => setShowEnlargeModal(true)} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs">
+                            Agrandar tamaño
                         </button>
                     </div>
                 )}
             </div>
+
+            {showEnlargeModal && (
+                <EnlargeSizeModal
+                    onClose={() => setShowEnlargeModal(false)}
+                    onSaved={async () => {
+                        setShowEnlargeModal(false);
+                        await loadGroups();
+                    }}
+                />
+            )}
 
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -511,31 +481,28 @@ export default function ModifiersPage() {
                         <div className="flex justify-between items-start">
                             <div>
                                 <h2 className="text-xl font-black italic uppercase">Nueva pregunta</h2>
-                                <p className="text-sm font-bold text-slate-500 mt-2">
-                                    Esto es lo que lee el cliente en la carta. Después le agregás las respuestas.
-                                </p>
                             </div>
                             <button type="button" onClick={() => setShowCreateModal(false)} className="p-2 text-slate-300"><X size={20} /></button>
                         </div>
                         <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">Texto de la pregunta</span>
+                            <span className="text-xs font-black text-slate-500 block mb-1">Pregunta</span>
                             <input
                                 value={newGroupDisplayName}
                                 onChange={(e) => setNewGroupDisplayName(e.target.value)}
-                                placeholder="Ej: Elige tu proteína"
+                                placeholder="Elige el tamaño"
                                 className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none focus:border-orange-500 border-2 border-transparent"
                                 autoFocus
                             />
                         </label>
                         <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">¿Cuántas respuestas puede marcar?</span>
+                            <span className="text-xs font-black text-slate-500 block mb-1">Cuántas</span>
                             <select
                                 value={newGroupType}
                                 onChange={(e) => setNewGroupType(e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT')}
                                 className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none"
                             >
-                                <option value="SINGLE_SELECT">Solo una (formato, tamaño)</option>
-                                <option value="MULTI_SELECT">Varias (proteínas, extras)</option>
+                                <option value="SINGLE_SELECT">Una</option>
+                                <option value="MULTI_SELECT">Varias</option>
                             </select>
                         </label>
                         <div className="flex gap-2">

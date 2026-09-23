@@ -480,7 +480,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             )}
                         </button>
                         <div className="flex justify-center items-center gap-2 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-                            <img src="https://logotipoz.com/wp-content/uploads/2021/10/version-horizontal-large-logo-mercadopago.webp" className="h-6 object-contain" alt="MercadoPago" />
+                            <img src="/assets/mercadopago/horizontal.svg" className="h-6 object-contain" alt="Mercado Pago" />
                         </div>
                     </div>
                 </div>

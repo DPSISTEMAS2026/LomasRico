@@ -26,6 +26,7 @@ import { PromotionsModule } from './promotions/promotions.module';
 import { ExternalOrdersModule } from './external-orders/external-orders.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { TablesModule } from './tables/tables.module';
+import { MailModule } from './mail/mail.module';
 
 // App Root
 import { AppController } from './app.controller';
@@ -56,6 +57,7 @@ import { AppService } from './app.service';
     ExternalOrdersModule,
     AvailabilityModule,
     TablesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

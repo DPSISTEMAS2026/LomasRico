@@ -71,6 +71,12 @@ export default function DashboardLayout({
         }
     }, [pathname]);
 
+    useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-width',hypothesisId:'H-width',location:'layout.tsx:route',message:'Ancho del panel en este módulo',data:{pathname,innerWidth:typeof window!=='undefined'?window.innerWidth:0,fullWidth:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [pathname]);
+
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
         { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER'] },
@@ -260,16 +266,16 @@ export default function DashboardLayout({
             )}
 
             {/* Main Area */}
-            <main className={`flex-1 w-full relative ${isFullBleed ? 'overflow-hidden h-screen' : 'overflow-y-auto'}`}>
+            <main className={`flex-1 min-w-0 w-full relative ${isFullBleed ? 'overflow-hidden h-screen' : 'overflow-y-auto'}`}>
                 {/* Background Decoration */}
                 {!isKitchen && (
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none" />
                 )}
 
-                <div className={`min-h-full flex flex-col w-full ${
-                    isFullBleed ? 'p-0 max-w-none h-full' : 'max-w-7xl mx-auto p-4 md:p-10'
+                <div className={`min-h-full flex flex-col w-full max-w-none min-w-0 ${
+                    isFullBleed ? 'p-0 h-full' : 'p-4 md:px-6 lg:px-8 md:py-8'
                 }`}>
-                    <div className={`animate-in fade-in duration-300 ${isFullBleed ? 'h-full' : ''}`}>
+                    <div className={`w-full max-w-none min-w-0 animate-in fade-in duration-300 ${isFullBleed ? 'h-full' : ''}`}>
                         {children}
                     </div>
                 </div>

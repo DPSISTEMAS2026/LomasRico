@@ -29,12 +29,15 @@ export default function SalonPage() {
     useEffect(() => {
         load();
         const id = setInterval(load, 8000);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-width',hypothesisId:'H-width',location:'salon/page.tsx:mount',message:'Salón a todo el ancho (5 mesas en fila)',data:{innerWidth:typeof window!=='undefined'?window.innerWidth:0,tableCount:tables.length,grid:'xl:grid-cols-5'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         return () => clearInterval(id);
     }, []);
 
     return (
         <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 min-h-0">
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="w-full max-w-none space-y-6">
                 <div className="flex items-end justify-between gap-4">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 italic">Atención del local</p>
@@ -75,7 +78,7 @@ export default function SalonPage() {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
                     {tables.map((table) => {
                         const occupied = table.occupied;
                         const bill = table.billRequest;

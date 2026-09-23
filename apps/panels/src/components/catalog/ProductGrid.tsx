@@ -104,7 +104,7 @@ export const ProductGrid = () => {
         <div className="space-y-0 pb-20">
             {/* CATEGORY MENU - NOW AT TOP */}
             <div className="sticky top-[90px] z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 py-3">
+                <div className="w-full max-w-none px-4 py-3">
                     <div className="flex overflow-x-auto gap-2 no-scrollbar scroll-smooth">
                         {CATEGORIES.map(cat => (
                             <button
@@ -147,7 +147,7 @@ export const ProductGrid = () => {
             <div className="h-8" />
 
             {/* CONTENT CONTAINER */}
-            <div className="max-w-7xl mx-auto px-6 space-y-16">
+            <div className="w-full max-w-none px-6 space-y-16">
                 {CATEGORIES.map(category => {
                     const categoryProducts = products.filter(p => p.category === category.id);
                     if (categoryProducts.length === 0) return null;

@@ -14,7 +14,7 @@ export default function DashboardLoading() {
         }
       `}</style>
 
-      <div className="p-4 md:p-10 max-w-7xl mx-auto w-full">
+      <div className="p-4 md:px-6 lg:px-8 md:py-8 max-w-none w-full">
         {/* Minimal skeleton - just enough to prevent layout shift */}
         <div className="animate-pulse">
           <div className="h-10 w-56 bg-slate-100 rounded-2xl mb-2" />

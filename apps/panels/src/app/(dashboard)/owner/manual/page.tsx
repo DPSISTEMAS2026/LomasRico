@@ -61,7 +61,7 @@ export default function ManualPage() {
             </nav>
 
             {/* Contenido del manual */}
-            <div className="flex-1 max-w-3xl pb-20">
+            <div className="flex-1 w-full min-w-0 pb-20">
                 <ManualContent />
             </div>
         </div>
