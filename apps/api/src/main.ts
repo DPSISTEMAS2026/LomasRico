@@ -49,6 +49,15 @@ async function bootstrap() {
       if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
         return callback(null, true);
       }
+      try {
+        const host = new URL(origin).hostname;
+        if (host === 'lomasrico.cl' || host.endsWith('.lomasrico.cl')) {
+          // #region agent log
+          fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cors',hypothesisId:'H-CORS',location:'main.ts:cors',message:'allowed lomasrico host',data:{host},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          return callback(null, true);
+        }
+      } catch { /* ignore bad origin */ }
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
