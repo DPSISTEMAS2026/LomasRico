@@ -5,10 +5,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // #region agent log
+  fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-ENV',location:'main.ts:bootstrap',message:'env check before required',data:{hasDatabaseUrl:!!process.env.DATABASE_URL,hasJwt:!!process.env.JWT_SECRET,nodeEnv:process.env.NODE_ENV||null,port:process.env.PORT||null,hasBrevoKey:!!process.env.BREVO_API_KEY,cwd:process.cwd()},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   // ── Validate critical environment variables ──
   const required = ['DATABASE_URL'];
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
+    // #region agent log
+    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-ENV',location:'main.ts:missing-env',message:'required env missing — exit 1',data:{missing},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error('╔══════════════════════════════════════════════════╗');
     console.error('║  ❌ MISSING REQUIRED ENVIRONMENT VARIABLES      ║');
     missing.forEach(key => console.error(`║  → ${key.padEnd(44)}║`));
@@ -23,6 +29,9 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule);
+  // #region agent log
+  fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-MAIL',location:'main.ts:after-create',message:'NestFactory.create ok',data:{mailModule:true},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   // CORS: Whitelist basada en variable de entorno
   const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -56,5 +65,16 @@ async function bootstrap() {
   console.log('#################################################');
 
   await app.listen(port, '0.0.0.0');
+  // #region agent log
+  fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-LISTEN',location:'main.ts:listen',message:'api listening',data:{port:String(port)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 }
-bootstrap();
+bootstrap().catch((err: unknown) => {
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack?.slice(0, 800) : null;
+  // #region agent log
+  fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-BOOT',location:'main.ts:bootstrap-catch',message:'bootstrap crashed',data:{message,stack},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  console.error('BOOTSTRAP_CRASH', message, stack);
+  process.exit(1);
+});

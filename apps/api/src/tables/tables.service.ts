@@ -12,7 +12,15 @@ export class TablesService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
-        await this.ensureTables();
+        try {
+            await this.ensureTables();
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-TABLES',location:'tables.service.ts:onModuleInit',message:'ensureTables failed but bootstrap continues',data:{message:message.slice(0,240)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            console.warn('ensureTables skipped:', message);
+        }
     }
 
     private saleInclude() {

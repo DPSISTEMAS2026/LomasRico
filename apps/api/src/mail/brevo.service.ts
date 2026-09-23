@@ -91,6 +91,9 @@ export class BrevoService {
         this.listName = process.env.BREVO_LIST_NAME || LIST_NAME_DEFAULT;
         if (this.apiKey) this.logger.log('Brevo API configurada');
         else this.logger.warn('Brevo sin BREVO_API_KEY — correo masivo en espera');
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-MAIL',location:'brevo.service.ts:constructor',message:'BrevoService constructed',data:{hasApiKey:!!this.apiKey,hasSenderEmail:!!this.senderEmail},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }
 
     isConfigured() {
