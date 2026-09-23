@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ArrowDown, Instagram } from 'lucide-react';
 import { useTableSession } from '../../context/TableSessionContext';
@@ -15,6 +15,7 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
     const [preview, setPreview] = useState(false);
     const [mesaQuery, setMesaQuery] = useState(false);
     const [checked, setChecked] = useState(false);
+    const cardRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -65,11 +66,11 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[#fff6ea]">
-            <FloatingDishes />
+        <div className="relative min-h-screen min-h-dvh overflow-hidden bg-[#fff6ea]">
+            <FloatingDishes cardRef={cardRef} />
 
-            <div className="relative z-10 min-h-screen flex items-center justify-center p-5">
-                <div className="w-full max-w-md bg-white/92 backdrop-blur-md rounded-[2rem] shadow-2xl px-8 py-10 text-center border border-white/70">
+            <div className="relative z-10 min-h-screen min-h-dvh flex items-center justify-center p-5">
+                <div ref={cardRef} className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl px-8 py-10 text-center border border-white/70">
                     <img
                         src="/assets/Logo Restaurante.png"
                         alt="Lo Más Rico"
