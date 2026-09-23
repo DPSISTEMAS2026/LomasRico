@@ -17,7 +17,18 @@ export class ModifiersService {
                 options: {
                     where: { isActive: true },
                     orderBy: { sortOrder: 'asc' },
-                    include: { inventoryItem: { select: { id: true, name: true } } },
+                    include: {
+                        inventoryItem: { select: { id: true, name: true } },
+                        recipe: {
+                            select: {
+                                id: true,
+                                name: true,
+                                baseWeight: true,
+                                internalRules: true,
+                                _count: { select: { items: true } },
+                            },
+                        },
+                    },
                 },
                 _count: {
                     select: { productModifiers: true },
@@ -29,12 +40,7 @@ export class ModifiersService {
         return groups.map((g) => ({
             ...g,
             assignedProductsCount: g._count.productModifiers,
-            options: g.options.map((o: any) => ({
-                ...o,
-                priceAdjustment: Number(o.priceAdjustment),
-                inventoryItemId: o.inventoryItemId || null,
-                inventoryItemName: o.inventoryItem?.name || null,
-            })),
+            options: g.options.map((o: any) => this.serializeOption(o)),
         }));
     }
 
@@ -44,7 +50,18 @@ export class ModifiersService {
             include: {
                 options: {
                     orderBy: { sortOrder: 'asc' },
-                    include: { inventoryItem: { select: { id: true, name: true } } },
+                    include: {
+                        inventoryItem: { select: { id: true, name: true } },
+                        recipe: {
+                            select: {
+                                id: true,
+                                name: true,
+                                baseWeight: true,
+                                internalRules: true,
+                                _count: { select: { items: true } },
+                            },
+                        },
+                    },
                 },
                 productModifiers: {
                     include: { sellingProduct: { select: { id: true, name: true, category: true } } },
@@ -54,10 +71,7 @@ export class ModifiersService {
         if (!group) throw new NotFoundException('Modifier Group not found');
         return {
             ...group,
-            options: group.options.map((o) => ({
-                ...o,
-                priceAdjustment: Number(o.priceAdjustment),
-            })),
+            options: group.options.map((o: any) => this.serializeOption(o)),
         };
     }
 
@@ -286,5 +300,186 @@ export class ModifiersService {
         }
 
         return this.getProductModifiers(productId);
+    }
+
+    // ===============================================
+    // RECETA POR OPCIÓN DE MODIFICADOR
+    // ===============================================
+
+    async getOptionRecipe(optionId: string) {
+        const option = await this.prisma.modifierOption.findUnique({
+            where: { id: optionId },
+            include: {
+                recipe: { include: { items: { include: { ingredient: true } } } },
+                modifierGroup: { select: { id: true, displayName: true, name: true } },
+            },
+        });
+        if (!option) throw new NotFoundException('Modifier option not found');
+        return {
+            ...this.serializeOption(option),
+            recipe: option.recipe,
+            group: option.modifierGroup,
+        };
+    }
+
+    async upsertOptionRecipe(
+        optionId: string,
+        data: {
+            name?: string;
+            baseWeight?: number;
+            applyMode?: 'OVERRIDE' | 'REPLACE';
+            items: { ingredientId: string; quantity: number; unit?: string; role?: string }[];
+        },
+    ) {
+        const option = await this.prisma.modifierOption.findUnique({
+            where: { id: optionId },
+            include: { recipe: true },
+        });
+        if (!option) throw new NotFoundException('Modifier option not found');
+
+        const applyMode = data.applyMode === 'REPLACE' ? 'REPLACE' : 'OVERRIDE';
+        const normalizedItems = await this.normalizeRecipeItems(data.items || []);
+        const recipeName = data.name?.trim() || `Modificador: ${option.name}`;
+
+        const saved = await this.prisma.$transaction(async (tx) => {
+            let recipeId = option.recipeId;
+            const recipeData = {
+                name: recipeName,
+                baseWeight: Number(data.baseWeight) || 0,
+                internalRules: { apply: applyMode, source: 'modifier-option' },
+            };
+
+            if (recipeId) {
+                const linkedProduct = await tx.sellingProduct.findUnique({ where: { recipeId } });
+                if (linkedProduct) {
+                    recipeId = null;
+                }
+            }
+
+            if (recipeId) {
+                await tx.recipe.update({ where: { id: recipeId }, data: recipeData });
+                await tx.recipeItem.deleteMany({ where: { recipeId } });
+            } else {
+                const created = await tx.recipe.create({ data: recipeData });
+                recipeId = created.id;
+                await tx.modifierOption.update({
+                    where: { id: optionId },
+                    data: { recipeId },
+                });
+            }
+
+            if (normalizedItems.length > 0) {
+                await tx.recipeItem.createMany({
+                    data: normalizedItems.map((i) => ({
+                        recipeId: recipeId!,
+                        ingredientId: i.ingredientId,
+                        quantity: i.quantity,
+                        role: i.role as any,
+                    })),
+                });
+            }
+
+            return tx.recipe.findUnique({
+                where: { id: recipeId! },
+                include: { items: { include: { ingredient: true } } },
+            });
+        });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-SAVE',location:'modifiers.service.ts:upsertOptionRecipe',message:'saved option recipe',data:{optionId,recipeId:saved?.id,itemCount:normalizedItems.length,applyMode},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        return saved;
+    }
+
+    async cloneOptionRecipeFromProduct(optionId: string, productId: string) {
+        const product = await this.prisma.sellingProduct.findUnique({
+            where: { id: productId },
+            include: { recipe: { include: { items: { include: { ingredient: true } } } } },
+        });
+        if (!product) throw new NotFoundException('Product not found');
+        if (!product.recipe) throw new NotFoundException(`El producto ${product.name} no tiene receta`);
+
+        const option = await this.prisma.modifierOption.findUnique({ where: { id: optionId } });
+        if (!option) throw new NotFoundException('Modifier option not found');
+
+        return this.upsertOptionRecipe(optionId, {
+            name: `${option.name} · ${product.name}`,
+            baseWeight: product.recipe.baseWeight,
+            applyMode: 'OVERRIDE',
+            items: product.recipe.items.map((i) => ({
+                ingredientId: i.ingredientId,
+                quantity: i.quantity,
+                unit: i.ingredient.unit,
+                role: i.role,
+            })),
+        });
+    }
+
+    async clearOptionRecipe(optionId: string) {
+        const option = await this.prisma.modifierOption.findUnique({
+            where: { id: optionId },
+        });
+        if (!option) throw new NotFoundException('Modifier option not found');
+        if (!option.recipeId) return { cleared: true, id: optionId };
+
+        const recipeId = option.recipeId;
+        await this.prisma.modifierOption.update({
+            where: { id: optionId },
+            data: { recipeId: null },
+        });
+
+        const stillUsed = await this.prisma.modifierOption.count({ where: { recipeId } });
+        const productUses = await this.prisma.sellingProduct.count({ where: { recipeId } });
+        if (stillUsed === 0 && productUses === 0) {
+            await this.prisma.recipeItem.deleteMany({ where: { recipeId } });
+            await this.prisma.recipe.delete({ where: { id: recipeId } });
+        }
+
+        return { cleared: true, id: optionId };
+    }
+
+    private serializeOption(o: any) {
+        const rules = o.recipe?.internalRules || {};
+        return {
+            ...o,
+            priceAdjustment: Number(o.priceAdjustment),
+            inventoryItemId: o.inventoryItemId || null,
+            inventoryItemName: o.inventoryItem?.name || null,
+            recipeId: o.recipeId || null,
+            recipeName: o.recipe?.name || null,
+            recipeItemCount: o.recipe?._count?.items ?? o.recipe?.items?.length ?? 0,
+            recipeApplyMode: rules.apply === 'REPLACE' ? 'REPLACE' : o.recipeId ? 'OVERRIDE' : null,
+        };
+    }
+
+    private async normalizeRecipeItems(
+        items: { ingredientId: string; quantity: number; unit?: string; role?: string }[],
+    ) {
+        return Promise.all(
+            items.map(async (item) => {
+                const ingredient = await this.prisma.inventoryItem.findUnique({
+                    where: { id: item.ingredientId },
+                });
+                if (!ingredient) throw new NotFoundException(`Ingrediente ${item.ingredientId} no encontrado`);
+
+                const targetUnit = (ingredient.unit || 'UN').toUpperCase();
+                const inputUnit = (item.unit || targetUnit).toUpperCase();
+                const inputQty = Number(item.quantity) || 0;
+                let finalQty = inputQty;
+
+                if (targetUnit === 'KG') {
+                    if (['G', 'GR', 'GRAMOS'].includes(inputUnit)) finalQty = inputQty / 1000;
+                } else if (targetUnit === 'LT') {
+                    if (['ML', 'CC', 'MILILITROS'].includes(inputUnit)) finalQty = inputQty / 1000;
+                }
+
+                return {
+                    ingredientId: item.ingredientId,
+                    quantity: finalQty,
+                    role: item.role || 'BASE',
+                };
+            }),
+        );
     }
 }

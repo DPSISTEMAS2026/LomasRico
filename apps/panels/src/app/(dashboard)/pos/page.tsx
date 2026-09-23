@@ -46,6 +46,7 @@ import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
 import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
 import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
 import { DiscountModal } from '../../../components/pos/DiscountModal';
+import { SHOW_POS_DELIVERY } from '../../../config/features';
 
 // ─────────────────────────────────────────────
 // Página Principal del POS
@@ -130,7 +131,7 @@ export default function POSPage() {
     useEffect(() => {
         loadProducts();
         if (user) loadActiveShift();
-        loadDeliveryMode();
+        if (SHOW_POS_DELIVERY) loadDeliveryMode();
     }, [user]);
 
     const loadDeliveryMode = async () => {
@@ -232,7 +233,7 @@ export default function POSPage() {
     };
 
     const handleCheckout = async () => {
-        if (cart.length === 0 || isSubmitting) return;
+        if (isSubmitting || cart.length === 0) return;
         setIsSubmitting(true);
         try {
             const saleRes = await createSale(cart, {
@@ -243,8 +244,9 @@ export default function POSPage() {
                 shippingData: shippingCost > 0 ? { cost: shippingCost, address: shippingAddress || 'POS_Manual' } : undefined,
                 discount: discount > 0 ? discount : undefined,
                 discountType: discount > 0 ? discountType : undefined,
-                note: orderNote || undefined
-            });
+                note: orderNote || undefined,
+                fulfillmentType: 'TAKEAWAY',
+            } as any);
 
             if (paymentMethod === 'MP') {
                 const shouldApprove = confirm(`Simular cobro MercadoPago por $${(total + shippingCost).toLocaleString()}?`);
@@ -257,7 +259,7 @@ export default function POSPage() {
                 }
             } else {
                 alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
-                setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: paymentMethod === 'TRANSFER' ? 'POS_TRANSFER' : 'POS_EFECTIVO' });
+                setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO' });
             }
             setCart([]);
             setShippingCost(0);
@@ -366,6 +368,7 @@ export default function POSPage() {
                             )}
                         </div>
                         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar justify-center">
+                            {SHOW_POS_DELIVERY && (
                             <button
                                 onClick={toggleDeliveryMode}
                                 disabled={loadingDeliveryMode}
@@ -374,8 +377,9 @@ export default function POSPage() {
                                 <Truck size={14} className="shrink-0" />
                                 {loadingDeliveryMode ? '...' : (deliveryMode === 'EXTERNAL' ? 'PedidosYa' : 'Propio')}
                             </button>
+                            )}
 
-                            {/* Gear: Delivery Radius Config */}
+                            {SHOW_POS_DELIVERY && (
                             <div className="relative">
                                 <button
                                     onClick={() => { setTempRadius(deliveryRadius); setShowRadiusConfig(!showRadiusConfig); }}
@@ -439,6 +443,7 @@ export default function POSPage() {
                                     </div>
                                 )}
                             </div>
+                            )}
 
                             {activeShift && (
                                 <>
@@ -573,7 +578,7 @@ export default function POSPage() {
                             <div>
                                 <h1 className="font-black text-slate-900 tracking-tighter italic uppercase text-lg md:text-xl leading-none">Mi Comanda</h1>
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5">
-                                    {cart.length} Ítem{cart.length !== 1 ? 's' : ''} Seleccionados
+                                    Retiro · {cart.length} ítem{cart.length !== 1 ? 's' : ''}
                                 </p>
                             </div>
                         </div>
@@ -756,7 +761,7 @@ export default function POSPage() {
                         )}
 
                         {/* Despacho (Si hay ítems) */}
-                        {cart.length > 0 && (
+                        {SHOW_POS_DELIVERY && cart.length > 0 && (
                             <div className="relative animate-in slide-in-from-bottom-2 duration-500">
                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-2 block italic">Ubicación de Entrega</label>
 
@@ -915,7 +920,6 @@ export default function POSPage() {
                             </div>
                         )}
 
-                        {/* Botón cobrar */}
                         <div className="pt-0">
                             <button
                                 onClick={handleCheckout}
@@ -932,7 +936,7 @@ export default function POSPage() {
                                         <span>PROCESANDO...</span>
                                     </div>
                                 ) : (
-                                    <>{paymentMethod === 'MP' ? 'COBRAR CON MP' : 'LIQUIDAR VENTA'} <ChevronRight size={20} /></>
+                                    <>{paymentMethod === 'MP' ? 'COBRAR CON MP' : 'COBRAR RETIRO'} <ChevronRight size={20} /></>
                                 )}
                             </button>
                         </div>

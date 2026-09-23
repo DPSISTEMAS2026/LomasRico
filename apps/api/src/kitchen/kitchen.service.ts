@@ -45,11 +45,47 @@ export class KitchenService {
                                 recipeSnapshot: true
                             },
                         },
+                        table: true,
+                        guest: true,
                         externalOrder: true, // Para saber si es Uber/PedidosYa
                     },
                 },
             },
+        }).then((tickets: any[]) => {
+            const mapped = tickets.map((ticket) => this.withTicketItems(ticket));
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H4',location:'kitchen.service.ts:findAllActive',message:'kitchen mapped tickets',data:{total:mapped.length,samples:mapped.slice(0,5).map((t:any)=>({label:t.label,batch:t.batchNumber,itemCount:t.sale?.items?.length||0,guest:t.sale?.guest?.name||null}))},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return mapped;
         });
+    }
+
+    private kitchenLabel(ticket: any) {
+        if (ticket.label) return ticket.label;
+        const sale = ticket.sale;
+        if (sale?.table?.number) {
+            return sale.guest?.name
+                ? `MESA ${sale.table.number} · ${sale.guest.name}`
+                : `MESA ${sale.table.number}`;
+        }
+        if (sale?.fulfillmentType === 'TAKEAWAY') return 'RETIRO';
+        if (sale?.channel === 'WEB') return 'WEB';
+        if (sale?.channel === 'UBER_EATS') return 'UBER';
+        if (sale?.channel === 'PEDIDOS_YA') return 'PEDIDOS YA';
+        return sale?.channel || 'POS';
+    }
+
+    private withTicketItems(ticket: any) {
+        if (!ticket?.sale) return ticket;
+        const ids: string[] = ticket.itemIds || [];
+        const items = ids.length
+            ? ticket.sale.items.filter((item: any) => ids.includes(item.id))
+            : ticket.sale.items;
+        return {
+            ...ticket,
+            label: this.kitchenLabel(ticket),
+            sale: { ...ticket.sale, items },
+        };
     }
 
     async updateStatus(id: string, status: string) {
@@ -73,7 +109,9 @@ export class KitchenService {
             // No marcar COMPLETED aún — se marca cuando se entrega
         } else if (status === TicketStatus.DELIVERED) {
             if (!ticket.endTime) updateData.endTime = new Date();
-            saleUpdateData.status = OrderStatus.COMPLETED;
+            if (ticket.sale?.paymentStatus === 'APPROVED') {
+                saleUpdateData.status = OrderStatus.COMPLETED;
+            }
         } else if (status === 'CANCELLED') {
             // Cancelación: quitar de la vista activa y marcar sale como cancelada
             updateData.status = TicketStatus.DELIVERED; // Removes from active view
@@ -137,7 +175,7 @@ export class KitchenService {
     }
 
     async createTicket(saleId: string) {
-        const existing = await (this.prisma as any).kitchenTicket.findUnique({
+        const existing = await (this.prisma as any).kitchenTicket.findFirst({
             where: { saleId }
         });
 
@@ -167,6 +205,8 @@ export class KitchenService {
                                 recipeSnapshot: true,
                             },
                         },
+                        table: true,
+                        guest: true,
                         externalOrder: true,
                     },
                 },
@@ -174,20 +214,37 @@ export class KitchenService {
         });
 
         if (!ticket) throw new NotFoundException(`Ticket ${ticketId} no encontrado`);
+        const labeled = this.withTicketItems(ticket);
 
-        const sale = ticket.sale;
-        const channel = sale.externalOrder ? sale.channel : 'POS';
+        const sale = labeled.sale;
+        const channel = labeled.label || (sale.externalOrder ? sale.channel : 'POS');
+        const guestName = sale.guest?.name;
         const orderCode = sale.code || sale.id.substring(0, 6).toUpperCase();
         const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
         const date = new Date(ticket.createdAt).toLocaleDateString('es-CL');
 
+        const formatMods = (raw: any) => {
+            const mods = raw
+                ? (typeof raw === 'string' ? JSON.parse(raw) : raw)
+                : {};
+            const lines: string[] = [];
+            if (Array.isArray(mods)) {
+                return mods.map((m: any) => `<div style="padding-left:12px;font-size:11px;color:#666;">+ ${m.name || m.optionName || m}</div>`).join('');
+            }
+            (mods.selectedProteinNames || []).forEach((n: string) => lines.push(`+ ${n}`));
+            (mods.selectedProteins || []).forEach((n: string) => lines.push(`+ ${n}`));
+            (mods.removedIngredients || []).forEach((n: string) => lines.push(`- Sin ${n}`));
+            (mods.extras || []).forEach((e: any) => lines.push(`+ ${e.name || e}`));
+            (mods.dynamicSelections || []).forEach((g: any) => {
+                (g.selectedOptions || []).forEach((o: any) => lines.push(`+ ${o.name || o}`));
+            });
+            return lines.map((line) => `<div style="padding-left:12px;font-size:11px;color:#666;">${line}</div>`).join('');
+        };
+
         const itemsHtml = sale.items.map((item: any) => {
             const name = item.sellingProduct?.name || item.productName || 'Producto';
             const qty = item.quantity || 1;
-            const mods = item.modifiers ? JSON.parse(typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers)) : [];
-            const modsHtml = Array.isArray(mods) && mods.length > 0
-                ? mods.map((m: any) => `<div style="padding-left:12px;font-size:11px;color:#666;">+ ${m.name || m.optionName || m}</div>`).join('')
-                : '';
+            const modsHtml = formatMods(item.modifiers);
             const notes = item.note ? `<div style="padding-left:12px;font-size:11px;color:#c00;font-weight:bold;">⚠ ${item.note}</div>` : '';
             return `
                 <div style="border-bottom:1px dashed #ccc;padding:6px 0;">
@@ -225,12 +282,14 @@ export class KitchenService {
     <div class="header">
         <h1>🔥 LO MÁS RICO</h1>
         <div>COMANDA DE COCINA</div>
-        <div class="order">#${orderCode}</div>
+        <div class="order">${channel}</div>
+        ${guestName ? `<div style="font-size:20px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
+        ${ticket.batchNumber ? `<div style="font-size:14px;margin-top:2px;">TANDA ${ticket.batchNumber}</div>` : ''}
+        <div>#${orderCode}</div>
     </div>
     <div class="meta">
         <span>📅 ${date}</span>
         <span>🕐 ${time}</span>
-        <span>📡 ${channel}</span>
     </div>
     ${itemsHtml}
     ${sale.note ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${sale.note}</div>` : ''}

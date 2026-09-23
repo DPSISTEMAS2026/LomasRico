@@ -14,6 +14,7 @@ export interface ModifierGroup {
     groupName: string;
     displayName: string;
     type: 'SINGLE_SELECT' | 'MULTI_SELECT';
+    isRequired?: boolean;
     minSelections: number;
     maxSelections: number;
     options: ModifierOption[];

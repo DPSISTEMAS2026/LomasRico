@@ -55,7 +55,7 @@ export default function KitchenPage() {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<TabKey>('WAITING');
     const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
-    const prevWaitingCount = useRef(0);
+    const prevTicketIds = useRef<Set<string>>(new Set());
 
     // 🔔 Sound notification for new tickets
     const playNotificationSound = useCallback(() => {
@@ -92,14 +92,17 @@ export default function KitchenPage() {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            const newWaiting = data.filter((t: any) => t.status === 'WAITING').length;
-            if (hasLoaded.current && newWaiting > prevWaitingCount.current) {
+            const ids = new Set(data.map((t: any) => t.id));
+            if (hasLoaded.current && data.some((t: any) => !prevTicketIds.current.has(t.id))) {
                 playNotificationSound();
             }
-            prevWaitingCount.current = newWaiting;
+            prevTicketIds.current = ids;
             hasLoaded.current = true;
             setTickets(data);
             setError('');
+            // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K5',location:'kitchen/page.tsx:loadTickets',message:'kitchen tickets loaded',data:{total:data.length,tableTickets:data.filter((t:any)=>t.label?.includes('MESA')||t.sale?.table).length,waiting:data.filter((t:any)=>t.status==='WAITING').length,preparing:data.filter((t:any)=>t.status==='PREPARING').length},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Error de conexión');
         } finally {

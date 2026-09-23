@@ -3,30 +3,29 @@
 import { useState, useEffect } from 'react';
 import {
     Plus, X, Save, Trash2, ChevronDown, ChevronUp,
-    ToggleLeft, ToggleRight, Layers, Settings2,
-    Loader2, CheckCircle2, DollarSign, GripVertical,
-    Package, ArrowUp, ArrowDown, Search
+    Layers, Loader2, CheckCircle2, DollarSign,
+    ArrowUp, ArrowDown, Search, ChefHat, Pencil,
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
+import ModifierRecipeModal from './ModifierRecipeModal';
 
 interface ModifierOption {
     id: string;
     name: string;
     priceAdjustment: number;
     isDefault: boolean;
-    isActive?: boolean;
     sortOrder: number;
     recipeId?: string | null;
+    recipeItemCount?: number;
+    recipeApplyMode?: 'OVERRIDE' | 'REPLACE' | null;
     inventoryItemId?: string | null;
     inventoryItemName?: string | null;
 }
 
-interface InventoryItem {
+interface ExtraItem {
     id: string;
     name: string;
-    type: string;
-    currentStock: number;
 }
 
 interface ModifierGroup {
@@ -41,6 +40,19 @@ interface ModifierGroup {
     assignedProductsCount?: number;
 }
 
+function optionEffect(option: ModifierOption): 'price' | 'extra' | 'recipe' {
+    if (option.recipeId) return 'recipe';
+    if (option.inventoryItemId) return 'extra';
+    return 'price';
+}
+
+function effectLabel(option: ModifierOption) {
+    const effect = optionEffect(option);
+    if (effect === 'recipe') return 'Cambia los gramos de la receta';
+    if (effect === 'extra') return `Suma ${option.inventoryItemName || 'un extra'}`;
+    return option.priceAdjustment ? `Cobra $${Number(option.priceAdjustment).toLocaleString()} más` : 'Sin cargo extra';
+}
+
 export default function ModifiersPage() {
     const [groups, setGroups] = useState<ModifierGroup[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,84 +62,79 @@ export default function ModifiersPage() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDisplayName, setNewGroupDisplayName] = useState('');
     const [newGroupType, setNewGroupType] = useState<'SINGLE_SELECT' | 'MULTI_SELECT'>('SINGLE_SELECT');
-    // New option form
     const [newOptionName, setNewOptionName] = useState('');
     const [newOptionPrice, setNewOptionPrice] = useState(0);
-    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
+    const [recipeOption, setRecipeOption] = useState<ModifierOption | null>(null);
+    const [pickingExtraFor, setPickingExtraFor] = useState<string | null>(null);
 
-    const filteredGroups = groups.filter(g =>
+    const filteredGroups = groups.filter((g) =>
         !searchQuery.trim() ||
         g.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.options.some(o => o.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        g.options.some((o) => o.name.toLowerCase().includes(searchQuery.toLowerCase())),
     );
 
     useEffect(() => {
         loadGroups();
-        loadInventoryItems();
+        loadExtras();
     }, []);
-
-
 
     const loadGroups = async () => {
         try {
             const res = await authFetch(`${API_URL}/modifiers/groups`);
-            if (res.ok) {
-                const data = await res.json();
-                setGroups(data);
-            }
-        } catch (e) {
-            console.error('Error loading modifier groups:', e);
+            if (res.ok) setGroups(await res.json());
         } finally {
             setLoading(false);
         }
     };
 
-    const loadInventoryItems = async () => {
+    const loadExtras = async () => {
         try {
             const res = await authFetch(`${API_URL}/inventory`);
             if (res.ok) {
                 const data = await res.json();
-                setInventoryItems(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+                setExtraItems(
+                    (Array.isArray(data) ? data : [])
+                        .map((i: any) => ({ id: i.id, name: i.name }))
+                        .sort((a: ExtraItem, b: ExtraItem) => a.name.localeCompare(b.name)),
+                );
             }
-        } catch (e) {
-            console.error('Error loading inventory:', e);
+        } catch {
+            setExtraItems([]);
         }
+    };
+
+    const refreshGroup = async (groupId: string) => {
+        await loadGroups();
+        const groupRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`);
+        if (groupRes.ok) setEditingGroup(await groupRes.json());
     };
 
     const handleCreateGroup = async () => {
         if (!newGroupDisplayName.trim()) return;
-        const newGroup: any = {
-            name: newGroupName.trim() || `mod-${Date.now()}`,
-            displayName: newGroupDisplayName.trim(),
-            type: newGroupType,
-            minSelections: 0,
-            maxSelections: newGroupType === 'SINGLE_SELECT' ? 1 : 5,
-            sortOrder: groups.length,
-            options: [],
-        };
-
-        try {
-            const res = await authFetch(`${API_URL}/modifiers/groups`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newGroup),
-            });
-            if (res.ok) {
-                const created = await res.json();
-                setGroups((prev) => [{ ...created, assignedProductsCount: 0 }, ...prev]);
-                setEditingGroup(created);
-                setExpandedGroupId(created.id);
-                setShowCreateModal(false);
-                setNewGroupName('');
-                setNewGroupDisplayName('');
-                setNewGroupType('SINGLE_SELECT');
-            }
-        } catch (e) {
-            console.error(e);
+        const res = await authFetch(`${API_URL}/modifiers/groups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: `mod-${Date.now()}`,
+                displayName: newGroupDisplayName.trim(),
+                type: newGroupType,
+                minSelections: 0,
+                maxSelections: newGroupType === 'SINGLE_SELECT' ? 1 : 5,
+                sortOrder: groups.length,
+                options: [],
+            }),
+        });
+        if (res.ok) {
+            const created = await res.json();
+            setGroups((prev) => [{ ...created, assignedProductsCount: 0 }, ...prev]);
+            setEditingGroup(created);
+            setExpandedGroupId(created.id);
+            setShowCreateModal(false);
+            setNewGroupDisplayName('');
+            setNewGroupType('SINGLE_SELECT');
         }
     };
 
@@ -138,12 +145,10 @@ export default function ModifiersPage() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: group.name,
                     displayName: group.displayName,
                     type: group.type,
                     minSelections: group.minSelections,
                     maxSelections: group.maxSelections,
-                    sortOrder: group.sortOrder,
                 }),
             });
             if (res.ok) {
@@ -151,481 +156,336 @@ export default function ModifiersPage() {
                 loadGroups();
                 setTimeout(() => setSaveSuccess(false), 2000);
             }
-        } catch (e) {
-            console.error(e);
         } finally {
             setSaving(false);
         }
     };
 
     const handleDeleteGroup = async (id: string) => {
-        if (!confirm('¿Eliminar este grupo de modificadores? Se eliminará de todos los productos asignados.')) return;
-        try {
-            await authFetch(`${API_URL}/modifiers/groups/${id}`, { method: 'DELETE' });
-            setGroups((prev) => prev.filter((g) => g.id !== id));
-            if (editingGroup?.id === id) setEditingGroup(null);
-        } catch (e) {
-            console.error(e);
-        }
+        if (!confirm('¿Borrar esta pregunta? Se quita de todos los platos donde esté asignada.')) return;
+        await authFetch(`${API_URL}/modifiers/groups/${id}`, { method: 'DELETE' });
+        setGroups((prev) => prev.filter((g) => g.id !== id));
+        if (editingGroup?.id === id) setEditingGroup(null);
     };
 
     const handleAddOption = async (groupId: string) => {
         if (!newOptionName.trim()) return;
-        try {
-            const res = await authFetch(`${API_URL}/modifiers/groups/${groupId}/options`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: newOptionName.trim(),
-                    priceAdjustment: newOptionPrice,
-                    sortOrder: editingGroup?.options?.length || 0,
-                }),
-            });
-            if (res.ok) {
-                setNewOptionName('');
-                setNewOptionPrice(0);
-                loadGroups();
-                // Refresh editing group
-                const groupRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`);
-                if (groupRes.ok) setEditingGroup(await groupRes.json());
-            }
-        } catch (e) {
-            console.error(e);
+        const res = await authFetch(`${API_URL}/modifiers/groups/${groupId}/options`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: newOptionName.trim(),
+                priceAdjustment: newOptionPrice,
+                sortOrder: editingGroup?.options?.length || 0,
+            }),
+        });
+        if (res.ok) {
+            setNewOptionName('');
+            setNewOptionPrice(0);
+            await refreshGroup(groupId);
         }
     };
 
     const handleDeleteOption = async (optionId: string, groupId: string) => {
-        try {
-            await authFetch(`${API_URL}/modifiers/options/${optionId}`, { method: 'DELETE' });
-            loadGroups();
-            const groupRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`);
-            if (groupRes.ok) setEditingGroup(await groupRes.json());
-        } catch (e) {
-            console.error(e);
-        }
+        await authFetch(`${API_URL}/modifiers/options/${optionId}`, { method: 'DELETE' });
+        await refreshGroup(groupId);
     };
 
     const handleUpdateOption = async (optionId: string, groupId: string, data: any) => {
-        try {
-            await authFetch(`${API_URL}/modifiers/options/${optionId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            loadGroups();
-            const groupRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`);
-            if (groupRes.ok) setEditingGroup(await groupRes.json());
-        } catch (e) {
-            console.error(e);
+        await authFetch(`${API_URL}/modifiers/options/${optionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        await refreshGroup(groupId);
+    };
+
+    const setPriceOnly = async (option: ModifierOption, groupId: string) => {
+        if (option.recipeId) {
+            if (!confirm('¿Esta opción deja de cambiar los gramos y solo cobra el extra?')) return;
+            await authFetch(`${API_URL}/modifiers/options/${option.id}/recipe`, { method: 'DELETE' });
         }
+        setPickingExtraFor(null);
+        await handleUpdateOption(option.id, groupId, { inventoryItemId: null });
     };
 
     const handleReorderOption = async (groupId: string, optionId: string, direction: 'up' | 'down') => {
         if (!editingGroup) return;
         const options = [...editingGroup.options];
-        const idx = options.findIndex(o => o.id === optionId);
+        const idx = options.findIndex((o) => o.id === optionId);
         if (idx === -1) return;
         if (direction === 'up' && idx === 0) return;
         if (direction === 'down' && idx === options.length - 1) return;
-
         const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
         [options[idx], options[swapIdx]] = [options[swapIdx], options[idx]];
-
-        // Update local state immediately
         const reordered = options.map((o, i) => ({ ...o, sortOrder: i }));
         setEditingGroup({ ...editingGroup, options: reordered });
-
-        // Persist
-        try {
-            await authFetch(`${API_URL}/modifiers/groups/${groupId}/reorder-options`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    items: reordered.map(o => ({ id: o.id, sortOrder: o.sortOrder }))
-                })
-            });
-            loadGroups();
-        } catch (e) {
-            console.error('Error reordering options:', e);
-        }
+        await authFetch(`${API_URL}/modifiers/groups/${groupId}/reorder-options`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: reordered.map((o) => ({ id: o.id, sortOrder: o.sortOrder })) }),
+        });
+        loadGroups();
     };
 
     if (loading) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center">
                 <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-                <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">
-                    Cargando Modificadores...
-                </p>
+                <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Cargando…</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
-            {/* Header */}
-            <header className="flex flex-col gap-4">
+        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+            <header className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                            GESTIÓN DE <span className="text-orange-500">MODIFICADORES</span>
+                            EXTRAS Y <span className="text-orange-500">OPCIONES</span>
                         </h1>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="w-8 h-[2px] bg-orange-500"></span>
-                            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1">
-                                {groups.length} grupos · {groups.reduce((a, g) => a + g.options.length, 0)} opciones totales
-                            </p>
-                        </div>
+                        <p className="mt-3 max-w-2xl text-sm font-bold text-slate-500 leading-relaxed">
+                            Aquí armás lo que el cliente elige al pedir: formato, proteína, extra.
+                            Primero la pregunta, después las respuestas, y en cada respuesta decís si solo cobra más, si suma un extra o si cambia los gramos del plato.
+                        </p>
                     </div>
                     <button
+                        type="button"
                         onClick={() => setShowCreateModal(true)}
-                        className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
+                        className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 flex items-center gap-2"
                     >
-                        <Plus size={18} />
-                        Nuevo Grupo
+                        <Plus size={16} /> Nueva pregunta
                     </button>
                 </div>
-                {/* Search Bar */}
+
+                <div className="grid md:grid-cols-3 gap-3">
+                    {[
+                        { n: '1', t: 'Pregunta', d: 'Lo que ve el cliente: “Elige tu formato”.' },
+                        { n: '2', t: 'Respuestas', d: '250 g, extra salmón, empanada +$2.000.' },
+                        { n: '3', t: 'Qué hace', d: 'Cobra más, suma un extra, o cambia gramos.' },
+                    ].map((step) => (
+                        <div key={step.n} className="bg-white rounded-2xl border border-slate-100 p-4">
+                            <p className="text-orange-500 font-black text-lg italic">{step.n}</p>
+                            <p className="font-black uppercase italic text-sm text-slate-900">{step.t}</p>
+                            <p className="text-xs font-bold text-slate-400 mt-1">{step.d}</p>
+                        </div>
+                    ))}
+                </div>
+
                 <div className="relative">
                     <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
-                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar modificador o opción..."
-                        className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-slate-100 focus:border-orange-500 rounded-2xl font-bold text-sm text-slate-700 outline-none transition-colors shadow-sm"
+                        placeholder="Buscar una pregunta o una respuesta…"
+                        className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-slate-100 focus:border-orange-500 rounded-2xl font-bold text-sm outline-none"
                     />
-                    {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                            <X size={16} />
-                        </button>
-                    )}
                 </div>
             </header>
 
-            {/* Empty State */}
-            {groups.length === 0 && (
-                <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-16 text-center">
-                    <Layers className="mx-auto text-slate-200 mb-6" size={64} />
-                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-300 mb-2">
-                        Sin Modificadores
-                    </h3>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8">
-                        Crea tu primer grupo: Formato, Proteínas, Extras, etc.
-                    </p>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-600 transition-all"
-                    >
-                        <Plus size={16} className="inline mr-2" />
-                        Crear Primer Grupo
-                    </button>
-                </div>
-            )}
-
-            {/* Groups List */}
             <div className="space-y-4">
-                {filteredGroups.length === 0 && groups.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-                        <Search className="mx-auto text-slate-200 mb-4" size={40} />
-                        <p className="font-black text-slate-300 uppercase text-xs tracking-widest italic">
-                            No se encontraron modificadores para "{searchQuery}"
-                        </p>
-                    </div>
-                )}
                 {filteredGroups.map((group) => (
-                    <div
-                        key={group.id}
-                        className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md"
-                    >
-                        {/* Group Header */}
+                    <div key={group.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
                         <div
-                            className="flex items-center justify-between p-5 md:p-6 cursor-pointer hover:bg-slate-50/50 transition-colors"
+                            className="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-50/70"
                             onClick={() => {
-                                const isExpanding = expandedGroupId !== group.id;
-                                setExpandedGroupId(isExpanding ? group.id : null);
-                                if (isExpanding) setEditingGroup(group);
+                                const open = expandedGroupId !== group.id;
+                                setExpandedGroupId(open ? group.id : null);
+                                if (open) setEditingGroup(group);
                             }}
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
-                                    <Layers size={22} />
-                                </div>
-                                <div>
-                                    <h3 className="font-black uppercase text-base md:text-lg italic tracking-tighter text-slate-900">
-                                        {group.displayName}
-                                    </h3>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                            {group.type === 'SINGLE_SELECT' ? 'Selección Única' : 'Multi Selección'}
-                                        </span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                            {group.options.length} opciones
-                                        </span>
-                                        {group.assignedProductsCount && group.assignedProductsCount > 0 && (
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">
-                                                <Package size={10} className="inline mr-1" />
-                                                {group.assignedProductsCount} productos
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                            <div>
+                                <h3 className="font-black uppercase italic text-lg text-slate-900">{group.displayName}</h3>
+                                <p className="text-xs font-bold text-slate-400 mt-1">
+                                    {group.type === 'SINGLE_SELECT' ? 'Elige una' : 'Puede elegir varias'}
+                                    {' · '}
+                                    {group.options.length} respuesta{group.options.length === 1 ? '' : 's'}
+                                    {group.assignedProductsCount ? ` · en ${group.assignedProductsCount} platos` : ''}
+                                </p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteGroup(group.id);
-                                    }}
-                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
+                                    className="p-2 text-slate-300 hover:text-red-500"
                                 >
                                     <Trash2 size={16} />
                                 </button>
-                                {expandedGroupId === group.id ? (
-                                    <ChevronUp size={20} className="text-slate-400" />
-                                ) : (
-                                    <ChevronDown size={20} className="text-slate-400" />
-                                )}
+                                {expandedGroupId === group.id ? <ChevronUp className="text-slate-400" /> : <ChevronDown className="text-slate-400" />}
                             </div>
                         </div>
 
-                        {/* Expanded Editor */}
                         {expandedGroupId === group.id && editingGroup && (
-                            <div className="border-t border-slate-100 p-6 md:p-8 space-y-6 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
-                                {/* Group Config */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <label className="block">
-                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block mb-1 italic">
-                                            Nombre Interno
-                                        </span>
-                                        <input
-                                            value={editingGroup.name}
-                                            onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })}
-                                            className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-slate-700 outline-none text-sm"
-                                            placeholder="formato"
-                                        />
-                                    </label>
-                                    <label className="block">
-                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block mb-1 italic">
-                                            Nombre Visible
-                                        </span>
+                            <div className="border-t border-slate-100 p-5 md:p-6 space-y-5 bg-slate-50/40">
+                                <div className="grid md:grid-cols-3 gap-3">
+                                    <label className="block md:col-span-2">
+                                        <span className="text-xs font-black text-slate-500 block mb-1">Pregunta que ve el cliente</span>
                                         <input
                                             value={editingGroup.displayName}
                                             onChange={(e) => setEditingGroup({ ...editingGroup, displayName: e.target.value })}
-                                            className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-slate-700 outline-none text-sm"
-                                            placeholder="Elige tu Formato"
+                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none border-2 border-transparent focus:border-orange-500"
                                         />
                                     </label>
                                     <label className="block">
-                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block mb-1 italic">
-                                            Tipo de Selección
-                                        </span>
+                                        <span className="text-xs font-black text-slate-500 block mb-1">¿Cuántas puede elegir?</span>
                                         <select
                                             value={editingGroup.type}
-                                            onChange={(e) =>
-                                                setEditingGroup({
-                                                    ...editingGroup,
-                                                    type: e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT',
-                                                })
-                                            }
-                                            className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-slate-700 outline-none text-sm appearance-none"
+                                            onChange={(e) => setEditingGroup({
+                                                ...editingGroup,
+                                                type: e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT',
+                                                maxSelections: e.target.value === 'SINGLE_SELECT' ? 1 : Math.max(editingGroup.maxSelections, 2),
+                                            })}
+                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none"
                                         >
-                                            <option value="SINGLE_SELECT">Selección Única</option>
-                                            <option value="MULTI_SELECT">Multi Selección</option>
+                                            <option value="SINGLE_SELECT">Solo una</option>
+                                            <option value="MULTI_SELECT">Varias</option>
                                         </select>
                                     </label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <label className="block">
-                                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block mb-1 italic">
-                                                Mín.
-                                            </span>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                value={editingGroup.minSelections}
-                                                onChange={(e) =>
-                                                    setEditingGroup({
-                                                        ...editingGroup,
-                                                        minSelections: Number(e.target.value),
-                                                    })
-                                                }
-                                                className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-slate-700 outline-none text-sm"
-                                            />
-                                        </label>
-                                        <label className="block">
-                                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block mb-1 italic">
-                                                Máx.
-                                            </span>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                value={editingGroup.maxSelections}
-                                                onChange={(e) =>
-                                                    setEditingGroup({
-                                                        ...editingGroup,
-                                                        maxSelections: Number(e.target.value),
-                                                    })
-                                                }
-                                                className="w-full p-3 bg-white border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-slate-700 outline-none text-sm"
-                                            />
-                                        </label>
-                                    </div>
                                 </div>
-
-                                {/* Save Group Button */}
                                 <div className="flex justify-end">
                                     <button
+                                        type="button"
                                         onClick={() => handleUpdateGroup(editingGroup)}
-                                        disabled={saving}
-                                        className={`px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 ${
-                                            saveSuccess
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-slate-900 text-white hover:bg-orange-600 active:scale-95'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 ${saveSuccess ? 'bg-green-500 text-white' : 'bg-slate-900 text-white'}`}
                                     >
-                                        {saving ? (
-                                            <Loader2 size={14} className="animate-spin" />
-                                        ) : saveSuccess ? (
-                                            <CheckCircle2 size={14} />
-                                        ) : (
-                                            <Save size={14} />
-                                        )}
-                                        {saveSuccess ? '¡Guardado!' : 'Guardar Grupo'}
+                                        {saving ? <Loader2 size={14} className="animate-spin" /> : saveSuccess ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                                        {saveSuccess ? 'Guardado' : 'Guardar pregunta'}
                                     </button>
                                 </div>
 
-                                {/* Options List */}
                                 <div className="space-y-3">
-                                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic flex items-center gap-2">
-                                        <Settings2 size={14} />
-                                        Opciones del Grupo
-                                    </h4>
-
-                                    {editingGroup.options.map((option, optIdx) => (
-                                        <div
-                                            key={option.id}
-                                            className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 group hover:border-orange-200 transition-all"
-                                        >
-                                            <span className="w-6 h-6 rounded-md bg-slate-100 text-slate-400 text-[9px] font-black flex items-center justify-center shrink-0">
-                                                {optIdx + 1}
-                                            </span>
-                                            <div className="flex flex-col gap-0.5 shrink-0">
-                                                <button
-                                                    disabled={optIdx === 0}
-                                                    onClick={() => handleReorderOption(editingGroup.id, option.id, 'up')}
-                                                    className="w-5 h-4 rounded flex items-center justify-center text-slate-300 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                >
-                                                    <ArrowUp size={10} />
-                                                </button>
-                                                <button
-                                                    disabled={optIdx === editingGroup.options.length - 1}
-                                                    onClick={() => handleReorderOption(editingGroup.id, option.id, 'down')}
-                                                    className="w-5 h-4 rounded flex items-center justify-center text-slate-300 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                >
-                                                    <ArrowDown size={10} />
-                                                </button>
-                                            </div>
-                                            <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-                                                <div className="flex items-center gap-3 flex-wrap">
-                                                    <span className="font-black text-sm italic text-slate-800 truncate">
-                                                        {option.name}
-                                                    </span>
-                                                    {option.priceAdjustment !== 0 && (
-                                                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full shrink-0">
-                                                            <DollarSign size={10} className="inline" />
-                                                            {option.priceAdjustment > 0 ? '+' : ''}
-                                                            {option.priceAdjustment.toLocaleString()}
-                                                        </span>
-                                                    )}
-                                                    {option.isDefault && (
-                                                        <span className="text-[8px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full shrink-0 uppercase">
-                                                            DEFAULT
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {/* Inventory Link Selector */}
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Respuestas</p>
+                                    {editingGroup.options.map((option, optIdx) => {
+                                        const effect = optionEffect(option);
+                                        return (
+                                            <div key={option.id} className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
                                                 <div className="flex items-center gap-2">
-                                                    <Package size={11} className={option.inventoryItemId ? 'text-blue-500' : 'text-slate-300'} />
-                                                    <select
-                                                        value={option.inventoryItemId || ''}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value || null;
-                                                            handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: val });
+                                                    <div className="flex flex-col">
+                                                        <button type="button" disabled={optIdx === 0} onClick={() => handleReorderOption(editingGroup.id, option.id, 'up')} className="text-slate-300 hover:text-orange-500 disabled:opacity-20"><ArrowUp size={12} /></button>
+                                                        <button type="button" disabled={optIdx === editingGroup.options.length - 1} onClick={() => handleReorderOption(editingGroup.id, option.id, 'down')} className="text-slate-300 hover:text-orange-500 disabled:opacity-20"><ArrowDown size={12} /></button>
+                                                    </div>
+                                                    <input
+                                                        key={`${option.id}-name-${option.name}`}
+                                                        defaultValue={option.name}
+                                                        onBlur={(e) => {
+                                                            const name = e.target.value.trim();
+                                                            if (name && name !== option.name) handleUpdateOption(option.id, editingGroup.id, { name });
                                                         }}
-                                                        className={`text-[10px] font-bold py-0.5 px-1.5 rounded-lg border outline-none cursor-pointer transition-colors ${
-                                                            option.inventoryItemId
-                                                                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                                                : 'bg-slate-50 border-slate-200 text-slate-400'
-                                                        }`}
-                                                    >
-                                                        <option value="">Sin inventario</option>
-                                                        {inventoryItems.map(inv => (
-                                                            <option key={inv.id} value={inv.id}>
-                                                                {inv.name} ({inv.currentStock} {inv.type})
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                        className="flex-1 bg-slate-50 rounded-xl px-3 py-2 font-black text-sm outline-none focus:border-orange-400 border border-transparent"
+                                                    />
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-black text-slate-400">+$</span>
+                                                        <input
+                                                            type="number"
+                                                            key={`${option.id}-price-${option.priceAdjustment}`}
+                                                            defaultValue={option.priceAdjustment}
+                                                            onBlur={(e) => {
+                                                                const priceAdjustment = Number(e.target.value) || 0;
+                                                                if (priceAdjustment !== option.priceAdjustment) handleUpdateOption(option.id, editingGroup.id, { priceAdjustment });
+                                                            }}
+                                                            className="w-24 bg-slate-50 rounded-xl px-2 py-2 font-black text-sm text-center outline-none"
+                                                        />
+                                                    </div>
+                                                    <button type="button" onClick={() => handleDeleteOption(option.id, editingGroup.id)} className="p-2 text-slate-300 hover:text-red-500">
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </div>
-                                            </div>
-                                            <button
-                                                onClick={() =>
-                                                    handleUpdateOption(option.id, editingGroup.id, {
-                                                        isDefault: !option.isDefault,
-                                                    })
-                                                }
-                                                className="p-1.5 text-slate-300 hover:text-orange-500 transition-colors"
-                                                title="Toggle Default"
-                                            >
-                                                {option.isDefault ? (
-                                                    <ToggleRight size={18} className="text-orange-500" />
-                                                ) : (
-                                                    <ToggleLeft size={18} />
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteOption(option.id, editingGroup.id)}
-                                                className="p-1.5 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    ))}
 
-                                    {/* Add New Option */}
-                                    <div className="flex items-center gap-3 p-3 bg-orange-50/50 rounded-xl border-2 border-dashed border-orange-200">
-                                        <Plus size={16} className="text-orange-400 shrink-0" />
+                                                <p className="text-xs font-bold text-slate-400">{effectLabel(option)}</p>
+
+                                                <div className="grid sm:grid-cols-3 gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPriceOnly(option, editingGroup.id)}
+                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'price' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100'}`}
+                                                    >
+                                                        <p className="font-black text-xs">Solo cobra más</p>
+                                                        <p className={`text-[11px] font-bold mt-1 ${effect === 'price' ? 'text-slate-300' : 'text-slate-400'}`}>Empanada +$2.000. El plato no cambia.</p>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPickingExtraFor(option.id)}
+                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'extra' ? 'border-blue-600 bg-blue-50' : 'border-slate-100'}`}
+                                                    >
+                                                        <p className="font-black text-xs text-slate-800">Suma un extra</p>
+                                                        <p className="text-[11px] font-bold text-slate-400 mt-1">Se agrega algo al pedido, como una empanada o un extra de salmón.</p>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            // #region agent log
+                                                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-UI',location:'modifiers/page.tsx:openRecipe',message:'opened recipe modal',data:{optionId:option.id,hasRecipe:!!option.recipeId},timestamp:Date.now()})}).catch(()=>{});
+                                                            // #endregion
+                                                            setRecipeOption(option);
+                                                        }}
+                                                        className={`text-left p-3 rounded-xl border-2 ${effect === 'recipe' ? 'border-orange-500 bg-orange-50' : 'border-slate-100'}`}
+                                                    >
+                                                        <p className="font-black text-xs text-slate-800 flex items-center gap-1"><ChefHat size={12} /> Cambia los gramos</p>
+                                                        <p className="text-[11px] font-bold text-slate-400 mt-1">La receta del plato pasa de 500 g a 1000 g, por ejemplo.</p>
+                                                    </button>
+                                                </div>
+
+                                                {(effect === 'extra' || pickingExtraFor === option.id) && (
+                                                    <label className="block">
+                                                        <span className="text-xs font-black text-slate-500 block mb-1">¿Qué extra se suma al pedido?</span>
+                                                        <select
+                                                            value={option.inventoryItemId || ''}
+                                                            onChange={(e) => {
+                                                                handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: e.target.value || null });
+                                                                setPickingExtraFor(null);
+                                                            }}
+                                                            className="w-full p-3 bg-blue-50 rounded-xl font-bold text-sm outline-none"
+                                                        >
+                                                            <option value="">Elegir el extra…</option>
+                                                            {extraItems.map((item) => (
+                                                                <option key={item.id} value={item.id}>{item.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </label>
+                                                )}
+
+                                                {option.recipeId && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRecipeOption(option)}
+                                                        className="inline-flex items-center gap-2 text-xs font-black text-orange-600 bg-orange-50 px-3 py-2 rounded-xl"
+                                                    >
+                                                        <Pencil size={12} />
+                                                        Receta lista
+                                                        {option.recipeApplyMode === 'REPLACE' ? ' · otro tamaño' : ' · cambia gramos'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-orange-50/70 rounded-2xl border-2 border-dashed border-orange-200">
                                         <input
-                                            type="text"
                                             value={newOptionName}
                                             onChange={(e) => setNewOptionName(e.target.value)}
-                                            placeholder="Nombre de la opción..."
-                                            className="flex-1 bg-transparent font-bold text-sm text-slate-700 outline-none placeholder:text-orange-300"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleAddOption(editingGroup.id);
-                                            }}
+                                            placeholder="Nueva respuesta: 500 g, Extra salmón, Empanada…"
+                                            className="flex-1 bg-transparent font-bold outline-none placeholder:text-orange-300"
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddOption(editingGroup.id); }}
                                         />
-                                        <div className="flex items-center gap-1 shrink-0">
+                                        <div className="flex items-center gap-2">
                                             <DollarSign size={14} className="text-slate-400" />
                                             <input
                                                 type="number"
                                                 value={newOptionPrice}
                                                 onChange={(e) => setNewOptionPrice(Number(e.target.value))}
-                                                className="w-20 bg-white rounded-lg p-2 font-bold text-sm text-slate-700 outline-none border border-slate-200 text-center"
+                                                className="w-24 bg-white rounded-xl p-2 font-black text-sm text-center outline-none"
                                                 placeholder="0"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddOption(editingGroup.id)}
+                                                disabled={!newOptionName.trim()}
+                                                className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] ${newOptionName.trim() ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'}`}
+                                            >
+                                                Agregar
+                                            </button>
                                         </div>
-
-                                        <button
-                                            onClick={() => handleAddOption(editingGroup.id)}
-                                            disabled={!newOptionName.trim()}
-                                            className={`px-4 py-2 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all ${
-                                                newOptionName.trim()
-                                                    ? 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
-                                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            Agregar
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -633,93 +493,77 @@ export default function ModifiersPage() {
                     </div>
                 ))}
 
-                {/* Create Button at Bottom */}
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="w-full bg-white rounded-2xl md:rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-orange-400 p-6 flex items-center justify-center gap-3 transition-all hover:bg-orange-50/50 group"
-                >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-orange-500 flex items-center justify-center transition-colors">
-                        <Plus size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                {groups.length === 0 && (
+                    <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
+                        <Layers className="mx-auto text-slate-200 mb-4" size={48} />
+                        <p className="font-black italic uppercase text-slate-400">Todavía no hay preguntas</p>
+                        <p className="text-sm font-bold text-slate-400 mt-2 mb-6">Empieza con “Elige tu formato” o “Proteínas”.</p>
+                        <button type="button" onClick={() => setShowCreateModal(true)} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs">
+                            Crear la primera
+                        </button>
                     </div>
-                    <span className="font-black uppercase text-xs tracking-widest text-slate-400 group-hover:text-orange-600 italic transition-colors">
-                        Crear Nuevo Grupo
-                    </span>
-                </button>
+                )}
             </div>
 
-            {/* Create Group Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 space-y-6 animate-in zoom-in-95 duration-300">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">
-                                Nuevo <span className="text-orange-500">Modificador</span>
-                            </h2>
-                            <button
-                                onClick={() => { setShowCreateModal(false); setNewGroupName(''); setNewGroupDisplayName(''); }}
-                                className="p-2 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
-                            >
-                                <X size={20} />
-                            </button>
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-7 space-y-5">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h2 className="text-xl font-black italic uppercase">Nueva pregunta</h2>
+                                <p className="text-sm font-bold text-slate-500 mt-2">
+                                    Esto es lo que lee el cliente en la carta. Después le agregás las respuestas.
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setShowCreateModal(false)} className="p-2 text-slate-300"><X size={20} /></button>
                         </div>
-
-                        <div className="space-y-4">
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Nombre Visible *</span>
-                                <input
-                                    value={newGroupDisplayName}
-                                    onChange={(e) => setNewGroupDisplayName(e.target.value)}
-                                    placeholder="Ej: Elige tu Proteína"
-                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none transition-colors"
-                                    autoFocus
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Nombre Interno</span>
-                                <input
-                                    value={newGroupName}
-                                    onChange={(e) => setNewGroupName(e.target.value)}
-                                    placeholder="Ej: proteinas (se genera automático)"
-                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none transition-colors"
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1.5 italic">Tipo de Selección</span>
-                                <select
-                                    value={newGroupType}
-                                    onChange={(e) => setNewGroupType(e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT')}
-                                    className="w-full p-3.5 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl font-bold text-sm text-slate-700 outline-none appearance-none"
-                                >
-                                    <option value="SINGLE_SELECT">Selección Única</option>
-                                    <option value="MULTI_SELECT">Multi Selección</option>
-                                </select>
-                            </label>
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                            <button
-                                onClick={() => { setShowCreateModal(false); setNewGroupName(''); setNewGroupDisplayName(''); }}
-                                className="flex-1 px-6 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                        <label className="block">
+                            <span className="text-xs font-black text-slate-500 block mb-1">Texto de la pregunta</span>
+                            <input
+                                value={newGroupDisplayName}
+                                onChange={(e) => setNewGroupDisplayName(e.target.value)}
+                                placeholder="Ej: Elige tu proteína"
+                                className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none focus:border-orange-500 border-2 border-transparent"
+                                autoFocus
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-xs font-black text-slate-500 block mb-1">¿Cuántas respuestas puede marcar?</span>
+                            <select
+                                value={newGroupType}
+                                onChange={(e) => setNewGroupType(e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT')}
+                                className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none"
                             >
-                                Cancelar
-                            </button>
+                                <option value="SINGLE_SELECT">Solo una (formato, tamaño)</option>
+                                <option value="MULTI_SELECT">Varias (proteínas, extras)</option>
+                            </select>
+                        </label>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 font-black uppercase text-[10px]">Cancelar</button>
                             <button
+                                type="button"
                                 onClick={handleCreateGroup}
                                 disabled={!newGroupDisplayName.trim()}
-                                className={`flex-1 px-6 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${
-                                    newGroupDisplayName.trim()
-                                        ? 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
-                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                }`}
+                                className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] ${newGroupDisplayName.trim() ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'}`}
                             >
-                                <Plus size={14} />
-                                Crear Grupo
+                                Crear
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
+            {recipeOption && editingGroup && (
+                <ModifierRecipeModal
+                    option={recipeOption}
+                    groupName={editingGroup.displayName}
+                    onClose={() => setRecipeOption(null)}
+                    onSaved={async () => {
+                        setRecipeOption(null);
+                        await refreshGroup(editingGroup.id);
+                    }}
+                />
+            )}
         </div>
     );
 }

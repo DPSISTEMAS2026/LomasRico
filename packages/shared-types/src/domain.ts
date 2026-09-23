@@ -54,6 +54,8 @@ export interface KitchenSale {
     userId?: string;
     total?: number;
     createdAt?: string;
+    fulfillmentType?: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+    table?: { id: string; number: number; name: string };
 }
 
 /** A kitchen ticket representing an order in the KDS */
@@ -62,6 +64,8 @@ export interface KitchenTicket {
     status: KitchenStatus;
     createdAt: string;
     updatedAt?: string;
+    label?: string;
+    batchNumber?: number;
     sale: KitchenSale;
 }
 

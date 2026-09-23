@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -7,8 +7,12 @@ import { OAuth2Client } from 'google-auth-library';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 
+const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN'] as const;
+const DEFAULT_STAFF_PIN = '2026';
+const ROLE_PRIORITY: Record<string, number> = { OWNER: 0, ADMIN: 1, CASHIER: 2, KITCHEN: 3 };
+
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
     private googleClient: OAuth2Client;
 
     constructor(
@@ -20,6 +24,47 @@ export class AuthService {
             console.warn('WARNING: GOOGLE_CLIENT_ID is not defined in environment variables.');
         }
         this.googleClient = new OAuth2Client(clientId);
+    }
+
+    async onModuleInit() {
+        await this.ensureStaffPins();
+    }
+
+    private async ensureStaffPins() {
+        const staff = await this.prisma.user.findMany({
+            where: { role: { in: [...STAFF_ROLES] } },
+            select: { id: true, email: true, role: true, pin: true },
+        });
+
+        let updated = 0;
+        for (const u of staff) {
+            if (!u.pin || !/^\d{4}$/.test(u.pin)) {
+                await this.prisma.user.update({
+                    where: { id: u.id },
+                    data: { pin: DEFAULT_STAFF_PIN },
+                });
+                updated += 1;
+            }
+        }
+
+        if (staff.length === 0) {
+            await this.prisma.user.create({
+                data: {
+                    name: 'Dueño',
+                    email: 'dueno@lomasrico.cl',
+                    role: 'OWNER',
+                    pin: DEFAULT_STAFF_PIN,
+                },
+            });
+            updated = 1;
+        }
+
+    }
+
+    private sanitizeUser(user: any) {
+        if (!user) return user;
+        const { password, pin, confirmationCode, ...safe } = user;
+        return safe;
     }
 
     /**
@@ -164,10 +209,27 @@ export class AuthService {
     }
 
     async loginWithPin(pin: string) {
-        // @ts-ignore: Prisma Client not updated yet
-        const user = await (this.prisma as any).user.findFirst({
-            where: { pin },
+        const isFourDigits = /^\d{4}$/.test(String(pin || ''));
+
+        if (!isFourDigits) {
+            throw new UnauthorizedException('El PIN debe ser de 4 dígitos');
+        }
+
+        const matches = await this.prisma.user.findMany({
+            where: { pin, role: { in: [...STAFF_ROLES] } },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                avatarUrl: true,
+                modules: true,
+                canDiscount: true,
+            },
         });
+
+        matches.sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99));
+        const user = matches[0];
 
         if (!user) {
             throw new UnauthorizedException('PIN inválido');
@@ -176,7 +238,7 @@ export class AuthService {
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
         return {
             accessToken: this.jwtService.sign(jwtPayload),
-            user,
+            user: this.sanitizeUser(user),
         };
     }
 

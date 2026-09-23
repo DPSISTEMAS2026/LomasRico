@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { isInventoryEnforced } from '../config/flags';
 import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -103,7 +104,10 @@ export class SalesService {
             shippingData,
             status: manualStatus,
             paymentMethod,
-            shiftId
+            shiftId,
+            fulfillmentType,
+            tableId,
+            sendToKitchen,
         } = createSaleDto as any;
 
         // Determine initial status based on payment method
@@ -442,10 +446,13 @@ export class SalesService {
                     discount: discountValue,
                     discountType: discountType || 'FIXED',
                     discountReason: (createSaleDto as any).discountReason || 'POS Discount',
-                    note: (createSaleDto as any).note
+                    note: (createSaleDto as any).note,
+                    fulfillmentType: fulfillmentType || (channel === 'WEB' && shippingData ? 'DELIVERY' : 'TAKEAWAY'),
+                    tableId: tableId || undefined,
                 }
             });
 
+            const createdItemIds: string[] = [];
             for (const pItem of processedItems) {
                 const saleItem = await tx.saleItem.create({
                     data: {
@@ -457,6 +464,7 @@ export class SalesService {
                         modifiers: pItem.modifiers !== undefined ? pItem.modifiers : undefined,
                     }
                 });
+                createdItemIds.push(saleItem.id);
 
                 await tx.recipeSnapshot.create({
                     data: {
@@ -481,7 +489,7 @@ export class SalesService {
                 // Canales externos ya fueron aceptados por la plataforma → solo alertar, no bloquear
                 const isExternalChannel = channel === 'UBER_EATS' || channel === 'PEDIDOS_YA';
 
-                if (itemIds.length > 0) {
+                if (isInventoryEnforced() && itemIds.length > 0) {
                     // Lock rows — la segunda transacción esperará hasta que la primera haga commit
                     const lockedItems: any[] = await tx.$queryRawUnsafe(
                         `SELECT id, name, "currentStock" FROM "InventoryItem" WHERE id IN (${itemIds.map((_: any, i: number) => `$${i + 1}`).join(',')}) FOR UPDATE`,
@@ -507,27 +515,28 @@ export class SalesService {
                             }
                         }
                     }
-                }
 
-                // Deduct inventory (safe — rows are locked)
-                for (const [itemId, qty] of totalRequirements.entries()) {
-                    await tx.inventoryItem.update({
-                        where: { id: itemId },
-                        data: {
-                            currentStock: { decrement: qty },
-                            movements: {
-                                create: {
-                                    quantity: -qty,
-                                    reason: 'SALE',
-                                    referenceId: sale.id
+                    // Deduct inventory (safe — rows are locked)
+                    for (const [itemId, qty] of totalRequirements.entries()) {
+                        await tx.inventoryItem.update({
+                            where: { id: itemId },
+                            data: {
+                                currentStock: { decrement: qty },
+                                movements: {
+                                    create: {
+                                        quantity: -qty,
+                                        reason: 'SALE',
+                                        referenceId: sale.id
+                                    }
                                 }
                             }
-                        }
-                    });
-                }
+                        });
+                    }
 
-                // Invalidar cache de disponibilidad después de descontar stock
-                this.availabilityService.invalidateCache();
+                    this.availabilityService.invalidateCache();
+                } else if (!isInventoryEnforced()) {
+                    this.logger.warn('Inventario en pausa — no se bloquea ni se descuenta stock');
+                }
 
                 // ✅ REGISTRAR EN FLUJO DE CAJA — TODOS LOS CANALES con turno activo
                 if (finalShiftId) {
@@ -551,15 +560,28 @@ export class SalesService {
 
             // Solo crear ticket de cocina si la venta está confirmada (no PENDING de pago)
             // Para ventas WEB con MP, el ticket se crea en handleApprovedOrder al confirmar el pago
-            if (!isPending) {
-                // External orders (Uber, PedidosYa) go straight to PREPARING
-                // since they're already confirmed by the platform
-                const isExternalOrder = channel === 'UBER_EATS' || channel === 'PEDIDOS_YA';
+            const shouldSendKitchen = sendToKitchen !== false && !isPending;
+            if (shouldSendKitchen) {
+                const isTable = fulfillmentType === 'DINE_IN';
+                const kitchenLabel = channel === 'WEB'
+                    ? 'WEB'
+                    : channel === 'UBER_EATS'
+                        ? 'UBER'
+                        : channel === 'PEDIDOS_YA'
+                            ? 'PEDIDOS YA'
+                            : (isTable ? 'MESA' : 'RETIRO');
                 await tx.kitchenTicket.create({
                     data: {
                         saleId: sale.id,
-                        status: isExternalOrder ? 'PREPARING' : 'WAITING'
+                        status: isTable ? 'PREPARING' : 'WAITING',
+                        batchNumber: 1,
+                        label: kitchenLabel,
+                        itemIds: createdItemIds,
                     }
+                });
+                await tx.saleItem.updateMany({
+                    where: { id: { in: createdItemIds } },
+                    data: { sentToKitchenAt: new Date() },
                 });
             }
 

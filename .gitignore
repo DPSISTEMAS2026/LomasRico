@@ -65,6 +65,9 @@ MAXI V2*.json
 scripts/update-maxi-*.js
 scripts/update-maxi-*.ps1
 
+# === DB LOCAL EMBEBIDA ===
+data/pg/
+
 # === ARCHIVOS TEMPORALES ===
 tmp/
 tmp_*

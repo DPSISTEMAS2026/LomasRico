@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { isModulePaused } from '../../config/features';
 
 interface SidebarItemProps {
     href: string;
@@ -73,7 +74,8 @@ export default function DashboardLayout({
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
         { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER'] },
-        { href: '/pos', icon: MonitorSmartphone, label: 'Punto de Venta', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
+        { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
+        { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
         { href: '/owner/catalog', icon: Package, label: 'Catálogo', moduleId: 'catalog', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/modifiers', icon: Layers, label: 'Modificadores', moduleId: 'modifiers', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/banners', icon: MonitorSmartphone, label: 'Marketing', moduleId: 'banners', roles: ['OWNER', 'ADMIN'] },
@@ -98,6 +100,7 @@ export default function DashboardLayout({
 
     // Filter items based on user role + individual module permissions
     const filteredMenu = menuItems.filter(item => {
+        if (isModulePaused(item.moduleId)) return false;
         // OWNER y ADMIN siempre ven todo
         if (isOwnerOrAdmin) return true;
         // Si tiene módulos individuales definidos, usarlos
@@ -121,6 +124,12 @@ export default function DashboardLayout({
             router.push('/login');
         }
     }, [isInitialized, user, router]);
+
+    useEffect(() => {
+        if (currentItem && isModulePaused(currentItem.moduleId)) {
+            router.replace('/owner');
+        }
+    }, [currentItem, router]);
 
     if (!isInitialized || !user) {
         return (
@@ -156,6 +165,8 @@ export default function DashboardLayout({
 
     const isKitchen = pathname === '/kitchen';
     const isPos = pathname.includes('/pos');
+    const isSalon = pathname.startsWith('/salon');
+    const isFullBleed = isPos || isKitchen || isSalon;
 
     return (
         <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -200,7 +211,7 @@ export default function DashboardLayout({
                             href={item.href}
                             icon={item.icon}
                             label={item.label}
-                            active={pathname === item.href}
+                            active={item.href === '/salon' ? pathname.startsWith('/salon') : pathname === item.href}
                             collapsed={isCollapsed}
                             onClick={() => setIsSidebarOpen(false)}
                         />
@@ -249,18 +260,16 @@ export default function DashboardLayout({
             )}
 
             {/* Main Area */}
-            <main className={`flex-1 w-full relative ${isPos || isKitchen ? 'overflow-hidden h-screen' : 'overflow-y-auto'}`}>
+            <main className={`flex-1 w-full relative ${isFullBleed ? 'overflow-hidden h-screen' : 'overflow-y-auto'}`}>
                 {/* Background Decoration */}
                 {!isKitchen && (
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none" />
                 )}
 
                 <div className={`min-h-full flex flex-col w-full ${
-                    isPos ? 'p-0 max-w-none h-full' :
-                    isKitchen ? 'p-0 max-w-none h-full' :
-                    'max-w-7xl mx-auto p-4 md:p-10'
+                    isFullBleed ? 'p-0 max-w-none h-full' : 'max-w-7xl mx-auto p-4 md:p-10'
                 }`}>
-                    <div className={`animate-in fade-in duration-300 ${isPos || isKitchen ? 'h-full' : ''}`}>
+                    <div className={`animate-in fade-in duration-300 ${isFullBleed ? 'h-full' : ''}`}>
                         {children}
                     </div>
                 </div>

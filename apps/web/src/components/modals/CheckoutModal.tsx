@@ -4,9 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, fetchCatalog } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useTableSession } from '../../context/TableSessionContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
+import { categoryRole } from '@lomasrico/shared-types';
 
 // Categorías cuyos productos aparecen como upsell
 const UPSELL_CATEGORIES = ['EXTRAS', 'BEBIDAS', 'AGREGADOS', 'LIMONADAS'];
@@ -25,6 +27,8 @@ if (typeof window !== 'undefined') {
 export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const { user, isLoggedIn } = useAuth();
     const { items, clearCart, removeFromCart, updateQuantity, addToCart } = useCart();
+    const { session: tableSession } = useTableSession();
+    const dineIn = !!tableSession;
 
     const [address, setAddress] = useState('');
     const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
@@ -44,17 +48,124 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     // Dynamic Upsell
     const [upsellProducts, setUpsellProducts] = useState<any[]>([]);
     const upsellRef = useRef<HTMLDivElement>(null);
+    const [tableBill, setTableBill] = useState<any>(null);
+    const [billMode, setBillMode] = useState<'ALL' | 'MINE'>('ALL');
+    const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+
+    const loadTableBill = async () => {
+        if (!tableSession) return null;
+        const res = await fetch(`${API_URL}/public/tables/${tableSession.tableNumber}/bill`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        setTableBill(data);
+        return data;
+    };
+
+    useEffect(() => {
+        if (isOpen && dineIn) {
+            loadTableBill().catch(() => {});
+        }
+        if (!isOpen) setShowConfirmPopup(false);
+    }, [isOpen, dineIn, tableSession?.tableNumber]);
+
+    const sendToTableAccount = async () => {
+        if (!tableSession || items.length === 0) return;
+        setLoading(true);
+        setErrorMsg('');
+        try {
+            const res = await fetch(`${API_URL}/public/tables/guests/${tableSession.id}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    claimToken: tableSession.claimToken,
+                    items: items.map((item) => ({
+                        sellingProductId: item.productId,
+                        quantity: item.quantity,
+                        modifiers: item.modifiers,
+                    })),
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'No se pudo agregar a tu cuenta');
+            const kitchen = await fetch(`${API_URL}/public/tables/guests/${tableSession.id}/send-kitchen`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ claimToken: tableSession.claimToken }),
+            });
+            if (!kitchen.ok) {
+                const kitchenData = await kitchen.json().catch(() => ({}));
+                throw new Error(kitchenData.message || 'Se agregó, pero no se envió a cocina');
+            }
+            clearCart();
+            await loadTableBill();
+            setStatus('success');
+            setShowConfirmPopup(false);
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K6',location:'CheckoutModal.tsx:sendToTableAccount',message:'diner confirmed and sent to kitchen',data:{tableNumber:tableSession.tableNumber,itemCount:items.length},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        } catch (e: any) {
+            setErrorMsg(e.message || 'No se pudo enviar a tu cuenta');
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H3',location:'CheckoutModal.tsx:sendToTableAccount',message:'web cart to table failed',data:{error:String(e?.message||e)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const requestTableBill = async (mode: 'ALL' | 'GUEST') => {
+        if (!tableSession) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_URL}/public/tables/${tableSession.tableNumber}/request-bill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mode,
+                    guestId: tableSession.id,
+                    guestName: tableSession.name,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'No se pudo pedir la cuenta');
+            setTableBill(data);
+            alert(mode === 'ALL' ? 'Se pidió una sola cuenta. El garzón ya puede cobrar.' : 'Se pidió tu cuenta. El garzón ya puede cobrar.');
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H5',location:'CheckoutModal.tsx:requestTableBill',message:'web requested table bill',data:{mode},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        } catch (e: any) {
+            setErrorMsg(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
             fetchCatalog().then((catalog: any[]) => {
-                const upsells = catalog.filter((p: any) =>
-                    p.isActive && UPSELL_CATEGORIES.some(cat => (p.category || '').toUpperCase().includes(cat))
-                );
+                const unique = (role: 'DRINK' | 'SIDE') => {
+                    const seen = new Set<string>();
+                    return catalog.filter((p: any) => {
+                        if (p.available === false || categoryRole(p.category) !== role) return false;
+                        if (seen.has(p.name)) return false;
+                        seen.add(p.name);
+                        return true;
+                    });
+                };
+                const extras = catalog.filter((p: any) => {
+                    const cat = (p.category || '').toUpperCase();
+                    return p.available !== false && (cat.includes('EXTRAS') || cat.includes('AGREGADOS'));
+                });
+                const drinks = unique('DRINK');
+                const sides = unique('SIDE').slice(0, 6);
+                const upsells = dineIn ? [...drinks, ...sides] : [...extras, ...drinks];
                 setUpsellProducts(upsells);
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K9',location:'CheckoutModal.tsx:upsell',message:'checkout upsell built',data:{dineIn,drinkCount:drinks.length,sideCount:sides.length,extraCount:extras.length},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
             }).catch(() => {});
         }
-    }, [isOpen]);
+    }, [isOpen, dineIn]);
 
     // Auto-scroll upsell strip
     useEffect(() => {
@@ -258,7 +369,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
     if (!isOpen) return null;
 
+    const mine = tableBill?.guests?.find((g: any) => g.id === tableSession?.id);
+    const isFirstPlate = dineIn && !(mine?.items?.length);
+
     return (
+        <>
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm overflow-hidden">
             <div className="bg-[#f8f9fa] rounded-[2rem] w-full max-w-5xl h-[95vh] md:h-[85vh] flex flex-col md:flex-row shadow-2xl overflow-y-auto md:overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
                 {/* Close Button */}
@@ -271,8 +386,13 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     <div className="p-6 md:p-8 pb-2 md:pb-4">
                         <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 flex items-center gap-3">
                             <ShoppingBag className="text-[#f2642e]" strokeWidth={2.5} size={28} />
-                            Tu Pedido
+                            {dineIn ? `Mesa ${tableSession?.tableNumber}` : 'Tu Pedido'}
                         </h2>
+                        {dineIn && (
+                            <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mt-2">
+                                Pedido de {tableSession?.name}
+                            </p>
+                        )}
                     </div>
 
                     {/* Cart Items List */}
@@ -382,7 +502,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     {/* Upsell Strip — Dynamic from Catalog */}
                     {upsellProducts.length > 0 && (
                         <div className="p-6 bg-slate-50 border-t border-slate-100">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-3 ml-1">¿TE FALTA ALGO?</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-3 ml-1">{dineIn ? 'ACOMPAÑANTES Y BEBESTIBLES' : '¿TE FALTA ALGO?'}</p>
                             <div ref={upsellRef} className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
                                 {upsellProducts.map((u: any) => (
                                     <button
@@ -429,6 +549,71 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                 {/* RIGHT COLUMN: Actions & Summary */}
                 <div className="w-full md:w-[400px] bg-slate-100 p-6 md:p-8 pb-10 flex flex-col gap-6 flex-none relative overflow-y-auto">
 
+                    {dineIn ? (
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estás en la mesa</p>
+                            <div className="bg-white p-4 rounded-2xl border border-orange-100">
+                                <p className="text-xs font-black uppercase text-orange-500">Mesa {tableSession?.tableNumber}</p>
+                                <p className="text-lg font-black italic uppercase">{tableSession?.name}</p>
+                                <p className="text-xs font-bold text-slate-500 mt-1">
+                                    Cuando lo tengas listo, envíalo a cocina. Te vamos a pedir que lo confirmes.
+                                </p>
+                            </div>
+                            {tableBill && (
+                                <div className="space-y-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button type="button" onClick={() => setBillMode('ALL')} className={`py-3 rounded-2xl font-black uppercase italic text-xs ${billMode === 'ALL' ? 'bg-slate-900 text-white' : 'bg-white'}`}>
+                                            Una cuenta
+                                        </button>
+                                        <button type="button" onClick={() => setBillMode('MINE')} className={`py-3 rounded-2xl font-black uppercase italic text-xs ${billMode === 'MINE' ? 'bg-slate-900 text-white' : 'bg-white'}`}>
+                                            Mi cuenta
+                                        </button>
+                                    </div>
+                                    {(billMode === 'ALL' ? tableBill.guests : tableBill.guests.filter((g: any) => g.id === tableSession?.id)).map((g: any) => (
+                                        <div key={g.id} className="bg-white rounded-2xl p-3">
+                                            <div className="flex justify-between font-black italic uppercase text-xs">
+                                                <span>{g.name}</span>
+                                                <span>${Number(g.total).toLocaleString()}</span>
+                                            </div>
+                                            {g.items?.map((item: any) => (
+                                                <p key={item.id} className="text-[10px] font-bold text-slate-500">{item.quantity}x {item.name}</p>
+                                            ))}
+                                        </div>
+                                    ))}
+                                    {billMode === 'ALL' && (
+                                        <p className="text-xl font-black italic">Total ${Number(tableBill.grandTotal || 0).toLocaleString()}</p>
+                                    )}
+                                </div>
+                            )}
+                            {errorMsg && (
+                                <div className="bg-red-50 border-2 border-red-200 p-4 rounded-2xl text-xs font-bold text-red-600">{errorMsg}</div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowConfirmPopup(true);
+                                    // #region agent log
+                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K8',location:'CheckoutModal.tsx:openConfirm',message:'diner confirm popup opened',data:{itemCount:items.length},timestamp:Date.now()})}).catch(()=>{});
+                                    // #endregion
+                                }}
+                                disabled={items.length === 0}
+                                className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl ${
+                                    items.length > 0 ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                }`}
+                            >
+                                <span className="italic">Enviar a cocina</span>
+                            </button>
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => requestTableBill(billMode === 'ALL' ? 'ALL' : 'GUEST')}
+                                className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black uppercase italic text-sm"
+                            >
+                                {billMode === 'ALL' ? 'Pedir una sola cuenta' : 'Pedir mi cuenta'}
+                            </button>
+                        </div>
+                    ) : (
+                    <>
                     {/* Delivery Type Selector */}
                     <div className="space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">¿Cómo lo recibís?</p>
@@ -667,8 +852,61 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             <p className="text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] italic">Transacción Segura · Mercado Pago</p>
                         </div>
                     </div>
+                    </>
+                    )}
                 </div>
             </div>
         </div>
+        {showConfirmPopup && (
+            <div className="fixed inset-0 z-[120] bg-black/70 flex items-end sm:items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-[2rem] p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Mesa {tableSession?.tableNumber}</p>
+                    <h2 className="text-2xl font-black italic uppercase tracking-tighter">
+                        {isFirstPlate ? 'Confirma tu primer plato' : 'Confirma tu pedido'}
+                    </h2>
+                    <p className="text-sm font-bold text-slate-500">
+                        Revisa cantidad, precio e ingredientes. Si está bien, va a cocina.
+                    </p>
+                    {items.map((item) => (
+                        <div key={item.tempId} className="border-b border-slate-100 pb-3">
+                            <div className="flex justify-between gap-2">
+                                <p className="text-sm font-black uppercase italic">{item.quantity}x {item.name}</p>
+                                <p className="text-sm font-black shrink-0">${(item.price * item.quantity).toLocaleString()}</p>
+                            </div>
+                            {item.modifiers?.dynamicSelections?.map((g: any) =>
+                                g.selectedOptions?.map((o: any, i: number) => (
+                                    <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-500">+ {g.groupName}: {o.name}</p>
+                                ))
+                            )}
+                            {item.modifiers?.selectedProteinNames?.map((n: string, i: number) => (
+                                <p key={`p-${i}`} className="text-xs font-bold text-slate-500">+ {n}</p>
+                            ))}
+                            {item.modifiers?.removedIngredients?.map((n: string, i: number) => (
+                                <p key={`r-${i}`} className="text-xs font-bold text-red-500">Sin {n}</p>
+                            ))}
+                        </div>
+                    ))}
+                    <div className="flex justify-between items-end">
+                        <span className="text-sm font-black uppercase">Total</span>
+                        <span className="text-3xl font-black italic">${total.toLocaleString()}</span>
+                    </div>
+                    {errorMsg && <p className="text-xs font-bold text-red-600">{errorMsg}</p>}
+                    <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => setShowConfirmPopup(false)} className="py-4 rounded-2xl bg-slate-100 font-black uppercase italic">
+                            Volver
+                        </button>
+                        <button
+                            type="button"
+                            disabled={loading}
+                            onClick={sendToTableAccount}
+                            className="py-4 rounded-2xl bg-orange-500 text-white font-black uppercase italic"
+                        >
+                            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Sí, enviar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }

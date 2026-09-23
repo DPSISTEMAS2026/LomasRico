@@ -6,67 +6,103 @@ interface ComandaProps {
     items: CartItem[];
     customerInfo?: string;
     channel?: string;
+    kind?: 'kitchen' | 'account';
+    total?: number;
 }
 
-export const ComandaPrinter = forwardRef<HTMLDivElement, ComandaProps>(({ saleCode, items, customerInfo, channel }, ref) => {
-    const today = new Date();
-    const formattedTime = today.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-    const formattedDate = today.toLocaleDateString('es-CL');
+function modifierLines(item: CartItem): string[] {
+    const lines: string[] = [];
+    const mods = item.modifiers || {};
+    mods.dynamicSelections?.forEach((g: any) => {
+        g.selectedOptions?.forEach((o: any) => lines.push(`${g.groupName}: ${o.name}`));
+    });
+    mods.selectedProteinNames?.forEach((p: string) => lines.push(p));
+    mods.selectedProteins?.forEach((p: string) => lines.push(p));
+    mods.removedIngredients?.forEach((v: string) => lines.push(`Sin ${v}`));
+    mods.extras?.forEach((e: any) => lines.push(e.name || e));
+    return lines;
+}
+
+export const ComandaPrinter = forwardRef<HTMLDivElement, ComandaProps>(({
+    saleCode, items, customerInfo, channel, kind = 'kitchen', total,
+}, ref) => {
+    const now = new Date();
+    const time = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const date = now.toLocaleDateString('es-CL');
+    const isAccount = kind === 'account';
+    const computedTotal = total ?? items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     return (
-        <div ref={ref} className="p-4" style={{ width: '80mm', color: 'black', fontFamily: 'monospace', fontSize: '12px' }}>
-            {/* Cabecera */}
-            <div className="text-center mb-4">
-                <h1 className="font-black text-lg mb-1" style={{ fontSize: '16px' }}>LO MÁS RICO</h1>
-                <p>Comprobante de Pedido</p>
-                <p>--------------------------------</p>
-            </div>
+        <div
+            ref={ref}
+            style={{
+                width: '80mm',
+                maxWidth: '80mm',
+                color: '#000',
+                background: '#fff',
+                fontFamily: '"Courier New", Courier, monospace',
+                fontSize: '13px',
+                lineHeight: 1.25,
+                padding: '4mm 3mm 12mm',
+                boxSizing: 'border-box',
+            }}
+        >
+            <style>{`
+                @page { size: 80mm auto; margin: 0; }
+                @media print {
+                    html, body { margin: 0 !important; width: 80mm !important; }
+                }
+            `}</style>
 
-            {/* Datos de Orden */}
-            <div className="mb-4">
-                <p><strong>ORDEN:</strong> #{saleCode}</p>
-                <p><strong>FECHA:</strong> {formattedDate}</p>
-                <p><strong>HORA:</strong> {formattedTime}</p>
-                <p><strong>CANAL:</strong> {channel || 'POS'}</p>
-                {customerInfo && <p><strong>INFO:</strong> {customerInfo}</p>}
-                <p>--------------------------------</p>
-            </div>
-
-            {/* Items */}
-            <div className="space-y-4 mb-4">
-                {items.map((item, index) => (
-                    <div key={index}>
-                        <div className="flex justify-between font-bold">
-                            <span>{item.quantity}x {item.name}</span>
-                        </div>
-
-                        {/* Modificadores */}
-                        {((item.modifiers?.selectedProteinNames?.length ?? 0) > 0 || (item.modifiers?.removedIngredients?.length ?? 0) > 0 || (item.modifiers?.extras?.length ?? 0) > 0) && (
-                            <div className="ml-4 mt-1" style={{ fontSize: '10px' }}>
-                                {item.modifiers.selectedProteinNames?.map((p: string, i: number) => (
-                                    <div key={`p-${i}`}>+ {p}</div>
-                                ))}
-                                {item.modifiers.removedIngredients?.map((v: string, i: number) => (
-                                    <div key={`v-${i}`}>- Sin {v}</div>
-                                ))}
-                                {item.modifiers.extras?.map((e: any, i: number) => (
-                                    <div key={`e-${i}`}>+ {e.name}</div>
-                                ))}
-                            </div>
-                        )}
+            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1 }}>LO MAS RICO</div>
+                <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2 }}>
+                    {isAccount ? 'CUENTA / PRE-CUENTA' : 'COMANDA COCINA'}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 900, marginTop: 6 }}>
+                    {(channel || 'MESA').toUpperCase()}
+                </div>
+                {customerInfo && (
+                    <div style={{ fontSize: 16, fontWeight: 900, marginTop: 4 }}>
+                        {customerInfo.toUpperCase()}
                     </div>
-                ))}
+                )}
+                <div style={{ fontSize: 11, marginTop: 4 }}>#{saleCode} · {date} {time}</div>
             </div>
 
-            {/* Pie */}
-            <div className="text-center mt-6">
-                <p>--------------------------------</p>
-                <p>Revisa tu orden antes de salir</p>
-                <p>¡Gracias por tu preferencia!</p>
+            <div>
+                {items.map((item, index) => {
+                    const lines = modifierLines(item);
+                    const lineTotal = item.price * item.quantity;
+                    return (
+                        <div key={index} style={{ borderBottom: '1px dashed #000', padding: '6px 0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 14 }}>
+                                <span>{item.quantity}x {item.name}</span>
+                                {isAccount && <span>${lineTotal.toLocaleString('es-CL')}</span>}
+                            </div>
+                            {lines.map((line, i) => (
+                                <div key={i} style={{ paddingLeft: 12, fontSize: 12 }}>+ {line}</div>
+                            ))}
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Espacio extra abajo para que la ticketera corte bien */}
-            <div style={{ height: '40px' }} />
+            {isAccount ? (
+                <div style={{ marginTop: 10, borderTop: '2px solid #000', paddingTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 900 }}>
+                        <span>TOTAL</span>
+                        <span>${computedTotal.toLocaleString('es-CL')}</span>
+                    </div>
+                    <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11 }}>
+                        Documento interno · no es boleta SII
+                    </div>
+                </div>
+            ) : (
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, borderTop: '2px solid #000', paddingTop: 8 }}>
+                    Revisar proteínas y formato antes de salir
+                </div>
+            )}
         </div>
     );
 });

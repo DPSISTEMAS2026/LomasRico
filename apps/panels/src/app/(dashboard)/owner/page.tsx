@@ -115,6 +115,7 @@ export default function OwnerDashboardPage() {
                     isUp={true}
                     icon={<Users size={20} />}
                 />
+                {false && (
                 <StatCard
                     title="Alertas de Stock"
                     value={data?.inventory?.lowStock || 0}
@@ -123,6 +124,7 @@ export default function OwnerDashboardPage() {
                     icon={<AlertCircle size={20} />}
                     color={data?.inventory?.lowStock > 0 ? "text-red-500" : "text-green-500"}
                 />
+                )}
             </div>
 
             {/* Multi-Panel Grid */}

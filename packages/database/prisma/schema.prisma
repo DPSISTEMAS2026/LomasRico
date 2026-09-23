@@ -262,6 +262,40 @@ enum OrderChannel {
   PEDIDOS_YA
 }
 
+enum FulfillmentType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+model DiningTable {
+  id          String       @id @default(uuid())
+  number      Int          @unique
+  name        String
+  isActive    Boolean      @default(true)
+  billRequest Json?
+  sales       Sale[]
+  guests      TableGuest[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model TableGuest {
+  id          String      @id @default(uuid())
+  tableId     String
+  table       DiningTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  seat        Int
+  name        String
+  isActive    Boolean     @default(true)
+  claimToken  String?     @unique
+  sales       Sale[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([tableId, seat])
+  @@index([tableId, isActive])
+}
+
 model Sale {
   id          String       @id @default(uuid())
   code        String       @unique // Codigo corto visible (ej: #1024)
@@ -275,6 +309,12 @@ model Sale {
   // Finanzas y Pagos
   paymentMethod   PaymentMethod?
   paymentStatus   String?      @default("PENDING") // PENDING, APPROVED, REJECTED
+
+  fulfillmentType FulfillmentType @default(TAKEAWAY)
+  tableId         String?
+  table           DiningTable?    @relation(fields: [tableId], references: [id])
+  guestId         String?
+  guest           TableGuest?     @relation(fields: [guestId], references: [id])
   
   // Relacion con turno de caja (solo para POS)
   shiftId         String?
@@ -288,12 +328,14 @@ model Sale {
   shippingData Json?       // { "cost": 2500, "address": "...", "estimateId": "..." }
   
   items       SaleItem[]
-  kitchenTicket KitchenTicket?
+  kitchenTickets KitchenTicket[]
   externalOrder ExternalOrder?  // Vinculación con pedido externo (Uber/PedidosYa)
   note        String?      // Notas para la cocina o comentarios generales
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([tableId, paymentStatus])
 }
 
 model SaleItem {
@@ -310,6 +352,8 @@ model SaleItem {
   quantity       Int
   priceUnit      Decimal
   modifiers      Json?           // { "removed": ["onion"], "protein": ["salmon", "octopus"] }
+  sentToKitchenAt DateTime?
+  kitchenTicketId String?
   
   // Snapshot Obligatorio: La receta congelada al momento de la venta
   recipeSnapshot RecipeSnapshot?
@@ -576,15 +620,20 @@ enum TicketStatus {
 }
 
 model KitchenTicket {
-  id        String       @id @default(uuid())
-  saleId    String       @unique
-  sale      Sale         @relation(fields: [saleId], references: [id])
+  id          String       @id @default(uuid())
+  saleId      String
+  sale        Sale         @relation(fields: [saleId], references: [id])
+  batchNumber Int          @default(1)
+  label       String?      // MESA 3 / RETIRO / WEB
+  itemIds     String[]     @default([])
   
   status    TicketStatus @default(WAITING)
   startTime DateTime?
   endTime   DateTime?
   
   createdAt DateTime     @default(now())
+
+  @@index([saleId])
 }
 
 // --------------------------------------------------------

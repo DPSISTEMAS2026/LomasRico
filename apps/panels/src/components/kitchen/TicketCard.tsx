@@ -47,10 +47,18 @@ function ModBadges({ item }: { item: SaleItem }) {
     const hasPN = (item.modifiers?.selectedProteinNames?.length ?? 0) > 0;
     const hasP = (item.modifiers?.selectedProteins?.length ?? 0) > 0;
     const hasR = (item.modifiers?.removedIngredients?.length ?? 0) > 0;
-    if (!hasPN && !hasP && !hasR) return null;
+    const dynamics = (item.modifiers?.dynamicSelections || []).filter((g: any) => g.selectedOptions?.length);
+    if (!hasPN && !hasP && !hasR && !dynamics.length) return null;
 
     return (
         <div className="flex flex-wrap gap-1 mt-1">
+            {dynamics.map((g: any) =>
+                g.selectedOptions.map((o: any, i: number) => (
+                    <span key={`${g.groupId}-${i}`} className="bg-orange-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
+                        {g.groupName}: {o.name}
+                    </span>
+                ))
+            )}
             {item.modifiers?.selectedProteins?.map((n: string, i: number) => (
                 <span key={`p${i}`} className="bg-slate-900 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">+ {n}</span>
             ))}
@@ -96,7 +104,13 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
     const isUber = sale.channel === 'UBER_EATS';
     const isPedidosYa = sale.channel === 'PEDIDOS_YA';
     const isExternal = isUber || isPedidosYa;
-    const platformLabel = isUber ? '🟢 UBER EATS' : isPedidosYa ? '🔴 PEDIDOS YA' : sale.channel;
+    const guestName = (sale as any).guest?.name;
+    const isTable = !!(sale.table?.number || ticket.label?.startsWith('MESA'));
+    const platformLabel = ticket.label
+        || (sale.table?.number ? `MESA ${sale.table.number}` : null)
+        || (sale.fulfillmentType === 'TAKEAWAY' ? 'RETIRO' : null)
+        || (sale.channel === 'WEB' ? 'WEB' : null)
+        || (isUber ? 'UBER' : isPedidosYa ? 'PEDIDOS YA' : sale.channel);
 
     return (
         <div className={`bg-white rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 border group relative overflow-hidden flex flex-col ${
@@ -118,10 +132,19 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                 </div>
                 <div className="flex flex-col items-end gap-1">
                     <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                        isUber ? 'bg-green-100 text-green-800' : isPedidosYa ? 'bg-red-100 text-red-800' : sale.channel === 'POS' ? 'bg-slate-100 text-slate-700' : 'bg-purple-100 text-purple-700'
+                        isUber ? 'bg-green-100 text-green-800' : isPedidosYa ? 'bg-red-100 text-red-800' : isTable ? 'bg-orange-100 text-orange-800' : sale.channel === 'POS' ? 'bg-slate-100 text-slate-700' : 'bg-purple-100 text-purple-700'
                     }`}>{platformLabel}</span>
+                    {ticket.batchNumber ? (
+                        <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-slate-100 text-slate-500">Tanda {ticket.batchNumber}</span>
+                    ) : null}
                 </div>
             </div>
+
+            {isTable && guestName && (
+                <p className="mb-3 pl-2 text-sm font-black italic uppercase text-slate-900">
+                    Comensal · {guestName}
+                </p>
+            )}
 
             {/* External notes */}
             {sale.note && (

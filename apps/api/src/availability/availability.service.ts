@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { isInventoryEnforced } from '../config/flags';
 
 /**
  * AvailabilityService — Calcula la disponibilidad dinámica de productos
@@ -60,6 +61,24 @@ export class AvailabilityService {
         // Verificar cache
         if (this.cache && (Date.now() - this.cache.timestamp) < this.CACHE_TTL_MS) {
             return this.cache.data;
+        }
+
+        if (!isInventoryEnforced()) {
+            const products = await this.prisma.sellingProduct.findMany({
+                where: { isActive: true },
+                select: { id: true },
+            });
+            const result = new Map<string, ProductAvailability>();
+            for (const product of products) {
+                result.set(product.id, {
+                    productId: product.id,
+                    maxQuantity: 999,
+                    available: true,
+                });
+            }
+            this.cache = { data: result, timestamp: Date.now() };
+            this.logger.log(`Inventario en pausa — ${products.length} productos disponibles`);
+            return result;
         }
 
         const startTime = Date.now();
@@ -133,6 +152,9 @@ export class AvailabilityService {
         },
         stockMap?: Map<string, { name: string; stock: number; unit: string }>
     ): Promise<ProductAvailability> {
+        if (!isInventoryEnforced()) {
+            return { productId: product.id, maxQuantity: 999, available: true };
+        }
         // Productos sin receta (ej: Coca-Cola, RETAIL) → siempre disponibles
         if (!product.recipe || product.recipe.items.length === 0) {
             return {

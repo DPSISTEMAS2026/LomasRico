@@ -5,7 +5,8 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES } from '@lomasrico/shared-types';
+import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL } from '@lomasrico/shared-types';
+import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
 
@@ -100,6 +101,7 @@ function buildCategories(products: Product[]) {
 
 export const ProductGrid = () => {
     const { addToCart } = useCart();
+    const { session: tableSession } = useTableSession();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState('todo');
@@ -207,7 +209,13 @@ export const ProductGrid = () => {
         </div>
     );
 
-    const activeMenuCategories = categories.filter(cat => products.some(p => p.category === cat.id));
+    const activeMenuCategories = [...categories]
+        .filter(cat => products.some(p => p.category === cat.id))
+        .sort((a, b) => {
+            if (!tableSession) return 0;
+            const order = { MAIN: 0, SIDE: 1, DRINK: 2 };
+            return order[categoryRole(a.id)] - order[categoryRole(b.id)];
+        });
     const currentCat = activeMenuCategories.find(c => c.id === selectedCategory);
 
 
@@ -279,7 +287,7 @@ export const ProductGrid = () => {
 
             {/* CONTENT CONTAINER */}
             <div className="max-w-7xl mx-auto px-6 space-y-16">
-                {categories.map(category => {
+                {activeMenuCategories.map(category => {
                     const displayProducts = products.filter(p => p.category === category.id);
                     if (displayProducts.length === 0) return null;
 
@@ -292,6 +300,11 @@ export const ProductGrid = () => {
                                     <span className="text-[#f2642e]">{category.icon}</span>
                                     {category.name}
                                 </h3>
+                                {tableSession && (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-2">
+                                        {MENU_ROLE_LABEL[categoryRole(category.id)]}
+                                    </span>
+                                )}
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full mb-1">
                                     {displayProducts.length} opc.
                                 </span>

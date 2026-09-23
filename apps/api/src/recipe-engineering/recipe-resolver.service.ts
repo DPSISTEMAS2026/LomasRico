@@ -161,6 +161,11 @@ export class RecipeResolverService {
             throw new NotFoundException(`Product/Variant ${identifier} not found`);
         }
 
+        const optionRecipe = await this.applyModifierOptionRecipes(product, effectiveModifiers);
+        if (optionRecipe.applied) {
+            product = { ...product, recipe: optionRecipe.recipe as any };
+        }
+
         if (!product.recipe) {
             console.warn(`[RecipeResolver] Product "${product.name}" has no recipe. Sale continues without stock deduction.`);
             return [];
@@ -471,6 +476,74 @@ export class RecipeResolverService {
         }
 
         return bom;
+    }
+
+    private async applyModifierOptionRecipes(product: any, modifiers: SaleModifiers) {
+        const optionIds = new Set<string>();
+        for (const selection of modifiers.dynamicSelections || []) {
+            for (const opt of selection.selectedOptions || []) {
+                if (opt?.id) optionIds.add(opt.id);
+            }
+            const rawIds = (selection as any).selectedOptionIds || [];
+            for (const id of rawIds) if (id) optionIds.add(id);
+        }
+        if (optionIds.size === 0) return { applied: false, recipe: product.recipe };
+
+        const options = await this.prisma.modifierOption.findMany({
+            where: { id: { in: [...optionIds] }, recipeId: { not: null } },
+            include: {
+                modifierGroup: { select: { type: true, name: true, displayName: true } },
+                recipe: { include: { items: { include: { ingredient: true } } } },
+            },
+        });
+
+        const withRecipe = options.filter((o) => o.recipe?.items?.length);
+        if (withRecipe.length === 0) return { applied: false, recipe: product.recipe };
+
+        let recipe = product.recipe
+            ? {
+                  ...product.recipe,
+                  items: [...product.recipe.items],
+              }
+            : null;
+
+        const replaceFirst = withRecipe.find((o) => {
+            const apply = (o.recipe?.internalRules as any)?.apply;
+            if (apply === 'OVERRIDE') return false;
+            return apply === 'REPLACE' || o.modifierGroup.type === 'SINGLE_SELECT';
+        });
+
+        if (replaceFirst?.recipe) {
+            recipe = {
+                ...replaceFirst.recipe,
+                items: [...replaceFirst.recipe.items],
+            };
+        }
+
+        for (const option of withRecipe) {
+            if (replaceFirst && option.id === replaceFirst.id) continue;
+            const apply = (option.recipe?.internalRules as any)?.apply;
+            if (apply === 'REPLACE' && !replaceFirst) {
+                recipe = { ...option.recipe, items: [...option.recipe.items] };
+                continue;
+            }
+            if (!recipe) {
+                recipe = { ...option.recipe, items: [...option.recipe.items] };
+                continue;
+            }
+            for (const item of option.recipe!.items) {
+                const existing = recipe.items.find((i: any) => i.ingredientId === item.ingredientId);
+                if (existing) existing.quantity = item.quantity;
+                else recipe.items.push(item);
+            }
+            if (option.recipe!.baseWeight > 0) recipe.baseWeight = option.recipe!.baseWeight;
+        }
+
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-RESOLVE',location:'recipe-resolver.service.ts:applyModifierOptionRecipes',message:'applied modifier option recipes',data:{productId:product.id,optionCount:withRecipe.length,replaced:!!replaceFirst,itemCount:recipe?.items?.length||0},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        return { applied: true, recipe };
     }
 
     private async expandPreparation(prepId: string, requiredQty: number): Promise<ResolvedBomItem[]> {

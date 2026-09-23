@@ -25,12 +25,14 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
+import { isModulePaused } from '../../../../config/features';
 
 // ------------------------------------------------------------------
 // Definición de TODOS los módulos disponibles en el panel
 // ------------------------------------------------------------------
 const ALL_MODULES = [
-    { id: 'pos', label: 'Punto de Venta (POS)', desc: 'Atender clientes, cobrar y procesar pedidos.' },
+    { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.' },
+    { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.' },
     { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.' },
     { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.' },
     { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.' },
@@ -39,7 +41,7 @@ const ALL_MODULES = [
     { id: 'banners', label: 'Marketing', desc: 'Gestionar banners, promociones y códigos de descuento.' },
     { id: 'whatsapp', label: 'WhatsApp Bot', desc: 'Gestionar conversaciones de WhatsApp.' },
     { id: 'cashiers', label: 'Personal (Equipo)', desc: 'Crear y gestionar usuarios del equipo.' },
-];
+].filter((m) => !isModulePaused(m.id));
 
 const ROLES = [
     { value: 'CASHIER', label: 'Cajero/a', color: 'bg-blue-500' },

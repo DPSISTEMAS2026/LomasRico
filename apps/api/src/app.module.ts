@@ -25,6 +25,7 @@ import { ModifiersModule } from './modifiers/modifiers.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { ExternalOrdersModule } from './external-orders/external-orders.module';
 import { AvailabilityModule } from './availability/availability.module';
+import { TablesModule } from './tables/tables.module';
 
 // App Root
 import { AppController } from './app.controller';
@@ -54,6 +55,7 @@ import { AppService } from './app.service';
     PromotionsModule,
     ExternalOrdersModule,
     AvailabilityModule,
+    TablesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

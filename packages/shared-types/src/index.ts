@@ -2,6 +2,7 @@ export * from './catalog';
 export * from './api-client';
 export * from './constants';
 export * from './domain';
+export * from './menuRoles';
 
 export interface ProductVariant {
     id: string;

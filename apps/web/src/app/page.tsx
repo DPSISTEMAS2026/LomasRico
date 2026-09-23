@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ProductGrid } from '../components/catalog/ProductGrid';
 import { BannerSection } from '../components/BannerSection';
 import { useCart, CartProvider } from '../context/CartContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useTableSession } from '../context/TableSessionContext';
 import CheckoutModal from '../components/modals/CheckoutModal';
 import OrdersModal from '../components/modals/OrdersModal';
 import AuthModal from '../components/modals/AuthModal';
@@ -13,6 +15,7 @@ import { ShoppingBag, User as UserIcon, LogIn } from 'lucide-react';
 const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => void, onOrdersOpen: () => void, onAuthOpen: () => void }) => {
   const { items } = useCart();
   const { user, isLoggedIn, logout } = useAuth();
+  const { session, leaveTable } = useTableSession();
 
   return (
     <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 px-4 md:px-6 py-3 md:py-4">
@@ -30,8 +33,50 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
 
         {/* Actions */}
         <div className="flex items-center gap-2 md:gap-6">
+          {session && (
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onCartOpen}
+                className="flex flex-col items-end px-3 md:px-4 py-1.5 bg-orange-50 rounded-2xl border border-orange-100"
+              >
+                <p className="text-[8px] md:text-[9px] font-black uppercase text-orange-400 tracking-widest leading-none">Mesa {session.tableNumber}</p>
+                <p className="text-xs md:text-sm font-black text-orange-900 leading-tight truncate max-w-[120px]">{session.name}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`¿Dejar de pedir como ${session.name}? La mesa sigue abierta hasta que cobren.`)) {
+                    leaveTable();
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black uppercase text-slate-500 hover:text-slate-900"
+              >
+                Salir
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2 md:gap-4">
-            {isLoggedIn ? (
+            {session ? (
+              <div className="sm:hidden flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={onCartOpen}
+                  className="px-3 py-2 bg-orange-50 rounded-full border border-orange-100 text-[10px] font-black uppercase text-orange-900"
+                >
+                  Mesa {session.tableNumber}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`¿Dejar de pedir como ${session.name}?`)) leaveTable();
+                  }}
+                  className="px-2 py-2 text-[10px] font-black uppercase text-slate-400"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : isLoggedIn ? (
               <div className="flex items-center gap-2 md:gap-4">
                 {/* Loyalty Info - Hidden on mobile, shown on md+ */}
                 <div className="hidden sm:flex flex-col items-end px-3 md:px-4 py-1.5 bg-orange-50 rounded-2xl border border-orange-100">
@@ -104,6 +149,23 @@ function HomeContent() {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const { total } = useCart();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { session, ready, sessionEnd } = useTableSession();
+  const mesa = searchParams.get('mesa');
+
+  useEffect(() => {
+    if (!ready) return;
+    if (mesa && (!session || session.tableNumber !== mesa)) {
+      router.replace(`/mesa/${mesa}`);
+      return;
+    }
+    if (session) {
+      // #region agent log
+      fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H1',location:'page.tsx:HomeContent',message:'web home in table mode',data:{tableNumber:session.tableNumber,hasMesaQuery:!!mesa},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
+  }, [ready, mesa, session, router]);
 
   useEffect(() => {
     (window as any).openAuthModal = () => setIsAuthOpen(true);
@@ -119,6 +181,15 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen flex flex-col page-transition">
+      {sessionEnd && (
+        <div className="bg-slate-900 text-white px-4 py-3 text-center text-sm font-bold">
+          {sessionEnd.reason === 'PAID'
+            ? `La cuenta de ${sessionEnd.name || 'este comensal'} ya fue cobrada. Puedes escanear de nuevo si siguen en la mesa.`
+            : sessionEnd.reason === 'REPLACED'
+            ? `${sessionEnd.name || 'Ese comensal'} está pidiendo en otro celular.`
+            : 'Ya no estás sentado en esa mesa.'}
+        </div>
+      )}
       <Header
         onCartOpen={() => setIsCheckoutOpen(true)}
         onOrdersOpen={() => setIsOrdersOpen(true)}
@@ -170,7 +241,9 @@ export default function Home() {
   return (
     <AuthProvider>
       <CartProvider>
-        <HomeContent />
+        <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+          <HomeContent />
+        </Suspense>
       </CartProvider>
     </AuthProvider>
   );

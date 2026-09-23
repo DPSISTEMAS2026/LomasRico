@@ -82,9 +82,45 @@ export class ModifiersController {
     @Patch('options/:optionId')
     updateOption(
         @Param('optionId') optionId: string,
-        @Body() data: { name?: string; priceAdjustment?: number; isDefault?: boolean; isActive?: boolean; sortOrder?: number; recipeId?: string | null },
+        @Body() data: { name?: string; priceAdjustment?: number; isDefault?: boolean; isActive?: boolean; sortOrder?: number; recipeId?: string | null; inventoryItemId?: string | null },
     ) {
         return this.modifiersService.updateOption(optionId, data);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('options/:optionId/recipe')
+    getOptionRecipe(@Param('optionId') optionId: string) {
+        return this.modifiersService.getOptionRecipe(optionId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('options/:optionId/recipe')
+    upsertOptionRecipe(
+        @Param('optionId') optionId: string,
+        @Body()
+        data: {
+            name?: string;
+            baseWeight?: number;
+            applyMode?: 'OVERRIDE' | 'REPLACE';
+            items: { ingredientId: string; quantity: number; unit?: string; role?: string }[];
+        },
+    ) {
+        return this.modifiersService.upsertOptionRecipe(optionId, data);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('options/:optionId/recipe/from-product')
+    cloneOptionRecipeFromProduct(
+        @Param('optionId') optionId: string,
+        @Body() data: { productId: string },
+    ) {
+        return this.modifiersService.cloneOptionRecipeFromProduct(optionId, data.productId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('options/:optionId/recipe')
+    clearOptionRecipe(@Param('optionId') optionId: string) {
+        return this.modifiersService.clearOptionRecipe(optionId);
     }
 
     @UseGuards(JwtAuthGuard)

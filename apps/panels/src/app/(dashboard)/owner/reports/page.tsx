@@ -10,6 +10,7 @@ import {
 import dynamic from 'next/dynamic';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
+import { isModulePaused } from '../../../../config/features';
 
 // Dynamic imports for charts
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -46,7 +47,7 @@ export default function ReportsPage() {
                 authFetch(`${API_URL}/sales`),
                 authFetch(`${API_URL}/stats/dashboard`),
                 authFetch(`${API_URL}/stats/top-products`),
-                authFetch(`${API_URL}/inventory`),
+                isModulePaused('inventory') ? Promise.resolve({ ok: false } as Response) : authFetch(`${API_URL}/inventory`),
             ]);
             if (salesRes.ok) setSales(await salesRes.json());
             if (dashRes.ok) setDashboard(await dashRes.json());
@@ -127,7 +128,9 @@ export default function ReportsPage() {
                 <KpiCard title="Ventas Mes" value={`$${(dashboard?.sales?.month || 0).toLocaleString()}`} icon={<BarChart3 />} />
                 <KpiCard title="Tickets" value={completedSales.length.toString()} icon={<CreditCard />} />
                 <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString()}`} icon={<TrendingUp />} />
+                {!isModulePaused('inventory') && (
                 <KpiCard title="Stock Valorizado" value={`$${Math.round(totalStockValue).toLocaleString()}`} icon={<Package />} />
+                )}
             </div>
 
             {/* Main Content: Chart + Channel Breakdown */}
@@ -223,6 +226,7 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Low Stock Alerts */}
+                {!isModulePaused('inventory') && (
                 <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-red-500">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
@@ -264,6 +268,7 @@ export default function ReportsPage() {
                         })}
                     </div>
                 </div>
+                )}
             </div>
 
             {/* Recent Sales Log */}

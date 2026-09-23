@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft, Loader2, Info, Search } from 'lucide-react';
 import { Product, ModifierGroup, ModifierOption } from '../../types';
 import { useCart } from '../../context/CartContext';
+import { useTableSession } from '../../context/TableSessionContext';
+import { fetchCatalog } from '../../services/api';
+import { categoryRole, isDishCoreModifier } from '@lomasrico/shared-types';
 
 interface CevicheBuilderModalProps {
     isOpen: boolean;
@@ -25,6 +28,9 @@ export const CevicheBuilderModal = ({
     onGoToCart,
 }: CevicheBuilderModalProps) => {
     const cartContext = useCart();
+    const { session: tableSession } = useTableSession();
+    const [drinkSuggestions, setDrinkSuggestions] = useState<any[]>([]);
+    const [sideSuggestions, setSideSuggestions] = useState<any[]>([]);
     
     // UI State
     const [step, setStep] = useState(0);
@@ -54,6 +60,9 @@ export const CevicheBuilderModal = ({
         const quick: ModifierGroup[] = [];
 
         product.modifiers.forEach(group => {
+            if (tableSession && !isDishCoreModifier(group.groupName, group.displayName)) {
+                return;
+            }
             const isOptional = group.minSelections === 0;
             const hasFewOptions = group.options.length <= 1;
             
@@ -65,7 +74,7 @@ export const CevicheBuilderModal = ({
         });
 
         return { mainSteps: main, quickToggles: quick };
-    }, [product.modifiers, hasDynamicModifiers]);
+    }, [product.modifiers, hasDynamicModifiers, tableSession]);
 
     const totalSteps = mainSteps.length; // summary is the step after all main steps
     
@@ -94,6 +103,31 @@ export const CevicheBuilderModal = ({
     useEffect(() => {
         setSearchQuery('');
     }, [step]);
+
+    useEffect(() => {
+        if (!isOpen || !tableSession) {
+            setDrinkSuggestions([]);
+            return;
+        }
+        fetchCatalog().then((catalog: any[]) => {
+            const pick = (role: 'SIDE' | 'DRINK') => {
+                const seen = new Set<string>();
+                return catalog.filter((p: any) => {
+                    if (p.available === false || categoryRole(p.category) !== role) return false;
+                    if (seen.has(p.name)) return false;
+                    seen.add(p.name);
+                    return true;
+                }).slice(0, 8);
+            };
+            const drinks = pick('DRINK');
+            const sides = pick('SIDE');
+            setDrinkSuggestions(drinks);
+            setSideSuggestions(sides);
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K9',location:'CevicheBuilderModal.tsx:suggestions',message:'dine-in suggestions after main dish',data:{drinks:drinks.length,sides:sides.length,coreSteps:(product.modifiers||[]).filter((g:any)=>isDishCoreModifier(g.groupName,g.displayName)).map((g:any)=>g.displayName||g.groupName),skipped:(product.modifiers||[]).filter((g:any)=>!isDishCoreModifier(g.groupName,g.displayName)).map((g:any)=>g.displayName||g.groupName)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        }).catch(() => {});
+    }, [isOpen, tableSession]);
 
     // Logic helpers
     const currentModifier = hasDynamicModifiers && step < totalSteps
@@ -535,8 +569,65 @@ export const CevicheBuilderModal = ({
                                         );
                                     })()}
 
+                                    {tableSession && (drinkSuggestions.length > 0 || sideSuggestions.length > 0) && (
+                                        <div className="space-y-4">
+                                            {sideSuggestions.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Acompañantes</p>
+                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                                        {sideSuggestions.map((side) => (
+                                                            <button
+                                                                key={side.id}
+                                                                type="button"
+                                                                onClick={() => cartContext.addToCart({
+                                                                    productId: side.id,
+                                                                    variantId: 'default',
+                                                                    name: side.name,
+                                                                    price: Number(side.price),
+                                                                    quantity: 1,
+                                                                    modifiers: { selectedProteins: [], removedIngredients: [] },
+                                                                    imageUrl: side.imageUrl,
+                                                                })}
+                                                                className="shrink-0 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-left"
+                                                            >
+                                                                <p className="text-[10px] font-black uppercase italic text-slate-800">{side.name}</p>
+                                                                <p className="text-[10px] font-bold text-orange-500">${Number(side.price).toLocaleString()}</p>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {drinkSuggestions.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Bebestibles</p>
+                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                                        {drinkSuggestions.map((drink) => (
+                                                            <button
+                                                                key={drink.id}
+                                                                type="button"
+                                                                onClick={() => cartContext.addToCart({
+                                                                    productId: drink.id,
+                                                                    variantId: 'default',
+                                                                    name: drink.name,
+                                                                    price: Number(drink.price),
+                                                                    quantity: 1,
+                                                                    modifiers: { selectedProteins: [], removedIngredients: [] },
+                                                                    imageUrl: drink.imageUrl,
+                                                                })}
+                                                                className="shrink-0 px-3 py-2 rounded-xl bg-orange-50 border border-orange-100 text-left"
+                                                            >
+                                                                <p className="text-[10px] font-black uppercase italic text-slate-800">{drink.name}</p>
+                                                                <p className="text-[10px] font-bold text-orange-500">${Number(drink.price).toLocaleString()}</p>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* Quick Toggles Section (optional single-option groups) */}
-                                    {quickToggles.length > 0 && (
+                                    {quickToggles.length > 0 && !tableSession && (
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-2">
                                                 <Plus size={14} className="text-orange-500" />
