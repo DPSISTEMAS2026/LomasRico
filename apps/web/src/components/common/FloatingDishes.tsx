@@ -12,7 +12,19 @@ type Ball = {
     vy: number;
     r: number;
     src: string;
+    swapAt: number;
 };
+
+function pickPhoto(photos: string[], avoid: string) {
+    const pool = photos.filter((p) => p !== avoid);
+    if (pool.length === 0) return avoid;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function setBallPhoto(node: HTMLDivElement | undefined, src: string) {
+    const img = node?.querySelector('img');
+    if (img && img.src !== src) img.src = src;
+}
 
 const FALLBACK_PHOTOS = [
     '/assets/Ceviche LoMASRico.jpg',
@@ -161,7 +173,7 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
             } catch {
                 photosRef.current = FALLBACK_PHOTOS;
             }
-            const chosen = photosRef.current.slice(0, 16);
+            const chosen = photosRef.current.slice(0, 24);
             await preloadPhotos(chosen);
             if (!cancelled) setReady(true);
         })();
@@ -179,23 +191,20 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
             const photos = photosRef.current;
             const mobile = w < 768;
             const hole = holeFromCard(wrap, cardRef?.current || null, w, h);
-            const topRoom = hole.y;
-            const botRoom = h - (hole.y + hole.h);
-            const lane = Math.max(0, Math.min(topRoom, botRoom));
-            let r = mobile ? 28 : 62;
-            while (r > 12 && topRoom < 2 * r + 12 && botRoom < 2 * r + 12) r -= 2;
-            const count = mobile ? (lane < 48 ? 4 : 6) : 14;
+            const r = mobile ? 48 : 62;
+            const count = mobile ? 8 : 14;
             const next: Ball[] = [];
-            let spawnFail = 0;
-            let overlap = 0;
             for (let i = 0; i < count; i++) {
-                const speed = mobile ? 0.22 + Math.random() * 0.2 : 0.6 + Math.random() * 0.9;
-                const pos = spawnInLane(w, h, r, hole, i % 2 === 1);
-                if (!pos) {
-                    spawnFail += 1;
-                    continue;
-                }
-                if (overlapsHole(pos.x, pos.y, r, hole)) overlap += 1;
+                const speed = mobile ? 0.4 + Math.random() * 0.35 : 0.6 + Math.random() * 0.9;
+                const pos = mobile
+                    ? {
+                        x: r + 8 + Math.random() * Math.max(8, w - r * 2),
+                        y: r + 8 + Math.random() * Math.max(8, h - r * 2),
+                    }
+                    : spawnInLane(w, h, r, hole, i % 2 === 1) || {
+                        x: r + 8 + Math.random() * Math.max(8, w - r * 2),
+                        y: r + 8,
+                    };
                 next.push({
                     id: i,
                     x: pos.x,
@@ -204,30 +213,27 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
                     vy: (Math.random() < 0.5 ? -1 : 1) * speed,
                     r,
                     src: photos[i % photos.length],
+                    swapAt: 0,
                 });
             }
             ballsRef.current = next;
             setBalls(next.map((b) => ({ ...b })));
             // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix',hypothesisId:'H-HOLE',location:'FloatingDishes.tsx:spawn',message:'spawned floating dishes',data:{mobile,count:next.length,w,h,r,hole,topRoom,botRoom,spawnFail,overlap,reduced:reduced.current,srcHost:(next[0]?.src||'').startsWith('http')?new URL(next[0].src).hostname:'local'},timestamp:Date.now()})}).catch(()=>{});
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix2',hypothesisId:'H-HOLE',location:'FloatingDishes.tsx:spawn',message:'spawned floating dishes',data:{mobile,count:next.length,w,h,r,behindCard:mobile,reduced:reduced.current,srcHost:(next[0]?.src||'').startsWith('http')?new URL(next[0].src).hostname:'local'},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
         };
 
         spawn();
-        if (reduced.current) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix',hypothesisId:'H-TICK',location:'FloatingDishes.tsx:reduced',message:'animation skipped reduced motion',data:{reduced:true},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            return;
-        }
 
         const tick = () => {
             const w = wrap.clientWidth;
             const h = wrap.clientHeight;
+            const mobile = w < 768;
             const hole = holeFromCard(wrap, cardRef?.current || null, w, h);
             const now = Date.now();
             const items = ballsRef.current;
             let ejected = 0;
+            let swapped = 0;
 
             for (const b of items) {
                 b.x += b.vx;
@@ -238,7 +244,7 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
                 if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); }
                 if (b.y > h - b.r) { b.y = h - b.r; b.vy = -Math.abs(b.vy); }
 
-                if (resolveCard(b, hole) === 'eject') ejected += 1;
+                if (!mobile && resolveCard(b, hole) === 'eject') ejected += 1;
             }
 
             for (let i = 0; i < items.length; i++) {
@@ -266,20 +272,29 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
                             b.vx += impact * nx;
                             b.vy += impact * ny;
                         }
+                        if (now - a.swapAt > 450 && now - b.swapAt > 450) {
+                            a.src = pickPhoto(photosRef.current, a.src);
+                            b.src = pickPhoto(photosRef.current, b.src);
+                            a.swapAt = now;
+                            b.swapAt = now;
+                            setBallPhoto(nodeRefs.current.get(a.id), a.src);
+                            setBallPhoto(nodeRefs.current.get(b.id), b.src);
+                            swapped += 1;
+                        }
                     }
                 }
             }
 
             for (const b of items) {
-                if (resolveCard(b, hole) === 'eject') ejected += 1;
+                if (!mobile && resolveCard(b, hole) === 'eject') ejected += 1;
                 const el = nodeRefs.current.get(b.id);
                 if (el) el.style.transform = `translate3d(${b.x - b.r}px, ${b.y - b.r}px, 0)`;
             }
 
-            if (ejected && now - lastLogRef.current > 4000) {
+            if ((swapped || ejected) && now - lastLogRef.current > 4000) {
                 lastLogRef.current = now;
                 // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix',hypothesisId:'H-TICK',location:'FloatingDishes.tsx:tick',message:'dishes tick',data:{ejected,moving:true,n:items.length},timestamp:Date.now()})}).catch(()=>{});
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix2',hypothesisId:'H-SWAP',location:'FloatingDishes.tsx:tick',message:'dishes tick',data:{swapped,ejected,moving:true,n:items.length,mobile},timestamp:Date.now()})}).catch(()=>{});
                 // #endregion
             }
 
