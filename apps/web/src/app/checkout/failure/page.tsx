@@ -10,10 +10,10 @@ function FailureContent() {
     const orderId = searchParams.get('orderId');
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 flex items-center justify-center p-6">
             <div className="max-w-lg w-full">
                 {/* Failure Card */}
-                <div className="bg-white rounded-[2rem] p-10 shadow-xl border border-red-100 text-center">
+                <div className="bg-white rounded-[2rem] p-6 sm:p-10 shadow-xl border border-red-100 text-center">
                     {/* Animated X */}
                     <div className="relative mx-auto w-24 h-24 mb-8">
                         <div className="absolute inset-0 bg-red-100 rounded-full animate-ping opacity-30"></div>

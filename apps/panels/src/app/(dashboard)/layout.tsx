@@ -74,7 +74,8 @@ export default function DashboardLayout({
     useEffect(() => {
         // #region agent log
         const main = document.querySelector('main');
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-scroll',hypothesisId:'H-SCROLL',location:'layout.tsx:route',message:'scrollport del panel',data:{pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,mainClientW:main?.clientWidth||0,mainScrollW:main?.scrollWidth||0,mainClientH:main?.clientHeight||0,mainScrollH:main?.scrollHeight||0,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2,canScrollY:!!main&&main.scrollHeight>main.clientHeight+2},timestamp:Date.now()})}).catch(()=>{});
+        const doc = document.documentElement;
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'site-xscroll',hypothesisId:'H-SCROLL',location:'layout.tsx:route',message:'scrollport del panel',data:{pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,docScrollW:doc.scrollWidth,docClientW:doc.clientWidth,docOverflow:doc.scrollWidth>doc.clientWidth+2,mainClientW:main?.clientWidth||0,mainScrollW:main?.scrollWidth||0,mainClientH:main?.clientHeight||0,mainScrollH:main?.scrollHeight||0,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2,canScrollY:!!main&&main.scrollHeight>main.clientHeight+2},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [pathname]);
 

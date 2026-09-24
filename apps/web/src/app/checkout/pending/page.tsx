@@ -11,10 +11,10 @@ function PendingContent() {
     const paymentId = searchParams.get('payment_id');
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 flex items-center justify-center p-6">
             <div className="max-w-lg w-full">
                 {/* Pending Card */}
-                <div className="bg-white rounded-[2rem] p-10 shadow-xl border border-amber-100 text-center">
+                <div className="bg-white rounded-[2rem] p-6 sm:p-10 shadow-xl border border-amber-100 text-center">
                     {/* Animated Clock */}
                     <div className="relative mx-auto w-24 h-24 mb-8">
                         <div className="absolute inset-0 bg-amber-100 rounded-full animate-ping opacity-30"></div>

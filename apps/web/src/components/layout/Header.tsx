@@ -16,8 +16,8 @@ export default function Header({ onCartOpen, onOrdersOpen, onAuthOpen }: HeaderP
   const { user, isLoggedIn, logout } = useAuth();
 
   return (
-    <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 px-4 md:px-6 py-3 md:py-4">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 px-4 md:px-6 py-3 md:py-4 min-w-0 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto flex justify-between items-center min-w-0 gap-2">
         {/* Logo Section */}
         <div className="flex items-center gap-2 md:gap-4">
           <Image src="/assets/Logo Restaurante.png" alt="LoMasRico Logo" width={70} height={70} className="h-[50px] w-[50px] md:h-[70px] md:w-[70px] object-contain drop-shadow-sm" priority />

@@ -128,7 +128,7 @@ export default function MesaQrPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 flex flex-col">
             <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">
                     <img src="/assets/Logo Restaurante.png" alt="Lo Más Rico" className="h-12 w-12 object-contain" />

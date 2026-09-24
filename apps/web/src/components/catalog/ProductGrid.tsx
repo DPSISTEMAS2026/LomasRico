@@ -192,7 +192,7 @@ export const ProductGrid = () => {
 
 
     return (
-        <div className="space-y-0 pb-20">
+        <div className="space-y-0 pb-20 min-w-0 overflow-x-hidden">
             {/* CATEGORY NAV - ADAPTIVE */}
             <div className="sticky top-[80px] md:top-[90px] z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-lg shadow-black/[0.03]">
                 <div className="max-w-7xl mx-auto px-4 py-3">
@@ -271,8 +271,8 @@ export const ProductGrid = () => {
                     return (
                         <div key={category.id} id={category.id} className="scroll-mt-40 relative">
                             {/* Section Header */}
-                            <div className="flex items-end gap-6 mb-8 border-b-2 border-slate-100 pb-3">
-                                <h3 className="text-3xl font-[900] italic uppercase text-slate-900 flex items-center gap-3">
+                            <div className="flex flex-wrap items-end gap-2 sm:gap-6 mb-8 border-b-2 border-slate-100 pb-3 min-w-0">
+                                <h3 className="text-2xl sm:text-3xl font-[900] italic uppercase text-slate-900 flex items-center gap-3 min-w-0 break-words">
                                     <span className="text-[#f2642e]">{category.icon}</span>
                                     {category.name}
                                 </h3>

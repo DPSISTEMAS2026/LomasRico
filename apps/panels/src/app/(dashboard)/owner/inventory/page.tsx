@@ -354,7 +354,7 @@ export default function InventoryManagementPage() {
     );
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             {/* Header */}
             <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
                 <div>

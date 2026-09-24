@@ -119,7 +119,7 @@ export default function CustomersPage() {
     const tags = ['ALL', 'Regular', 'En Riesgo', 'Nuevo'];
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 min-w-0 overflow-x-hidden">
             {/* Header Area */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 px-1">
                 <div className="w-full text-center lg:text-left">

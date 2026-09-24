@@ -10,6 +10,17 @@
   --accent: #fdf5f2;
 }
 
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

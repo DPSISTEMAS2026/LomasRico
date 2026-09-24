@@ -245,7 +245,7 @@ export default function MarketingPage() {
     );
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-10">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-10 min-w-0 overflow-x-hidden">
             {successMsg && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 z-[100] bg-slate-900 border border-slate-800 text-white px-6 py-4 rounded-2xl font-black uppercase text-[10px] md:text-xs italic tracking-[0.2em] shadow-2xl flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />

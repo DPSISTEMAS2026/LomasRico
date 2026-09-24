@@ -180,7 +180,7 @@ function HomeContent() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col page-transition">
+    <div className="min-h-screen min-w-0 flex flex-col page-transition overflow-x-hidden">
       {sessionEnd && (
         <div className="bg-slate-900 text-white px-4 py-3 text-center text-sm font-bold">
           {sessionEnd.reason === 'PAID'
@@ -210,7 +210,7 @@ function HomeContent() {
             <img src="/assets/Logo Restaurante.png" alt="Logo" className="h-10 w-10" />
             <span className="font-black italic text-sm tracking-tighter">LO MÁS RICO &copy; 2026</span>
           </div>
-          <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
             <a href="/legal/terms" className="hover:text-orange-600 transition-colors">Terminos</a>
             <a href="/legal/privacy" className="hover:text-orange-600 transition-colors">Privacidad</a>
             <a href="#" className="hover:text-orange-600 transition-colors">Soporte</a>

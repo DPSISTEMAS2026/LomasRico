@@ -448,7 +448,7 @@ export default function CatalogManagementPage() {
     );
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             {/* Header */}
             <header className="flex flex-col gap-6 md:gap-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
@@ -456,9 +456,9 @@ export default function CatalogManagementPage() {
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             GESTIÓN DE <span className="text-orange-500">CATÁLOGO</span>
                         </h1>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="w-8 h-[2px] bg-orange-500"></span>
-                            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1">
+                        <div className="flex items-center gap-2 mt-2 min-w-0">
+                            <span className="w-8 h-[2px] bg-orange-500 shrink-0"></span>
+                            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1 min-w-0 break-words">
                                 Control Total de Productos y Lógica de Venta
                             </p>
                         </div>

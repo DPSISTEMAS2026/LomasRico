@@ -72,7 +72,7 @@ export default function OwnerDashboardPage() {
     const COLORS = ['#f2642e', '#0f172a', '#3b82f6', '#10b981'];
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             {/* Header */}
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4">
                 <div>

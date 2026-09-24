@@ -16,6 +16,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { TableSessionProvider } from "../context/TableSessionContext";
 import CookieBanner from "../components/common/CookieBanner";
 import ComingSoonGate from "../components/common/ComingSoonGate";
+import OverflowLock from "../components/common/OverflowLock";
 
 export default function RootLayout({
   children,
@@ -24,13 +25,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${outfit.variable} font-sans antialiased bg-white`}>
+      <body className={`${outfit.variable} font-sans antialiased bg-white overflow-x-hidden`}>
         <AuthProvider>
           <TableSessionProvider>
-            <ComingSoonGate>
-              {children}
-              <CookieBanner />
-            </ComingSoonGate>
+            <OverflowLock>
+              <ComingSoonGate>
+                {children}
+                <CookieBanner />
+              </ComingSoonGate>
+            </OverflowLock>
           </TableSessionProvider>
         </AuthProvider>
       </body>

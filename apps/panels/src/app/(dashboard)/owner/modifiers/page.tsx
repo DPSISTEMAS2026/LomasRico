@@ -231,7 +231,7 @@ export default function ModifiersPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-8 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             <header className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>

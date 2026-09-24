@@ -19,7 +19,7 @@ export default function AdminPreviewPage() {
     }, [router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen min-w-0 overflow-x-hidden flex items-center justify-center bg-slate-50">
             <Loader2 className="animate-spin text-orange-500" size={32} />
         </div>
     );

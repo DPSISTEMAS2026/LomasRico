@@ -4,14 +4,14 @@ import { ArrowLeft, Cookie, Shield, Eye, Settings, HelpCircle } from 'lucide-rea
 
 export default function CookiesPage() {
     return (
-        <div className="min-h-screen bg-slate-50/30">
+        <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50/30">
             <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-slate-100">
-                <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/" className="bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-all hover:scale-105 active:scale-95">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <Link href="/" className="shrink-0 bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-all hover:scale-105 active:scale-95">
                             <ArrowLeft size={20} className="text-slate-900" />
                         </Link>
-                        <span className="font-black italic text-lg uppercase tracking-tighter text-slate-900">Volver al Inicio</span>
+                        <span className="font-black italic text-sm sm:text-lg uppercase tracking-tighter text-slate-900 truncate">Volver al Inicio</span>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-orange-50 text-[#f2642e] px-3 py-1 rounded-full border border-orange-100">
                         Vigente 2026
@@ -22,7 +22,7 @@ export default function CookiesPage() {
             <main className="max-w-4xl mx-auto px-6 pt-32 pb-20">
                 <header className="mb-12 text-center md:text-left">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-2">Transparencia y Control</p>
-                    <h1 className="text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-4">
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-4 break-words">
                         Política de Cookies
                     </h1>
                     <p className="text-base md:text-lg text-slate-500 font-medium max-w-2xl">

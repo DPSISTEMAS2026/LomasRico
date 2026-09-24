@@ -104,7 +104,7 @@ export default function ReportsPage() {
     );
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             {/* Header */}
             <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
                 <div>

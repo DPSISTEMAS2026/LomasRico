@@ -124,7 +124,7 @@ export default function ProfilePage() {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-6 flex items-start md:items-center justify-center pt-10 md:pt-6">
+        <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 p-4 md:p-6 flex items-start md:items-center justify-center pt-10 md:pt-6">
             <div className="max-w-md w-full animate-in fade-in zoom-in-95 duration-500">
                 <button onClick={() => router.push('/')} className="mb-6 md:mb-8 flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors font-black text-[10px] md:text-xs uppercase tracking-widest italic">
                     <ArrowLeft size={16} /> VOLVER AL INICIO
