@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['192.168.1.85', '192.168.56.1'],
   transpilePackages: ["@lomasrico/shared-types"],
+  async rewrites() {
+    return [
+      { source: '/backend/:path*', destination: 'http://127.0.0.1:3001/:path*' },
+    ];
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

@@ -4,7 +4,7 @@ import {
     ChefHat, ChevronRight, ChevronDown, MessageSquare, Timer,
     AlertCircle, XCircle, ArrowRight, CheckCircle2, Printer
 } from 'lucide-react';
-import type { KitchenTicket, SaleItem } from '@lomasrico/shared-types';
+import { cleanModifierLabel, type KitchenTicket, type SaleItem } from '@lomasrico/shared-types';
 
 // ─── Tab config type ────────────────────────────────
 interface TabConfig {
@@ -55,7 +55,7 @@ function ModBadges({ item }: { item: SaleItem }) {
             {dynamics.map((g: any) =>
                 g.selectedOptions.map((o: any, i: number) => (
                     <span key={`${g.groupId}-${i}`} className="bg-orange-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
-                        {g.groupName}: {o.name}
+                        {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}
                     </span>
                 ))
             )}

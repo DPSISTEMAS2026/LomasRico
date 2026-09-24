@@ -630,17 +630,13 @@ export class SalesService {
             include: {
                 items: {
                     include: {
-                        sellingProduct: true, // Ventas directas por producto (sin variante)
-                        productVariant: {
-                            include: {
-                                sellingProduct: true
-                            }
-                        },
-                        recipeSnapshot: true
+                        sellingProduct: { select: { id: true, name: true, category: true } },
+                        productVariant: { select: { id: true, name: true } },
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 200,
         });
     }
 

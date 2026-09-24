@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
 import {
-    ArrowLeft, Plus, Users, Loader2, Printer, CreditCard, Trash2, Search,
+    ArrowLeft, Plus, Users, Loader2, Printer, CreditCard, Trash2, Search, ChevronUp,
     Gift, Fish, ChefHat, Wheat, CupSoda, Flame, Salad, Shell, Sparkles, UtensilsCrossed,
 } from 'lucide-react';
 import { fetchCatalog, API_URL, WEB_URL } from '../../../../services/api';
@@ -13,6 +13,7 @@ import { WaiterDishBuilder } from '../../../../components/modals/WaiterDishBuild
 import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
+import { normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
     PROMOS: { name: 'Promos', Icon: Gift },
@@ -49,6 +50,7 @@ export default function SalonTablePage() {
     const [nameModal, setNameModal] = useState<'add' | 'rename' | null>(null);
     const [nameInput, setNameInput] = useState('');
     const [showBill, setShowBill] = useState(false);
+    const [accountOpen, setAccountOpen] = useState(false);
     const [bill, setBill] = useState<any>(null);
     const nameRef = useRef<HTMLInputElement>(null);
     const [printSale, setPrintSale] = useState<{ code: string; items: CartItem[]; channel: string; guestName?: string; kind?: 'kitchen' | 'account'; total?: number } | null>(null);
@@ -61,6 +63,13 @@ export default function SalonTablePage() {
     useEffect(() => {
         if (printSale && printerRef.current) handlePrint();
     }, [printSale, handlePrint]);
+
+    useEffect(() => {
+        // #region agent log
+        const catalogH = document.querySelector('[data-salon-catalog]')?.clientHeight ?? 0;
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cart',hypothesisId:'H-SPACE',location:'salon/[id]/page.tsx:layout',message:'espacio catalogo vs cuenta',data:{accountOpen,catalogH,innerH:typeof window!=='undefined'?window.innerHeight:0},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [accountOpen, table]);
 
     const loadTable = async (preferGuestId?: string | null) => {
         const res = await authFetch(`${API_URL}/tables/${id}`);
@@ -141,6 +150,7 @@ export default function SalonTablePage() {
             alert('Primero agrega un comensal');
             return;
         }
+        const t0 = Date.now();
         setBusy(true);
         try {
             const res = await authFetch(`${API_URL}/tables/${id}/guests/${guestId}/items`, {
@@ -159,8 +169,21 @@ export default function SalonTablePage() {
             fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-layout',hypothesisId:'C',location:'salon/[id]/page.tsx:persistItem',message:'item persisted',data:{ok:res.ok,guestId,itemCount:1,saleCode:data.code||null},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
             if (!res.ok) throw new Error(data.message || 'No se pudo guardar el plato');
-            await loadTable(guestId);
+            const afterApi = Date.now();
+            if (data.guests) {
+                setTable(data);
+                setGuestId((current) => {
+                    const next = guestId || current;
+                    if (next && data.guests?.some((g: any) => g.id === next)) return next;
+                    return data.guests?.[0]?.id || null;
+                });
+            } else {
+                await loadTable(guestId);
+            }
             backToCategories();
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix-anotar',hypothesisId:'H-UI',location:'salon/[id]/page.tsx:persistItem',message:'persist timings',data:{name:item.name,apiMs:afterApi-t0,reloadMs:Date.now()-afterApi,totalMs:Date.now()-t0,usedTable:!!data.guests},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
             // #region agent log
             fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H2',location:'salon/[id]/page.tsx:persistItem',message:'added then back to categories',data:{guestId,fromCategory:selectedCategory},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
@@ -176,10 +199,22 @@ export default function SalonTablePage() {
             alert('Primero agrega un comensal');
             return;
         }
+        const drinkGroups = normalizeDrinkModifiers(product);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'drinks',hypothesisId:'H-DRINK',location:'salon/[id]/page.tsx:onProduct',message:'product tap',data:{name:product.name,category:product.category,rawGroups:product.modifiers?.length||0,drinkGroups:drinkGroups.length,opts:drinkGroups[0]?.options?.map((o:any)=>o.name)||[]},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (drinkGroups.length === 0 && /bebida|limonad|cervez|jugo|monster|agua/i.test(`${product.category} ${product.name}`)) {
+            void persistItem({
+                productId: product.id,
+                variantId: 'default',
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+                modifiers: { selectedProteins: [], removedIngredients: [] },
+            });
+            return;
+        }
         if (product.isConfigurable || product.allowsModifiers || (product.modifiers && product.modifiers.length > 0)) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H6',location:'salon/[id]/page.tsx:onProduct',message:'opened ceviche builder',data:{hasModifiers:!!product.modifiers?.length,groups:product.modifiers?.map((m:any)=>m.displayName||m.groupName)||[]},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             setConfigProduct(product);
             return;
         }
@@ -444,7 +479,7 @@ export default function SalonTablePage() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
+            <div data-salon-catalog className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
                 {showCategories ? categories.map((cat) => (
                     <button
                         key={cat.id}
@@ -477,50 +512,66 @@ export default function SalonTablePage() {
                 ))}
             </div>
 
-            <div className="shrink-0 border-t border-slate-100 bg-white p-3 md:p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <button type="button" onClick={openRenameGuest} className="text-left">
-                            <p className="text-[10px] font-black uppercase text-slate-400">Cuenta de</p>
-                            <p className="font-black italic uppercase text-slate-900">{guest?.name || '—'}</p>
-                        </button>
-                        <p className="font-black italic text-lg">${accountTotal.toLocaleString()}</p>
+            <div className="shrink-0 border-t border-slate-100 bg-white">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setAccountOpen((open) => !open);
+                        // #region agent log
+                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cart',hypothesisId:'H-CART',location:'salon/[id]/page.tsx:toggleAccount',message:'cuenta inferior',data:{next:!accountOpen,pending:pendingItems.length},timestamp:Date.now()})}).catch(()=>{});
+                        // #endregion
+                    }}
+                    className="w-full px-4 py-3 flex items-center justify-between gap-3"
+                >
+                    <div className="min-w-0 text-left">
+                        <p className="text-[10px] font-black uppercase text-slate-400 truncate">{guest?.name || 'Cuenta'}</p>
+                        <p className="font-black italic text-lg leading-none">${accountTotal.toLocaleString()}</p>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        {pendingItems.length} por enviar · {sentItems.length} en cocina
-                    </p>
-                </div>
-                {accountItems.length > 0 && (
-                    <div className="max-h-24 overflow-y-auto space-y-1">
-                        {accountItems.map((item) => (
-                            <div key={item.tempId} className="flex justify-between text-xs">
-                                <span className="font-black uppercase italic truncate pr-2">
-                                    {item.quantity}x {item.name}
-                                    <span className="ml-2 text-orange-500">{(item as any).sentToKitchen ? 'Cocina' : 'Nuevo'}</span>
-                                </span>
-                                <span className="font-black shrink-0">${(item.price * item.quantity).toLocaleString()}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-black uppercase text-orange-500">
+                            {pendingItems.length} por enviar
+                        </span>
+                        <ChevronUp size={18} className={`text-slate-400 transition-transform ${accountOpen ? '' : 'rotate-180'}`} />
+                    </div>
+                </button>
+                {accountOpen && (
+                    <div className="px-3 md:px-4 pb-3 space-y-3">
+                        <button type="button" onClick={openRenameGuest} className="text-[10px] font-black uppercase text-slate-400">
+                            Cambiar nombre · {sentItems.length} en cocina
+                        </button>
+                        {accountItems.length > 0 && (
+                            <div className="max-h-36 overflow-y-auto space-y-1">
+                                {accountItems.map((item) => (
+                                    <div key={item.tempId} className="flex justify-between text-xs">
+                                        <span className="font-black uppercase italic truncate pr-2">
+                                            {item.quantity}x {item.name}
+                                            <span className="ml-2 text-orange-500">{(item as any).sentToKitchen ? 'Cocina' : 'Nuevo'}</span>
+                                        </span>
+                                        <span className="font-black shrink-0">${(item.price * item.quantity).toLocaleString()}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={sendKitchen}
+                                disabled={busy || !guestId || pendingItems.length === 0}
+                                className="py-3 rounded-2xl bg-orange-500 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
+                            >
+                                {busy ? <Loader2 className="animate-spin" size={18} /> : <Printer size={16} />} Enviar cocina
+                            </button>
+                            <button
+                                type="button"
+                                onClick={payGuest}
+                                disabled={busy || !guestId || accountItems.length === 0}
+                                className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
+                            >
+                                <CreditCard size={16} /> Cobrar
+                            </button>
+                        </div>
                     </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={sendKitchen}
-                        disabled={busy || !guestId || pendingItems.length === 0}
-                        className="py-4 rounded-2xl bg-orange-500 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                        {busy ? <Loader2 className="animate-spin" size={18} /> : <Printer size={16} />} Enviar cocina
-                    </button>
-                    <button
-                        type="button"
-                        onClick={payGuest}
-                        disabled={busy || !guestId || accountItems.length === 0}
-                        className="py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                        <CreditCard size={16} /> Cobrar
-                    </button>
-                </div>
             </div>
 
             {showBill && bill && (

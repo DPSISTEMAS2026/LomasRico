@@ -249,7 +249,7 @@ export default function CustomersPage() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex border-b border-slate-200 overflow-x-auto no-scrollbar scroll-smooth -mx-4 px-4 sticky top-0 md:relative bg-slate-50 md:bg-transparent z-40 py-1">
+            <div className="flex border-b border-slate-200 overflow-x-auto scroll-smooth sticky top-0 md:relative bg-slate-50 md:bg-transparent z-40 py-1">
                 {tags.map(tag => (
                     <button
                         key={tag}

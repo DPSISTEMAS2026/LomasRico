@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { cleanModifierLabel } from '../common/clean-label';
 
 @Injectable()
 export class ModifiersService {
@@ -39,6 +40,8 @@ export class ModifiersService {
 
         return groups.map((g) => ({
             ...g,
+            name: cleanModifierLabel(g.name) || g.name,
+            displayName: cleanModifierLabel(g.displayName) || g.displayName,
             assignedProductsCount: g._count.productModifiers,
             options: g.options.map((o: any) => this.serializeOption(o)),
         }));
@@ -71,6 +74,8 @@ export class ModifiersService {
         if (!group) throw new NotFoundException('Modifier Group not found');
         return {
             ...group,
+            name: cleanModifierLabel(group.name) || group.name,
+            displayName: cleanModifierLabel(group.displayName) || group.displayName,
             options: group.options.map((o: any) => this.serializeOption(o)),
         };
     }
@@ -86,8 +91,8 @@ export class ModifiersService {
     }) {
         return this.prisma.modifierGroup.create({
             data: {
-                name: data.name,
-                displayName: data.displayName,
+                name: cleanModifierLabel(data.name) || data.name,
+                displayName: cleanModifierLabel(data.displayName) || data.displayName,
                 type: data.type || 'SINGLE_SELECT',
                 minSelections: data.minSelections ?? 0,
                 maxSelections: data.maxSelections ?? 1,
@@ -121,7 +126,11 @@ export class ModifiersService {
     ) {
         return this.prisma.modifierGroup.update({
             where: { id },
-            data,
+            data: {
+                ...data,
+                ...(data.name !== undefined ? { name: cleanModifierLabel(data.name) || data.name } : {}),
+                ...(data.displayName !== undefined ? { displayName: cleanModifierLabel(data.displayName) || data.displayName } : {}),
+            },
             include: { options: true },
         });
     }
@@ -239,8 +248,8 @@ export class ModifiersService {
         return modifiers.map((m) => ({
             id: m.id,
             groupId: m.modifierGroupId,
-            groupName: m.modifierGroup.name,
-            displayName: m.modifierGroup.displayName,
+            groupName: cleanModifierLabel(m.modifierGroup.displayName || m.modifierGroup.name),
+            displayName: cleanModifierLabel(m.modifierGroup.displayName || m.modifierGroup.name),
             type: m.modifierGroup.type,
             isRequired: m.isRequired,
             sortOrder: m.sortOrder,

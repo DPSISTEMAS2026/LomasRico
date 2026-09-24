@@ -57,6 +57,7 @@ export default function CatalogManagementPage() {
     const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+    const [showNewCategory, setShowNewCategory] = useState(false);
 
     const CATEGORIES = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
@@ -275,6 +276,7 @@ export default function CatalogManagementPage() {
         });
         setProductModifiers([]);
         setModifierSearchQuery('');
+        setShowNewCategory(false);
         loadModifierGroups();
     };
 
@@ -430,10 +432,11 @@ export default function CatalogManagementPage() {
             filtered = filtered.filter(p => p.category === selectedCategory);
         }
 
-        // Sort: Active first, then by name
         return [...filtered].sort((a, b) => {
-            if (a.isActive === b.isActive) return a.name.localeCompare(b.name);
-            return a.isActive ? -1 : 1;
+            const ao = Number(a.sortOrder || 0);
+            const bo = Number(b.sortOrder || 0);
+            if (ao !== bo) return ao - bo;
+            return String(a.name || '').localeCompare(String(b.name || ''));
         });
     }, [products, selectedCategory, searchQuery]);
 
@@ -461,7 +464,7 @@ export default function CatalogManagementPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
                             onClick={() => {
                                 const sorted = products.filter(p => p.isActive).sort((a: any, b: any) => {
@@ -477,14 +480,14 @@ export default function CatalogManagementPage() {
                                 setCategoryOrder(cats);
                                 setShowSortModal(true);
                             }}
-                            className="bg-white text-slate-600 border border-slate-200 px-5 py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-wider hover:border-orange-400 hover:text-orange-600 transition-all flex items-center gap-2 whitespace-nowrap"
+                            className="flex-1 sm:flex-none bg-white text-slate-600 border border-slate-200 px-4 py-3 md:px-5 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-wider hover:border-orange-400 hover:text-orange-600 transition-all flex items-center justify-center gap-2"
                         >
                             <GripVertical size={16} />
                             Organizar
                         </button>
                         <button
                             onClick={handleAddNew}
-                            className="bg-slate-900 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 hover:scale-105 transition-all flex items-center justify-center gap-3 active:scale-95 italic whitespace-nowrap"
+                            className="flex-1 sm:flex-none bg-slate-900 text-white px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 transition-all flex items-center justify-center gap-2 active:scale-95 italic"
                         >
                             <PlusCircle size={18} />
                             Nuevo Producto
@@ -513,10 +516,10 @@ export default function CatalogManagementPage() {
                         )}
                     </div>
 
-                    <div className="relative">
+                    <div className="relative w-full md:w-auto">
                         <button
                             onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                            className={`flex items-center gap-3 px-6 py-4 bg-white rounded-2xl border shadow-sm font-black uppercase text-[11px] tracking-wider transition-all whitespace-nowrap
+                            className={`w-full md:w-auto flex items-center justify-between gap-3 px-5 py-4 bg-white rounded-2xl border shadow-sm font-black uppercase text-[11px] tracking-wider transition-all
                                 ${selectedCategory !== 'ALL' ? 'border-orange-500 text-orange-600' : 'border-slate-100 text-slate-600'}`}
                         >
                             <LayoutGrid size={16} />
@@ -561,8 +564,57 @@ export default function CatalogManagementPage() {
                 </div>
             </header>
 
-            {/* Product Table */}
-            <div className="bg-white rounded-2xl md:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden border-b-8 border-b-slate-900">
+            {/* Mobile cards: no horizontal scroll */}
+            <div className="md:hidden space-y-3">
+                {displayedProducts.map((p) => (
+                    <article key={p.id} className={`bg-white rounded-2xl border shadow-sm p-3 ${p.isActive ? 'border-slate-100' : 'border-slate-200 bg-slate-50'}`}>
+                        <div className="flex gap-3 min-w-0">
+                            <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+                                {p.imageUrl ? (
+                                    <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="m-auto mt-5 text-slate-300 w-6 h-6" />
+                                )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="font-black text-slate-900 leading-tight truncate">{p.name}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1 truncate">{p.category}</p>
+                                <p className="text-orange-500 font-black text-sm mt-1">${Number(p.price || 0).toLocaleString('es-CL')}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    // #region agent log
+                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-mobile',hypothesisId:'H-MOBILE',location:'catalog/page.tsx:toggle',message:'mobile web visibility toggle',data:{id:p.id,next:!p.isActive},timestamp:Date.now()})}).catch(()=>{});
+                                    // #endregion
+                                    toggleProductStatus(p.id, p.isActive, 'isActive');
+                                }}
+                                className={`h-12 rounded-xl border-2 font-black uppercase text-[10px] tracking-wider ${p.isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}
+                            >
+                                {p.isActive ? 'En la web' : 'Oculto'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowNewCategory(false);
+                                    setEditingProduct({ ...p });
+                                    loadModifierGroups();
+                                    if (p.id !== 'NEW') loadProductModifiers(p.id);
+                                }}
+                                className="h-12 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider flex items-center justify-center gap-2"
+                            >
+                                <Pencil className="w-4 h-4" />
+                                Editar
+                            </button>
+                        </div>
+                    </article>
+                ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden border-b-8 border-b-slate-900">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[920px]">
                                 <thead>
@@ -618,6 +670,7 @@ export default function CatalogManagementPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => {
+                                                    setShowNewCategory(false);
                                                     setEditingProduct({ ...p });
                                                     loadModifierGroups();
                                                     if (p.id !== 'NEW') loadProductModifiers(p.id);
@@ -681,18 +734,37 @@ export default function CatalogManagementPage() {
                                     </label>
                                     <label className="block">
                                         <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Categoría</span>
-                                        <input
-                                            list="categories_list"
-                                            value={editingProduct.category}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value.toUpperCase() })}
-                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-black text-slate-900 outline-none transition-all uppercase italic text-sm md:text-base placeholder:text-slate-300"
-                                            placeholder="ESCRIBE O SELECCIONA..."
-                                        />
-                                        <datalist id="categories_list">
+                                        <select
+                                            value={showNewCategory ? '__NEW__' : (editingProduct.category || '')}
+                                            onChange={(e) => {
+                                                if (e.target.value === '__NEW__') {
+                                                    setShowNewCategory(true);
+                                                    setEditingProduct({ ...editingProduct, category: '' });
+                                                    return;
+                                                }
+                                                setShowNewCategory(false);
+                                                setEditingProduct({ ...editingProduct, category: e.target.value });
+                                            }}
+                                            className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-black text-slate-900 outline-none transition-all uppercase italic text-sm md:text-base"
+                                        >
+                                            <option value="">Selecciona categoría</option>
                                             {CATEGORIES.filter(c => c.id !== 'ALL').map(c => (
-                                                <option key={c.id} value={c.id} />
+                                                <option key={c.id} value={c.id}>{c.name}</option>
                                             ))}
-                                        </datalist>
+                                            {editingProduct.category && !CATEGORIES.some(c => c.id === editingProduct.category) && !showNewCategory && (
+                                                <option value={editingProduct.category}>{editingProduct.category}</option>
+                                            )}
+                                            <option value="__NEW__">+ Nueva categoría</option>
+                                        </select>
+                                        {showNewCategory && (
+                                            <input
+                                                autoFocus
+                                                value={editingProduct.category || ''}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value.toUpperCase() })}
+                                                className="mt-3 w-full p-3 md:p-4 bg-white border-2 border-orange-200 focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-black text-slate-900 outline-none transition-all uppercase italic text-sm md:text-base"
+                                                placeholder="NOMBRE DE LA NUEVA CATEGORÍA"
+                                            />
+                                        )}
                                     </label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <label className="block">

@@ -217,6 +217,9 @@ export default function POSPage() {
         if (product.available === false) return;
 
         const needsConfig = product.isConfigurable || product.allowsModifiers;
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'slow-product',hypothesisId:'H-POS',location:'pos/page.tsx:click',message:'pos product click',data:{name:product.name,needsConfig,modCount:product.modifiers?.length||0},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (needsConfig) {
             setSelectedProductForConfig(product);
         } else {

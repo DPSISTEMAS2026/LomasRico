@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
+import { isInventoryEnforced } from '../config/flags';
 
 const TABLE_COUNT = 5;
 
@@ -23,13 +24,13 @@ export class TablesService implements OnModuleInit {
         }
     }
 
-    private saleInclude() {
+    private saleInclude(full = false) {
         return {
             items: {
                 include: {
-                    sellingProduct: true,
-                    productVariant: true,
-                    recipeSnapshot: true,
+                    sellingProduct: full ? true : { select: { id: true, name: true, price: true, category: true } },
+                    productVariant: full,
+                    recipeSnapshot: full,
                 },
                 orderBy: { id: 'asc' as const },
             },
@@ -62,41 +63,80 @@ export class TablesService implements OnModuleInit {
     }
 
     async list() {
-        const tables = await (this.prisma as any).diningTable.findMany({
-            where: { isActive: true },
-            orderBy: { number: 'asc' },
-            include: {
-                guests: {
-                    where: { isActive: true },
-                    orderBy: { seat: 'asc' },
+        const t0 = Date.now();
+        const [tables, openSales] = await Promise.all([
+            (this.prisma as any).diningTable.findMany({
+                where: { isActive: true },
+                orderBy: { number: 'asc' },
+                select: {
+                    id: true,
+                    number: true,
+                    name: true,
+                    billRequest: true,
+                    guests: {
+                        where: { isActive: true },
+                        orderBy: { seat: 'asc' },
+                        select: { id: true, name: true, seat: true, isActive: true, claimToken: true },
+                    },
                 },
-            },
-        });
-        const openSales = await (this.prisma as any).sale.findMany({
-            where: this.openSaleWhere({ tableId: { in: tables.map((t: any) => t.id) } }),
-            include: this.saleInclude(),
-        });
-        const extras = await this.loadQrExtras(tables.map((t: any) => t.id));
-        return tables.map((table: any) => this.decorateTable(table, openSales, extras));
+            }),
+            (this.prisma as any).sale.findMany({
+                where: this.openSaleWhere(),
+                select: { id: true, total: true, guestId: true, tableId: true },
+            }),
+        ]);
+        const result = tables.map((table: any) => this.decorateTable(table, openSales));
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-TABLE',location:'tables.service.ts:list',message:'salon list ms',data:{ms:Date.now()-t0,tables:tables.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return result;
     }
 
     async getTable(tableId: string) {
-        const table = await (this.prisma as any).diningTable.findUnique({
-            where: { id: tableId },
-            include: {
-                guests: {
-                    where: { isActive: true },
-                    orderBy: { seat: 'asc' },
+        const t0 = Date.now();
+        const [table, openSales] = await Promise.all([
+            (this.prisma as any).diningTable.findUnique({
+                where: { id: tableId },
+                select: {
+                    id: true,
+                    number: true,
+                    name: true,
+                    billRequest: true,
+                    guests: {
+                        where: { isActive: true },
+                        orderBy: { seat: 'asc' },
+                        select: { id: true, name: true, seat: true, isActive: true, claimToken: true },
+                    },
                 },
-            },
-        });
+            }),
+            (this.prisma as any).sale.findMany({
+                where: this.openSaleWhere({ tableId }),
+                select: {
+                    id: true,
+                    total: true,
+                    guestId: true,
+                    tableId: true,
+                    items: {
+                        orderBy: { id: 'asc' },
+                        select: {
+                            id: true,
+                            quantity: true,
+                            priceUnit: true,
+                            modifiers: true,
+                            sentToKitchenAt: true,
+                            sellingProductId: true,
+                            sellingProduct: { select: { id: true, name: true } },
+                        },
+                    },
+                },
+            }),
+        ]);
         if (!table) throw new NotFoundException('Mesa no existe');
-        const openSales = await (this.prisma as any).sale.findMany({
-            where: this.openSaleWhere({ tableId }),
-            include: this.saleInclude(),
-        });
-        const extras = await this.loadQrExtras([tableId]);
-        return this.decorateTable(table, openSales, extras);
+        const decorated = this.decorateTable(table, openSales);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-TABLE',location:'tables.service.ts:getTable',message:'getTable ms',data:{ms:Date.now()-t0,guestCount:decorated.guestCount,saleCount:openSales.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return decorated;
     }
 
     private async loadQrExtras(tableIds: string[]) {
@@ -126,16 +166,16 @@ export class TablesService implements OnModuleInit {
         return { bills, claims };
     }
 
-    private decorateTable(table: any, openSales: any[], extras: { bills: Map<string, any>; claims: Map<string, string> }) {
+    private decorateTable(table: any, openSales: any[]) {
         const guests = (table.guests || []).map((guest: any) => {
             const openSale = openSales.find((s) => s.guestId === guest.id) || null;
             const { claimToken, ...safeGuest } = guest;
-            return { ...safeGuest, openSale, claimed: !!(claimToken || extras.claims.get(guest.id)) };
+            return { ...safeGuest, openSale, claimed: !!claimToken };
         });
         const openTotal = guests.reduce((sum: number, g: any) => sum + Number(g.openSale?.total || 0), 0);
         return {
             ...table,
-            billRequest: extras.bills.get(table.id) || table.billRequest || null,
+            billRequest: table.billRequest || null,
             guests,
             guestCount: guests.length,
             openTotal,
@@ -232,7 +272,7 @@ export class TablesService implements OnModuleInit {
     async getSale(saleId: string) {
         return (this.prisma as any).sale.findUnique({
             where: { id: saleId },
-            include: this.saleInclude(),
+            include: this.saleInclude(true),
         });
     }
 
@@ -270,46 +310,43 @@ export class TablesService implements OnModuleInit {
                 userId: extras.userId || undefined,
                 note: extras.note || guest.name,
             },
-            include: this.saleInclude(),
         });
     }
 
     private async appendItems(saleId: string, items: any[]) {
-        for (const itemDto of items || []) {
-            if (!itemDto.sellingProductId) {
-                throw new BadRequestException('Cada ítem necesita sellingProductId');
-            }
-            const product = await this.prisma.sellingProduct.findUnique({
-                where: { id: itemDto.sellingProductId },
-            });
+        const rows = items || [];
+        const ids = [...new Set(rows.map((item: any) => item.sellingProductId).filter(Boolean))];
+        if (!ids.length) throw new BadRequestException('Cada ítem necesita sellingProductId');
+        const products = await this.prisma.sellingProduct.findMany({
+            where: { id: { in: ids as string[] } },
+            select: { id: true, price: true },
+        });
+        const byId = new Map(products.map((p) => [p.id, p]));
+        let added = 0;
+        const created = [];
+        for (const itemDto of rows) {
+            const product = byId.get(itemDto.sellingProductId);
             if (!product) throw new BadRequestException(`Producto no encontrado: ${itemDto.sellingProductId}`);
-
-            const price = Number(product.price);
-            const saleItem = await (this.prisma as any).saleItem.create({
-                data: {
-                    saleId,
-                    sellingProductId: product.id,
-                    quantity: itemDto.quantity || 1,
-                    priceUnit: price,
-                    modifiers: itemDto.modifiers || undefined,
-                },
+            const extras = Number(
+                (itemDto.modifiers?.dynamicSelections || []).reduce(
+                    (sum: number, group: any) =>
+                        sum + (group.selectedOptions || []).reduce((s: number, o: any) => s + Number(o.price || 0), 0),
+                    0,
+                ),
+            );
+            const price = Number(product.price) + extras;
+            const quantity = itemDto.quantity || 1;
+            added += price * quantity;
+            created.push({
+                saleId,
+                sellingProductId: product.id,
+                quantity,
+                priceUnit: price,
+                modifiers: itemDto.modifiers || undefined,
             });
-
-            try {
-                const bom = await this.recipeResolver.resolveBom(product.id, itemDto.modifiers || {}, false);
-                await (this.prisma as any).recipeSnapshot.create({
-                    data: {
-                        saleItemId: saleItem.id,
-                        resolvedBoM: JSON.parse(JSON.stringify(bom)),
-                        costSnapshot: 0,
-                        priceSnapshot: price,
-                        costBreakdown: {},
-                    },
-                });
-            } catch {
-                // Receta opcional mientras el inventario está en pausa
-            }
         }
+        await Promise.all(created.map((data) => (this.prisma as any).saleItem.create({ data })));
+        return added;
     }
 
     private async recalcTotal(saleId: string, discount?: number, discountType?: string) {
@@ -327,16 +364,38 @@ export class TablesService implements OnModuleInit {
                 discount: discountValue,
                 discountType: discount ? (discountType || 'FIXED') : undefined,
             },
-            include: this.saleInclude(),
         });
     }
 
     async addItemsToGuest(tableId: string, guestId: string, dto: any) {
-        const guest = await this.requireGuest(tableId, guestId);
-        let sale = await this.getOpenSaleForGuest(guestId);
-        if (!sale) sale = await this.createOpenSale(guest, dto);
-        if (dto.items?.length) await this.appendItems(sale.id, dto.items);
-        return this.recalcTotal(sale.id, dto.discount, dto.discountType);
+        const t0 = Date.now();
+        const [guest, existing] = await Promise.all([
+            this.requireGuest(tableId, guestId),
+            (this.prisma as any).sale.findFirst({
+                where: this.openSaleWhere({ guestId }),
+                select: { id: true },
+                orderBy: { createdAt: 'desc' },
+            }),
+        ]);
+        const afterGuest = Date.now();
+        const sale = existing || await this.createOpenSale(guest, dto);
+        const afterSale = Date.now();
+        const added = dto.items?.length ? await this.appendItems(sale.id, dto.items) : 0;
+        const afterItems = Date.now();
+        if (dto.discount && dto.discount > 0) {
+            await this.recalcTotal(sale.id, dto.discount, dto.discountType);
+        } else if (added) {
+            await (this.prisma as any).sale.update({
+                where: { id: sale.id },
+                data: { total: { increment: added } },
+            });
+        }
+        const afterRecalc = Date.now();
+        const table = await this.getTable(tableId);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-ADD',location:'tables.service.ts:addItemsToGuest',message:'add item phases',data:{itemCount:dto.items?.length||0,guestMs:afterGuest-t0,saleMs:afterSale-afterGuest,itemsMs:afterItems-afterSale,recalcMs:afterRecalc-afterItems,tableMs:Date.now()-afterRecalc,totalMs:Date.now()-t0,parallel:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return table;
     }
 
     async sendGuestToKitchen(tableId: string, guestId: string, dto: any = {}) {

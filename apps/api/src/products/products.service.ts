@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AvailabilityService } from '../availability/availability.service';
+import { cleanModifierLabel } from '../common/clean-label';
+import { isInventoryEnforced } from '../config/flags';
 
 import { MOCK_PRODUCTS } from './products.seed';
 import { seedMasterRecipes } from '../recipe-engineering/master-recipes.seed';
@@ -8,6 +10,13 @@ import { seedMasterRecipes } from '../recipe-engineering/master-recipes.seed';
 @Injectable()
 export class ProductsService implements OnModuleInit {
     private readonly logger = new Logger(ProductsService.name);
+    private activeCache: { data: any[]; ts: number } | null = null;
+    private activeInflight: Promise<any[]> | null = null;
+    private readonly ACTIVE_TTL_MS = 20_000;
+
+    private invalidateActiveCache() {
+        this.activeCache = null;
+    }
 
     constructor(
         private prisma: PrismaService,
@@ -137,8 +146,8 @@ export class ProductsService implements OnModuleInit {
         if (enriched.productModifiers && enriched.productModifiers.length > 0) {
             enriched.modifiers = enriched.productModifiers.map((pm: any) => ({
                 groupId: pm.modifierGroupId,
-                groupName: pm.modifierGroup.name,
-                displayName: pm.modifierGroup.displayName,
+                groupName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
+                displayName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
                 type: pm.modifierGroup.type,
                 isRequired: pm.isRequired,
                 sortOrder: pm.sortOrder,
@@ -179,43 +188,90 @@ export class ProductsService implements OnModuleInit {
     }
 
     async findActive() {
+        if (this.activeCache && (Date.now() - this.activeCache.ts) < this.ACTIVE_TTL_MS) {
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CACHE',location:'products.service.ts:findActive',message:'catalog cache hit',data:{ageMs:Date.now()-this.activeCache.ts,count:this.activeCache.data.length},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return this.activeCache.data;
+        }
+        if (this.activeInflight) {
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CACHE',location:'products.service.ts:findActive',message:'catalog inflight join',data:{},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return this.activeInflight;
+        }
+        this.activeInflight = this.loadActiveCatalog().finally(() => { this.activeInflight = null; });
+        return this.activeInflight;
+    }
+
+    private async loadActiveCatalog() {
+        const t0 = Date.now();
         const products = await this.prisma.sellingProduct.findMany({
             where: { isActive: true },
-            include: {
-                variants: true,
-                recipe: {
-                    include: {
-                        items: {
-                            include: { ingredient: true }
-                        }
-                    }
-                },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                category: true,
+                imageUrl: true,
+                price: true,
+                isActive: true,
+                isConfigurable: true,
+                maxProteins: true,
+                sortOrder: true,
+                hoverVideoUrl: true,
+                variants: { select: { id: true, name: true, price: true, isActive: true } },
                 productModifiers: {
-                    include: {
+                    orderBy: { sortOrder: 'asc' },
+                    select: {
+                        modifierGroupId: true,
+                        isRequired: true,
+                        sortOrder: true,
+                        overrideMin: true,
+                        overrideMax: true,
                         modifierGroup: {
-                            include: {
+                            select: {
+                                name: true,
+                                displayName: true,
+                                type: true,
+                                minSelections: true,
+                                maxSelections: true,
                                 options: {
                                     where: { isActive: true },
-                                    orderBy: { sortOrder: 'asc' }
-                                }
-                            }
-                        }
+                                    orderBy: { sortOrder: 'asc' },
+                                    select: { id: true, name: true, priceAdjustment: true, isDefault: true },
+                                },
+                            },
+                        },
                     },
-                    orderBy: { sortOrder: 'asc' }
-                }
-            }
+                },
+            },
         });
+        const queryMs = Date.now() - t0;
 
         // Calcular disponibilidad de todos los productos
         let availabilityMap: Map<string, any>;
         let modifierAvailMap: Map<string, any>;
+        const tAvail = Date.now();
         try {
-            availabilityMap = await this.availabilityService.calculateAll();
-            modifierAvailMap = await this.availabilityService.calculateModifierOptionsAvailability();
+            if (isInventoryEnforced()) {
+                availabilityMap = await this.availabilityService.calculateAll();
+                modifierAvailMap = await this.availabilityService.calculateModifierOptionsAvailability();
+            } else {
+                availabilityMap = new Map();
+                modifierAvailMap = new Map();
+            }
+            const afterAll = Date.now();
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CAT',location:'products.service.ts:findActive',message:'catalog active phases',data:{count:products.length,queryMs,availMs:afterAll-tAvail,modAvailMs:Date.now()-afterAll,totalMs:Date.now()-t0,cached:false,inv:isInventoryEnforced()},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         } catch (error) {
             this.logger.error('Error calculating availability, returning all as available', error);
             availabilityMap = new Map();
             modifierAvailMap = new Map();
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'slow-product',hypothesisId:'H-CAT',location:'products.service.ts:findActive',message:'catalog avail failed',data:{queryMs,err:String((error as any)?.message||error)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         }
 
         const enriched = products.map(p => {
@@ -252,7 +308,9 @@ export class ProductsService implements OnModuleInit {
             return product;
         });
 
-        return this.sortProducts(enriched);
+        const sorted = this.sortProducts(enriched);
+        this.activeCache = { data: sorted, ts: Date.now() };
+        return sorted;
     }
 
     async findAll() {
@@ -301,18 +359,22 @@ export class ProductsService implements OnModuleInit {
     }
 
     async create(data: any) {
+        this.invalidateActiveCache();
         return this.prisma.sellingProduct.create({ data });
     }
 
     async update(id: string, data: any) {
+        this.invalidateActiveCache();
         return this.prisma.sellingProduct.update({ where: { id }, data });
     }
 
     async remove(id: string) {
+        this.invalidateActiveCache();
         return this.prisma.sellingProduct.update({ where: { id }, data: { isActive: false } });
     }
 
     async reorder(items: { id: string; sortOrder: number }[]) {
+        this.invalidateActiveCache();
         this.logger.log(`Reordering ${items.length} products`);
         const updates = items.map(item =>
             this.prisma.sellingProduct.update({

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, X, Search } from 'lucide-react';
 import { Product, ModifierGroup } from '../../types';
-import { isDishCoreModifier } from '@lomasrico/shared-types';
+import { cleanModifierLabel, drinkTicketName, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 function isWaiterCoreGroup(group: ModifierGroup) {
     if (isDishCoreModifier(group.groupName, group.displayName)) return true;
@@ -25,8 +25,8 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
     const [search, setSearch] = useState('');
 
     const groups = useMemo(
-        () => (product.modifiers || []).filter(isWaiterCoreGroup),
-        [product.modifiers],
+        () => (normalizeDrinkModifiers(product) as ModifierGroup[]).filter(isWaiterCoreGroup),
+        [product],
     );
 
     useEffect(() => {
@@ -40,7 +40,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
         });
         setSelections(initial);
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'waiter-builder',hypothesisId:'H7',location:'WaiterDishBuilder.tsx:open',message:'waiter builder groups',data:{shown:groups.map((g)=>g.displayName||g.groupName),skipped:(product.modifiers||[]).filter((g)=>!isWaiterCoreGroup(g)).map((g)=>g.displayName||g.groupName)},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'drinks',hypothesisId:'H-DRINK',location:'WaiterDishBuilder.tsx:open',message:'drink groups normalized',data:{product:product.name,category:product.category,raw:(product.modifiers||[]).map((g)=>({name:g.displayName||g.groupName,min:g.minSelections,max:g.maxSelections,opts:g.options.map((o)=>o.name)})),shown:groups.map((g)=>({name:g.displayName||g.groupName,min:g.minSelections,max:g.maxSelections,opts:g.options.map((o)=>o.name)}))},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [isOpen, product.id, groups]);
 
@@ -65,7 +65,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
         }
         const dynamicSelections = groups.map((group) => ({
             groupId: group.groupId,
-            groupName: group.groupName,
+            groupName: cleanModifierLabel(group.displayName || group.groupName),
             selectedOptions: (selections[group.groupId] || []).map((optId) => {
                 const opt = group.options.find((o) => o.id === optId);
                 return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };
@@ -76,10 +76,13 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
             (sum, g) => sum + g.selectedOptions.reduce((s, o) => s + Number(o.price || 0), 0),
             0,
         );
+        const flavor = dynamicSelections[0]?.selectedOptions.map((o) => o.name).filter(Boolean).join(' · ');
         onConfirm({
             productId: product.id,
             variantId: 'custom',
-            name: product.name,
+            name: /bebida|limonad|monster/i.test(`${product.category} ${product.name}`)
+                ? drinkTicketName(product.name, flavor)
+                : product.name,
             price: Number(product.price) + extraPrice,
             quantity: 1,
             modifiers: {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Armchair, ShoppingBag, Users, RefreshCw } from 'lucide-react';
+import { Users, RefreshCw } from 'lucide-react';
 import { API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
 
@@ -30,13 +30,13 @@ export default function SalonPage() {
         load();
         const id = setInterval(load, 8000);
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-width',hypothesisId:'H-width',location:'salon/page.tsx:mount',message:'Salón a todo el ancho (5 mesas en fila)',data:{innerWidth:typeof window!=='undefined'?window.innerWidth:0,tableCount:tables.length,grid:'xl:grid-cols-5'},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-only',hypothesisId:'H-CAJA',location:'salon/page.tsx:mount',message:'salon floor sin caja',data:{hasCajaTile:false,innerWidth:typeof window!=='undefined'?window.innerWidth:0},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         return () => clearInterval(id);
     }, []);
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-slate-50">
             <div className="w-full max-w-none space-y-6">
                 <div className="flex items-end justify-between gap-4">
                     <div>
@@ -54,27 +54,6 @@ export default function SalonPage() {
                         className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-900"
                     >
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                        type="button"
-                        onClick={() => router.push('/salon')}
-                        className="text-left p-5 rounded-3xl bg-slate-900 text-white shadow-xl"
-                    >
-                        <Armchair className="mb-3 text-orange-400" size={28} />
-                        <p className="font-black uppercase italic text-lg leading-none">Salón · 5 mesas</p>
-                        <p className="text-xs font-bold text-slate-300 mt-2">Garzón o tablet: sentar, anotar y mandar a cocina.</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => router.push('/pos')}
-                        className="text-left p-5 rounded-3xl bg-white border-2 border-slate-100 shadow-sm hover:border-orange-400"
-                    >
-                        <ShoppingBag className="mb-3 text-orange-500" size={28} />
-                        <p className="font-black uppercase italic text-lg leading-none text-slate-900">Caja · Para llevar</p>
-                        <p className="text-xs font-bold text-slate-500 mt-2">Atención de retiro en el mostrador. Se cobra al tiro.</p>
                     </button>
                 </div>
 

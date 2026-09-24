@@ -73,7 +73,8 @@ export default function DashboardLayout({
 
     useEffect(() => {
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-width',hypothesisId:'H-width',location:'layout.tsx:route',message:'Ancho del panel en este módulo',data:{pathname,innerWidth:typeof window!=='undefined'?window.innerWidth:0,fullWidth:true},timestamp:Date.now()})}).catch(()=>{});
+        const main = document.querySelector('main');
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-scroll',hypothesisId:'H-SCROLL',location:'layout.tsx:route',message:'scrollport del panel',data:{pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,mainClientW:main?.clientWidth||0,mainScrollW:main?.scrollWidth||0,mainClientH:main?.clientHeight||0,mainScrollH:main?.scrollHeight||0,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2,canScrollY:!!main&&main.scrollHeight>main.clientHeight+2},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [pathname]);
 
@@ -175,7 +176,7 @@ export default function DashboardLayout({
     const isFullBleed = isPos || isKitchen || isSalon;
 
     return (
-        <div className="flex h-screen overflow-hidden bg-slate-50">
+        <div className="flex h-dvh max-h-dvh overflow-hidden bg-slate-50">
             {/* Mobile Menu Button */}
             <button
                 onClick={toggleSidebar}
@@ -266,16 +267,16 @@ export default function DashboardLayout({
             )}
 
             {/* Main Area */}
-            <main className={`flex-1 min-w-0 w-full relative ${isFullBleed ? 'overflow-hidden h-screen' : 'overflow-y-auto'}`}>
+            <main className={`flex-1 min-w-0 min-h-0 w-full relative ${isFullBleed ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-hidden overscroll-y-contain'}`}>
                 {/* Background Decoration */}
                 {!isKitchen && (
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none" />
                 )}
 
-                <div className={`min-h-full flex flex-col w-full max-w-none min-w-0 ${
-                    isFullBleed ? 'p-0 h-full' : 'p-4 md:px-6 lg:px-8 md:py-8'
+                <div className={`w-full max-w-none min-w-0 ${
+                    isFullBleed ? 'p-0 flex-1 min-h-0 flex flex-col overflow-hidden' : 'min-h-full flex flex-col p-4 md:px-6 lg:px-8 md:py-8'
                 }`}>
-                    <div className={`w-full max-w-none min-w-0 animate-in fade-in duration-300 ${isFullBleed ? 'h-full' : ''}`}>
+                    <div className={`w-full max-w-none min-w-0 animate-in fade-in duration-300 ${isFullBleed ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : ''}`}>
                         {children}
                     </div>
                 </div>

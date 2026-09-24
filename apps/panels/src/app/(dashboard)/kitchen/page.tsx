@@ -149,7 +149,7 @@ export default function KitchenPage() {
     );
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 overflow-hidden">
             {/* Header */}
             <div className="shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-0">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
@@ -169,7 +169,7 @@ export default function KitchenPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 border-b border-slate-200">
+                <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
                     {(Object.keys(TAB_CFG) as TabKey[]).map(key => {
                         const t = TAB_CFG[key]; const count = byTab[key].length; const active = activeTab === key; const Icon = t.icon;
                         return (
@@ -187,7 +187,7 @@ export default function KitchenPage() {
             </div>
 
             {/* Orders Grid */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-4 md:py-6">
                 {current.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[40vh] bg-white rounded-3xl md:rounded-[40px] border-2 border-dashed border-slate-200 p-8 text-center">
                         <Package size={60} className="text-slate-200 mb-4" />

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft, Loader2, Info, Search } from 'lucide-react';
 import { Product, ModifierGroup, ModifierOption } from '../../types';
+import { cleanModifierLabel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 interface CevicheBuilderModalProps {
     isOpen: boolean;
@@ -30,8 +31,8 @@ export const CevicheBuilderModal = ({
     // Selections State (Map: groupId -> selected Option IDs)
     const [selections, setSelections] = useState<Record<string, string[]>>({});
 
-    // Determine if we use dynamic modifiers or legacy builder
-    const hasDynamicModifiers = product.modifiers && product.modifiers.length > 0;
+    const modifiers = useMemo(() => normalizeDrinkModifiers(product) as ModifierGroup[], [product]);
+    const hasDynamicModifiers = modifiers.length > 0;
     
     // Setup initial selections based on defaults
     useEffect(() => {
@@ -41,7 +42,7 @@ export const CevicheBuilderModal = ({
             
             if (hasDynamicModifiers) {
                 const initial: Record<string, string[]> = {};
-                product.modifiers!.forEach(group => {
+                modifiers.forEach(group => {
                     const defaults = group.options
                         .filter(opt => opt.isDefault && opt.available !== false)
                         .map(opt => opt.id);
@@ -50,7 +51,7 @@ export const CevicheBuilderModal = ({
                 setSelections(initial);
             }
         }
-    }, [product, isOpen, hasDynamicModifiers]);
+    }, [product, isOpen, hasDynamicModifiers, modifiers]);
 
     // Reset search when step changes
     useEffect(() => {
@@ -58,8 +59,8 @@ export const CevicheBuilderModal = ({
     }, [step]);
 
     // Logic helpers
-    const currentModifier = hasDynamicModifiers && step < (product.modifiers?.length || 0)
-        ? product.modifiers![step] 
+    const currentModifier = hasDynamicModifiers && step < modifiers.length
+        ? modifiers[step] 
         : null;
 
     const filteredOptions = useMemo(() => {
@@ -74,7 +75,7 @@ export const CevicheBuilderModal = ({
 
     if (!isOpen) return null;
 
-    const modifierStepsCount = hasDynamicModifiers ? product.modifiers!.length : 0;
+    const modifierStepsCount = hasDynamicModifiers ? modifiers.length : 0;
     const isLastStep = hasDynamicModifiers ? step === modifierStepsCount : true;
 
     // Price Calculation
@@ -82,7 +83,7 @@ export const CevicheBuilderModal = ({
     
     const modifiersTotal = hasDynamicModifiers 
         ? Object.entries(selections).reduce((groupSum, [groupId, selectedIds]) => {
-            const group = product.modifiers?.find(m => m.groupId === groupId);
+            const group = modifiers.find(m => m.groupId === groupId);
             if (!group) return groupSum;
             
             const groupModifierPrice = selectedIds.reduce((optSum, optId) => {
@@ -100,7 +101,7 @@ export const CevicheBuilderModal = ({
     const handleNext = () => {
         if (hasDynamicModifiers && step < modifierStepsCount) {
             // Validation: check minSelections
-            const group = product.modifiers![step];
+            const group = modifiers[step];
             const currentCount = (selections[group.groupId] || []).length;
             if (currentCount < (group.minSelections || 0)) {
                 alert(`Por favor selecciona al menos ${group.minSelections} opción(es) de ${group.displayName}`);
@@ -140,9 +141,9 @@ export const CevicheBuilderModal = ({
         
         // Transform dynamic selections into CartItem format
         const dynamicSelections = hasDynamicModifiers 
-            ? product.modifiers!.map(group => ({
+            ? modifiers.map(group => ({
                 groupId: group.groupId,
-                groupName: group.groupName,
+                groupName: cleanModifierLabel(group.displayName || group.groupName),
                 selectedOptions: (selections[group.groupId] || []).map(optId => {
                     const opt = group.options.find(o => o.id === optId);
                     return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };
@@ -346,7 +347,7 @@ export const CevicheBuilderModal = ({
 
                                 <div className="bg-slate-50 rounded-2xl p-6 space-y-4 border border-slate-100">
                                     {Object.entries(selections).map(([groupId, selectedIds]) => {
-                                        const group = product.modifiers?.find(m => m.groupId === groupId);
+                                        const group = modifiers.find(m => m.groupId === groupId);
                                         if (!group || selectedIds.length === 0) return null;
                                         
                                         return (

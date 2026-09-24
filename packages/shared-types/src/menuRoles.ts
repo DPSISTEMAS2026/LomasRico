@@ -67,6 +67,16 @@ export function canEnlargeBySize(category?: string | null, name?: string | null)
     return /ceviche|crudo|roll|bowl|gohan/.test(label);
 }
 
+export function cleanModifierLabel(label?: string | null): string {
+    if (!label) return '';
+    return String(label)
+        .replace(/mer-?cat\s*:\s*/gi, '')
+        .replace(/\bmer-?cat\b/gi, '')
+        .replace(/^[:\s\-]+/, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
 export function isDishCoreModifier(groupName?: string, displayName?: string) {
     const label = `${groupName || ''} ${displayName || ''}`.toLowerCase();
     // Delivery upsells: no se preguntan en salón / QR. Todo lo demás es pregunta del plato.
@@ -74,4 +84,129 @@ export function isDishCoreModifier(groupName?: string, displayName?: string) {
         return false;
     }
     return true;
+}
+
+const SIZE_RE = /(\d+(?:[.,]\d+)?)\s*(cc|ml|l|lt|litro)s?\b/i;
+
+type DrinkModifierOption = {
+    id: string;
+    name: string;
+    priceAdjustment?: number;
+    isDefault?: boolean;
+    [key: string]: unknown;
+};
+
+type DrinkModifierGroup = {
+    groupId: string;
+    groupName?: string;
+    displayName?: string;
+    type?: string;
+    isRequired?: boolean;
+    minSelections?: number;
+    maxSelections?: number;
+    options?: DrinkModifierOption[];
+    [key: string]: unknown;
+};
+
+function groupLabel(group: DrinkModifierGroup) {
+    return `${group.groupName || ''} ${group.displayName || ''}`.toLowerCase();
+}
+
+function parseSize(label?: string | null) {
+    const match = String(label || '').match(SIZE_RE);
+    if (!match) return null;
+    const n = Number(match[1].replace(',', '.'));
+    let u = match[2].toLowerCase();
+    if (u === 'lt' || u === 'litro' || u === 'l') u = 'l';
+    const cc = u === 'l' ? n * 1000 : n;
+    return { n, u, cc };
+}
+
+export function stripDrinkSize(label?: string | null) {
+    return cleanModifierLabel(label)
+        .replace(SIZE_RE, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function isDrinkCatalogItem(category?: string | null, name?: string | null) {
+    if (categoryRole(category) === 'DRINK') return true;
+    return DRINK.test(`${category || ''} ${name || ''}`.toLowerCase());
+}
+
+function isMerCatDrinkChoiceGroup(group: DrinkModifierGroup) {
+    const label = groupLabel(group);
+    return /\bopciones?\b/.test(label) || /\bvariedades\b/.test(label);
+}
+
+function isDrinkSizeUpsell(group: DrinkModifierGroup) {
+    const label = groupLabel(group);
+    if (/opciones\s*cc|tama[ñn]o|formato/.test(label)) return true;
+    const options = group.options || [];
+    return options.length > 0 && options.every((opt) => {
+        const size = parseSize(opt.name);
+        return !!size && Number(opt.priceAdjustment || 0) >= 500;
+    });
+}
+
+function isDummyDrinkGroup(productName: string, group: DrinkModifierGroup) {
+    const options = group.options || [];
+    if (options.length !== 1) return false;
+    const optionName = stripDrinkSize(options[0].name).toLowerCase();
+    const base = stripDrinkSize(productName).toLowerCase();
+    return !optionName || optionName === base || optionName.includes(base) || base.includes(optionName) || /normal/.test(optionName);
+}
+
+export function normalizeDrinkModifiers<T extends DrinkModifierGroup>(
+    product: { name?: string; category?: string | null; modifiers?: T[] | null },
+): T[] {
+    const groups = (product.modifiers || []) as T[];
+    if (!isDrinkCatalogItem(product.category, product.name)) return groups;
+
+    const productSize = parseSize(product.name);
+    const usable = groups.filter((group) => {
+        if (isDummyDrinkGroup(product.name || '', group)) return false;
+        if (isDrinkSizeUpsell(group)) return false;
+        if (!isDishCoreModifier(group.groupName, group.displayName)) return false;
+        return true;
+    });
+
+    const choice = usable.find((group) => isMerCatDrinkChoiceGroup(group));
+    const flavor = usable.find((group) => /sabor/.test(groupLabel(group)));
+    const source = choice || flavor;
+    if (!source) return [];
+
+    const options = (source.options || [])
+        .filter((opt) => {
+            const optionSize = parseSize(opt.name);
+            if (productSize && optionSize && optionSize.cc !== productSize.cc) return false;
+            return true;
+        })
+        .map((opt) => ({
+            ...opt,
+            name: (stripDrinkSize(opt.name) || cleanModifierLabel(opt.name)).replace(/^limonada\s+/i, ''),
+            priceAdjustment: Number(opt.priceAdjustment || 0) >= 500 ? 0 : Number(opt.priceAdjustment || 0),
+        }));
+
+    if (options.length === 0) return [];
+    if (options.length === 1 && isDummyDrinkGroup(product.name || '', { ...source, options })) return [];
+
+    return [{
+        ...source,
+        type: 'SINGLE_SELECT',
+        minSelections: 1,
+        maxSelections: 1,
+        isRequired: true,
+        groupName: 'Sabor',
+        displayName: flavor ? cleanModifierLabel(flavor.displayName || flavor.groupName) || 'Sabor' : 'Sabor',
+        options,
+    }];
+}
+
+export function drinkTicketName(productName: string, flavor?: string | null) {
+    if (!flavor) return productName;
+    const size = String(productName || '').match(/(\d+(?:[.,]\d+)?\s*(?:cc|ml|l|lt|litro)s?)/i)?.[1] || '';
+    let base = flavor;
+    if (/limonad/i.test(productName) && !/limonad/i.test(flavor)) base = `Limonada ${flavor}`;
+    return [base, size].filter(Boolean).join(' ');
 }

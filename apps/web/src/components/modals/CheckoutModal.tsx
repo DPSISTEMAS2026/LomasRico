@@ -8,7 +8,7 @@ import { useTableSession } from '../../context/TableSessionContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import { categoryRole } from '@lomasrico/shared-types';
+import { categoryRole, cleanModifierLabel } from '@lomasrico/shared-types';
 
 // Categorías cuyos productos aparecen como upsell
 const UPSELL_CATEGORIES = ['EXTRAS', 'BEBIDAS', 'AGREGADOS', 'LIMONADAS'];
@@ -876,7 +876,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             </div>
                             {item.modifiers?.dynamicSelections?.map((g: any) =>
                                 g.selectedOptions?.map((o: any, i: number) => (
-                                    <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-500">+ {g.groupName}: {o.name}</p>
+                                    <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-500">+ {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}</p>
                                 ))
                             )}
                             {item.modifiers?.selectedProteinNames?.map((n: string, i: number) => (

@@ -26,6 +26,7 @@ export class KitchenService {
      * Solo excluye DELIVERED (ya fue entregado al repartidor/cliente)
      */
     async findAllActive() {
+        const t0 = Date.now();
         return (this.prisma as any).kitchenTicket.findMany({
             where: {
                 status: {
@@ -37,24 +38,31 @@ export class KitchenService {
             },
             include: {
                 sale: {
-                    include: {
+                    select: {
+                        id: true,
+                        code: true,
+                        channel: true,
+                        fulfillmentType: true,
+                        status: true,
+                        table: { select: { id: true, number: true } },
+                        guest: { select: { id: true, name: true } },
+                        externalOrder: { select: { id: true, platform: true } },
                         items: {
-                            include: {
-                                productVariant: true,
-                                sellingProduct: true,
-                                recipeSnapshot: true
+                            select: {
+                                id: true,
+                                quantity: true,
+                                modifiers: true,
+                                sellingProduct: { select: { id: true, name: true } },
+                                productVariant: { select: { id: true, name: true } },
                             },
                         },
-                        table: true,
-                        guest: true,
-                        externalOrder: true, // Para saber si es Uber/PedidosYa
                     },
                 },
             },
         }).then((tickets: any[]) => {
             const mapped = tickets.map((ticket) => this.withTicketItems(ticket));
             // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H4',location:'kitchen.service.ts:findAllActive',message:'kitchen mapped tickets',data:{total:mapped.length,samples:mapped.slice(0,5).map((t:any)=>({label:t.label,batch:t.batchNumber,itemCount:t.sale?.items?.length||0,guest:t.sale?.guest?.name||null}))},timestamp:Date.now()})}).catch(()=>{});
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-KDS',location:'kitchen.service.ts:findAllActive',message:'kitchen mapped tickets',data:{total:mapped.length,ms:Date.now()-t0},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
             return mapped;
         });

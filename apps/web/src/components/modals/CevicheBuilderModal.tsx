@@ -6,7 +6,7 @@ import { Product, ModifierGroup, ModifierOption } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
 import { fetchCatalog } from '../../services/api';
-import { categoryRole, isDishCoreModifier } from '@lomasrico/shared-types';
+import { categoryRole, cleanModifierLabel, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 interface CevicheBuilderModalProps {
     isOpen: boolean;
@@ -45,8 +45,8 @@ export const CevicheBuilderModal = ({
     // Upsell state
     const [originalFormatoId, setOriginalFormatoId] = useState<string | null>(null);
 
-    // Determine if we use dynamic modifiers or legacy builder
-    const hasDynamicModifiers = product.modifiers && product.modifiers.length > 0;
+    const modifiers = useMemo(() => normalizeDrinkModifiers(product) as ModifierGroup[], [product]);
+    const hasDynamicModifiers = modifiers.length > 0;
 
     /**
      * Split modifiers into:
@@ -54,12 +54,12 @@ export const CevicheBuilderModal = ({
      *  - quickToggles: optional single-option groups shown in summary (e.g. "Agrandar a 500g")
      */
     const { mainSteps, quickToggles } = useMemo(() => {
-        if (!hasDynamicModifiers || !product.modifiers) return { mainSteps: [], quickToggles: [] };
+        if (!hasDynamicModifiers) return { mainSteps: [], quickToggles: [] };
 
         const main: ModifierGroup[] = [];
         const quick: ModifierGroup[] = [];
 
-        product.modifiers.forEach(group => {
+        modifiers.forEach(group => {
             if (tableSession && !isDishCoreModifier(group.groupName, group.displayName)) {
                 return;
             }
@@ -74,7 +74,7 @@ export const CevicheBuilderModal = ({
         });
 
         return { mainSteps: main, quickToggles: quick };
-    }, [product.modifiers, hasDynamicModifiers, tableSession]);
+    }, [modifiers, hasDynamicModifiers, tableSession]);
 
     const totalSteps = mainSteps.length; // summary is the step after all main steps
     
@@ -227,7 +227,7 @@ export const CevicheBuilderModal = ({
         const dynamicSelections = hasDynamicModifiers 
             ? product.modifiers!.map(group => ({
                 groupId: group.groupId,
-                groupName: group.groupName,
+                groupName: cleanModifierLabel(group.displayName || group.groupName),
                 selectedOptions: (selections[group.groupId] || []).map(optId => {
                     const opt = group.options.find(o => o.id === optId);
                     return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };

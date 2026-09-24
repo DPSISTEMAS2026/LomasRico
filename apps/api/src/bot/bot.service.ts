@@ -5,6 +5,7 @@ import { SalesService } from '../sales/sales.service';
 import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { CreateSaleDto } from '../sales/dto/create-sale.dto';
 import { PaymentsService } from '../payments/payments.service';
+import { cleanModifierLabel } from '../common/clean-label';
 
 @Injectable()
 export class BotService {
@@ -148,8 +149,8 @@ export class BotService {
             // Modifier groups con opciones completas (mismo formato que el sitio web)
             modifiers: (p.productModifiers || []).map((pm: any) => ({
                 groupId: pm.modifierGroupId,
-                groupName: pm.modifierGroup.name,
-                displayName: pm.modifierGroup.displayName,
+                groupName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
+                displayName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
                 type: pm.modifierGroup.type,
                 isRequired: pm.isRequired,
                 sortOrder: pm.sortOrder,

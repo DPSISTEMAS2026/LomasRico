@@ -614,8 +614,8 @@ export default function InventoryManagementPage() {
             )}
 
             {/* Desktop Table View */}
-            <div className="hidden lg:block bg-white border border-slate-100 rounded-[3rem] overflow-hidden shadow-sm border-b-8 border-b-slate-900">
-                <table className="w-full">
+            <div className="hidden lg:block bg-white border border-slate-100 rounded-[3rem] overflow-x-auto overflow-y-hidden shadow-sm border-b-8 border-b-slate-900">
+                <table className="w-full min-w-[720px]">
                     <thead className="bg-slate-50 border-b border-slate-100">
                         <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
                             <th className="px-8 py-6 text-left">Insumo</th>
