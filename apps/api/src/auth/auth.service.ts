@@ -7,6 +7,11 @@ import { OAuth2Client } from 'google-auth-library';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 
+export function passwordFromPhone(phone?: string | null) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return digits.slice(-4);
+}
+
 const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN'] as const;
 const DEFAULT_STAFF_PIN = '2026';
 const ROLE_PRIORITY: Record<string, number> = { OWNER: 0, ADMIN: 1, CASHIER: 2, KITCHEN: 3 };
@@ -147,14 +152,21 @@ export class AuthService implements OnModuleInit {
             where: { email: dto.email },
         });
 
-        if (!user || !user.password) {
-            // Handle Google-only users trying to login with password logic or just bad creds
+        const pin = passwordFromPhone(user?.phone);
+        const typed = String(dto.password || '').replace(/\D/g, '');
+        const pinOk = !!user && pin.length === 4 && typed === pin;
+        const hashOk = user?.password ? await bcrypt.compare(dto.password, user.password) : false;
+
+        if (!user || (!hashOk && !pinOk)) {
             throw new UnauthorizedException('Credenciales inválidas');
         }
 
-        const cleanPass = await bcrypt.compare(dto.password, user.password);
-        if (!cleanPass) {
-            throw new UnauthorizedException('Credenciales inválidas');
+        if (pinOk && !hashOk) {
+            const hashedPassword = await bcrypt.hash(pin, 10);
+            await (this.prisma as any).user.update({
+                where: { id: user.id },
+                data: { password: hashedPassword },
+            });
         }
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };

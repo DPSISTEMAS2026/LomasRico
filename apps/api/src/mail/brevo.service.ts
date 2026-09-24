@@ -58,7 +58,7 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
             Tus puntos se mantienen. Pronto podrás canjearlos.
           </p>
           <p style="margin:0 0 22px 0;">
-            Entra con tu correo. La contraseña es tu número de teléfono, solo dígitos.
+            Entra con tu correo. La contraseña son los 4 últimos dígitos de tu celular.
           </p>
           <p style="margin:0 0 28px 0;text-align:center;">
             <a href="https://www.instagram.com/cevichelomasrico/" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;font-weight:800;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:14px 22px;border-radius:999px;">
