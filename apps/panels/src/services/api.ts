@@ -14,7 +14,10 @@ const getApiUrl = () => {
     url = url.replace(/\/$/, '');
     if (typeof window !== 'undefined') {
         const host = window.location.hostname;
-        if (host !== 'localhost' && host !== '127.0.0.1') {
+        const lan = /^192\.168\.\d+\.\d+$/.test(host)
+            || /^10\.\d+\.\d+\.\d+$/.test(host)
+            || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host);
+        if (lan) {
             return `${window.location.origin}/backend`;
         }
     }
