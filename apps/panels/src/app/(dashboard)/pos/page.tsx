@@ -17,7 +17,6 @@ import {
     ShoppingBag,
     Loader2,
     Lock,
-    Unlock,
     DollarSign,
     X,
     ArrowUpCircle,
@@ -26,8 +25,7 @@ import {
     Printer,
     Coins,
     MessageSquare,
-    AlertTriangle,
-    Settings2
+    AlertTriangle
 } from 'lucide-react';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
@@ -330,152 +328,67 @@ export default function POSPage() {
     return (
         <div className="flex-1 flex flex-col xl:grid xl:grid-cols-[1fr,420px] gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-0 min-w-0 overflow-x-hidden bg-slate-50/50">
 
-            {/* Mobile Tab Switcher */}
-            <div className="xl:hidden flex bg-white p-1 rounded-2xl shadow-sm border border-slate-100 mb-2 shrink-0">
-                <button
-                    onClick={() => setMobileTab('CATALOG')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all ${mobileTab === 'CATALOG' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
-                >
-                    <ShoppingBag size={14} /> Catálogo
-                </button>
-                <button
-                    onClick={() => setMobileTab('CART')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all relative ${mobileTab === 'CART' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
-                >
-                    <ShoppingBag size={14} /> Carrito
-                    {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-orange-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[8px] border-2 border-white animate-bounce">
-                            {cart.length}
-                        </span>
-                    )}
-                </button>
+            <div className="flex items-center gap-2 shrink-0">
+                <div className="xl:hidden flex flex-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100">
+                    <button
+                        onClick={() => setMobileTab('CATALOG')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all ${mobileTab === 'CATALOG' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                    >
+                        <ShoppingBag size={14} /> Catálogo
+                    </button>
+                    <button
+                        onClick={() => setMobileTab('CART')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all relative ${mobileTab === 'CART' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                    >
+                        <ShoppingBag size={14} /> Carrito
+                        {cart.length > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-orange-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[8px] border-2 border-white">
+                                {cart.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {!loadingShift && (
+                    <div className="flex items-center gap-1 shrink-0 ml-auto">
+                        {activeShift ? (
+                            <>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 pr-1 max-w-[5.5rem] sm:max-w-none truncate">
+                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 align-middle" />
+                                    {shiftOpenTime} · ${shiftSalesTotal.toLocaleString()}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowWithdrawalModal(true)}
+                                    className="w-9 h-9 rounded-xl bg-white border border-slate-100 text-orange-500 flex items-center justify-center"
+                                    title="Retiro efectivo"
+                                >
+                                    <Coins size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCloseShift(true)}
+                                    className="w-9 h-9 rounded-xl bg-white border border-slate-100 text-red-500 flex items-center justify-center"
+                                    title="Cerrar caja"
+                                >
+                                    <Lock size={14} />
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowOpenShift(true)}
+                                className="h-9 px-3 rounded-xl bg-green-500 text-white text-[9px] font-black uppercase italic"
+                            >
+                                Abrir
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* ── Catálogo (Izquierda) ───────────────────────── */}
-            <div className={`flex flex-col gap-4 overflow-hidden min-h-0 ${mobileTab === 'CART' ? 'hidden xl:flex' : 'flex'}`}>
-
-                {/* Barra de turno */}
-                {!loadingShift && (
-                    <div className={`flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 md:py-3 rounded-[1.5rem] md:rounded-[20px] border-2 gap-4 ${activeShift ? 'bg-white border-green-200' : 'bg-white border-amber-200 shadow-sm'}`}>
-                        <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
-                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activeShift ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-amber-400'}`} />
-                            {activeShift ? (
-                                <div className="text-center md:text-left">
-                                    <p className="text-[10px] md:text-xs font-black uppercase text-slate-900 italic leading-none">Caja en Producción</p>
-                                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Desde {shiftOpenTime} · <span className="text-green-600">${shiftSalesTotal.toLocaleString()}</span></p>
-                                </div>
-                            ) : (
-                                <span className="text-[10px] md:text-xs font-black uppercase text-amber-700 italic tracking-widest">
-                                    {isOwnerOrAdmin ? 'MODO DIRECTO (SIN TURNO)' : 'TURNO CERRADO — BLOQUEADO'}
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar justify-center">
-                            {SHOW_POS_DELIVERY && (
-                            <button
-                                onClick={toggleDeliveryMode}
-                                disabled={loadingDeliveryMode}
-                                className={`flex items-center justify-center gap-2 px-6 md:px-4 py-3 md:py-2.5 rounded-xl md:rounded-xl text-[9px] md:text-[10px] font-black uppercase italic transition-all shadow-md shrink-0 active:scale-95 ${deliveryMode === 'EXTERNAL' ? 'bg-slate-900 text-white' : 'bg-orange-500 text-white'}`}
-                            >
-                                <Truck size={14} className="shrink-0" />
-                                {loadingDeliveryMode ? '...' : (deliveryMode === 'EXTERNAL' ? 'PedidosYa' : 'Propio')}
-                            </button>
-                            )}
-
-                            {SHOW_POS_DELIVERY && (
-                            <div className="relative">
-                                <button
-                                    onClick={() => { setTempRadius(deliveryRadius); setShowRadiusConfig(!showRadiusConfig); }}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all shrink-0 active:scale-90 ${
-                                        showRadiusConfig ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600'
-                                    }`}
-                                    title="Configurar radio de delivery"
-                                >
-                                    <Settings2 size={16} className={showRadiusConfig ? 'animate-spin' : ''} />
-                                </button>
-                                {showRadiusConfig && (
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white rounded-2xl shadow-2xl border-2 border-slate-900 p-5 w-[280px] animate-in fade-in zoom-in-95 duration-200">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Radio Delivery</span>
-                                            <button onClick={() => setShowRadiusConfig(false)} className="text-slate-300 hover:text-red-500">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <button
-                                                onClick={() => setTempRadius(Math.max(1, tempRadius - 1))}
-                                                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-600 hover:bg-slate-200 active:scale-90 transition-all"
-                                            >
-                                                <Minus size={16} />
-                                            </button>
-                                            <div className="flex-1 text-center">
-                                                <span className="text-3xl font-black text-slate-900 tabular-nums">{tempRadius}</span>
-                                                <span className="text-sm font-black text-slate-400 ml-1">km</span>
-                                            </div>
-                                            <button
-                                                onClick={() => setTempRadius(Math.min(50, tempRadius + 1))}
-                                                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-600 hover:bg-slate-200 active:scale-90 transition-all"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                        <input
-                                            type="range" min={1} max={50} value={tempRadius}
-                                            onChange={(e) => setTempRadius(Number(e.target.value))}
-                                            className="w-full h-2 bg-slate-100 rounded-full appearance-none cursor-pointer accent-orange-500 mb-4"
-                                        />
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const res = await authFetch(`${API_URL}/shipping/config/radius`, {
-                                                        method: 'POST',
-                                                        body: JSON.stringify({ km: tempRadius })
-                                                    });
-                                                    const data = await res.json();
-                                                    setDeliveryRadius(data.maxDistanceKm);
-                                                    setShowRadiusConfig(false);
-                                                } catch (e) {
-                                                    alert('Error al guardar radio');
-                                                }
-                                            }}
-                                            className="w-full py-3 bg-orange-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-orange-600 transition-all active:scale-95 italic"
-                                        >
-                                            Guardar ({tempRadius}km)
-                                        </button>
-                                        <p className="text-[8px] font-bold text-slate-300 text-center mt-2 uppercase">Actual: {deliveryRadius}km · Web se actualiza en tiempo real</p>
-                                    </div>
-                                )}
-                            </div>
-                            )}
-
-                            {activeShift && (
-                                <>
-                                    <button
-                                        onClick={() => setShowWithdrawalModal(true)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 text-orange-600 border border-orange-100 text-[10px] font-black uppercase italic hover:bg-orange-500 hover:text-white transition-all shadow-sm shrink-0 active:scale-95"
-                                    >
-                                        <Coins size={14} /> Retiro Efec.
-                                    </button>
-                                    <button
-                                        onClick={() => setShowCloseShift(true)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-500 border border-red-100 text-[10px] font-black uppercase italic hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 active:scale-95"
-                                    >
-                                        <Lock size={14} /> Cerrar Caja
-                                    </button>
-                                </>
-                            )}
-
-                            {!activeShift && (
-                                <button
-                                    onClick={() => setShowOpenShift(true)}
-                                    className="flex items-center justify-center gap-2 px-6 md:px-4 py-3 md:py-2.5 rounded-xl bg-green-500 text-white text-[9px] md:text-[10px] font-black uppercase italic hover:bg-green-600 transition-all shadow-xl shadow-green-200 shrink-0 active:scale-95"
-                                >
-                                    <Unlock size={14} /> Abrir Turno
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
+            <div className={`flex flex-col gap-3 overflow-hidden min-h-0 ${mobileTab === 'CART' ? 'hidden xl:flex' : 'flex'}`}>
 
                 {/* Search & Categories */}
                 <div className="bg-white p-4 md:p-5 rounded-[2rem] md:rounded-[28px] shadow-sm border border-slate-100 flex flex-col gap-4">
