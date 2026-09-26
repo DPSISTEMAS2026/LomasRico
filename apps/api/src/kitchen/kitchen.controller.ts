@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Res } from '@nestjs/common';
 import { KitchenService } from './kitchen.service';
 import { UpdateTicketStatusDto } from './dto/update-ticket.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,6 +13,11 @@ export class KitchenController {
         return this.kitchenService.findAllActive();
     }
 
+    @Get('history')
+    findHistory(@Query('q') q?: string) {
+        return this.kitchenService.findHistory(q);
+    }
+
     @Patch(':id/status')
     updateStatus(
         @Param('id') id: string,
@@ -23,7 +28,13 @@ export class KitchenController {
 
     @Get(':id/print')
     async printTicket(@Param('id') id: string, @Res() res: any) {
-        const html = await this.kitchenService.generatePrintHtml(id);
+        const html = await this.kitchenService.generatePrintHtml(id, 'kitchen');
+        res.type('text/html').send(html);
+    }
+
+    @Get(':id/print-account')
+    async printAccount(@Param('id') id: string, @Res() res: any) {
+        const html = await this.kitchenService.generatePrintHtml(id, 'account');
         res.type('text/html').send(html);
     }
 }

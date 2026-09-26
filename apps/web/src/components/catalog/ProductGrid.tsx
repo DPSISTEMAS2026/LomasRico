@@ -5,67 +5,95 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { REAL_PRODUCT_CATALOG, PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, WEB_MENU_SECTIONS, webMenuSectionId } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webMenuSectionId, groupProductsByWebSection } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
 
 
-import {
-    LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda,
-    UtensilsCrossed, Flame, Sparkles
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
-/**
- * Icon mapping for known categories.
- * New/unknown categories get a generic icon automatically.
- */
-const SECTION_ICONS: Record<string, JSX.Element> = {
-    promos: <Gift size={20} strokeWidth={2.5} />,
-    ceviches: <Fish size={20} strokeWidth={2.5} />,
-    rolls: <Sparkles size={20} strokeWidth={2.5} />,
-    'bowls-gohan': <ChefHat size={20} strokeWidth={2.5} />,
-    empanadas: <Wheat size={20} strokeWidth={2.5} />,
-    acompanar: <Flame size={20} strokeWidth={2.5} />,
-    bebidas: <CupSoda size={20} strokeWidth={2.5} />,
-};
+function photosForIds(products: Product[], ids: Set<string>) {
+    const urls: string[] = [];
+    for (const product of products) {
+        if (!ids.has(product.id)) continue;
+        const url = product.imageUrl;
+        if (url && url.length > 4 && !urls.includes(url)) urls.push(url);
+        if (urls.length >= 8) break;
+    }
+    return urls;
+}
 
 function buildMenuSections(products: Product[]) {
-    const sections = WEB_MENU_SECTIONS.map((section) => ({
-        id: section.id,
-        name: section.name,
-        icon: SECTION_ICONS[section.id] || <UtensilsCrossed size={20} strokeWidth={2.5} />,
-        productIds: new Set<string>(),
-    }));
+    return groupProductsByWebSection(products).map((section) => {
+        const ids = new Set(section.products.map((product) => product.id));
+        return {
+            id: section.id,
+            name: section.name,
+            count: section.products.length,
+            photos: photosForIds(products, ids),
+        };
+    });
+}
 
-    const leftovers = new Map<string, { name: string; productIds: Set<string> }>();
-
-    for (const product of products) {
-        const sectionId = webMenuSectionId(product.category, product.name);
-        if (sectionId) {
-            sections.find((s) => s.id === sectionId)?.productIds.add(product.id);
-            continue;
-        }
-        const key = product.category || 'otros';
-        if (!leftovers.has(key)) leftovers.set(key, { name: key, productIds: new Set() });
-        leftovers.get(key)!.productIds.add(product.id);
+function CategoryMosaic({ photos }: { photos: string[] }) {
+    const pics = photos.slice(0, 4);
+    if (pics.length === 0) {
+        return (
+            <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
+                <img src="/assets/Logo Restaurante.png" alt="" className="h-16 w-16 object-contain opacity-30" />
+            </div>
+        );
     }
 
-    const visible = sections
-        .filter((s) => s.productIds.size > 0)
-        .map(({ productIds, ...rest }) => rest);
+    const cell = (src: string, extra = '') => (
+        <div key={src} className={`relative overflow-hidden bg-slate-100 ${extra}`}>
+            <img
+                src={src}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover scale-100 transition-transform duration-500 ease-out group-hover:scale-110"
+                onError={(e) => {
+                    const img = e.currentTarget;
+                    const used = Number(img.dataset.backup || '0');
+                    const next = photos[4 + used];
+                    if (next) {
+                        img.dataset.backup = String(used + 1);
+                        img.src = next;
+                    } else if (!img.src.includes('Logo')) {
+                        img.src = '/assets/Logo Restaurante.png';
+                    }
+                }}
+            />
+        </div>
+    );
 
-    leftovers.forEach((left, key) => {
-        if (left.productIds.size > 0) {
-            visible.push({
-                id: `other-${key}`,
-                name: key,
-                icon: <UtensilsCrossed size={20} strokeWidth={2.5} />,
-            });
-        }
-    });
+    if (pics.length === 1) {
+        return <div className="absolute inset-0">{cell(pics[0], 'h-full w-full')}</div>;
+    }
+    if (pics.length === 2) {
+        return <div className="absolute inset-0 grid grid-cols-2 gap-0.5 bg-white">{pics.map((src) => cell(src))}</div>;
+    }
+    if (pics.length === 3) {
+        return (
+            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 bg-white">
+                {cell(pics[0], 'row-span-2')}
+                {cell(pics[1])}
+                {cell(pics[2])}
+            </div>
+        );
+    }
+    return (
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 bg-white">
+            {pics.map((src) => cell(src))}
+        </div>
+    );
+}
 
-    return visible;
+function catalogHref(cat: string | null) {
+    const url = new URL(window.location.href);
+    if (cat) url.searchParams.set('cat', cat);
+    else url.searchParams.delete('cat');
+    return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export const ProductGrid = () => {
@@ -73,7 +101,7 @@ export const ProductGrid = () => {
     const { session: tableSession } = useTableSession();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState('todo');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [availableProteins, setAvailableProteins] = useState<{ id: string; name: string }[]>([]);
@@ -83,28 +111,31 @@ export const ProductGrid = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch Products (Active Only)
                 const prodResponse = await fetch(`${API_URL}/products/active`);
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        const salsas = data.filter((p: any) => /salsa/i.test(p.name || '')).map((p: any) => ({ name: p.name, category: p.category, section: webMenuSectionId(p.category, p.name) }));
-                        // #region agent log
-                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-menu',hypothesisId:'H-SALSA',location:'ProductGrid.tsx:fetch',message:'salsa products mapped',data:{salsas},timestamp:Date.now()})}).catch(()=>{});
-                        // #endregion
-                        setProducts(data);
-                    } else {
-                        setProducts(REAL_PRODUCT_CATALOG.filter(p => p.isActive));
-                    }
+                    const list = Array.isArray(data) ? data : [];
+                    const names = list.slice(0, 8).map((p: any) => p.name);
+                    const cats = [...new Set(list.map((p: any) => p.category))];
+                    const hasLegacy = list.some((p: any) => /^PROMO [123]$/i.test(p.name || ''));
+                    // #region agent log
+                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'api',count:list.length,names,cats,hasLegacy,api:API_URL},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
+                    setProducts(list);
                 } else {
-                    setProducts(REAL_PRODUCT_CATALOG.filter(p => p.isActive));
+                    // #region agent log
+                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'empty-http',status:prodResponse.status,api:API_URL},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
+                    setProducts([]);
                 }
 
-                // Las proteínas ahora vienen de la lista limpia (PROTEINS) importada arriba
                 setAvailableProteins(PROTEINS);
             } catch (error) {
                 console.warn('API error', error);
-                setProducts(REAL_PRODUCT_CATALOG);
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'empty-error',api:API_URL,err:String(error),origin:window.location.origin},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                setProducts([]);
                 setAvailableProteins(PROTEINS);
             } finally {
                 setLoading(false);
@@ -128,32 +159,45 @@ export const ProductGrid = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
-
     const categories = useMemo(() => {
         const next = buildMenuSections(products);
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-menu',hypothesisId:'H-ORDER',location:'ProductGrid.tsx:sections',message:'web menu sections built',data:{order:next.map((s)=>s.name)},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-ORDER',location:'ProductGrid.tsx:sections',message:'web section order',data:{order:next.map((s)=>s.name)},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         return next;
     }, [products]);
 
-    const scrollToCategory = (categoryId: string) => {
-        const element = document.getElementById(categoryId);
-        if (element) {
-            const y = element.getBoundingClientRect().top + window.scrollY - (isMobile ? 180 : 150);
-            window.scrollTo({ top: y, behavior: 'smooth' });
-            setSelectedCategory(categoryId);
-            setIsMenuOpen(false);
-        }
+    useEffect(() => {
+        const fromUrl = new URLSearchParams(window.location.search).get('cat');
+        if (fromUrl) setSelectedCategory(fromUrl);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-VIEW',location:'ProductGrid.tsx:init',message:'catalog view init',data:{view:fromUrl?'products':'categories',cat:fromUrl,path:window.location.pathname},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const onPop = () => {
+            const cat = new URLSearchParams(window.location.search).get('cat');
+            setSelectedCategory(cat);
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-POP',location:'ProductGrid.tsx:popstate',message:'catalog back/forward',data:{view:cat?'products':'categories',cat},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        };
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+
+    const openCategory = (categoryId: string) => {
+        history.pushState({ catalog: categoryId }, '', catalogHref(categoryId));
+        setSelectedCategory(categoryId);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-LOBBY',location:'ProductGrid.tsx:open',message:'open category',data:{cat:categoryId,samePage:true,noScrollJump:true,layout:'tiles'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    };
+
+    const backToCategories = () => {
+        history.pushState({ catalog: null }, '', catalogHref(null));
+        setSelectedCategory(null);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-LOBBY',location:'ProductGrid.tsx:back',message:'back to categories',data:{view:'categories',noScrollJump:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     };
 
     const handleAddClick = (product: Product) => {
@@ -187,108 +231,94 @@ export const ProductGrid = () => {
         </div>
     );
 
-    const activeMenuCategories = categories;
-    const currentCat = activeMenuCategories.find(c => c.id === selectedCategory);
+    if (products.length === 0) return (
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <p className="text-sm font-black uppercase tracking-widest text-slate-500">El menú se está cargando desde el local</p>
+            <p className="mt-2 text-xs text-slate-400">Si esto no cambia, la API no está disponible.</p>
+        </div>
+    );
 
+    const currentCat = categories.find((c) => c.id === selectedCategory);
+    const displayProducts = currentCat
+        ? products.filter((p) => {
+            const sectionId = webMenuSectionId(p.category, p.name);
+            if (sectionId) return sectionId === currentCat.id;
+            return currentCat.id === `other-${p.category || 'otros'}`;
+        })
+        : [];
 
     return (
-        <div className="space-y-0 pb-20 min-w-0 overflow-x-hidden">
-            {/* CATEGORY NAV - ADAPTIVE */}
-            <div className="sticky top-[80px] md:top-[90px] z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-lg shadow-black/[0.03]">
-                <div className="max-w-7xl mx-auto px-4 py-3">
-
-                    {/* PC VIEW: Horizontal Scroll */}
-                    <div className="hidden lg:flex overflow-x-auto gap-3 scroll-smooth pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-orange-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100">
-                        {activeMenuCategories.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => scrollToCategory(cat.id)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap border-2
-                                    ${selectedCategory === cat.id
-                                        ? 'bg-[#f2642e] border-[#f2642e] text-white shadow-md'
-                                        : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-                                    }`}
-                            >
-                                {cat.icon && <span className={selectedCategory === cat.id ? 'text-white' : 'text-[#f2642e]'}>{cat.icon}</span>}
-                                {cat.name}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* MOBILE VIEW: Dropdown Selector */}
-                    <div className="lg:hidden relative">
+        <div id="catalog-root" className="relative pb-20 min-w-0">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 md:pt-10">
+                {selectedCategory ? (
+                    <div className="flex items-center gap-3 mb-6 min-h-[52px]">
                         <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="w-full flex items-center justify-between px-6 py-4 bg-slate-900 text-white rounded-[1.2rem] font-black uppercase text-xs italic tracking-widest shadow-xl shadow-slate-200 active:scale-[0.98] transition-all"
+                            type="button"
+                            onClick={backToCategories}
+                            className="flex items-center justify-center h-11 w-11 rounded-2xl bg-white border border-slate-100 shadow-sm text-slate-700"
+                            aria-label="Volver a categorías"
                         >
-                            <div className="flex items-center gap-3">
-                                {(currentCat?.icon || !currentCat) && <span className="text-[#f2642e]">{currentCat?.icon || <LayoutGrid size={18} />}</span>}
-                                <span>{currentCat?.name || 'Explorar Menú'}</span>
-                            </div>
-                            <div className={`transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}>
-                                <Plus size={18} className={isMenuOpen ? 'rotate-45' : ''} />
-                            </div>
+                            <ArrowLeft size={18} />
                         </button>
-
-                        {/* DESPLEGABLE */}
-                        {isMenuOpen && (
-                            <div className="absolute top-[calc(100%+10px)] left-0 right-0 bg-white rounded-[2rem] border border-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 z-50 p-2 max-h-[70vh] overflow-y-auto no-scrollbar">
-                                <div className="grid grid-cols-1 gap-1">
-                                    {activeMenuCategories.map(cat => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => scrollToCategory(cat.id)}
-                                            className={`flex items-center gap-4 w-full p-4 rounded-2xl text-left transition-all
-                                                ${selectedCategory === cat.id
-                                                    ? 'bg-orange-50 text-[#f2642e] border-l-4 border-[#f2642e]'
-                                                    : 'hover:bg-slate-50 text-slate-600'}`}
-                                        >
-                                            {cat.icon && <span className={`${selectedCategory === cat.id ? 'text-[#f2642e]' : 'text-slate-400'}`}>{cat.icon}</span>}
-                                            <span className="font-black uppercase text-[11px] tracking-widest italic">{cat.name}</span>
-                                            {selectedCategory === cat.id && <div className="ml-auto w-2 h-2 rounded-full bg-[#f2642e] animate-pulse" />}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#f2642e]">
+                                Nuestro menú
+                            </p>
+                            <h2 className="text-2xl md:text-3xl font-[900] italic uppercase text-slate-900 truncate">
+                                {currentCat?.name}
+                            </h2>
+                        </div>
+                        {currentCat && (
+                            <span className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-widest bg-white border border-slate-100 px-3 py-1 rounded-full">
+                                {displayProducts.length} opc.
+                            </span>
+                        )}
+                        {tableSession && currentCat && (
+                            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest text-orange-400">
+                                {MENU_ROLE_LABEL[categoryRole(currentCat.id)]}
+                            </span>
                         )}
                     </div>
-                </div>
-            </div>
+                ) : (
+                    <div className="text-center mb-10 md:mb-12">
+                        <p className="text-xs sm:text-sm font-black uppercase tracking-[0.38em] text-[#f2642e]">
+                            Elige una categoría
+                        </p>
+                        <h2 className="mt-2 text-4xl sm:text-5xl md:text-6xl font-[900] italic uppercase text-slate-900">
+                            Nuestro menú
+                        </h2>
+                    </div>
+                )}
 
+                <div className="relative min-h-[28rem]">
+                    <div className={`catalog-stage ${selectedCategory ? 'catalog-stage-out-left absolute inset-x-0 top-0' : 'catalog-stage-in'}`}>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => openCategory(cat.id)}
+                                    className="group relative aspect-square rounded-[1.6rem] overflow-hidden bg-white border border-slate-100 shadow-[0_8px_30px_rgba(15,23,42,0.04)] text-center hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(242,100,46,0.28)] hover:ring-2 hover:ring-[#f2642e]/50 active:scale-[0.98] transition-all duration-300"
+                                >
+                                    <CategoryMosaic photos={cat.photos} />
+                                    <div className="absolute inset-0 bg-black/45 transition-colors duration-300 group-hover:bg-black/25" />
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center px-3 transition-transform duration-300 group-hover:scale-105">
+                                        <span className="w-full font-black uppercase text-[clamp(1.45rem,5.8vw,2.15rem)] tracking-wide text-white leading-[0.95] drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
+                                            {cat.name}
+                                        </span>
+                                        <span className="mt-2 text-[11px] sm:text-sm font-bold uppercase tracking-[0.2em] text-white/85">
+                                            {cat.count} opc.
+                                        </span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-
-            {/* CONTENT CONTAINER */}
-            <div className="max-w-7xl mx-auto px-6 space-y-16">
-                {activeMenuCategories.map(category => {
-                    const displayProducts = products.filter((p) => {
-                        const sectionId = webMenuSectionId(p.category, p.name);
-                        if (sectionId) return sectionId === category.id;
-                        return category.id === `other-${p.category || 'otros'}`;
-                    });
-                    if (displayProducts.length === 0) return null;
-
-
-                    return (
-                        <div key={category.id} id={category.id} className="scroll-mt-40 relative">
-                            {/* Section Header */}
-                            <div className="flex flex-wrap items-end gap-2 sm:gap-6 mb-8 border-b-2 border-slate-100 pb-3 min-w-0">
-                                <h3 className="text-2xl sm:text-3xl font-[900] italic uppercase text-slate-900 flex items-center gap-3 min-w-0 break-words">
-                                    <span className="text-[#f2642e]">{category.icon}</span>
-                                    {category.name}
-                                </h3>
-                                {tableSession && (
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-2">
-                                        {MENU_ROLE_LABEL[categoryRole(category.id)]}
-                                    </span>
-                                )}
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full mb-1">
-                                    {displayProducts.length} opc.
-                                </span>
-                            </div>
-
-                            {/* Responsive Grid — full-width card when only 1 product in category */}
+                    <div className={`catalog-stage ${selectedCategory && currentCat ? 'catalog-stage-in' : 'catalog-stage-out-right absolute inset-x-0 top-0'}`}>
+                        {currentCat && (
                             <div className={`grid ${displayProducts.length === 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'} lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10`}>
-                                {displayProducts.map(product => (
+                                {displayProducts.map((product) => (
                                     <ProductCard
                                         key={product.id}
                                         product={product}
@@ -296,9 +326,9 @@ export const ProductGrid = () => {
                                     />
                                 ))}
                             </div>
-                        </div>
-                    );
-                })}
+                        )}
+                    </div>
+                </div>
             </div>
 
             {selectedProduct && (

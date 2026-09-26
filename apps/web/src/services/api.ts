@@ -1,21 +1,27 @@
 
-const getApiUrl = () => {
+export function getApiUrl() {
+    try {
+        const origin = globalThis.location?.origin;
+        if (origin) {
+            return `${origin.replace(/\/$/, '')}/backend`;
+        }
+    } catch { /* SSR */ }
     let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-    // Si la URL es solo el nombre del servicio (ej: "pro-lomasrico-api")
     if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
         url = `${url}.onrender.com`;
     }
-
     if (!url.startsWith('http')) {
         url = `https://${url}`;
     }
-
-    // Limpiar slash final
     return url.replace(/\/$/, '');
-};
+}
 
-export const API_URL = getApiUrl();
+class ApiUrlBox {
+    toString() { return getApiUrl(); }
+    valueOf() { return getApiUrl(); }
+    [Symbol.toPrimitive]() { return getApiUrl(); }
+}
+export const API_URL = new ApiUrlBox() as unknown as string;
 
 export async function fetchCatalog() {
     const res = await fetch(`${API_URL}/products/active`);

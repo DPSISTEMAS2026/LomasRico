@@ -33,6 +33,7 @@ import {
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { supabase } from '../../../../lib/supabase';
+import { groupProductsByWebSection, webSectionKey, displayCategoryName } from '@lomasrico/shared-types';
 
 export default function CatalogManagementPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -41,7 +42,8 @@ export default function CatalogManagementPage() {
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
     const [filterAsset, setFilterAsset] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('ALL');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [catalogTab, setCatalogTab] = useState<'active' | 'hidden'>('active');
     const [showAssetSelector, setShowAssetSelector] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [supabaseAssets, setSupabaseAssets] = useState<string[]>([]);
@@ -52,23 +54,32 @@ export default function CatalogManagementPage() {
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [modifierSearchQuery, setModifierSearchQuery] = useState('');
     const [showSortModal, setShowSortModal] = useState(false);
+    const [sortTab, setSortTab] = useState<'products' | 'categories'>('categories');
+    const [sortFocusCategory, setSortFocusCategory] = useState('');
     const [sortItems, setSortItems] = useState<any[]>([]);
     const [savingSort, setSavingSort] = useState(false);
-    const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+    const [sortSections, setSortSections] = useState<{ id: string; name: string }[]>([]);
     const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
     const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
     const [showNewCategory, setShowNewCategory] = useState(false);
+    const [editorTab, setEditorTab] = useState<'config' | 'media' | 'modifiers'>('config');
+
+    useEffect(() => {
+        if (!editingProduct) return;
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-editor',hypothesisId:'H-TABS',location:'catalog/page.tsx:editorTab',message:'catalog editor tab',data:{tab:editorTab,productId:editingProduct.id,isNew:editingProduct.id==='NEW'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [editorTab, editingProduct?.id]);
 
     const CATEGORIES = useMemo(() => {
-        const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
-        return [
-            { id: 'ALL', name: 'Todos', icon: <LayoutGrid size={12} /> },
-            ...unique.sort().map(cat => ({
-                id: cat,
-                name: cat,
-                icon: <ChevronRight size={12} />
-            }))
-        ];
+        const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean) as string[];
+        return unique
+            .map((cat) => {
+                const inCat = products.filter((p) => p.category === cat);
+                const order = Math.min(...inCat.map((p) => Number(p.sortOrder || 9999)), 9999);
+                return { id: cat, name: displayCategoryName(cat), count: inCat.length, order };
+            })
+            .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
     }, [products]);
 
     useEffect(() => {
@@ -77,6 +88,19 @@ export default function CatalogManagementPage() {
         fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H-width',location:'catalog/page.tsx:mount',message:'Ancho disponible del panel',data:{innerWidth:typeof window!=='undefined'?window.innerWidth:0,cappedAt7xl:false},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, []);
+
+    useEffect(() => {
+        if (!showSortModal) return;
+        const main = document.querySelector('main') as HTMLElement | null;
+        const prevBody = document.body.style.overflow;
+        const prevMain = main?.style.overflow || '';
+        document.body.style.overflow = 'hidden';
+        if (main) main.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = prevBody;
+            if (main) main.style.overflow = prevMain;
+        };
+    }, [showSortModal]);
 
     const loadData = async () => {
         try {
@@ -259,12 +283,13 @@ export default function CatalogManagementPage() {
     };
 
     const handleAddNew = () => {
+        setEditorTab('config');
         setEditingProduct({
             id: 'NEW',
             name: '',
             description: '',
             price: 0,
-            category: 'PROMOS',
+            category: selectedCategory || 'PROMOS',
             imageUrl: '',
             imageKey: '',
             hoverVideoUrl: '',
@@ -393,7 +418,7 @@ export default function CatalogManagementPage() {
             const res = await authFetch(`${API_URL}/products/category/${encodeURIComponent(category)}`, { method: 'DELETE' });
             if (res.ok) {
                 setProducts(prev => prev.filter(p => p.category !== category));
-                if (selectedCategory === category) setSelectedCategory('ALL');
+                if (selectedCategory === category) setSelectedCategory('');
             } else {
                 alert('Error al eliminar la categoría.');
             }
@@ -415,21 +440,95 @@ export default function CatalogManagementPage() {
         setShowAssetSelector(false);
     };
 
+    const openSortModal = () => {
+        const active = products.filter((p) => p.isActive).sort((a: any, b: any) => {
+            const ao = Number(a.sortOrder ?? 0);
+            const bo = Number(b.sortOrder ?? 0);
+            if (ao !== bo) return ao - bo;
+            return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+        const grouped = groupProductsByWebSection(active);
+        const rawCats = Array.from(new Set(active.map((p) => p.category).filter(Boolean)));
+        const zeros = active.filter((p) => !Number(p.sortOrder)).length;
+        setSortItems(active);
+        setSortSections(grouped.map((section) => ({ id: section.id, name: section.name })));
+        const focus = selectedCategory ? webSectionKey(selectedCategory, '') : '';
+        setSortTab(selectedCategory ? 'products' : 'categories');
+        setSortFocusCategory(focus);
+        setShowSortModal(true);
+        // #region agent log
+        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:grouped.map((s)=>s.name).join('|'),ua:`H-SORT web:${grouped.length} raw:${rawCats.length} zeros:${zeros}`})}).catch(()=>{});
+        // #endregion
+    };
+
+    const moveSortCategory = (id: string, direction: 'up' | 'down') => {
+        const idx = sortSections.findIndex((section) => section.id === id);
+        const swap = direction === 'up' ? idx - 1 : idx + 1;
+        if (idx < 0 || swap < 0 || swap >= sortSections.length) return;
+        const next = [...sortSections];
+        [next[idx], next[swap]] = [next[swap], next[idx]];
+        setSortSections(next);
+    };
+
+    const moveSortProduct = (id: string, direction: 'up' | 'down') => {
+        const item = sortItems.find((p) => p.id === id);
+        if (!item) return;
+        const section = webSectionKey(item.category, item.name);
+        const siblings = sortItems.filter((p) => webSectionKey(p.category, p.name) === section);
+        const idx = siblings.findIndex((p) => p.id === id);
+        const other = direction === 'up' ? siblings[idx - 1] : siblings[idx + 1];
+        if (!other) return;
+        const next = [...sortItems];
+        const a = next.findIndex((p) => p.id === id);
+        const b = next.findIndex((p) => p.id === other.id);
+        [next[a], next[b]] = [next[b], next[a]];
+        setSortItems(next);
+    };
+
+    const saveSortOrder = async () => {
+        setSavingSort(true);
+        try {
+            const finalItems: any[] = [];
+            sortSections.forEach((section) => {
+                sortItems.filter((p) => webSectionKey(p.category, p.name) === section.id).forEach((p) => finalItems.push(p));
+            });
+            const items = finalItems.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
+            await authFetch(`${API_URL}/products/reorder/bulk`, {
+                method: 'PATCH',
+                body: JSON.stringify({ items }),
+            });
+            setProducts((prev) => prev.map((p) => {
+                const sorted = items.find((s) => s.id === p.id);
+                return sorted ? { ...p, sortOrder: sorted.sortOrder } : p;
+            }));
+            setShowSortModal(false);
+            // #region agent log
+            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:sortSections.map((s)=>s.name).join('|'),ua:`H-SORT saved sections:${sortSections.length} items:${items.length}`})}).catch(()=>{});
+            // #endregion
+        } catch (e) {
+            console.error('Error saving sort order:', e);
+            alert('Error al guardar el orden');
+        } finally {
+            setSavingSort(false);
+        }
+    };
+
     const displayedProducts = useMemo(() => {
         let filtered = products;
+        const query = searchQuery.toLowerCase().trim();
 
-        // Search Filter
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase().trim();
-            filtered = filtered.filter(p => 
-                p.name.toLowerCase().includes(query) || 
+        if (selectedCategory) {
+            filtered = filtered.filter(p => p.category === selectedCategory);
+        }
+        if (query) {
+            filtered = filtered.filter(p =>
+                p.name.toLowerCase().includes(query) ||
                 (p.description && p.description.toLowerCase().includes(query))
             );
-        }
-
-        // Category Filter
-        if (selectedCategory !== 'ALL') {
-            filtered = filtered.filter(p => p.category === selectedCategory);
+        } else if (selectedCategory) {
+            filtered = filtered.filter(p => catalogTab === 'active' ? p.isActive : !p.isActive);
+        } else {
+            filtered = [];
         }
 
         return [...filtered].sort((a, b) => {
@@ -438,7 +537,9 @@ export default function CatalogManagementPage() {
             if (ao !== bo) return ao - bo;
             return String(a.name || '').localeCompare(String(b.name || ''));
         });
-    }, [products, selectedCategory, searchQuery]);
+    }, [products, selectedCategory, searchQuery, catalogTab]);
+
+    const showLobby = !selectedCategory && !searchQuery.trim();
 
     if (loading) return (
         <div className="flex-1 flex flex-col items-center justify-center">
@@ -448,278 +549,200 @@ export default function CatalogManagementPage() {
     );
 
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
-            {/* Header */}
-            <header className="flex flex-col gap-6 md:gap-8">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                    <div>
-                        <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                            GESTIÓN DE <span className="text-orange-500">CATÁLOGO</span>
-                        </h1>
-                        <div className="flex items-center gap-2 mt-2 min-w-0">
-                            <span className="w-8 h-[2px] bg-orange-500 shrink-0"></span>
-                            <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest px-1 min-w-0 break-words">
-                                Control Total de Productos y Lógica de Venta
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <button
-                            onClick={() => {
-                                const sorted = products.filter(p => p.isActive).sort((a: any, b: any) => {
-                                    if (a.sortOrder > 0 && b.sortOrder > 0) return a.sortOrder - b.sortOrder;
-                                    if (a.sortOrder > 0) return -1;
-                                    if (b.sortOrder > 0) return 1;
-                                    return a.name.localeCompare(b.name);
-                                });
-                                setSortItems(sorted);
-                                // Derive category order from the sorted products
-                                const cats: string[] = [];
-                                sorted.forEach(p => { if (p.category && !cats.includes(p.category)) cats.push(p.category); });
-                                setCategoryOrder(cats);
-                                setShowSortModal(true);
-                            }}
-                            className="flex-1 sm:flex-none bg-white text-slate-600 border border-slate-200 px-4 py-3 md:px-5 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-wider hover:border-orange-400 hover:text-orange-600 transition-all flex items-center justify-center gap-2"
-                        >
-                            <GripVertical size={16} />
-                            Organizar
-                        </button>
-                        <button
-                            onClick={handleAddNew}
-                            className="flex-1 sm:flex-none bg-slate-900 text-white px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-2xl shadow-orange-500/10 hover:bg-orange-600 transition-all flex items-center justify-center gap-2 active:scale-95 italic"
-                        >
-                            <PlusCircle size={18} />
-                            Nuevo Producto
-                        </button>
-                    </div>
+        <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700 pb-10 min-w-0 overflow-x-hidden">
+            <header className="flex items-center justify-between gap-3">
+                <div className="min-w-0 pl-14 lg:pl-0 text-right lg:text-left">
+                    <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+                        Catálogo
+                    </h1>
+                    {selectedCategory && (
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 italic mt-1">{displayCategoryName(selectedCategory)}</p>
+                    )}
                 </div>
-
-                {/* Barra de Búsqueda y Filtros Compacta */}
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Buscar producto..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-14 pr-6 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-bold text-slate-600 outline-none focus:border-orange-500 transition-all text-sm"
-                        />
-                        {searchQuery && (
-                            <button 
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="relative w-full md:w-auto">
-                        <button
-                            onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                            className={`w-full md:w-auto flex items-center justify-between gap-3 px-5 py-4 bg-white rounded-2xl border shadow-sm font-black uppercase text-[11px] tracking-wider transition-all
-                                ${selectedCategory !== 'ALL' ? 'border-orange-500 text-orange-600' : 'border-slate-100 text-slate-600'}`}
-                        >
-                            <LayoutGrid size={16} />
-                            {selectedCategory === 'ALL' ? 'Todas las Categorías' : selectedCategory}
-                            <ChevronRight size={14} className={`transition-transform duration-300 ${showCategoryDropdown ? 'rotate-90' : ''}`} />
-                        </button>
-
-                        {showCategoryDropdown && (
-                            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 py-2 animate-in fade-in slide-in-from-top-2">
-                                {CATEGORIES.map(cat => (
-                                    <div key={cat.id} className="flex items-center group">
-                                        <button
-                                            onClick={() => {
-                                                setSelectedCategory(cat.id);
-                                                setShowCategoryDropdown(false);
-                                            }}
-                                            className={`flex-1 text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-colors
-                                                ${selectedCategory === cat.id ? 'bg-orange-50 text-orange-600' : 'text-slate-500 hover:bg-slate-50'}`}
-                                        >
-                                            {cat.name}
-                                            {selectedCategory === cat.id && <CheckCircle2 size={14} />}
-                                        </button>
-                                        {cat.id !== 'ALL' && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowCategoryDropdown(false);
-                                                    handleDeleteCategory(cat.id);
-                                                }}
-                                                disabled={deletingCategory === cat.id}
-                                                className="px-2 py-3 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                title={`Eliminar categoría ${cat.name}`}
-                                            >
-                                                {deletingCategory === cat.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        onClick={openSortModal}
+                        className="p-2.5 bg-white text-slate-500 border border-slate-200 rounded-xl"
+                        title="Organizar"
+                    >
+                        <GripVertical size={16} />
+                    </button>
+                    <button
+                        onClick={handleAddNew}
+                        className="bg-slate-900 text-white px-3 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider flex items-center gap-1.5"
+                    >
+                        <PlusCircle size={16} /> Nuevo
+                    </button>
                 </div>
             </header>
 
-            {/* Mobile cards: no horizontal scroll */}
-            <div className="md:hidden space-y-3">
-                {displayedProducts.map((p) => (
-                    <article key={p.id} className={`bg-white rounded-2xl border shadow-sm p-3 ${p.isActive ? 'border-slate-100' : 'border-slate-200 bg-slate-50'}`}>
-                        <div className="flex gap-3 min-w-0">
-                            <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-                                {p.imageUrl ? (
-                                    <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <ImageIcon className="m-auto mt-5 text-slate-300 w-6 h-6" />
-                                )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="font-black text-slate-900 leading-tight truncate">{p.name}</p>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1 truncate">{p.category}</p>
-                                <p className="text-orange-500 font-black text-sm mt-1">${Number(p.price || 0).toLocaleString('es-CL')}</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    // #region agent log
-                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-mobile',hypothesisId:'H-MOBILE',location:'catalog/page.tsx:toggle',message:'mobile web visibility toggle',data:{id:p.id,next:!p.isActive},timestamp:Date.now()})}).catch(()=>{});
-                                    // #endregion
-                                    toggleProductStatus(p.id, p.isActive, 'isActive');
-                                }}
-                                className={`h-12 rounded-xl border-2 font-black uppercase text-[10px] tracking-wider ${p.isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}
-                            >
-                                {p.isActive ? 'En la web' : 'Oculto'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowNewCategory(false);
-                                    setEditingProduct({ ...p });
-                                    loadModifierGroups();
-                                    if (p.id !== 'NEW') loadProductModifiers(p.id);
-                                }}
-                                className="h-12 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider flex items-center justify-center gap-2"
-                            >
-                                <Pencil className="w-4 h-4" />
-                                Editar
-                            </button>
-                        </div>
-                    </article>
-                ))}
+            <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                    type="text"
+                    placeholder={selectedCategory ? `Buscar en ${displayCategoryName(selectedCategory)}...` : 'Buscar producto por nombre'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-10 py-3 bg-white rounded-xl border border-slate-100 shadow-sm font-bold text-slate-600 outline-none focus:border-orange-500 text-sm"
+                />
+                {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                        <X size={16} />
+                    </button>
+                )}
             </div>
 
-            {/* Desktop table */}
-            <div className="hidden md:block bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden border-b-8 border-b-slate-900">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[920px]">
-                                <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
-                                <th className="px-4 md:px-6 py-5">Foto</th>
-                                <th className="px-4 md:px-6 py-5">Nombre y descripción</th>
-                                <th className="px-4 md:px-6 py-5">Categoría</th>
-                                <th className="px-4 md:px-6 py-5 text-center">En la web</th>
-                                <th className="px-4 md:px-6 py-5 text-right sticky right-0 bg-slate-50/90">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {displayedProducts.map((p) => (
-                                <tr key={p.id} className={`group hover:bg-orange-50/10 transition-colors ${!p.isActive ? 'bg-slate-50/80' : ''}`}>
-                                    <td className="px-4 md:px-6 py-4">
-                                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-slate-100 overflow-hidden border-2 border-white shadow-sm">
-                                            {p.imageUrl ? (
-                                                <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <ImageIcon className="m-auto text-slate-300 w-5 h-5" />
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 md:px-6 py-4">
-                                        <div className="font-black text-sm md:text-base text-slate-900 tracking-tight mb-1">{p.name}</div>
-                                        <div className="text-xs text-slate-500 font-medium leading-relaxed line-clamp-3 whitespace-pre-line">
-                                            {p.description || 'Sin descripción'}
-                                        </div>
-                                        <div className="text-orange-500 font-black text-xs md:text-sm mt-1">${Number(p.price || 0).toLocaleString('es-CL')}</div>
-                                    </td>
-                                    <td className="px-4 md:px-6 py-4">
-                                        <span className="text-[8px] md:text-[9px] font-black uppercase bg-slate-900 text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full italic tracking-widest whitespace-nowrap">
-                                            {p.category}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 md:px-6 py-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleProductStatus(p.id, p.isActive, 'isActive')}
-                                            className={`mx-auto flex items-center gap-2 rounded-full px-3 py-2 border transition-all ${p.isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}
-                                            title={p.isActive ? 'Ocultar de la web' : 'Mostrar en la web'}
-                                        >
-                                            <span className={`w-10 h-5 rounded-full p-0.5 transition-all ${p.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                                                <span className={`block w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${p.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
-                                            </span>
-                                            <span className="text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
-                                                {p.isActive ? 'Visible' : 'Oculto'}
-                                            </span>
-                                        </button>
-                                    </td>
-                                    <td className="px-4 md:px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-orange-50/10">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setShowNewCategory(false);
-                                                    setEditingProduct({ ...p });
-                                                    loadModifierGroups();
-                                                    if (p.id !== 'NEW') loadProductModifiers(p.id);
-                                                }}
-                                                className="bg-slate-900 text-white h-10 px-3 md:px-4 rounded-xl flex items-center gap-2 border-2 border-slate-900 hover:bg-orange-600 hover:border-orange-600 transition-all"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                                <span className="text-[10px] font-black uppercase tracking-wider">Editar</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteProduct(p.id, p.name)}
-                                                disabled={deletingProductId === p.id}
-                                                className="bg-white text-slate-400 w-10 h-10 rounded-xl flex items-center justify-center border-2 border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
-                                                title="Eliminar permanentemente"
-                                            >
-                                                {deletingProductId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {showLobby && (
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic mb-3 px-1">
+                        ¿Qué categoría quieres trabajar?
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => {
+                                    setSelectedCategory(cat.id);
+                                    setCatalogTab('active');
+                                    // #region agent log
+                                    fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:cat.id,ua:`cat-pick:${cat.count}`})}).catch(()=>{});
+                                    // #endregion
+                                }}
+                                className="text-left bg-white border border-slate-100 rounded-2xl p-4 hover:border-orange-400 hover:shadow-md transition-all"
+                            >
+                                <p className="font-black uppercase italic tracking-tighter text-slate-900 text-sm leading-tight">{cat.name}</p>
+                                <p className="text-[10px] font-black text-slate-400 mt-1">{cat.count} productos</p>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {!showLobby && (
+                <>
+                    {selectedCategory && !searchQuery.trim() && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCategory('')}
+                                className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                            >
+                                Categorías
+                            </button>
+                            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl flex-1">
+                                {([
+                                    { key: 'active' as const, label: 'En la web' },
+                                    { key: 'hidden' as const, label: 'Ocultos' },
+                                ]).map((t) => (
+                                    <button
+                                        key={t.key}
+                                        type="button"
+                                        onClick={() => setCatalogTab(t.key)}
+                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${catalogTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-400'}`}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        {displayedProducts.length > 0 ? displayedProducts.map((p) => (
+                            <div key={p.id} className="flex items-center gap-3 px-3 md:px-4 py-3 border-b border-slate-50 last:border-0">
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+                                    {p.imageUrl ? (
+                                        <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <ImageIcon className="m-auto mt-3.5 text-slate-300 w-5 h-5" />
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-black text-slate-900 text-sm truncate">{p.name}</p>
+                                    <p className="text-[10px] font-black text-orange-500">${Number(p.price || 0).toLocaleString('es-CL')}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleProductStatus(p.id, p.isActive, 'isActive')}
+                                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase ${p.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                                >
+                                    {p.isActive ? 'Web' : 'Off'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowNewCategory(false);
+                                        setEditorTab('config');
+                                        setEditingProduct({ ...p });
+                                        loadModifierGroups();
+                                        if (p.id !== 'NEW') loadProductModifiers(p.id);
+                                    }}
+                                    className="shrink-0 bg-slate-900 text-white w-9 h-9 rounded-xl flex items-center justify-center"
+                                    title="Editar"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )) : (
+                            <div className="py-14 text-center">
+                                <p className="text-slate-400 font-black uppercase tracking-widest italic text-[10px]">
+                                    {searchQuery.trim() ? 'Sin coincidencias' : catalogTab === 'hidden' ? 'Nada oculto en esta categoría' : 'Sin productos'}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
 
             {/* Editor Modal */}
             {editingProduct && (
                 <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-2 md:p-4 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-[min(96rem,96vw)] h-[95vh] md:h-auto md:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                    <div className="bg-white rounded-3xl md:rounded-[2.5rem] w-full max-w-3xl h-[92vh] max-h-[840px] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
                         {/* Modal Header */}
-                        <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
-                            <div>
-                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1 md:mb-2 italic">Ficha del producto</p>
-                                <h3 className="font-black text-xl md:text-3xl tracking-tight text-slate-900 leading-tight">
+                        <div className="p-5 md:p-6 border-b border-slate-50 flex justify-between items-center bg-white shrink-0">
+                            <div className="min-w-0 pr-3">
+                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1 italic">Ficha del producto</p>
+                                <h3 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 leading-tight truncate">
                                     {editingProduct.id === 'NEW' ? 'Nuevo producto' : editingProduct.name}
                                 </h3>
                             </div>
                             <button onClick={() => {
                                 setEditingProduct(null);
                                 setModifierSearchQuery('');
-                            }} className="p-3 md:p-4 bg-slate-50 hover:bg-red-50 hover:text-red-500 rounded-full transition-all">
-                                <X className="w-5 h-5 md:w-6 md:h-6" />
+                                setEditorTab('config');
+                            }} className="p-3 bg-slate-50 hover:bg-red-50 hover:text-red-500 rounded-full transition-all shrink-0">
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
+                        <div className="px-4 md:px-6 pt-3 shrink-0">
+                            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl">
+                                {([
+                                    { id: 'config', label: 'Configuración', Icon: Settings },
+                                    { id: 'media', label: 'Multimedia', Icon: ImageIcon },
+                                    { id: 'modifiers', label: 'Modificadores', Icon: Layers },
+                                ] as const).map(({ id, label, Icon }) => (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        onClick={() => setEditorTab(id)}
+                                        className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-wider transition-all ${
+                                            editorTab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                                        }`}
+                                    >
+                                        <Icon size={14} className={editorTab === id ? 'text-orange-500' : ''} />
+                                        <span className="hidden sm:inline">{label}</span>
+                                        <span className="sm:hidden">{id === 'config' ? 'Datos' : id === 'media' ? 'Media' : 'Mods'}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Modal Content */}
-                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 md:space-y-12 no-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-5 md:p-6 no-scrollbar">
+                            {editorTab === 'config' && (
+                            <div className="space-y-6">
                             {/* General Section */}
                             <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 <div className="space-y-4 md:space-y-6">
@@ -748,7 +771,7 @@ export default function CatalogManagementPage() {
                                             className="w-full p-3 md:p-4 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-[1.5rem] font-black text-slate-900 outline-none transition-all uppercase italic text-sm md:text-base"
                                         >
                                             <option value="">Selecciona categoría</option>
-                                            {CATEGORIES.filter(c => c.id !== 'ALL').map(c => (
+                                            {CATEGORIES.map(c => (
                                                 <option key={c.id} value={c.id}>{c.name}</option>
                                             ))}
                                             {editingProduct.category && !CATEGORIES.some(c => c.id === editingProduct.category) && !showNewCategory && (
@@ -792,7 +815,34 @@ export default function CatalogManagementPage() {
                                 </div>
                             </section>
 
-                            {/* Multimedia Section */}
+                            <section className="grid grid-cols-1 gap-4 md:gap-6">
+                                <div
+                                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border-2 transition-all cursor-pointer flex justify-between items-center
+                                    ${editingProduct.isActive ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}`}
+                                    onClick={() => setEditingProduct({ ...editingProduct, isActive: !editingProduct.isActive })}
+                                >
+                                    <div className="flex gap-3 md:gap-4 items-center">
+                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${editingProduct.isActive ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                            <Power size={18} className="md:w-5 md:h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
+                                                {editingProduct.isActive ? 'Visible en la web' : 'Oculto en la web'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400">
+                                                {editingProduct.isActive ? 'Los clientes lo ven en la carta' : 'No aparece en la web ni en el salón'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all ${editingProduct.isActive ? 'bg-orange-500' : 'bg-slate-200'} shrink-0`}>
+                                        <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full bg-white transition-transform ${editingProduct.isActive ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
+                                    </div>
+                                </div>
+                            </section>
+                            </div>
+                            )}
+
+                            {editorTab === 'media' && (
                             <section className="bg-slate-50 rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 border border-slate-100">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 px-1 md:px-2 gap-2">
                                     <h4 className="font-black italic uppercase tracking-tighter text-lg md:text-xl flex items-center gap-3">
@@ -857,35 +907,17 @@ export default function CatalogManagementPage() {
                                     </div>
                                 </div>
                             </section>
+                            )}
 
-                            {/* Logic Section */}
-                            <section className="grid grid-cols-1 gap-4 md:gap-6 pb-4 md:pb-10">
-                                <div
-                                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border-2 transition-all cursor-pointer flex justify-between items-center
-                                    ${editingProduct.isActive ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}`}
-                                    onClick={() => setEditingProduct({ ...editingProduct, isActive: !editingProduct.isActive })}
-                                >
-                                    <div className="flex gap-3 md:gap-4 items-center">
-                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${editingProduct.isActive ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                            <Power size={18} className="md:w-5 md:h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
-                                                {editingProduct.isActive ? 'Visible en la web' : 'Oculto en la web'}
-                                            </p>
-                                            <p className="text-[10px] font-bold text-slate-400">
-                                                {editingProduct.isActive ? 'Los clientes lo ven en la carta' : 'No aparece en la web ni en el salón'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all ${editingProduct.isActive ? 'bg-orange-500' : 'bg-slate-200'} shrink-0`}>
-                                        <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full bg-white transition-transform ${editingProduct.isActive ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
-                                    </div>
+                            {editorTab === 'modifiers' && (
+                            <>
+                            {editingProduct.id === 'NEW' ? (
+                                <div className="py-16 text-center">
+                                    <Layers className="mx-auto mb-4 text-slate-300" size={36} />
+                                    <p className="font-black uppercase italic text-slate-700">Guarda el producto primero</p>
+                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Después podrás asignarle modificadores</p>
                                 </div>
-                            </section>
-
-                            {/* Modifiers Section */}
-                            {editingProduct.id !== 'NEW' && allModifierGroups.length > 0 && (
+                            ) : (
                                 <section className="bg-slate-50 rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 border border-slate-100">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-1">
                                         <div className="flex items-center gap-3">
@@ -1042,6 +1074,8 @@ export default function CatalogManagementPage() {
                                     )}
                                 </section>
                             )}
+                            </>
+                            )}
                         </div>
 
                         {/* Modal Footer */}
@@ -1049,6 +1083,7 @@ export default function CatalogManagementPage() {
                             <button onClick={() => {
                                 setEditingProduct(null);
                                 setModifierSearchQuery('');
+                                setEditorTab('config');
                             }} className="flex-1 sm:flex-none px-6 md:px-8 py-3 md:py-4 font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors order-2 sm:order-1">
                                 Descartar
                             </button>
@@ -1122,230 +1157,124 @@ export default function CatalogManagementPage() {
                 </div>
             )}
 
-            {/* ════════════ SORT / ORGANIZE MODAL ════════════ */}
             {showSortModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 overflow-hidden overscroll-none touch-none">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowSortModal(false)} />
-                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-300">
-                        {/* Modal Header */}
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                            <div>
-                                <h2 className="text-xl font-black italic tracking-tighter uppercase text-slate-900">
-                                    ORGANIZAR <span className="text-orange-500">CATÁLOGO</span>
-                                </h2>
-                                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
-                                    Reordena categorías y productos con flechas o arrastrando
-                                </p>
+                    <div className="relative w-full max-w-lg max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col touch-auto">
+                        <div className="p-5 pb-3 border-b border-slate-100 shrink-0">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h2 className="text-xl font-black italic tracking-tighter uppercase text-slate-900">
+                                        Organizar <span className="text-orange-500">catálogo</span>
+                                    </h2>
+                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
+                                        {sortTab === 'categories' ? 'Qué categoría se ve primero en la web' : 'Qué plato se ve primero en su categoría'}
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 shrink-0">
+                                    <X size={18} />
+                                </button>
                             </div>
-                            <button onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50">
-                                <X size={18} />
-                            </button>
+                            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mt-4">
+                                {([
+                                    { key: 'categories' as const, label: 'Categorías' },
+                                    { key: 'products' as const, label: 'Platos' },
+                                ]).map((t) => (
+                                    <button
+                                        key={t.key}
+                                        type="button"
+                                        onClick={() => {
+                                            setSortTab(t.key);
+                                            if (t.key === 'products' && !sortFocusCategory && selectedCategory) {
+                                                setSortFocusCategory(webSectionKey(selectedCategory, ''));
+                                            }
+                                            // #region agent log
+                                            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:t.key,ua:`H-SORT tab:${t.key}`})}).catch(()=>{});
+                                            // #endregion
+                                        }}
+                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${sortTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-400'}`}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {categoryOrder.map((cat, catOrderIdx) => {
-                                const catItems = sortItems.filter(p => p.category === cat);
-                                if (catItems.length === 0) return null;
+                        <div data-bill-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-2">
+                            {sortTab === 'categories' && sortSections.map((section, idx) => {
+                                const count = sortItems.filter((p) => webSectionKey(p.category, p.name) === section.id).length;
                                 return (
-                                    <div
-                                        key={cat}
-                                        draggable
-                                        onDragStart={(e) => {
-                                            e.dataTransfer.setData('dragType', 'category');
-                                            e.dataTransfer.setData('dragCat', cat);
-                                            e.dataTransfer.effectAllowed = 'move';
-                                            (e.currentTarget as HTMLElement).style.opacity = '0.5';
-                                        }}
-                                        onDragEnd={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-                                        onDragOver={(e) => {
-                                            if (!e.dataTransfer.types.includes('dragtype')) return;
-                                            e.preventDefault();
-                                            e.dataTransfer.dropEffect = 'move';
-                                            (e.currentTarget as HTMLElement).style.outline = '2px solid #f97316';
-                                            (e.currentTarget as HTMLElement).style.outlineOffset = '2px';
-                                        }}
-                                        onDragLeave={(e) => { (e.currentTarget as HTMLElement).style.outline = ''; (e.currentTarget as HTMLElement).style.outlineOffset = ''; }}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            (e.currentTarget as HTMLElement).style.outline = '';
-                                            (e.currentTarget as HTMLElement).style.outlineOffset = '';
-                                            const dragType = e.dataTransfer.getData('dragType');
-                                            if (dragType === 'category') {
-                                                const fromCat = e.dataTransfer.getData('dragCat');
-                                                if (fromCat === cat) return;
-                                                const newOrder = [...categoryOrder];
-                                                const fromIdx = newOrder.indexOf(fromCat);
-                                                const toIdx = newOrder.indexOf(cat);
-                                                if (fromIdx === -1) return;
-                                                newOrder.splice(fromIdx, 1);
-                                                newOrder.splice(toIdx, 0, fromCat);
-                                                setCategoryOrder(newOrder);
-                                            }
-                                        }}
-                                        className="bg-white border border-slate-100 rounded-2xl overflow-hidden"
-                                    >
-                                        {/* Category Header — draggable + arrows */}
-                                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-900 cursor-grab active:cursor-grabbing select-none">
-                                            <GripVertical size={16} className="text-slate-500 hover:text-orange-400 transition-colors shrink-0" />
-                                            <div className="w-6 h-[2px] bg-orange-500 shrink-0" />
-                                            <p className="text-[11px] font-black uppercase text-white tracking-widest italic flex-1">{cat}</p>
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase">{catItems.length}</span>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    disabled={catOrderIdx === 0}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const newOrder = [...categoryOrder];
-                                                        [newOrder[catOrderIdx - 1], newOrder[catOrderIdx]] = [newOrder[catOrderIdx], newOrder[catOrderIdx - 1]];
-                                                        setCategoryOrder(newOrder);
-                                                    }}
-                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-slate-500 hover:text-orange-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                >
-                                                    <ArrowUp size={12} />
-                                                </button>
-                                                <button
-                                                    disabled={catOrderIdx === categoryOrder.length - 1}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const newOrder = [...categoryOrder];
-                                                        [newOrder[catOrderIdx], newOrder[catOrderIdx + 1]] = [newOrder[catOrderIdx + 1], newOrder[catOrderIdx]];
-                                                        setCategoryOrder(newOrder);
-                                                    }}
-                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-slate-500 hover:text-orange-400 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                >
-                                                    <ArrowDown size={12} />
-                                                </button>
-                                            </div>
+                                    <div key={section.id} className="flex items-center gap-3 px-3 py-3 bg-slate-50 rounded-2xl">
+                                        <span className="w-7 h-7 rounded-xl bg-white text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">{idx + 1}</span>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-black uppercase italic text-sm text-slate-900 truncate">{section.name}</p>
+                                            <p className="text-[10px] font-black text-slate-400">{count} platos</p>
                                         </div>
-
-                                        {/* Products within category */}
-                                        <div className="divide-y divide-slate-50">
-                                            {catItems.map((item, catIdx) => (
-                                                <div
-                                                    key={item.id}
-                                                    draggable
-                                                    onDragStart={(e) => {
-                                                        e.stopPropagation();
-                                                        e.dataTransfer.setData('dragType', 'product');
-                                                        e.dataTransfer.setData('text/plain', item.id);
-                                                        e.dataTransfer.setData('productCat', cat);
-                                                        e.dataTransfer.effectAllowed = 'move';
-                                                        (e.currentTarget as HTMLElement).style.opacity = '0.4';
-                                                    }}
-                                                    onDragEnd={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-                                                    onDragOver={(e) => {
-                                                        if (!e.dataTransfer.types.includes('productcat')) return;
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        (e.currentTarget as HTMLElement).style.borderTop = '3px solid #f97316';
-                                                    }}
-                                                    onDragLeave={(e) => { (e.currentTarget as HTMLElement).style.borderTop = ''; }}
-                                                    onDrop={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        (e.currentTarget as HTMLElement).style.borderTop = '';
-                                                        const dragType = e.dataTransfer.getData('dragType');
-                                                        if (dragType !== 'product') return;
-                                                        const draggedId = e.dataTransfer.getData('text/plain');
-                                                        const draggedCat = e.dataTransfer.getData('productCat');
-                                                        if (draggedCat !== cat) return;
-                                                        const newItems = [...sortItems];
-                                                        const fromIdx = newItems.findIndex(s => s.id === draggedId);
-                                                        const toIdx = newItems.findIndex(s => s.id === item.id);
-                                                        if (fromIdx === toIdx || fromIdx === -1) return;
-                                                        const [moved] = newItems.splice(fromIdx, 1);
-                                                        newItems.splice(toIdx, 0, moved);
-                                                        setSortItems(newItems);
-                                                    }}
-                                                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors cursor-grab active:cursor-grabbing select-none"
-                                                >
-                                                    <GripVertical size={12} className="text-slate-200 shrink-0" />
-                                                    <span className="w-5 h-5 rounded bg-slate-100 text-slate-400 text-[9px] font-black flex items-center justify-center shrink-0">
-                                                        {catIdx + 1}
-                                                    </span>
-                                                    {item.imageUrl && <img src={item.imageUrl} className="w-7 h-7 rounded-lg object-cover shrink-0" alt="" />}
-                                                    <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
-                                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">${Number(item.price).toLocaleString()}</span>
-                                                    <div className="flex gap-0.5">
-                                                        <button
-                                                            disabled={catIdx === 0}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const prev = catItems[catIdx - 1];
-                                                                const newItems = [...sortItems];
-                                                                const a = newItems.findIndex(s => s.id === item.id);
-                                                                const b = newItems.findIndex(s => s.id === prev.id);
-                                                                [newItems[a], newItems[b]] = [newItems[b], newItems[a]];
-                                                                setSortItems(newItems);
-                                                            }}
-                                                            className="w-6 h-6 rounded border border-slate-100 flex items-center justify-center text-slate-300 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                        >
-                                                            <ArrowUp size={10} />
-                                                        </button>
-                                                        <button
-                                                            disabled={catIdx === catItems.length - 1}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const next = catItems[catIdx + 1];
-                                                                const newItems = [...sortItems];
-                                                                const a = newItems.findIndex(s => s.id === item.id);
-                                                                const b = newItems.findIndex(s => s.id === next.id);
-                                                                [newItems[a], newItems[b]] = [newItems[b], newItems[a]];
-                                                                setSortItems(newItems);
-                                                            }}
-                                                            className="w-6 h-6 rounded border border-slate-100 flex items-center justify-center text-slate-300 hover:border-orange-400 hover:text-orange-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                        >
-                                                            <ArrowDown size={10} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                        <div className="flex gap-1 shrink-0">
+                                            <button type="button" disabled={idx === 0} onClick={() => moveSortCategory(section.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                <ArrowUp size={14} />
+                                            </button>
+                                            <button type="button" disabled={idx === sortSections.length - 1} onClick={() => moveSortCategory(section.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                <ArrowDown size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 );
                             })}
+
+                            {sortTab === 'products' && !sortFocusCategory && (
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic mb-3 px-1">¿Qué categoría quieres ordenar?</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {sortSections.map((section) => (
+                                            <button
+                                                key={section.id}
+                                                type="button"
+                                                onClick={() => setSortFocusCategory(section.id)}
+                                                className="text-left bg-slate-50 rounded-2xl p-4"
+                                            >
+                                                <p className="font-black uppercase italic text-sm leading-tight">{section.name}</p>
+                                                <p className="text-[10px] font-black text-slate-400 mt-1">{sortItems.filter((p) => webSectionKey(p.category, p.name) === section.id).length} platos</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {sortTab === 'products' && sortFocusCategory && (
+                                <div className="space-y-2">
+                                    <button type="button" onClick={() => setSortFocusCategory('')} className="px-3 py-2 rounded-xl bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Elegir categoría
+                                    </button>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 italic px-1">
+                                        {sortSections.find((section) => section.id === sortFocusCategory)?.name || sortFocusCategory}
+                                    </p>
+                                    {sortItems.filter((p) => webSectionKey(p.category, p.name) === sortFocusCategory).map((item, idx, list) => (
+                                        <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 bg-slate-50 rounded-2xl">
+                                            <span className="w-7 h-7 rounded-xl bg-white text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">{idx + 1}</span>
+                                            {item.imageUrl ? <img src={item.imageUrl} className="w-9 h-9 rounded-lg object-cover shrink-0" alt="" /> : <div className="w-9 h-9 rounded-lg bg-white shrink-0" />}
+                                            <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
+                                            <div className="flex gap-1 shrink-0">
+                                                <button type="button" disabled={idx === 0} onClick={() => moveSortProduct(item.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                    <ArrowUp size={14} />
+                                                </button>
+                                                <button type="button" disabled={idx === list.length - 1} onClick={() => moveSortProduct(item.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                    <ArrowDown size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Footer */}
                         <div className="p-4 border-t border-slate-100 flex items-center justify-between shrink-0 bg-white">
-                            <button
-                                onClick={() => setShowSortModal(false)}
-                                className="px-6 py-3 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-wider hover:text-slate-600 transition-colors"
-                            >
+                            <button type="button" onClick={() => setShowSortModal(false)} className="px-6 py-3 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-wider">
                                 Cancelar
                             </button>
-                            <button
-                                onClick={async () => {
-                                    setSavingSort(true);
-                                    try {
-                                        // Rebuild sortItems ordered by categoryOrder
-                                        const finalItems: any[] = [];
-                                        categoryOrder.forEach(cat => {
-                                            sortItems.filter(p => p.category === cat).forEach(p => finalItems.push(p));
-                                        });
-                                        const items = finalItems.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
-                                        await authFetch(`${API_URL}/products/reorder/bulk`, {
-                                            method: 'PATCH',
-                                            body: JSON.stringify({ items })
-                                        });
-                                        setProducts(prev => prev.map(p => {
-                                            const sorted = items.find(s => s.id === p.id);
-                                            return sorted ? { ...p, sortOrder: sorted.sortOrder } : p;
-                                        }));
-                                        setShowSortModal(false);
-                                    } catch (e) {
-                                        console.error('Error saving sort order:', e);
-                                        alert('Error al guardar el orden');
-                                    } finally {
-                                        setSavingSort(false);
-                                    }
-                                }}
-                                disabled={savingSort}
-                                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2 disabled:opacity-50"
-                            >
+                            <button type="button" onClick={saveSortOrder} disabled={savingSort} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 disabled:opacity-50">
                                 {savingSort ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                                Guardar Orden
+                                Guardar orden
                             </button>
                         </div>
                     </div>

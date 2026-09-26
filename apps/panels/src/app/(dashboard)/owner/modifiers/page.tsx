@@ -234,9 +234,9 @@ export default function ModifiersPage() {
         <div className="space-y-8 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
             <header className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
+                    <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                            EXTRAS Y <span className="text-orange-500">OPCIONES</span>
+                            Extras y <span className="text-orange-500">Opciones</span>
                         </h1>
                     </div>
                     <div className="flex gap-2">

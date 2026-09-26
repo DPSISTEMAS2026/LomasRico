@@ -38,14 +38,13 @@ export default function SalonPage() {
     return (
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-slate-50">
             <div className="w-full max-w-none space-y-6">
-                <div className="flex items-end justify-between gap-4">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 italic">Atención del local</p>
+                <div className="flex items-start justify-between gap-4">
+                    <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
                         <h1 className="text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-slate-900">
                             Salón
                         </h1>
-                        <p className="text-sm font-bold text-slate-500 mt-1">
-                            Toca una mesa para sentar comensales. Cada persona puede tener su propia cuenta.
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 italic mt-1">
+                            Atención del local
                         </p>
                     </div>
                     <button

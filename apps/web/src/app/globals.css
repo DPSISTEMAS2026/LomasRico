@@ -86,3 +86,24 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.catalog-stage {
+  transition: opacity 320ms ease, transform 320ms ease;
+}
+
+.catalog-stage-in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.catalog-stage-out-left {
+  opacity: 0;
+  transform: translateX(-18px);
+  pointer-events: none;
+}
+
+.catalog-stage-out-right {
+  opacity: 0;
+  transform: translateX(18px);
+  pointer-events: none;
+}

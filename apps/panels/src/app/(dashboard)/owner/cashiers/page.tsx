@@ -293,7 +293,7 @@ export default function CashiersManagementPage() {
 
             {/* Header */}
             <header className="flex flex-col lg:flex-row justify-between items-center md:items-start lg:items-end gap-6 px-1">
-                <div className="text-center md:text-left">
+                <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
                     <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                         ADMIN <span className="text-orange-500">PRO</span>
                     </h1>

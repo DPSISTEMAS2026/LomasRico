@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../services/api';
 import { Delete, Loader2, AlertCircle } from 'lucide-react';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'] as const;
@@ -15,6 +16,9 @@ export default function LoginPage() {
     const [pin, setPin] = useState('');
 
     useEffect(() => {
+        // #region agent log
+        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,ua:typeof navigator!=='undefined'?navigator.userAgent:null,apiUrl:String(API_URL)})}).catch(()=>{});
+        // #endregion
         if (!user) return;
         if (user.role === 'KITCHEN') {
             router.push('/kitchen');

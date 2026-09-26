@@ -68,6 +68,72 @@ export class KitchenService {
         });
     }
 
+    async findHistory(q?: string) {
+        const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        const query = (q || '').trim();
+        const tableNumber = /^\d+$/.test(query) ? Number(query) : null;
+
+        const tickets = await (this.prisma as any).kitchenTicket.findMany({
+            where: {
+                status: TicketStatus.DELIVERED,
+                createdAt: { gte: since },
+                ...(query ? {
+                    OR: [
+                        { sale: { code: { contains: query, mode: 'insensitive' } } },
+                        { sale: { guest: { name: { contains: query, mode: 'insensitive' } } } },
+                        { sale: { note: { contains: query, mode: 'insensitive' } } },
+                        ...(tableNumber != null ? [{ sale: { table: { number: tableNumber } } }] : []),
+                    ],
+                } : {}),
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 80,
+            include: {
+                sale: {
+                    select: {
+                        id: true,
+                        code: true,
+                        channel: true,
+                        fulfillmentType: true,
+                        status: true,
+                        total: true,
+                        note: true,
+                        table: { select: { id: true, number: true } },
+                        guest: { select: { id: true, name: true } },
+                        externalOrder: { select: { id: true, platform: true } },
+                        items: {
+                            select: {
+                                id: true,
+                                quantity: true,
+                                priceUnit: true,
+                                modifiers: true,
+                                sellingProduct: { select: { id: true, name: true } },
+                                productVariant: { select: { id: true, name: true } },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const mapped = tickets.map((ticket: any) => {
+            const withItems = this.withTicketItems(ticket);
+            const dte = this.parseDte(withItems.sale?.note);
+            return { ...withItems, dteTipo: dte?.tipo || null, dteFolio: dte?.folio || null };
+        });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-history',hypothesisId:'H-HIST',location:'kitchen.service.ts:findHistory',message:'kitchen delivered history',data:{count:mapped.length,q:query||null,withDte:mapped.filter((t:any)=>t.dteFolio).length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return mapped;
+    }
+
+    private parseDte(note?: string | null) {
+        const match = (note || '').match(/\[DTE (\d+) #(\d+)/i);
+        if (!match) return null;
+        return { tipo: Number(match[1]), folio: Number(match[2]) };
+    }
+
     private kitchenLabel(ticket: any) {
         if (ticket.label) return ticket.label;
         const sale = ticket.sale;
@@ -201,7 +267,7 @@ export class KitchenService {
      * Genera HTML optimizado para impresión en impresora térmica de 80mm.
      * Incluye: #pedido, canal, hora, items con modificadores, notas.
      */
-    async generatePrintHtml(ticketId: string): Promise<string> {
+    async generatePrintHtml(ticketId: string, kind: 'kitchen' | 'account' = 'kitchen'): Promise<string> {
         const ticket = await (this.prisma as any).kitchenTicket.findUnique({
             where: { id: ticketId },
             include: {
@@ -249,21 +315,26 @@ export class KitchenService {
             return lines.map((line) => `<div style="padding-left:12px;font-size:11px;color:#666;">${line}</div>`).join('');
         };
 
+        const isAccount = kind === 'account';
         const itemsHtml = sale.items.map((item: any) => {
             const name = item.sellingProduct?.name || item.productName || 'Producto';
             const qty = item.quantity || 1;
+            const unit = Number(item.priceUnit || 0);
+            const lineTotal = unit * qty;
             const modsHtml = formatMods(item.modifiers);
             const notes = item.note ? `<div style="padding-left:12px;font-size:11px;color:#c00;font-weight:bold;">⚠ ${item.note}</div>` : '';
             return `
                 <div style="border-bottom:1px dashed #ccc;padding:6px 0;">
                     <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;">
-                        <span>${name}</span>
-                        <span>x${qty}</span>
+                        <span>${qty}x ${name}</span>
+                        <span>${isAccount ? `$${lineTotal.toLocaleString('es-CL')}` : `x${qty}`}</span>
                     </div>
                     ${modsHtml}
                     ${notes}
                 </div>`;
         }).join('');
+        const saleTotal = Number(sale.total || 0);
+        const dte = this.parseDte(sale.note);
 
         return `<!DOCTYPE html>
 <html>
@@ -289,7 +360,7 @@ export class KitchenService {
 <body onload="window.print()">
     <div class="header">
         <h1>🔥 LO MÁS RICO</h1>
-        <div>COMANDA DE COCINA</div>
+        <div>${isAccount ? 'CUENTA / BOLETA INTERNA' : 'COMANDA DE COCINA'}</div>
         <div class="order">${channel}</div>
         ${guestName ? `<div style="font-size:20px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
         ${ticket.batchNumber ? `<div style="font-size:14px;margin-top:2px;">TANDA ${ticket.batchNumber}</div>` : ''}
@@ -300,9 +371,10 @@ export class KitchenService {
         <span>🕐 ${time}</span>
     </div>
     ${itemsHtml}
-    ${sale.note ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${sale.note}</div>` : ''}
+    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div>${dte ? `<div style="text-align:center;margin-top:8px;font-size:11px;">DTE ${dte.tipo} folio ${dte.folio}</div>` : `<div style="text-align:center;margin-top:8px;font-size:11px;">Documento interno · reimpresión</div>`}` : ''}
+    ${sale.note && !isAccount ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${sale.note}</div>` : ''}
     <div class="footer">
-        <div>Impreso: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+        <div>Reimpresión: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
     </div>
 </body>
 </html>`;

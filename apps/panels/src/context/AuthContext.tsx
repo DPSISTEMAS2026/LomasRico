@@ -83,7 +83,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // #region agent log
             fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'phone-login',hypothesisId:'H-LOAD',location:'AuthContext.tsx:pin',message:'pin login start',data:{apiUrl:API_URL,host:typeof window!=='undefined'?window.location.host:null},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
-            const res = await fetch(`${API_URL}/auth/pin`, {
+            const apiBase = typeof window !== 'undefined' && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(window.location.hostname)
+                ? `${window.location.origin}/backend`
+                : API_URL;
+            const res = await fetch(`${apiBase}/auth/pin`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin })

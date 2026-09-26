@@ -52,7 +52,7 @@ async function bootstrap() {
       try {
         const host = new URL(origin).hostname;
         const lan = /^192\.168\.\d+\.\d+$/.test(host) || /^10\.\d+\.\d+\.\d+$/.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host);
-        if (lan || host === 'lomasrico.cl' || host.endsWith('.lomasrico.cl')) {
+        if (lan || host === '127.0.0.1' || host === 'localhost' || host === 'lomasrico.cl' || host.endsWith('.lomasrico.cl')) {
           // #region agent log
           fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cors',hypothesisId:'H-CORS',location:'main.ts:cors',message:'allowed lomasrico host',data:{host},timestamp:Date.now()})}).catch(()=>{});
           // #endregion

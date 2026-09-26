@@ -255,8 +255,8 @@ export default function MarketingPage() {
 
             {/* Header Unified */}
             <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                <div>
-                    <div className="flex items-center gap-2 mb-2 lg:mb-1">
+                <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
+                    <div className="flex items-center justify-end lg:justify-start gap-2 mb-2 lg:mb-1">
                         <span className="bg-orange-500 text-white text-[7px] md:text-[8px] font-black px-2 py-0.5 rounded-sm uppercase tracking-tighter italic">Ventas e Impulso</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl xl:text-6xl font-black italic tracking-tighter uppercase leading-none text-slate-900">

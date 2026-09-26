@@ -35,6 +35,12 @@ export const CevicheBuilderModal = ({
     // UI State
     const [step, setStep] = useState(0);
     const [isSuccess, setIsSuccess] = useState(false);
+    useEffect(() => {
+        if (!isSuccess) return;
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'upsell-cta',hypothesisId:'H-CTA',location:'CevicheBuilderModal.tsx:success',message:'success buttons order',data:{primary:'seguir-comprando',secondary:'ver-pedido'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [isSuccess]);
     const [isAdding, setIsAdding] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -308,17 +314,17 @@ export const CevicheBuilderModal = ({
                             </p>
                             <div className="flex flex-col gap-4">
                                 <button 
-                                    onClick={onGoToCart}
-                                    className="bg-slate-900 text-white w-full py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl flex items-center justify-center gap-3 hover:bg-orange-600 transition-all active:scale-95"
-                                >
-                                    <ShoppingBag size={20} />
-                                    Ver mi Pedido
-                                </button>
-                                <button 
                                     onClick={onClose}
-                                    className="bg-white text-slate-400 border-2 border-slate-50 w-full py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest hover:border-orange-500 hover:text-orange-500 transition-all"
+                                    className="bg-[#f2642e] text-white w-full py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl shadow-orange-500/25 flex items-center justify-center gap-3 hover:bg-orange-600 transition-all active:scale-95"
                                 >
                                     Seguir Comprando
+                                </button>
+                                <button 
+                                    onClick={onGoToCart}
+                                    className="bg-white text-slate-400 border-2 border-slate-100 w-full py-4 rounded-[2rem] font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:border-slate-300 hover:text-slate-600 transition-all"
+                                >
+                                    <ShoppingBag size={16} />
+                                    Ver mi Pedido
                                 </button>
                             </div>
                         </div>

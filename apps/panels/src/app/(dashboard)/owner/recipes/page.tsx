@@ -236,7 +236,7 @@ export default function RecipesMasterPage() {
             <div className="space-y-12 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
                 {/* Header */}
                 <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
-                    <div>
+                    <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             RECETAS <span className="text-orange-500">MAESTRAS</span>
                         </h1>

@@ -1,30 +1,26 @@
-
-const getApiUrl = () => {
+export function getApiUrl() {
+    try {
+        const origin = globalThis.location?.origin;
+        if (origin) {
+            return `${origin.replace(/\/$/, '')}/backend`;
+        }
+    } catch { /* SSR */ }
     let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-    // Si la URL es solo el nombre del servicio (ej: "pro-lomasrico-api")
     if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
         url = `${url}.onrender.com`;
     }
-
     if (!url.startsWith('http')) {
         url = `https://${url}`;
     }
+    return url.replace(/\/$/, '');
+}
 
-    url = url.replace(/\/$/, '');
-    if (typeof window !== 'undefined') {
-        const host = window.location.hostname;
-        const lan = /^192\.168\.\d+\.\d+$/.test(host)
-            || /^10\.\d+\.\d+\.\d+$/.test(host)
-            || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host);
-        if (lan) {
-            return `${window.location.origin}/backend`;
-        }
-    }
-    return url;
-};
-
-export const API_URL = getApiUrl();
+class ApiUrlBox {
+    toString() { return getApiUrl(); }
+    valueOf() { return getApiUrl(); }
+    [Symbol.toPrimitive]() { return getApiUrl(); }
+}
+export const API_URL = new ApiUrlBox() as unknown as string;
 
 export const WEB_URL = (
     process.env.NEXT_PUBLIC_WEB_URL ||

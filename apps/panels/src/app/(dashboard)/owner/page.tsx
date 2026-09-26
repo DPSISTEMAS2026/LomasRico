@@ -11,11 +11,12 @@ import {
     TrendingUp,
     Users,
     ShoppingBag,
-    AlertCircle,
     ArrowUpRight,
     ArrowDownRight,
-    Search,
-    RefreshCcw
+    RefreshCcw,
+    PieChart as PieIcon,
+    Flame,
+    Clock
 } from 'lucide-react';
 
 // Dynamic imports for charts to avoid SSR issues
@@ -35,6 +36,7 @@ export default function OwnerDashboardPage() {
     const [topProducts, setTopProducts] = useState<any[]>([]);
     const [peakHours, setPeakHours] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [tab, setTab] = useState<'channels' | 'top' | 'hours'>('channels');
 
     useEffect(() => {
         loadData();
@@ -71,66 +73,80 @@ export default function OwnerDashboardPage() {
 
     const COLORS = ['#f2642e', '#0f172a', '#3b82f6', '#10b981'];
 
+    const tabs = [
+        { key: 'channels' as const, short: 'Canales', full: 'Canales', Icon: PieIcon },
+        { key: 'top' as const, short: 'Top', full: 'Top productos', Icon: Flame },
+        { key: 'hours' as const, short: 'Horas', full: 'Horas pico', Icon: Clock },
+    ];
+
     return (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
-            {/* Header */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4">
-                <div>
+        <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700 pb-10 min-w-0 overflow-x-hidden">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 pl-14 lg:pl-0 text-right lg:text-left">
                     <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                        ESTADO DEL <span className="text-orange-500">NEGOCIO</span>
+                        Resumen
                     </h1>
-                    <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-2 px-1">
-                        Snapshot Estratégico de Rendimiento
-                    </p>
                 </div>
                 <button
                     onClick={loadData}
-                    className="w-full xl:w-auto bg-white px-4 py-3 md:py-4 rounded-xl md:rounded-2xl border border-slate-100 flex items-center justify-center gap-2 shadow-sm font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                    className="shrink-0 bg-white p-2.5 md:px-4 md:py-3 rounded-xl border border-slate-100 flex items-center justify-center gap-2 shadow-sm font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-slate-50"
+                    title="Refrescar"
                 >
                     <RefreshCcw size={14} className="text-orange-500" />
-                    Refrescar Resumen
+                    <span className="hidden md:inline">Refrescar</span>
                 </button>
             </div>
 
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <StatCard
-                    title="Ingresos Hoy"
+                    title="Hoy"
                     value={`$${Number(data?.sales?.today || 0).toLocaleString()}`}
                     trend={`${data?.sales?.trend || 0}%`}
                     isUp={Number(data?.sales?.trend || 0) >= 0}
-                    icon={<TrendingUp size={20} />}
+                    icon={<TrendingUp size={16} />}
                 />
                 <StatCard
-                    title="Ventas del Mes"
+                    title="Mes"
                     value={`$${Number(data?.sales?.month || 0).toLocaleString()}`}
-                    trend="Vs Mes Ant."
+                    trend="Vs ant."
                     isUp={true}
-                    icon={<ShoppingBag size={20} />}
+                    icon={<ShoppingBag size={16} />}
                 />
                 <StatCard
-                    title="Órdenes Activas"
+                    title="Cocina"
                     value={data?.orders?.active || 0}
-                    trend="En cocina"
+                    trend="Activas"
                     isUp={true}
-                    icon={<Users size={20} />}
+                    icon={<Users size={16} />}
                 />
-                {false && (
-                <StatCard
-                    title="Alertas de Stock"
-                    value={data?.inventory?.lowStock || 0}
-                    trend={data?.inventory?.lowStock > 0 ? "Crítico" : "Saludable"}
-                    isUp={data?.inventory?.lowStock === 0}
-                    icon={<AlertCircle size={20} />}
-                    color={data?.inventory?.lowStock > 0 ? "text-red-500" : "text-green-500"}
-                />
-                )}
             </div>
 
-            {/* Multi-Panel Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {/* Distribution Chart */}
-                <div className="lg:col-span-1 bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl">
+                {tabs.map((t) => {
+                    const active = tab === t.key;
+                    const Icon = t.Icon;
+                    return (
+                        <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => {
+                                setTab(t.key);
+                                // #region agent log
+                                fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'resumen-tab'})}).catch(()=>{});
+                                // #endregion
+                            }}
+                            className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight text-[9px] md:text-xs transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                        >
+                            <Icon size={14} />
+                            <span className="md:hidden">{t.short}</span>
+                            <span className="hidden md:inline">{t.full}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {tab === 'channels' && (
+            <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
                     <h3 className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">Canales de Venta</h3>
                     <div className="h-[240px] md:h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -165,10 +181,11 @@ export default function OwnerDashboardPage() {
                             </div>
                         ))}
                     </div>
-                </div>
+            </div>
+            )}
 
-                {/* Top Products Rank */}
-                <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
+            {tab === 'top' && (
+                <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
                     <div className="flex justify-between items-center mb-6 md:mb-10">
                         <h3 className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Productos más Vendidos</h3>
                         <div className="bg-orange-50 text-orange-600 px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase">Top 5</div>
@@ -203,9 +220,9 @@ export default function OwnerDashboardPage() {
                         )}
                     </div>
                 </div>
-            </div>
+            )}
 
-            {/* Peak Hours Chart */}
+            {tab === 'hours' && (
             <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-8 md:mb-12">
                     <div>
@@ -243,30 +260,27 @@ export default function OwnerDashboardPage() {
                     )}
                 </div>
             </div>
+            )}
         </div>
     );
 }
 
 function StatCard({ title, value, trend, isUp, icon, color = "text-slate-900" }: any) {
     return (
-        <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 group hover:border-orange-500 hover:shadow-xl transition-all duration-500">
-            <div className="flex justify-between items-start mb-4 md:mb-6">
-                <div className="p-3 md:p-4 bg-slate-50 text-slate-900 rounded-xl md:rounded-2xl group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-sm shrink-0">
-                    <div className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
-                        {icon}
-                    </div>
+        <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 min-w-0">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+                <div className="p-2 md:p-3 bg-slate-50 text-slate-900 rounded-xl shrink-0">
+                    {icon}
                 </div>
-                <div className={`flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[10px] font-black uppercase italic ${isUp ? 'text-green-500' : 'text-slate-300'} shrink-0`}>
-                    {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                    <span className="tracking-widest">{trend}</span>
+                <div className={`flex items-center gap-0.5 text-[8px] md:text-[10px] font-black uppercase italic ${isUp ? 'text-green-500' : 'text-slate-300'} shrink-0`}>
+                    {isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    <span className="tracking-tight hidden sm:inline">{trend}</span>
                 </div>
             </div>
-            <div>
-                <p className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] mb-1 md:mb-1.5">{title}</p>
-                <p className={`text-2xl md:text-4xl font-black italic tracking-tighter uppercase leading-none transition-colors duration-500 truncate ${color === 'text-slate-900' ? 'group-hover:text-slate-900' : color}`}>
-                    {value}
-                </p>
-            </div>
+            <p className="text-slate-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 truncate">{title}</p>
+            <p className={`text-lg md:text-3xl font-black italic tracking-tighter uppercase leading-none truncate ${color}`}>
+                {value}
+            </p>
         </div>
     );
 }

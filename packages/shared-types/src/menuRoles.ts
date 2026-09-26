@@ -31,7 +31,7 @@ export const WEB_MENU_SECTIONS: WebMenuSection[] = [
     { id: 'bowls-gohan', name: 'Bowls y gohans', match: (c) => /bowl|gohan/i.test(c) },
     { id: 'empanadas', name: 'Empanadas', match: (c) => /empanad/i.test(c) },
     { id: 'acompanar', name: 'Para acompañar', match: (c) => /papa|frito|extra|agregad|pancito|acompa[ñn]|apanad/i.test(c) && !/empanad/i.test(c) },
-    { id: 'bebidas', name: 'Bebidas', match: (c) => /bebida|limonad|cervez|jugo|gaseos|bebest|monster|agua/i.test(c) },
+    { id: 'bebidas', name: 'Bebestibles', match: (c) => /bebida|limonad|cervez|jugo|gaseos|bebest|monster|agua/i.test(c) },
 ];
 
 export function webMenuSectionId(category?: string | null, name?: string | null): string | null {
@@ -39,6 +39,42 @@ export function webMenuSectionId(category?: string | null, name?: string | null)
     const value = category || '';
     if (!value) return null;
     return WEB_MENU_SECTIONS.find((section) => section.match(value))?.id || null;
+}
+
+export function webSectionKey(category?: string | null, name?: string | null): string {
+    return webMenuSectionId(category, name) || `other-${category || 'otros'}`;
+}
+
+export function groupProductsByWebSection<T extends { category?: string | null; name?: string | null; sortOrder?: number }>(
+    products: T[],
+) {
+    const sections = WEB_MENU_SECTIONS.map((section) => ({
+        id: section.id,
+        name: section.name,
+        products: [] as T[],
+    }));
+    const leftovers = new Map<string, { id: string; name: string; products: T[] }>();
+
+    for (const product of products) {
+        const sectionId = webMenuSectionId(product.category, product.name);
+        if (sectionId) {
+            sections.find((section) => section.id === sectionId)?.products.push(product);
+            continue;
+        }
+        const key = product.category || 'otros';
+        if (!leftovers.has(key)) leftovers.set(key, { id: `other-${key}`, name: key, products: [] });
+        leftovers.get(key)!.products.push(product);
+    }
+
+    return [
+        ...sections.filter((section) => section.products.length > 0),
+        ...[...leftovers.values()].filter((section) => section.products.length > 0),
+    ];
+}
+
+export function displayCategoryName(category?: string | null) {
+    if (/bebida/i.test(category || '')) return 'Bebestibles';
+    return category || '';
 }
 
 const SHOWCASE_SECTIONS = new Set(['promos', 'ceviches', 'rolls', 'bowls-gohan']);

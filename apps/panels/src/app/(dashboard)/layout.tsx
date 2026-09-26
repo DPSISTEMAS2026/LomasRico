@@ -75,7 +75,12 @@ export default function DashboardLayout({
         // #region agent log
         const main = document.querySelector('main');
         const doc = document.documentElement;
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'site-xscroll',hypothesisId:'H-SCROLL',location:'layout.tsx:route',message:'scrollport del panel',data:{pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,docScrollW:doc.scrollWidth,docClientW:doc.clientWidth,docOverflow:doc.scrollWidth>doc.clientWidth+2,mainClientW:main?.clientWidth||0,mainScrollW:main?.scrollWidth||0,mainClientH:main?.clientHeight||0,mainScrollH:main?.scrollHeight||0,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2,canScrollY:!!main&&main.scrollHeight>main.clientHeight+2},timestamp:Date.now()})}).catch(()=>{});
+        const btn = document.querySelector('[data-mobile-menu-btn]');
+        const h1 = document.querySelector('main h1');
+        const btnR = btn?.getBoundingClientRect();
+        const h1R = h1?.getBoundingClientRect();
+        const overlaps = !!(btnR && h1R && !(btnR.right < h1R.left || btnR.left > h1R.right || btnR.bottom < h1R.top || btnR.top > h1R.bottom));
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'title-overlap',hypothesisId:'H-TITLE-OVERLAY',location:'layout.tsx:route',message:'hamburger vs title overlap',data:{pathname,innerWidth:window.innerWidth,hasBtn:!!btn,hasH1:!!h1,overlaps,btn:{t:btnR?.top,l:btnR?.left,r:btnR?.right,b:btnR?.bottom},h1:{t:h1R?.top,l:h1R?.left,r:h1R?.right,b:h1R?.bottom,text:h1?.textContent?.slice(0,48)||null},docOverflow:doc.scrollWidth>doc.clientWidth+2,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [pathname]);
 
@@ -178,10 +183,10 @@ export default function DashboardLayout({
 
     return (
         <div className="flex h-dvh max-h-dvh overflow-hidden bg-slate-50">
-            {/* Mobile Menu Button */}
             <button
                 onClick={toggleSidebar}
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-xl shadow-md"
+                data-mobile-menu-btn
+                className="lg:hidden fixed top-3 left-3 z-50 p-2 bg-white rounded-xl shadow-md"
             >
                 {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -277,7 +282,7 @@ export default function DashboardLayout({
                 <div className={`w-full max-w-none min-w-0 ${
                     isFullBleed ? 'p-0 flex-1 min-h-0 flex flex-col overflow-hidden' : 'min-h-full flex flex-col p-4 md:px-6 lg:px-8 md:py-8'
                 }`}>
-                    <div className={`w-full max-w-none min-w-0 animate-in fade-in duration-300 ${isFullBleed ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : ''}`}>
+                    <div className={`w-full max-w-none min-w-0 animate-in fade-in duration-300 max-lg:[&_h1]:text-right lg:[&_h1]:text-left ${isFullBleed ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : ''}`}>
                         {children}
                     </div>
                 </div>

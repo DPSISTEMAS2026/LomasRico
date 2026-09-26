@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['192.168.1.85', '192.168.56.1'],
+  allowedDevOrigins: ['192.168.1.85', '192.168.56.1', '127.0.0.1', 'localhost'],
   transpilePackages: ["@lomasrico/shared-types"],
   async rewrites() {
     return [

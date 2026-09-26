@@ -5,7 +5,6 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { REAL_PRODUCT_CATALOG } from '@lomasrico/shared-types';
 import { API_URL } from '../../services/api';
 
 import { LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda } from 'lucide-react';
@@ -16,7 +15,7 @@ const CATEGORIES = [
     { id: 'CEVICHE PERUANO', name: 'Peruanos', icon: <ChefHat size={20} strokeWidth={2.5} /> },
     { id: 'EMPANADAS', name: 'Empanadas', icon: <Wheat size={20} strokeWidth={2.5} /> },
     { id: 'EXTRAS', name: 'Agregados', icon: <Plus size={20} strokeWidth={3} /> },
-    { id: 'BEBIDAS', name: 'Bebidas', icon: <CupSoda size={20} strokeWidth={2.5} /> },
+    { id: 'BEBIDAS', name: 'Bebestibles', icon: <CupSoda size={20} strokeWidth={2.5} /> },
 ];
 
 
@@ -37,13 +36,9 @@ export const ProductGrid = () => {
                 const prodResponse = await fetch(`${API_URL}/products`);
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        setProducts(data);
-                    } else {
-                        setProducts(REAL_PRODUCT_CATALOG);
-                    }
+                    setProducts(Array.isArray(data) ? data : []);
                 } else {
-                    setProducts(REAL_PRODUCT_CATALOG);
+                    setProducts([]);
                 }
 
                 // Fetch Proteins for Modal
@@ -55,7 +50,7 @@ export const ProductGrid = () => {
                 }
             } catch (error) {
                 console.warn('API error', error);
-                setProducts(REAL_PRODUCT_CATALOG);
+                setProducts([]);
             } finally {
                 setLoading(false);
             }

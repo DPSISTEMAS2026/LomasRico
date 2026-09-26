@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
 import {
-    ArrowLeft, Plus, Users, Loader2, Printer, CreditCard, Trash2, Search, ChevronUp,
+    ArrowLeft, Plus, Users, Loader2, Printer, CreditCard, Trash2, Search, ChevronUp, X,
     Gift, Fish, ChefHat, Wheat, CupSoda, Flame, Salad, Shell, Sparkles, UtensilsCrossed,
 } from 'lucide-react';
-import { fetchCatalog, API_URL, WEB_URL } from '../../../../services/api';
+import { fetchCatalog, API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { WaiterDishBuilder } from '../../../../components/modals/WaiterDishBuilder';
 import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
@@ -33,7 +33,7 @@ const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
     PANCITOS: { name: 'Pancitos', Icon: ChefHat },
     EXTRAS: { name: 'Extras', Icon: Plus },
     AGREGADOS: { name: 'Agregados', Icon: Plus },
-    BEBIDAS: { name: 'Bebidas', Icon: CupSoda },
+    BEBIDAS: { name: 'Bebestibles', Icon: CupSoda },
 };
 
 export default function SalonTablePage() {
@@ -86,18 +86,54 @@ export default function SalonTablePage() {
 
     useEffect(() => {
         loadTable().then(async (data) => {
-            const bill = data?.billRequest;
-            if (bill?.guestId) setGuestId(bill.guestId);
-            if (bill) {
+            const request = data?.billRequest;
+            if (request?.guestId) setGuestId(request.guestId);
+            if (request) {
                 const res = await authFetch(`${API_URL}/tables/${id}/bill`);
                 if (res.ok) {
                     setBill(await res.json());
                     setShowBill(true);
                 }
             }
+            // #region agent log
+            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:request?'auto-open':'no-bill-request',ua:'H-AUTO-OPEN restore'})}).catch(()=>{});
+            // #endregion
         });
         fetchCatalog().then(setProducts).catch(() => {});
     }, [id]);
+
+    useEffect(() => {
+        if (!showBill) return;
+        const catalog = document.querySelector('[data-salon-catalog]') as HTMLElement | null;
+        const html = document.documentElement;
+        const prevCatalog = catalog?.style.overflow ?? '';
+        const prevHtml = html.style.overflow;
+        const prevBody = document.body.style.overflow;
+        if (catalog) catalog.style.overflow = 'hidden';
+        html.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+
+        const insideBill = (target: EventTarget | null) =>
+            target instanceof Element && !!target.closest('[data-bill-scroll]');
+        const blockBackground = (e: Event) => {
+            if (!insideBill(e.target)) e.preventDefault();
+        };
+        document.addEventListener('wheel', blockBackground, { passive: false });
+        document.addEventListener('touchmove', blockBackground, { passive: false });
+
+        const catalogOverflow = catalog ? getComputedStyle(catalog).overflowY : 'missing';
+        // #region agent log
+        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:catalogOverflow,ua:'H-CATALOG-SCROLL lock'})}).catch(()=>{});
+        // #endregion
+
+        return () => {
+            if (catalog) catalog.style.overflow = prevCatalog;
+            html.style.overflow = prevHtml;
+            document.body.style.overflow = prevBody;
+            document.removeEventListener('wheel', blockBackground);
+            document.removeEventListener('touchmove', blockBackground);
+        };
+    }, [showBill]);
 
     const guest = table?.guests?.find((g: any) => g.id === guestId) || null;
     const accountItems: CartItem[] = (guest?.openSale?.items || []).map((item: any) => ({
@@ -355,6 +391,9 @@ export default function SalonTablePage() {
         const res = await authFetch(`${API_URL}/tables/${id}/bill`);
         if (res.ok) setBill(await res.json());
         setShowBill(true);
+        // #region agent log
+        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'open-bill',ua:'H-NO-CLOSE open-manual'})}).catch(()=>{});
+        // #endregion
     };
 
     const payAll = async () => {
@@ -407,26 +446,40 @@ export default function SalonTablePage() {
     return (
         <div className="h-full min-h-0 flex flex-col overflow-hidden">
             <div className="shrink-0 p-3 md:p-4 pb-0 space-y-3">
-                <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => router.push('/salon')} className="p-3 rounded-2xl bg-white border border-slate-100">
-                        <ArrowLeft size={20} />
+                <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => router.push('/salon')} className="p-2.5 rounded-xl bg-white border border-slate-100 ml-12 lg:ml-0 shrink-0" title="Volver al salón">
+                        <ArrowLeft size={18} />
                     </button>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Salón</p>
-                        <h1 className="text-2xl font-black italic uppercase tracking-tighter">Mesa {table.number}</h1>
-                        <p className="text-[10px] font-bold text-slate-400">QR comensal: {WEB_URL}/mesa/{table.number}</p>
+                    <div className="flex-1 min-w-0 text-right">
+                        <h1 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-slate-900">
+                            Mesa {table.number}
+                        </h1>
                     </div>
-                    <button type="button" onClick={openBill} className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase ${table.billRequest ? 'bg-amber-400 text-slate-900' : 'bg-white border border-slate-100'}`}>
-                        {table.billRequest?.guestName
-                            ? `${table.billRequest.guestName} pidió cuenta`
-                            : table.billRequest ? 'Pidieron cuenta' : 'Cuenta mesa'}
-                    </button>
                     {guest && (
-                        <button type="button" onClick={leaveGuest} className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-300 hover:text-red-500">
+                        <button type="button" onClick={leaveGuest} className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-red-500 shrink-0" title="Quitar comensal">
                             <Trash2 size={18} />
                         </button>
                     )}
                 </div>
+                {table.billRequest ? (
+                    <button
+                        type="button"
+                        onClick={openBill}
+                        className="w-full px-4 py-3 rounded-2xl bg-amber-400 text-slate-900 text-[11px] font-black uppercase italic tracking-tight text-left"
+                    >
+                        {table.billRequest.guestName
+                            ? `${table.billRequest.guestName} pidió la cuenta`
+                            : 'Pidieron la cuenta'}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={openBill}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-white border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                    >
+                        Ver cuenta de la mesa
+                    </button>
+                )}
 
                 <div className="bg-white rounded-3xl p-3 border border-slate-100">
                     <div className="flex items-center justify-between mb-2 px-1">
@@ -490,7 +543,7 @@ export default function SalonTablePage() {
                             fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H1',location:'salon/[id]/page.tsx:selectCategory',message:'waiter opened category',data:{category:cat.id,count:cat.count},timestamp:Date.now()})}).catch(()=>{});
                             // #endregion
                         }}
-                        className="bg-white rounded-2xl p-4 text-left border border-slate-100 active:scale-95 min-h-[110px] flex flex-col justify-between"
+                        className="bg-white rounded-2xl p-4 text-left border border-slate-100 active:scale-95 min-h-[140px] md:min-h-[160px] flex flex-col justify-between"
                     >
                         <cat.Icon size={22} className="text-orange-500" />
                         <div>
@@ -575,10 +628,36 @@ export default function SalonTablePage() {
             </div>
 
             {showBill && bill && (
-                <div className="fixed inset-0 z-[80] bg-black/50 flex items-end md:items-center justify-center p-4" onClick={() => setShowBill(false)}>
-                    <div className="w-full max-w-lg bg-white rounded-[2rem] p-6 space-y-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Mesa {bill.number}</p>
-                        <h2 className="text-2xl font-black italic uppercase tracking-tighter">Cuenta de la mesa</h2>
+                <div
+                    className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-3 overflow-hidden overscroll-none touch-none"
+                    onClick={() => {
+                        setShowBill(false);
+                        // #region agent log
+                        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'close-bill',ua:'salon-bill-close'})}).catch(()=>{});
+                        // #endregion
+                    }}
+                >
+                    <div className="w-full max-w-lg bg-white rounded-[2rem] max-h-[85vh] flex flex-col overscroll-contain touch-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="shrink-0 flex items-start justify-between gap-3 p-5 pb-3">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Mesa {bill.number}</p>
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Cuenta de la mesa</h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowBill(false);
+                                    // #region agent log
+                                    fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'close-x',ua:'H-NO-CLOSE close-x'})}).catch(()=>{});
+                                    // #endregion
+                                }}
+                                className="p-2.5 rounded-full bg-slate-50 hover:bg-red-50 hover:text-red-500 shrink-0"
+                                title="Cerrar"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div data-bill-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-auto px-5 pb-6 space-y-4">
                         {bill.billRequest?.guestName && (
                             <p className="text-sm font-bold text-amber-700 bg-amber-50 rounded-2xl px-4 py-3">
                                 {bill.billRequest.mode === 'GUEST'
@@ -614,6 +693,7 @@ export default function SalonTablePage() {
                         <button type="button" onClick={payAll} disabled={busy || !bill.grandTotal} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs">
                             Un solo pago · toda la mesa
                         </button>
+                        </div>
                     </div>
                 </div>
             )}
