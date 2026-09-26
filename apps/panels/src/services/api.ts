@@ -1,18 +1,36 @@
+function isLocalDevHost(host?: string) {
+    if (!host) return false;
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    return /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+}
+
 export function getApiUrl() {
+    let resolved = '';
+    let via = 'env';
     try {
-        const origin = globalThis.location?.origin;
-        if (origin) {
-            return `${origin.replace(/\/$/, '')}/backend`;
+        const host = globalThis.location?.hostname;
+        if (isLocalDevHost(host)) {
+            resolved = `${String(globalThis.location.origin).replace(/\/$/, '')}/backend`;
+            via = 'lan-backend';
         }
     } catch { /* SSR */ }
-    let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
-        url = `${url}.onrender.com`;
+    if (!resolved) {
+        let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
+            url = `${url}.onrender.com`;
+        }
+        if (!url.startsWith('http')) {
+            url = `https://${url}`;
+        }
+        resolved = url.replace(/\/$/, '');
     }
-    if (!url.startsWith('http')) {
-        url = `https://${url}`;
+    // #region agent log
+    if (typeof window !== 'undefined' && !(window as any).__lrApiUrlLogged) {
+        (window as any).__lrApiUrlLogged = true;
+        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:window.location.href,apiUrl:resolved,ua:`H-BACKEND-REWRITE ${via}`})}).catch(()=>{});
     }
-    return url.replace(/\/$/, '');
+    // #endregion
+    return resolved;
 }
 
 class ApiUrlBox {

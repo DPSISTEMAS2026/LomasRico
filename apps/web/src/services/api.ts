@@ -1,19 +1,36 @@
+function isLocalDevHost(host?: string) {
+    if (!host) return false;
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    return /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+}
 
 export function getApiUrl() {
+    let resolved = '';
+    let via = 'env';
     try {
-        const origin = globalThis.location?.origin;
-        if (origin) {
-            return `${origin.replace(/\/$/, '')}/backend`;
+        const host = globalThis.location?.hostname;
+        if (isLocalDevHost(host)) {
+            resolved = `${String(globalThis.location.origin).replace(/\/$/, '')}/backend`;
+            via = 'lan-backend';
         }
     } catch { /* SSR */ }
-    let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
-        url = `${url}.onrender.com`;
+    if (!resolved) {
+        let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        if (url && !url.includes('.') && !url.includes('localhost') && !url.startsWith('https://')) {
+            url = `${url}.onrender.com`;
+        }
+        if (!url.startsWith('http')) {
+            url = `https://${url}`;
+        }
+        resolved = url.replace(/\/$/, '');
     }
-    if (!url.startsWith('http')) {
-        url = `https://${url}`;
+    // #region agent log
+    if (typeof window !== 'undefined' && !(window as any).__lrApiUrlLogged) {
+        (window as any).__lrApiUrlLogged = true;
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'prod-api',hypothesisId:'H-BACKEND-REWRITE',location:'web/api.ts:getApiUrl',message:'resolved api url',data:{host:window.location.hostname,via,resolved},timestamp:Date.now()})}).catch(()=>{});
     }
-    return url.replace(/\/$/, '');
+    // #endregion
+    return resolved;
 }
 
 class ApiUrlBox {
