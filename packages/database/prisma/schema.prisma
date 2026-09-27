@@ -402,6 +402,10 @@ enum PaymentMethod {
   CREDIT
   TRANSFER
   MERCADO_PAGO
+  EDENRED
+  PLUXEE
+  JUNAEB
+  FOOD_CARD
   OTHER
 }
 

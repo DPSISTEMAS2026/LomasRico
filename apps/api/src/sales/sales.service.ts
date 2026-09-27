@@ -116,7 +116,7 @@ export class SalesService {
             if (paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'MP') {
                 initialStatus = OrderStatus.PENDING;
             } else {
-                initialStatus = OrderStatus.CONFIRMED; // CASH, TRANSFER
+                initialStatus = OrderStatus.CONFIRMED; // CASH, TRANSFER, alimentación
             }
         } else if (channel === 'WEB' && !initialStatus) {
             initialStatus = OrderStatus.PENDING;

@@ -3,6 +3,7 @@ export * from './api-client';
 export * from './constants';
 export * from './domain';
 export * from './menuRoles';
+export * from './paymentMethods';
 
 export interface ProductVariant {
     id: string;

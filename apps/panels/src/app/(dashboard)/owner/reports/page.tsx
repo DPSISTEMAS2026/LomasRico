@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { isModulePaused } from '../../../../config/features';
+import { paymentMethodLabel, isFoodPaymentMethod } from '@lomasrico/shared-types';
 
 // Dynamic imports for charts
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -30,6 +31,15 @@ const CHANNEL_COLORS: Record<string, { bg: string, text: string, fill: string, l
     PEDIDOS_YA: { bg: 'bg-red-500', text: 'text-red-600', fill: '#ef4444', label: '🔴 PedidosYa' },
     WEB: { bg: 'bg-purple-500', text: 'text-purple-600', fill: '#a855f7', label: '🌐 Web' },
     WHATSAPP: { bg: 'bg-emerald-500', text: 'text-emerald-600', fill: '#10b981', label: '💬 WhatsApp' },
+};
+
+const PAYMENT_LOGOS: Record<string, string> = {
+    MP: '/assets/mercadopago/horizontal.svg',
+    MERCADO_PAGO: '/assets/mercadopago/horizontal.svg',
+    EDENRED: '/assets/alimentacion/edenred.png',
+    PLUXEE: '/assets/alimentacion/pluxee.svg',
+    JUNAEB: '/assets/alimentacion/junaeb.png',
+    FOOD_CARD: '/assets/alimentacion/cobra.svg',
 };
 
 export default function ReportsPage() {
@@ -86,6 +96,18 @@ export default function ReportsPage() {
 
     // Channel breakdown
     const channelData = dashboard?.orders?.byChannel || [];
+
+    const paymentData = (() => {
+        const map: Record<string, { method: string; total: number; count: number }> = {};
+        sales.forEach((s) => {
+            if (s.status === 'CANCELLED') return;
+            const method = s.paymentMethod || 'SIN_MÉTODO';
+            if (!map[method]) map[method] = { method, total: 0, count: 0 };
+            map[method].total += Number(s.total);
+            map[method].count += 1;
+        });
+        return Object.values(map).sort((a, b) => b.total - a.total);
+    })();
 
     // Low stock items
     const lowStockItems = inventory.filter(i =>
@@ -184,29 +206,67 @@ export default function ReportsPage() {
             )}
 
             {tab === 'channels' && (
-                <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border-b-4 border-b-orange-500 flex flex-col">
-                    <h3 className="text-lg font-black italic tracking-tighter uppercase mb-6">Ventas por <span className="text-orange-400">Canal</span></h3>
-                    <div className="space-y-3 flex-1">
-                        {channelData.length === 0 && <p className="text-slate-500 text-xs italic">Sin datos de canales</p>}
-                        {channelData.map((ch: any) => {
-                            const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-400', fill: '#64748b', label: ch.channel };
-                            const pct = totalRevenue > 0 ? ((ch._sum?.total || 0) / totalRevenue * 100) : 0;
-                            return (
-                                <div key={ch.channel} className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-black uppercase italic">{cfg.label}</span>
-                                        <span className="text-orange-400 font-black text-sm italic">${(ch._sum?.total || 0).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full ${cfg.bg}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                    <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border-b-4 border-b-orange-500 flex flex-col">
+                        <h3 className="text-lg font-black italic tracking-tighter uppercase mb-6">Ventas por <span className="text-orange-400">Canal</span></h3>
+                        <div className="space-y-3 flex-1">
+                            {channelData.length === 0 && <p className="text-slate-500 text-xs italic">Sin datos de canales</p>}
+                            {channelData.map((ch: any) => {
+                                const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-400', fill: '#64748b', label: ch.channel };
+                                const pct = totalRevenue > 0 ? ((ch._sum?.total || 0) / totalRevenue * 100) : 0;
+                                return (
+                                    <div key={ch.channel} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-black uppercase italic">{cfg.label}</span>
+                                            <span className="text-orange-400 font-black text-sm italic">${(ch._sum?.total || 0).toLocaleString()}</span>
                                         </div>
-                                        <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${cfg.bg}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+                                            </div>
+                                            <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                        </div>
+                                        <p className="text-[9px] font-bold text-slate-500 mt-1">{ch._count?.id || 0} pedidos</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-slate-500 mt-1">{ch._count?.id || 0} pedidos</p>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-orange-500 flex flex-col">
+                        <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900 mb-6">
+                            Ventas por <span className="text-orange-500">medio de pago</span>
+                        </h3>
+                        <div className="space-y-3 flex-1">
+                            {paymentData.length === 0 && <p className="text-slate-400 text-xs italic">Sin datos de medios de pago</p>}
+                            {paymentData.map((pm) => {
+                                const pct = totalRevenue > 0 ? (pm.total / totalRevenue * 100) : 0;
+                                const logo = PAYMENT_LOGOS[pm.method];
+                                const food = isFoodPaymentMethod(pm.method);
+                                return (
+                                    <div key={pm.method} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <div className="flex justify-between items-center mb-2 gap-3">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                {logo && (
+                                                    <img src={logo} alt="" className="h-6 w-auto max-w-[72px] object-contain shrink-0" />
+                                                )}
+                                                <span className={`text-xs font-black uppercase italic truncate ${food ? 'text-orange-600' : 'text-slate-900'}`}>
+                                                    {paymentMethodLabel(pm.method)}
+                                                </span>
+                                            </div>
+                                            <span className="text-orange-500 font-black text-sm italic shrink-0">${pm.total.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${food ? 'bg-orange-500' : 'bg-slate-800'}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+                                            </div>
+                                            <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                        </div>
+                                        <p className="text-[9px] font-bold text-slate-400 mt-1">{pm.count} pedidos</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}
@@ -306,6 +366,7 @@ export default function ReportsPage() {
                                 <th className="px-6 py-5">Código</th>
                                 <th className="px-4 py-5">Fecha</th>
                                 <th className="px-4 py-5 text-center">Canal</th>
+                                <th className="px-4 py-5 text-center">Pago</th>
                                 <th className="px-4 py-5 text-center">Estado</th>
                                 <th className="px-6 py-5 text-right">Total</th>
                             </tr>
@@ -337,6 +398,19 @@ export default function ReportsPage() {
                                                 sale.channel === 'POS' ? 'bg-blue-100 text-blue-700' :
                                                 'bg-purple-100 text-purple-700'
                                             }`}>{chCfg.label}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-[8px] font-black uppercase italic tracking-wider ${
+                                                isFoodPaymentMethod(sale.paymentMethod) ? 'bg-orange-50 text-orange-700' :
+                                                sale.paymentMethod === 'MERCADO_PAGO' || sale.paymentMethod === 'MP' ? 'bg-indigo-50 text-indigo-700' :
+                                                sale.paymentMethod === 'CASH' ? 'bg-emerald-50 text-emerald-700' :
+                                                'bg-slate-100 text-slate-600'
+                                            }`}>
+                                                {PAYMENT_LOGOS[sale.paymentMethod] && (
+                                                    <img src={PAYMENT_LOGOS[sale.paymentMethod]} alt="" className="h-3.5 w-auto max-w-[36px] object-contain" />
+                                                )}
+                                                {paymentMethodLabel(sale.paymentMethod)}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${statusColors[sale.status] || 'bg-slate-100 text-slate-500'}`}>

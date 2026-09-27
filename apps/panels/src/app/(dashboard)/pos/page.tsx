@@ -6,12 +6,9 @@ import {
     Trash2,
     Plus,
     Minus,
-    CreditCard,
-    Banknote,
     Truck,
     CheckCircle2,
     AlertCircle,
-    TrendingUp,
     TrendingDown,
     ChevronRight,
     ShoppingBag,
@@ -44,6 +41,7 @@ import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
 import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
 import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
 import { DiscountModal } from '../../../components/pos/DiscountModal';
+import { PaymentMethodPicker, checkoutButtonLabel, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
 import { SHOW_POS_DELIVERY } from '../../../config/features';
 
 // ─────────────────────────────────────────────
@@ -61,7 +59,7 @@ export default function POSPage() {
     const [shippingCost, setShippingCost] = useState(0);
     const [shippingAddress, setShippingAddress] = useState('');
     const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
-    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MP' | 'TRANSFER'>('CASH');
+    const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('CASH');
     const [cashReceived, setCashReceived] = useState<number>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeShift, setActiveShift] = useState<CashierShift | null>(null);
@@ -326,7 +324,7 @@ export default function POSPage() {
     const [mobileTab, setMobileTab] = useState<'CATALOG' | 'CART'>('CATALOG');
 
     return (
-        <div className="flex-1 flex flex-col xl:grid xl:grid-cols-[1fr,420px] gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-0 min-w-0 overflow-x-hidden bg-slate-50/50">
+        <div className="flex-1 flex flex-col gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-0 min-w-0 overflow-x-hidden bg-slate-50/50">
 
             <div className="flex items-center gap-2 shrink-0">
                 <div className="xl:hidden flex flex-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100">
@@ -387,6 +385,7 @@ export default function POSPage() {
                 )}
             </div>
 
+            <div className="flex-1 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr),440px] gap-4 xl:overflow-hidden min-h-0">
             {/* ── Catálogo (Izquierda) ───────────────────────── */}
             <div className={`flex flex-col gap-3 overflow-hidden min-h-0 ${mobileTab === 'CART' ? 'hidden xl:flex' : 'flex'}`}>
 
@@ -730,35 +729,7 @@ export default function POSPage() {
                             </div>
                         )}
 
-                        {/* Método de pago */}
-                        <div className="grid grid-cols-3 gap-2 md:gap-3">
-                            {[
-                                { id: 'CASH', label: 'Efectivo', icon: <Banknote size={16} />, color: 'orange' },
-                                { id: 'MP', label: 'Mercado Pago', icon: <img src="/assets/mercadopago/vertical.svg" alt="Mercado Pago" className="w-5 h-5 object-contain" />, color: 'blue' },
-                                { id: 'TRANSFER', label: 'Transferen.', icon: <TrendingUp size={16} />, color: 'purple' },
-                            ].map(m => (
-                                <button
-                                    key={m.id}
-                                    onClick={() => setPaymentMethod(m.id as any)}
-                                    className={`py-3 md:py-4 rounded-2xl font-black italic uppercase text-[9px] md:text-[10px] tracking-widest border-2 transition-all flex flex-col items-center gap-2 shadow-sm
-                                        ${paymentMethod === m.id
-                                            ? m.id === 'MP' ? 'bg-[#0a0080] border-[#0a0080] text-white shadow-xl shadow-blue-200 scale-105 z-10'
-                                                : 'bg-white border-orange-500 text-orange-500 shadow-xl shadow-orange-100 scale-105 z-10'
-                                            : 'bg-white border-transparent text-slate-300 opacity-60 hover:opacity-100 hover:bg-slate-50'}`}
-                                >
-                                    <div className="w-6 h-6 flex items-center justify-center">
-                                        {m.id === 'MP' ? (
-                                            <img
-                                                src={paymentMethod === 'MP' ? '/assets/mercadopago/vertical-pluma.svg' : '/assets/mercadopago/vertical.svg'}
-                                                alt="Mercado Pago"
-                                                className="w-6 h-6 object-contain"
-                                            />
-                                        ) : m.icon}
-                                    </div>
-                                    <span className="truncate w-full px-1">{m.label}</span>
-                                </button>
-                            ))}
-                        </div>
+                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
 
                         {/* Ayuda Vuelto para Efectivo */}
                         {paymentMethod === 'CASH' && (
@@ -852,12 +823,13 @@ export default function POSPage() {
                                         <span>PROCESANDO...</span>
                                     </div>
                                 ) : (
-                                    <>{paymentMethod === 'MP' ? 'COBRAR CON MP' : 'COBRAR RETIRO'} <ChevronRight size={20} /></>
+                                    <>{checkoutButtonLabel(paymentMethod)} <ChevronRight size={20} /></>
                                 )}
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
 
             {/* ── Floating Mobile Button To Toggle View ── */}
