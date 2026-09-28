@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { PROTEINS, VEGGIES } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, filterModifiersForChannel } from '@lomasrico/shared-types';
 import type { CashierShift, AppUser, ShiftTransaction } from '@lomasrico/shared-types';
 import { createSale, getShippingQuote, simulateMPCallback, fetchCatalog, API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
@@ -212,9 +212,10 @@ export default function POSPage() {
         // Bloquear productos agotados
         if (product.available === false) return;
 
-        const needsConfig = product.isConfigurable || product.allowsModifiers;
+        const visibleMods = filterModifiersForChannel(product.modifiers, 'pos');
+        const needsConfig = visibleMods.length > 0;
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'slow-product',hypothesisId:'H-POS',location:'pos/page.tsx:click',message:'pos product click',data:{name:product.name,needsConfig,modCount:product.modifiers?.length||0},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-POS',location:'pos/page.tsx:click',message:'pos product click',data:{name:product.name,needsConfig,modCount:product.modifiers?.length||0,visible:visibleMods.map((m:any)=>m.displayName||m.groupName)},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         if (needsConfig) {
             setSelectedProductForConfig(product);
@@ -326,17 +327,17 @@ export default function POSPage() {
     return (
         <div className="flex-1 flex flex-col gap-4 xl:h-full p-2 md:p-4 xl:overflow-hidden min-h-0 min-w-0 overflow-x-hidden bg-slate-50/50">
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 pl-14 lg:pl-0 min-w-0">
                 <div className="xl:hidden flex flex-1 bg-white p-1 rounded-2xl shadow-sm border border-slate-100">
                     <button
                         onClick={() => setMobileTab('CATALOG')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all ${mobileTab === 'CATALOG' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all ${mobileTab === 'CATALOG' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >
                         <ShoppingBag size={14} /> Catálogo
                     </button>
                     <button
                         onClick={() => setMobileTab('CART')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all relative ${mobileTab === 'CART' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all relative ${mobileTab === 'CART' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >
                         <ShoppingBag size={14} /> Carrito
                         {cart.length > 0 && (
@@ -351,7 +352,7 @@ export default function POSPage() {
                     <div className="flex items-center gap-1 shrink-0 ml-auto">
                         {activeShift ? (
                             <>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 pr-1 max-w-[5.5rem] sm:max-w-none truncate">
+                                <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest text-slate-800 pr-1 max-w-[5.5rem] sm:max-w-none truncate">
                                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 align-middle" />
                                     {shiftOpenTime} · ${shiftSalesTotal.toLocaleString()}
                                 </span>
@@ -406,7 +407,7 @@ export default function POSPage() {
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
-                                className={`px-6 md:px-8 py-3 rounded-xl font-black uppercase italic tracking-tighter text-[10px] md:text-[11px] transition-all border-2 ${selectedCategory === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-400 border-slate-50 hover:border-slate-200 hover:text-slate-600 shadow-sm'}`}
+                                className={`px-6 md:px-8 py-3 rounded-xl font-black uppercase italic tracking-tighter text-[10px] md:text-[11px] transition-all border-2 ${selectedCategory === cat.id ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105' : 'bg-white text-slate-800 border-slate-50 hover:border-slate-200 hover:text-slate-600 shadow-sm'}`}
                             >
                                 {cat.label}
                             </button>
@@ -492,7 +493,7 @@ export default function POSPage() {
                             </div>
                             <div>
                                 <h1 className="font-black text-slate-900 tracking-tighter italic uppercase text-lg md:text-xl leading-none">Mi Comanda</h1>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5">
+                                <p className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em] mt-1.5">
                                     Retiro · {cart.length} ítem{cart.length !== 1 ? 's' : ''}
                                 </p>
                             </div>
@@ -510,7 +511,7 @@ export default function POSPage() {
                                     <ShoppingBag size={48} strokeWidth={1} className="text-slate-100" />
                                 </div>
                                 <div className="space-y-4">
-                                    <p className="font-black uppercase italic text-sm tracking-[0.3em] text-slate-300">Carrito vacío</p>
+                                    <p className="font-black uppercase italic text-sm tracking-[0.3em] text-slate-900">Carrito vacío</p>
                                     <button
                                         onClick={() => setMobileTab('CATALOG')}
                                         className="text-[10px] font-black uppercase italic text-orange-500 hover:underline"
@@ -550,9 +551,9 @@ export default function POSPage() {
                                     <div className="flex flex-col items-end gap-2 shrink-0">
                                         <div className="font-black text-slate-900 text-sm md:text-base italic tracking-tighter">${(item.price * item.quantity).toLocaleString()}</div>
                                         <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-2 py-1 border border-slate-100 shadow-inner">
-                                            <button onClick={() => updateQuantity(item.tempId, -1)} className="p-1 text-slate-400 hover:text-slate-900 active:scale-90 transition-all"><Minus size={14} /></button>
+                                            <button onClick={() => updateQuantity(item.tempId, -1)} className="p-1 text-slate-800 hover:text-slate-900 active:scale-90 transition-all"><Minus size={14} /></button>
                                             <span className="text-[11px] md:text-xs font-black text-slate-900 w-5 text-center">{item.quantity}</span>
-                                            <button onClick={() => updateQuantity(item.tempId, 1)} className="p-1 text-slate-400 hover:text-slate-900 active:scale-90 transition-all"><Plus size={14} /></button>
+                                            <button onClick={() => updateQuantity(item.tempId, 1)} className="p-1 text-slate-800 hover:text-slate-900 active:scale-90 transition-all"><Plus size={14} /></button>
                                         </div>
                                         <button onClick={() => removeFromCart(item.tempId)} className="p-1.5 text-slate-200 hover:text-red-500 transition-colors active:scale-110"><X size={16} /></button>
                                     </div>
@@ -565,7 +566,7 @@ export default function POSPage() {
                     <div className="p-4 md:p-5 bg-slate-50 border-t border-slate-100 space-y-3 md:space-y-4 overflow-y-auto max-h-[55vh] shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
                         {/* Totales */}
                         <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">
+                            <div className="flex justify-between text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest px-1">
                                 <span className="italic">SUBTOTAL ÓRDEN</span><span>${subtotal.toLocaleString()}</span>
                             </div>
                             {shippingCost > 0 && (
@@ -615,7 +616,7 @@ export default function POSPage() {
                         {cart.length > 0 && (
                             <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3 shadow-inner">
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Asignar Cliente</label>
+                                    <label className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em] italic">Asignar Cliente</label>
                                     {selectedCustomer && (
                                         <button onClick={() => setSelectedCustomer(null)} className="text-[8px] font-black uppercase text-red-500 hover:text-red-700 transition-colors">Limpiar x</button>
                                     )}
@@ -645,14 +646,14 @@ export default function POSPage() {
                                                         >
                                                             <div>
                                                                 <p className="font-black text-[11px] uppercase italic text-slate-900">{c.name}</p>
-                                                                <p className="text-[9px] font-bold text-slate-400">{c.phone || c.email}</p>
+                                                                <p className="text-[9px] font-bold text-slate-800">{c.phone || c.email}</p>
                                                             </div>
                                                             <ChevronRight size={14} className="text-slate-200" />
                                                         </button>
                                                     ))
                                                 ) : (
                                                     <div className="p-4 text-center">
-                                                        <p className="text-[10px] font-black text-slate-300 uppercase italic">Sin coincidencias para "{customerSearchTerm}"</p>
+                                                        <p className="text-[10px] font-black text-slate-900 uppercase italic">Sin coincidencias para "{customerSearchTerm}"</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -665,7 +666,7 @@ export default function POSPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-black text-[11px] uppercase italic truncate leading-none">{selectedCustomer.name}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">{selectedCustomer.phone || selectedCustomer.email}</p>
+                                            <p className="text-[9px] font-bold text-slate-800 mt-1 uppercase tracking-widest leading-none">{selectedCustomer.phone || selectedCustomer.email}</p>
                                         </div>
                                         <div className="bg-orange-500 px-2 py-1 rounded-lg text-[8px] font-black uppercase italic animate-pulse">
                                             En Sesión
@@ -678,7 +679,7 @@ export default function POSPage() {
                         {/* Despacho (Si hay ítems) */}
                         {SHOW_POS_DELIVERY && cart.length > 0 && (
                             <div className="relative animate-in slide-in-from-bottom-2 duration-500">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-2 block italic">Ubicación de Entrega</label>
+                                <label className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em] px-1 mb-2 block italic">Ubicación de Entrega</label>
 
                                 {selectedCustomer && (selectedCustomer.addresses || []).length > 0 && (
                                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2 pb-1">
@@ -690,7 +691,7 @@ export default function POSPage() {
                                                     handleShippingQuote({ address: a.address, lat: a.latitude, lng: a.longitude });
                                                 }}
                                                 className={`px-3 py-1.5 rounded-xl border-2 transition-all whitespace-nowrap flex flex-col items-start gap-0.5
-                                                ${shippingAddress === a.address ? 'bg-orange-100 border-orange-500 text-orange-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                                                ${shippingAddress === a.address ? 'bg-orange-100 border-orange-500 text-orange-600' : 'bg-white border-slate-100 text-slate-800 hover:border-slate-300'}`}
                                             >
                                                 <span className="text-[9px] font-black uppercase italic leading-none">{a.alias || 'Dirección'}</span>
                                                 <span className="text-[8px] font-bold uppercase truncate max-w-[100px]">{a.address}</span>
@@ -717,7 +718,7 @@ export default function POSPage() {
                         {/* Comentario para cocina */}
                         {cart.length > 0 && (
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 block italic flex items-center gap-2">
+                                <label className="text-[9px] font-black text-slate-800 uppercase tracking-[0.2em] px-1 block italic flex items-center gap-2">
                                     <MessageSquare size={10} className="text-orange-500" /> Notas para Cocina
                                 </label>
                                 <textarea
@@ -735,13 +736,13 @@ export default function POSPage() {
                         {paymentMethod === 'CASH' && (
                             <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex justify-between items-center px-1">
-                                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Total a Cobrar</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Total a Cobrar</span>
                                     <span className="text-sm font-black text-slate-800">${total.toLocaleString()}</span>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest px-1">Efectivo Recibido</label>
+                                    <label className="block text-[9px] font-black uppercase text-slate-800 tracking-widest px-1">Efectivo Recibido</label>
                                     <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">$</span>
+                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-800">$</span>
                                         <input
                                             type="text"
                                             value={cashReceived === 0 ? '' : cashReceived.toLocaleString()}
@@ -783,7 +784,7 @@ export default function POSPage() {
                                                     className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all active:scale-95
                                                         ${cashReceived === val
                                                             ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-100 scale-105'
-                                                            : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
+                                                            : 'bg-white border-slate-100 text-slate-800 hover:bg-slate-50'}`}
                                                 >
                                                     ${val.toLocaleString()}
                                                 </button>

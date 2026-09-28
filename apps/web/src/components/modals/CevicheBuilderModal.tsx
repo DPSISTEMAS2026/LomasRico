@@ -5,8 +5,7 @@ import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft,
 import { Product, ModifierGroup, ModifierOption } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
-import { fetchCatalog } from '../../services/api';
-import { categoryRole, cleanModifierLabel, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { canEnlargeBySize, channelOffersSizeUpgrade, cleanModifierLabel, filterModifiersForChannel, findSizeModifierGroup, isSuggestionRole, nextSizeUpgrade, normalizeDrinkModifiers, resolveModifierRole } from '@lomasrico/shared-types';
 
 interface CevicheBuilderModalProps {
     isOpen: boolean;
@@ -16,6 +15,7 @@ interface CevicheBuilderModalProps {
     availableVeggies?: { id: string; name: string }[];
     onConfirm?: (item: any) => void;
     onGoToCart?: () => void;
+    startInSuccess?: boolean;
 }
 
 export const CevicheBuilderModal = ({
@@ -26,11 +26,10 @@ export const CevicheBuilderModal = ({
     availableVeggies = [],
     onConfirm,
     onGoToCart,
+    startInSuccess = false,
 }: CevicheBuilderModalProps) => {
     const cartContext = useCart();
     const { session: tableSession } = useTableSession();
-    const [drinkSuggestions, setDrinkSuggestions] = useState<any[]>([]);
-    const [sideSuggestions, setSideSuggestions] = useState<any[]>([]);
     
     // UI State
     const [step, setStep] = useState(0);
@@ -38,7 +37,7 @@ export const CevicheBuilderModal = ({
     useEffect(() => {
         if (!isSuccess) return;
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'upsell-cta',hypothesisId:'H-CTA',location:'CevicheBuilderModal.tsx:success',message:'success buttons order',data:{primary:'seguir-comprando',secondary:'ver-pedido'},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'CevicheBuilderModal.tsx:success',message:'success buttons order',data:{primary:'seguir-comprando',secondary:'ver-pedido',startInSuccess,product:product.name},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [isSuccess]);
     const [isAdding, setIsAdding] = useState(false);
@@ -51,7 +50,11 @@ export const CevicheBuilderModal = ({
     // Upsell state
     const [originalFormatoId, setOriginalFormatoId] = useState<string | null>(null);
 
-    const modifiers = useMemo(() => normalizeDrinkModifiers(product) as ModifierGroup[], [product]);
+    const modifiers = useMemo(() => {
+        const channel = tableSession ? 'salon' : 'web';
+        const scoped = { ...product, modifiers: filterModifiersForChannel(product.modifiers, channel) };
+        return normalizeDrinkModifiers(scoped) as ModifierGroup[];
+    }, [product, tableSession]);
     const hasDynamicModifiers = modifiers.length > 0;
 
     /**
@@ -66,7 +69,8 @@ export const CevicheBuilderModal = ({
         const quick: ModifierGroup[] = [];
 
         modifiers.forEach(group => {
-            if (tableSession && !isDishCoreModifier(group.groupName, group.displayName)) {
+            if (isSuggestionRole(group.role, group.groupName, group.displayName)) {
+                main.push(group);
                 return;
             }
             const isOptional = group.minSelections === 0;
@@ -87,9 +91,13 @@ export const CevicheBuilderModal = ({
     // Setup initial selections based on defaults
     useEffect(() => {
         if (isOpen) {
-            setIsSuccess(false);
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'CevicheBuilderModal.tsx:web',message:'purchase modifier order',data:{product:product.name,channel:tableSession?'qr':'web',startInSuccess,showedSuccess:!!startInSuccess,openedCheckout:false,steps:mainSteps.map((g)=>({n:g.displayName||g.groupName,suggestion:isSuggestionRole(g.role,g.groupName,g.displayName)})),extrasInSteps:mainSteps.some((g)=>isSuggestionRole(g.role,g.groupName,g.displayName)),emptyBuilder:hasDynamicModifiers&&mainSteps.length===0,hasDynamicModifiers},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            setIsSuccess(!!startInSuccess);
             setSearchQuery('');
             setQuantity(1);
+            if (startInSuccess) return;
             
             if (hasDynamicModifiers) {
                 setStep(0);
@@ -103,37 +111,12 @@ export const CevicheBuilderModal = ({
                 setSelections(initial);
             }
         }
-    }, [product, isOpen, hasDynamicModifiers]);
+    }, [product, isOpen, hasDynamicModifiers, mainSteps, quickToggles, tableSession, startInSuccess]);
 
     // Reset search when step changes
     useEffect(() => {
         setSearchQuery('');
     }, [step]);
-
-    useEffect(() => {
-        if (!isOpen || !tableSession) {
-            setDrinkSuggestions([]);
-            return;
-        }
-        fetchCatalog().then((catalog: any[]) => {
-            const pick = (role: 'SIDE' | 'DRINK') => {
-                const seen = new Set<string>();
-                return catalog.filter((p: any) => {
-                    if (p.available === false || categoryRole(p.category) !== role) return false;
-                    if (seen.has(p.name)) return false;
-                    seen.add(p.name);
-                    return true;
-                }).slice(0, 8);
-            };
-            const drinks = pick('DRINK');
-            const sides = pick('SIDE');
-            setDrinkSuggestions(drinks);
-            setSideSuggestions(sides);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K9',location:'CevicheBuilderModal.tsx:suggestions',message:'dine-in suggestions after main dish',data:{drinks:drinks.length,sides:sides.length,coreSteps:(product.modifiers||[]).filter((g:any)=>isDishCoreModifier(g.groupName,g.displayName)).map((g:any)=>g.displayName||g.groupName),skipped:(product.modifiers||[]).filter((g:any)=>!isDishCoreModifier(g.groupName,g.displayName)).map((g:any)=>g.displayName||g.groupName)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-        }).catch(() => {});
-    }, [isOpen, tableSession]);
 
     // Logic helpers
     const currentModifier = hasDynamicModifiers && step < totalSteps
@@ -210,9 +193,9 @@ export const CevicheBuilderModal = ({
                 return;
             }
             
-            // If leaving step 0 and it's the Formato step, record the original choice
-            if (step === 0 && currentModifier?.groupName?.toLowerCase().includes('formato')) {
-                const choice = selections[currentModifier.groupId]?.[0] || null;
+            const leaving = currentModifier;
+            if (leaving && resolveModifierRole(leaving.groupName, leaving.displayName, leaving.role) === 'SIZE') {
+                const choice = selections[leaving.groupId]?.[0] || null;
                 setOriginalFormatoId(choice);
             }
             
@@ -295,7 +278,7 @@ export const CevicheBuilderModal = ({
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all">
+                    <button onClick={onClose} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-900 hover:bg-slate-50 transition-all">
                         <X size={20} />
                     </button>
                 </header>
@@ -309,8 +292,8 @@ export const CevicheBuilderModal = ({
                             <h3 className="text-3xl font-black italic tracking-tighter uppercase text-slate-900 mb-4">
                                 ¡Agregado con éxito!
                             </h3>
-                            <p className="text-slate-400 font-bold uppercase text-xs tracking-widest mb-10 max-w-xs mx-auto">
-                                Tu selección personalizada ha sido guardada en el carrito.
+                            <p className="text-slate-900 font-bold uppercase text-xs tracking-widest mb-10 max-w-xs mx-auto">
+                                {startInSuccess ? 'El producto se agregó al carrito.' : 'Tu selección personalizada ha sido guardada en el carrito.'}
                             </p>
                             <div className="flex flex-col gap-4">
                                 <button 
@@ -321,7 +304,7 @@ export const CevicheBuilderModal = ({
                                 </button>
                                 <button 
                                     onClick={onGoToCart}
-                                    className="bg-white text-slate-400 border-2 border-slate-100 w-full py-4 rounded-[2rem] font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:border-slate-300 hover:text-slate-600 transition-all"
+                                    className="bg-white text-slate-900 border-2 border-slate-100 w-full py-4 rounded-[2rem] font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:border-slate-300 hover:text-[#f2642e] transition-all"
                                 >
                                     <ShoppingBag size={16} />
                                     Ver mi Pedido
@@ -357,7 +340,7 @@ export const CevicheBuilderModal = ({
                                         </h3>
                                         <div className="flex items-center gap-2 mt-1">
                                             <Info size={12} className="text-orange-400" />
-                                            <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em] italic">
+                                            <p className="text-slate-900 font-bold uppercase text-[9px] tracking-[0.2em] italic">
                                                 {currentModifier.type === 'SINGLE_SELECT' 
                                                     ? 'Elige 1 de la lista' 
                                                     : currentModifier.minSelections > 0 
@@ -372,7 +355,7 @@ export const CevicheBuilderModal = ({
                                         {/* Search Input */}
                                         {currentModifier.options.length > 5 && (
                                             <div className="relative mb-2">
-                                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
+                                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-900">
                                                     <Search size={14} />
                                                 </div>
                                                 <input
@@ -380,12 +363,12 @@ export const CevicheBuilderModal = ({
                                                     placeholder={`Buscar en ${currentModifier.displayName.toLowerCase()}...`}
                                                     value={searchQuery}
                                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none focus:border-orange-200 transition-all placeholder:text-slate-300"
+                                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 pl-11 pr-4 text-xs font-bold text-slate-900 outline-none focus:border-orange-200 transition-all placeholder:text-slate-700"
                                                 />
                                                 {searchQuery && (
                                                     <button 
                                                         onClick={() => setSearchQuery('')}
-                                                        className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-orange-500"
+                                                        className="absolute inset-y-0 right-4 flex items-center text-slate-900 hover:text-orange-500"
                                                     >
                                                         <X size={14} />
                                                     </button>
@@ -412,7 +395,7 @@ export const CevicheBuilderModal = ({
                                                             ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
                                                             : isSelected 
                                                             ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-900/10' 
-                                                            : 'bg-white border-slate-50 text-slate-500 hover:border-orange-200'
+                                                            : 'bg-white border-slate-50 text-slate-900 hover:border-orange-200'
                                                         }`}
                                                     >
                                                         <div className="flex items-center gap-4">
@@ -446,12 +429,12 @@ export const CevicheBuilderModal = ({
                                             })
                                         ) : (
                                             <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-900">
                                                     <Search size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-black italic uppercase text-xs text-slate-700 tracking-tight">No hay resultados</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Intenta con otra palabra</p>
+                                                    <p className="font-black italic uppercase text-xs text-slate-900 tracking-tight">No hay resultados</p>
+                                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-1">Intenta con otra palabra</p>
                                                 </div>
                                                 <button 
                                                     onClick={() => setSearchQuery('')}
@@ -471,7 +454,7 @@ export const CevicheBuilderModal = ({
                                         <h3 className="text-3xl font-black italic tracking-tighter uppercase text-slate-900">
                                             REVISA TU PEDIDO
                                         </h3>
-                                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">
+                                        <p className="text-slate-900 font-bold uppercase text-[10px] tracking-widest mt-1">
                                             Todo listo para sumarlo al carrito
                                         </p>
                                     </div>
@@ -489,7 +472,7 @@ export const CevicheBuilderModal = ({
                                                         {selectedIds.map(optId => {
                                                             const opt = group.options.find(o => o.id === optId);
                                                             return (
-                                                                <span key={optId} className="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm border border-slate-100">
+                                                                <span key={optId} className="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-900 shadow-sm border border-slate-100">
                                                                     {opt?.name}
                                                                     {opt && opt.priceAdjustment !== 0 && (
                                                                         <span className="ml-1 text-orange-500 text-[10px]">
@@ -507,137 +490,50 @@ export const CevicheBuilderModal = ({
 
                                     {/* Dynamic Upsell Formato */}
                                     {(() => {
-                                        const formatoGroup = mainSteps.find(g => g.groupName?.toLowerCase().includes('formato'));
-                                        if (!formatoGroup) return null;
-                                        const selectedOptId = (selections[formatoGroup.groupId] || [])[0];
-                                        if (!selectedOptId) return null;
-                                        
-                                        const sortedOptions = [...formatoGroup.options].sort((a,b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-                                        const currentIndex = sortedOptions.findIndex(o => o.id === selectedOptId);
-                                        if (currentIndex === -1) return null;
-
-                                        // Undo state?
-                                        const isUpsold = originalFormatoId && selectedOptId !== originalFormatoId;
-
-                                        const canUpgrade = currentIndex < sortedOptions.length - 1;
-                                        const nextOpt = canUpgrade ? sortedOptions[currentIndex + 1] : null;
-                                        const currentOpt = sortedOptions[currentIndex];
-                                        const upgradePrice = nextOpt ? Number(nextOpt.priceAdjustment) - Number(currentOpt.priceAdjustment) : 0;
-
-                                        // If they can't upgrade anymore AND they didn't upsell, show nothing.
-                                        if (!canUpgrade && !isUpsold) return null;
-
+                                        const canEnlarge = !tableSession && channelOffersSizeUpgrade('web') && canEnlargeBySize(product.category, product.name);
+                                        const formatoGroup = findSizeModifierGroup(mainSteps);
+                                        const selectedOptId = formatoGroup ? (selections[formatoGroup.groupId] || [])[0] : null;
+                                        const upgrade = nextSizeUpgrade(formatoGroup, selectedOptId);
+                                        const isUpsold = !!(originalFormatoId && selectedOptId && selectedOptId !== originalFormatoId);
+                                        // #region agent log
+                                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:web-summary',message:'summary is last screen',data:{product:product.name,addonsOnSummary:false,suggestionSteps:mainSteps.filter((g)=>isSuggestionRole(g.role,g.groupName,g.displayName)).map((g)=>g.displayName||g.groupName),canEnlarge,willShow:!!(canEnlarge && formatoGroup && (upgrade || isUpsold))},timestamp:Date.now()})}).catch(()=>{});
+                                        // #endregion
+                                        if (!canEnlarge || !formatoGroup || (!upgrade && !isUpsold)) return null;
                                         return (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Plus size={14} className="text-orange-500" />
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">
-                                                        {isUpsold ? '¿CAMBIASTE DE OPINIÓN?' : '¿MUCHA HAMBRE?'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-col gap-2">
-                                                    {canUpgrade && !isUpsold && (
-                                                        <button
-                                                            onClick={() => toggleOption(formatoGroup.groupId, nextOpt!.id, 'SINGLE_SELECT', 1)}
-                                                            className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-orange-50/50 hover:bg-orange-100 hover:border-orange-300 flex items-center justify-between transition-all active:scale-[0.98] animate-in slide-in-from-bottom-2"
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-orange-200 text-orange-600 flex items-center justify-center p-1 font-black">
-                                                                    <ChevronRight size={16} />
-                                                                </div>
-                                                                <span className="font-black italic uppercase text-xs tracking-tighter text-orange-700 text-left leading-tight">
-                                                                    AGRANDAR A <span className="text-sm">{nextOpt!.name}</span>
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-white text-orange-600 shadow-sm border border-orange-100">
-                                                                +${upgradePrice.toLocaleString()}
-                                                            </span>
-                                                        </button>
-                                                    )}
-                                                    
-                                                    {isUpsold && originalFormatoId && (
-                                                        <button
-                                                            onClick={() => toggleOption(formatoGroup.groupId, originalFormatoId, 'SINGLE_SELECT', 1)}
-                                                            className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 flex items-center justify-between transition-all active:scale-[0.98] animate-in slide-in-from-bottom-2"
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center p-1 font-black">
-                                                                    <Minus size={16} />
-                                                                </div>
-                                                                <span className="font-black italic uppercase text-xs tracking-tighter text-slate-600 text-left leading-tight">
-                                                                    DESHACER AGRANDADO
-                                                                </span>
-                                                            </div>
-                                                        </button>
-                                                    )}
-                                                </div>
+                                            <div className="space-y-2">
+                                                {upgrade && !isUpsold && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleOption(formatoGroup.groupId, upgrade.next.id, 'SINGLE_SELECT', 1)}
+                                                        className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 flex items-center justify-between"
+                                                    >
+                                                        <span className="font-black italic uppercase text-sm text-orange-700">
+                                                            Agrandar a {upgrade.next.name}
+                                                        </span>
+                                                        <span className="text-xs font-black text-orange-600">
+                                                            +${upgrade.extra.toLocaleString()}
+                                                        </span>
+                                                    </button>
+                                                )}
+                                                {isUpsold && originalFormatoId && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleOption(formatoGroup.groupId, originalFormatoId, 'SINGLE_SELECT', 1)}
+                                                        className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 flex items-center justify-between"
+                                                    >
+                                                        <span className="font-black italic uppercase text-sm text-slate-900">Volver al tamaño anterior</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         );
                                     })()}
-
-                                    {tableSession && (drinkSuggestions.length > 0 || sideSuggestions.length > 0) && (
-                                        <div className="space-y-4">
-                                            {sideSuggestions.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Acompañantes</p>
-                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                                                        {sideSuggestions.map((side) => (
-                                                            <button
-                                                                key={side.id}
-                                                                type="button"
-                                                                onClick={() => cartContext.addToCart({
-                                                                    productId: side.id,
-                                                                    variantId: 'default',
-                                                                    name: side.name,
-                                                                    price: Number(side.price),
-                                                                    quantity: 1,
-                                                                    modifiers: { selectedProteins: [], removedIngredients: [] },
-                                                                    imageUrl: side.imageUrl,
-                                                                })}
-                                                                className="shrink-0 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-left"
-                                                            >
-                                                                <p className="text-[10px] font-black uppercase italic text-slate-800">{side.name}</p>
-                                                                <p className="text-[10px] font-bold text-orange-500">${Number(side.price).toLocaleString()}</p>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {drinkSuggestions.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Bebestibles</p>
-                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                                                        {drinkSuggestions.map((drink) => (
-                                                            <button
-                                                                key={drink.id}
-                                                                type="button"
-                                                                onClick={() => cartContext.addToCart({
-                                                                    productId: drink.id,
-                                                                    variantId: 'default',
-                                                                    name: drink.name,
-                                                                    price: Number(drink.price),
-                                                                    quantity: 1,
-                                                                    modifiers: { selectedProteins: [], removedIngredients: [] },
-                                                                    imageUrl: drink.imageUrl,
-                                                                })}
-                                                                className="shrink-0 px-3 py-2 rounded-xl bg-orange-50 border border-orange-100 text-left"
-                                                            >
-                                                                <p className="text-[10px] font-black uppercase italic text-slate-800">{drink.name}</p>
-                                                                <p className="text-[10px] font-bold text-orange-500">${Number(drink.price).toLocaleString()}</p>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
 
                                     {/* Quick Toggles Section (optional single-option groups) */}
                                     {quickToggles.length > 0 && !tableSession && (
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-2">
                                                 <Plus size={14} className="text-orange-500" />
-                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">
+                                                <p className="text-[10px] font-black uppercase text-slate-900 tracking-widest italic">
                                                     ¿Quieres agregar algo más?
                                                 </p>
                                             </div>
@@ -663,14 +559,12 @@ export const CevicheBuilderModal = ({
                                                                 }`}>
                                                                     {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
                                                                 </div>
-                                                                <span className={`font-black italic uppercase text-xs tracking-tighter ${isSelected ? 'text-orange-600' : 'text-slate-500'}`}>
+                                                                <span className="font-black italic uppercase text-xs tracking-tighter text-slate-900">
                                                                     {group.displayName}
                                                                 </span>
                                                             </div>
                                                             {opt.priceAdjustment !== 0 && (
-                                                                <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${
-                                                                    isSelected ? 'bg-orange-100 text-orange-600' : 'bg-slate-50 text-slate-400'
-                                                                }`}>
+                                                                <span className="text-[10px] font-black text-orange-500">
                                                                     +${Number(opt.priceAdjustment).toLocaleString()}
                                                                 </span>
                                                             )}
@@ -685,7 +579,7 @@ export const CevicheBuilderModal = ({
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200">
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Cantidad</span>
+                                                <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Cantidad</span>
                                                 {product.maxQuantity != null && product.maxQuantity < 999 && (
                                                     <span className={`text-[9px] font-black uppercase tracking-wider mt-0.5 ${
                                                         product.maxQuantity <= 3 ? 'text-amber-500' : 'text-slate-300'
@@ -698,7 +592,7 @@ export const CevicheBuilderModal = ({
                                                 <button
                                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                                     className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black text-lg transition-all active:scale-90 ${
-                                                        quantity <= 1 ? 'border-slate-100 text-slate-200 cursor-not-allowed' : 'border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
+                                                        quantity <= 1 ? 'border-slate-100 text-slate-200 cursor-not-allowed' : 'border-slate-200 text-slate-900 hover:border-orange-300 hover:text-orange-500'
                                                     }`}
                                                     disabled={quantity <= 1}
                                                 >
@@ -714,7 +608,7 @@ export const CevicheBuilderModal = ({
                                                     className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black text-lg transition-all active:scale-90 ${
                                                         product.maxQuantity != null && quantity >= product.maxQuantity
                                                             ? 'border-red-100 text-red-300 cursor-not-allowed bg-red-50'
-                                                            : 'border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-500'
+                                                            : 'border-slate-200 text-slate-900 hover:border-orange-300 hover:text-orange-500'
                                                     }`}
                                                 >
                                                     <Plus size={16} strokeWidth={3} />
@@ -730,15 +624,15 @@ export const CevicheBuilderModal = ({
 
                                     {/* Total */}
                                     <div className="flex justify-between items-center">
-                                        <span className="font-black italic uppercase text-sm text-slate-400 tracking-tighter">Total Personalizado</span>
-                                        <span className="text-2xl font-black italic text-slate-900 tracking-tighter">
+                                        <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Total Personalizado</span>
+                                        <span className="text-2xl font-black italic text-[#f2642e] tracking-tighter">
                                             ${(finalPrice * quantity).toLocaleString()}
                                         </span>
                                     </div>
                                     
                                     <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-start gap-4">
                                         <ChefHat className="text-orange-500 shrink-0" size={24} />
-                                        <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic">
+                                        <p className="text-[10px] font-bold text-slate-900 leading-relaxed uppercase italic">
                                             Nuestros chefs prepararán tu pedido siguiendo exactamente las personalizaciones que has seleccionado. ¡Buen provecho!
                                         </p>
                                     </div>
@@ -754,7 +648,7 @@ export const CevicheBuilderModal = ({
                         {step > 0 && (
                             <button 
                                 onClick={handleBack}
-                                className="w-16 h-16 rounded-[1.5rem] border-2 border-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all hover:border-slate-200"
+                                className="w-16 h-16 rounded-[1.5rem] border-2 border-slate-50 flex items-center justify-center text-slate-900 hover:text-[#f2642e] transition-all hover:border-slate-200"
                             >
                                 <ChevronLeft size={24} />
                             </button>

@@ -50,7 +50,7 @@ export default function SalonPage() {
                     <button
                         type="button"
                         onClick={load}
-                        className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-900"
+                        className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-800 hover:text-slate-900"
                     >
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
@@ -80,7 +80,7 @@ export default function SalonPage() {
                                 <div className={`absolute inset-6 rounded-[1.6rem] border-2 ${bill || occupied ? 'border-white/30' : 'border-slate-100'}`} />
                                 <div className="relative h-full flex flex-col justify-between">
                                     <div>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest ${occupied && !bill ? 'text-white/70' : bill ? 'text-slate-800' : 'text-slate-400'}`}>
+                                        <p className={`text-[10px] font-black uppercase tracking-widest ${occupied && !bill ? 'text-white/70' : bill ? 'text-slate-800' : 'text-slate-800'}`}>
                                             {billText}
                                         </p>
                                         <p className="text-4xl md:text-5xl font-black italic tracking-tighter leading-none mt-1">

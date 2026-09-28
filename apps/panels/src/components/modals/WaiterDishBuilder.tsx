@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, X, Search } from 'lucide-react';
 import { Product, ModifierGroup } from '../../types';
-import { cleanModifierLabel, drinkTicketName, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { channelOffersSizeUpgrade, cleanModifierLabel, drinkTicketName, filterModifiersForChannel, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 function isWaiterCoreGroup(group: ModifierGroup) {
     if (isDishCoreModifier(group.groupName, group.displayName)) return true;
@@ -25,7 +25,10 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
     const [search, setSearch] = useState('');
 
     const groups = useMemo(
-        () => (normalizeDrinkModifiers(product) as ModifierGroup[]).filter(isWaiterCoreGroup),
+        () => (normalizeDrinkModifiers({
+            ...product,
+            modifiers: filterModifiersForChannel(product.modifiers, 'salon'),
+        }) as ModifierGroup[]).filter(isWaiterCoreGroup),
         [product],
     );
 
@@ -40,7 +43,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
         });
         setSelections(initial);
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'drinks',hypothesisId:'H-DRINK',location:'WaiterDishBuilder.tsx:open',message:'drink groups normalized',data:{product:product.name,category:product.category,raw:(product.modifiers||[]).map((g)=>({name:g.displayName||g.groupName,min:g.minSelections,max:g.maxSelections,opts:g.options.map((o)=>o.name)})),shown:groups.map((g)=>({name:g.displayName||g.groupName,min:g.minSelections,max:g.maxSelections,opts:g.options.map((o)=>o.name)}))},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'WaiterDishBuilder.tsx:open',message:'salon builder policy',data:{product:product.name,sizeUpgrade:channelOffersSizeUpgrade('salon'),perItemAddons:false,shown:groups.map((g)=>({name:g.displayName||g.groupName}))},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [isOpen, product.id, groups]);
 
@@ -111,7 +114,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-6">
                     {groups.length === 0 && (
-                        <p className="text-sm font-bold text-slate-500">Este plato no necesita más datos. Anótalo y sigue.</p>
+                        <p className="text-sm font-bold text-slate-900">Este plato no necesita más datos. Anótalo y sigue.</p>
                     )}
                     {groups.map((group) => {
                         const options = q
@@ -121,7 +124,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
                             <section key={group.groupId}>
                                 <div className="flex items-end justify-between mb-2">
                                     <h3 className="font-black italic uppercase">{group.displayName || group.groupName}</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                    <p className="text-[10px] font-bold text-slate-900 uppercase">
                                         {group.type === 'SINGLE_SELECT' ? 'Elige 1' : `${group.minSelections || 0}–${group.maxSelections || group.options.length}`}
                                     </p>
                                 </div>

@@ -5,7 +5,7 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webMenuSectionId, groupProductsByWebSection } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webMenuSectionId, groupProductsByWebSection, filterModifiersForChannel } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
@@ -104,6 +104,7 @@ export const ProductGrid = () => {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [directAdded, setDirectAdded] = useState(false);
     const [availableProteins, setAvailableProteins] = useState<{ id: string; name: string }[]>([]);
 
 
@@ -118,8 +119,15 @@ export const ProductGrid = () => {
                     const names = list.slice(0, 8).map((p: any) => p.name);
                     const cats = [...new Set(list.map((p: any) => p.category))];
                     const hasLegacy = list.some((p: any) => /^PROMO [123]$/i.test(p.name || ''));
+                    const leftover = groupProductsByWebSection(list).filter((s) => String(s.id).startsWith('other-')).map((s) => ({ id: s.id, names: s.products.map((p) => p.name) }));
+                    const missing = list.filter((p: any) => !p.name || p.price == null || Number.isNaN(Number(p.price))).map((p: any) => p.name);
+                    const emptyAfterFilter = (channel: 'web' | 'salon') => list.filter((p: any) => {
+                        const raw = (p.modifiers || []).some((m: any) => m.options?.length);
+                        const vis = filterModifiersForChannel(p.modifiers, channel).some((m: any) => m.options?.length);
+                        return raw && !vis;
+                    }).map((p: any) => p.name);
                     // #region agent log
-                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'api',count:list.length,names,cats,hasLegacy,api:API_URL},timestamp:Date.now()})}).catch(()=>{});
+                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-health',hypothesisId:'H-A',location:'ProductGrid.tsx:fetch',message:'catalog health',data:{source:'api',count:list.length,names,cats,hasLegacy,api:API_URL,leftover,missing,emptyAfterWeb:emptyAfterFilter('web'),emptyAfterQr:emptyAfterFilter('salon'),sections:groupProductsByWebSection(list).map((s)=>({id:s.id,name:s.name,n:s.products.length}))},timestamp:Date.now()})}).catch(()=>{});
                     // #endregion
                     setProducts(list);
                 } else {
@@ -204,11 +212,15 @@ export const ProductGrid = () => {
         // Guard: no permitir agregar productos agotados
         if (product.available === false) return;
 
-        // Only open builder modal if there are modifiers with actual options
-        const hasRealModifiers = product.modifiers && 
-            product.modifiers.some(m => m.options && m.options.length > 0);
+        const channel = tableSession ? 'salon' : 'web';
+        const visibleMods = filterModifiersForChannel(product.modifiers, channel);
+        const hasRealModifiers = visibleMods.some(m => m.options && m.options.length > 0);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'ProductGrid.tsx:add',message:'add product path',data:{name:product.name,channel,rawGroups:(product.modifiers||[]).map((m)=>m.displayName||m.groupName),visibleGroups:visibleMods.map((m)=>m.displayName||m.groupName),opensBuilder:hasRealModifiers,showsAddedNotice:!hasRealModifiers,openedCheckout:false},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         if (hasRealModifiers) {
+            setDirectAdded(false);
             setSelectedProduct(product);
             setIsModalOpen(true);
         } else {
@@ -222,6 +234,9 @@ export const ProductGrid = () => {
                 imageUrl: product.imageUrl,
                 maxQuantity: product.maxQuantity
             });
+            setDirectAdded(true);
+            setSelectedProduct(product);
+            setIsModalOpen(true);
         }
     };
 
@@ -233,8 +248,8 @@ export const ProductGrid = () => {
 
     if (products.length === 0) return (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-            <p className="text-sm font-black uppercase tracking-widest text-slate-500">El menú se está cargando desde el local</p>
-            <p className="mt-2 text-xs text-slate-400">Si esto no cambia, la API no está disponible.</p>
+            <p className="text-sm font-black uppercase tracking-widest text-slate-900">El menú se está cargando desde el local</p>
+            <p className="mt-2 text-xs text-slate-900">Si esto no cambia, la API no está disponible.</p>
         </div>
     );
 
@@ -269,7 +284,7 @@ export const ProductGrid = () => {
                             </h2>
                         </div>
                         {currentCat && (
-                            <span className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-widest bg-white border border-slate-100 px-3 py-1 rounded-full">
+                            <span className="ml-auto text-xs font-bold text-slate-900 uppercase tracking-widest bg-white border border-slate-100 px-3 py-1 rounded-full">
                                 {displayProducts.length} opc.
                             </span>
                         )}
@@ -334,13 +349,17 @@ export const ProductGrid = () => {
             {selectedProduct && (
                 <CevicheBuilderModal
                     isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setDirectAdded(false);
+                    }}
                     product={selectedProduct}
                     availableProteins={availableProteins}
                     availableVeggies={VEGGIES}
+                    startInSuccess={directAdded}
                     onGoToCart={() => {
                         setIsModalOpen(false);
-                        // Disparamos un evento global para que la página principal abra el checkout
+                        setDirectAdded(false);
                         window.dispatchEvent(new CustomEvent('open-checkout'));
                     }}
                 />

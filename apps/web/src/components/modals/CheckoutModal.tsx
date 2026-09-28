@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, fetchCatalog } from '../../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import { categoryRole, cleanModifierLabel } from '@lomasrico/shared-types';
-
-// Categorías cuyos productos aparecen como upsell
-const UPSELL_CATEGORIES = ['EXTRAS', 'BEBIDAS', 'AGREGADOS', 'LIMONADAS'];
+import { cleanModifierLabel } from '@lomasrico/shared-types';
 
 interface Props {
     isOpen: boolean;
@@ -26,7 +23,7 @@ if (typeof window !== 'undefined') {
 
 export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const { user, isLoggedIn } = useAuth();
-    const { items, clearCart, removeFromCart, updateQuantity, addToCart } = useCart();
+    const { items, clearCart, removeFromCart, updateQuantity } = useCart();
     const { session: tableSession } = useTableSession();
     const dineIn = !!tableSession;
 
@@ -44,10 +41,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [status, setStatus] = useState<'idle' | 'checking' | 'ready' | 'error' | 'out-of-range' | 'paying' | 'success'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
     const [preferenceId, setPreferenceId] = useState<string | null>(null);
-
-    // Dynamic Upsell
-    const [upsellProducts, setUpsellProducts] = useState<any[]>([]);
-    const upsellRef = useRef<HTMLDivElement>(null);
     const [tableBill, setTableBill] = useState<any>(null);
     const [billMode, setBillMode] = useState<'ALL' | 'MINE'>('ALL');
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -141,47 +134,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     };
 
     useEffect(() => {
-        if (isOpen) {
-            fetchCatalog().then((catalog: any[]) => {
-                const unique = (role: 'DRINK' | 'SIDE') => {
-                    const seen = new Set<string>();
-                    return catalog.filter((p: any) => {
-                        if (p.available === false || categoryRole(p.category) !== role) return false;
-                        if (seen.has(p.name)) return false;
-                        seen.add(p.name);
-                        return true;
-                    });
-                };
-                const extras = catalog.filter((p: any) => {
-                    const cat = (p.category || '').toUpperCase();
-                    return p.available !== false && (cat.includes('EXTRAS') || cat.includes('AGREGADOS'));
-                });
-                const drinks = unique('DRINK');
-                const sides = unique('SIDE').slice(0, 6);
-                const upsells = dineIn ? [...drinks, ...sides] : [...extras, ...drinks];
-                setUpsellProducts(upsells);
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K9',location:'CheckoutModal.tsx:upsell',message:'checkout upsell built',data:{dineIn,drinkCount:drinks.length,sideCount:sides.length,extraCount:extras.length},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
-            }).catch(() => {});
-        }
+        if (!isOpen) return;
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CheckoutModal.tsx:upsell',message:'checkout dump off; extras live on each product',data:{dineIn,checkoutDump:false,perItemAddons:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
     }, [isOpen, dineIn]);
-
-    // Auto-scroll upsell strip
-    useEffect(() => {
-        if (!isOpen || upsellProducts.length <= 3) return;
-        const interval = setInterval(() => {
-            const el = upsellRef.current;
-            if (!el) return;
-            const maxScroll = el.scrollWidth - el.clientWidth;
-            if (el.scrollLeft >= maxScroll - 10) {
-                el.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                el.scrollBy({ left: 200, behavior: 'smooth' });
-            }
-        }, 4000);
-        return () => clearInterval(interval);
-    }, [isOpen, upsellProducts.length]);
 
     useEffect(() => {
         if (isOpen && isLoggedIn && user) {
@@ -398,7 +355,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     {/* Cart Items List */}
                     <div className="flex-none md:flex-1 overflow-visible md:overflow-y-auto px-6 md:px-8 py-2 space-y-4">
                         {items.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4 opacity-50">
+                            <div className="h-full flex flex-col items-center justify-center text-slate-900 gap-4">
                                 <ShoppingBag size={48} />
                                 <p className="font-black uppercase tracking-widest text-xs">Carrito Vacío</p>
                             </div>
@@ -422,11 +379,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
                                             <h4 className="font-black text-sm uppercase text-slate-900 leading-tight">{item.name}</h4>
-                                            <span className="font-black text-sm text-slate-900 ml-2">${(item.price * item.quantity).toLocaleString()}</span>
+                                            <span className="font-black text-sm text-[#f2642e] ml-2">${(item.price * item.quantity).toLocaleString()}</span>
                                         </div>
                                         {/* Legacy: protein names */}
                                         {item.modifiers?.selectedProteins?.length > 0 && (
-                                            <p className="text-[10px] text-slate-500 font-bold mt-1 line-clamp-1">
+                                            <p className="text-[10px] text-slate-900 font-bold mt-1 line-clamp-1">
                                                 {(item.modifiers.selectedProteinNames || item.modifiers.selectedProteins).join(', ')}
                                             </p>
                                         )}
@@ -436,7 +393,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                 {item.modifiers?.dynamicSelections
                                                     ?.filter((ds: any) => ds.selectedOptions?.length > 0)
                                                     .map((ds: any) => (
-                                                        <span key={ds.groupId} className="text-[9px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                                                        <span key={ds.groupId} className="text-[9px] bg-slate-100 text-slate-900 font-bold px-2 py-0.5 rounded-full">
                                                             {ds.selectedOptions.map((o: any) => o.name).join(', ')}
                                                         </span>
                                                     ))}
@@ -457,7 +414,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                             updateQuantity(item.tempId, item.quantity - 1);
                                                         }
                                                     }}
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 transition-all active:scale-90"
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-900 hover:border-red-300 hover:text-red-500 transition-all active:scale-90"
                                                 >
                                                     {item.quantity <= 1 ? <Trash2 size={12} /> : <span className="text-sm font-black leading-none">−</span>}
                                                 </button>
@@ -473,14 +430,14 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                     className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all active:scale-90 ${
                                                         item.maxQuantity != null && item.quantity >= item.maxQuantity
                                                             ? 'border-red-200 text-red-300 cursor-not-allowed bg-red-50'
-                                                            : 'border-slate-200 text-slate-400 hover:border-orange-300 hover:text-orange-500'
+                                                            : 'border-slate-200 text-slate-900 hover:border-orange-300 hover:text-orange-500'
                                                     }`}
                                                 >
                                                     <span className="text-sm font-black leading-none">+</span>
                                                 </button>
                                                 {item.maxQuantity != null && item.maxQuantity < 999 && (
                                                     <span className={`text-[8px] font-black uppercase tracking-wider ml-1 ${
-                                                        item.quantity >= item.maxQuantity ? 'text-red-400' : 'text-slate-300'
+                                                        item.quantity >= item.maxQuantity ? 'text-red-400' : 'text-slate-900'
                                                     }`}>
                                                         máx {item.maxQuantity}
                                                     </span>
@@ -488,7 +445,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                             </div>
                                             <button
                                                 onClick={() => removeFromCart(item.tempId)}
-                                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                                className="text-slate-900 hover:text-red-500 transition-colors"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -498,52 +455,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             ))
                         )}
                     </div>
-
-                                    {/* Upsell Strip — Dynamic from Catalog */}
-                    {upsellProducts.length > 0 && (
-                        <div className="p-6 bg-slate-50 border-t border-slate-100">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#f2642e] mb-3 ml-1">{dineIn ? 'ACOMPAÑANTES Y BEBESTIBLES' : '¿TE FALTA ALGO?'}</p>
-                            <div ref={upsellRef} className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
-                                {upsellProducts.map((u: any) => (
-                                    <button
-                                        key={u.id}
-                                        onClick={() => addToCart({
-                                            productId: u.id,
-                                            name: u.name,
-                                            price: u.variants?.[0]?.price ?? u.price ?? 0,
-                                            quantity: 1,
-                                            variantId: u.variants?.[0]?.id || 'default',
-                                            modifiers: { selectedProteins: [], removedIngredients: [] },
-                                            imageUrl: u.imageUrl,
-                                            maxQuantity: u.maxQuantity
-                                        })}
-                                        disabled={u.available === false}
-                                        className={`flex items-center gap-3 bg-white p-2 pr-4 rounded-xl border border-slate-100 shadow-sm min-w-[180px] shrink-0 group transition-all ${
-                                            u.available === false ? 'opacity-40 cursor-not-allowed' : 'hover:border-[#f2642e]/30'
-                                        }`}
-                                    >
-                                        <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden">
-                                            <img
-                                                src={u.imageUrl || `/assets/${u.name}.jpg`}
-                                                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/Logo Restaurante.png'; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-1.5 opacity-20'; }}
-                                                className="w-full h-full object-cover"
-                                                alt={u.name}
-                                            />
-                                        </div>
-                                        <div className="text-left min-w-0">
-                                            <p className="font-black text-[10px] uppercase text-slate-800 leading-tight group-hover:text-[#f2642e] transition-colors truncate">{u.name}</p>
-                                            <p className="font-bold text-[10px] text-slate-400">+ ${(u.variants?.[0]?.price ?? u.price ?? 0).toLocaleString()}</p>
-                                        </div>
-                                        <div className={`ml-auto w-6 h-6 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                                            u.available === false ? 'bg-red-100 text-red-300' : 'bg-slate-100 text-slate-400 group-hover:bg-[#f2642e] group-hover:text-white'
-                                        }`}>
-                                            <Plus size={12} strokeWidth={3} />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* RIGHT COLUMN: Actions & Summary */}
@@ -551,11 +462,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     {dineIn ? (
                         <div className="space-y-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estás en la mesa</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Estás en la mesa</p>
                             <div className="bg-white p-4 rounded-2xl border border-orange-100">
                                 <p className="text-xs font-black uppercase text-orange-500">Mesa {tableSession?.tableNumber}</p>
                                 <p className="text-lg font-black italic uppercase">{tableSession?.name}</p>
-                                <p className="text-xs font-bold text-slate-500 mt-1">
+                                <p className="text-xs font-bold text-slate-900 mt-1">
                                     Cuando lo tengas listo, envíalo a cocina. Te vamos a pedir que lo confirmes.
                                 </p>
                             </div>
@@ -576,7 +487,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                 <span>${Number(g.total).toLocaleString()}</span>
                                             </div>
                                             {g.items?.map((item: any) => (
-                                                <p key={item.id} className="text-[10px] font-bold text-slate-500">{item.quantity}x {item.name}</p>
+                                                <p key={item.id} className="text-[10px] font-bold text-slate-900">{item.quantity}x {item.name}</p>
                                             ))}
                                         </div>
                                     ))}
@@ -616,7 +527,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     <>
                     {/* Delivery Type Selector */}
                     <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">¿Cómo lo recibís?</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">¿Cómo lo recibes?</p>
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => handleDeliveryTypeChange('delivery')}
@@ -625,7 +536,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     : 'border-slate-200 bg-transparent opacity-60 hover:opacity-100'
                                     }`}
                             >
-                                <Truck size={16} className={deliveryType === 'delivery' ? 'text-[#f2642e]' : 'text-slate-400'} />
+                                <Truck size={16} className={deliveryType === 'delivery' ? 'text-[#f2642e]' : 'text-slate-900'} />
                                 <span className="font-black text-xs uppercase text-slate-800">Delivery</span>
                             </button>
                             <button
@@ -635,7 +546,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     : 'border-slate-200 bg-transparent opacity-60 hover:opacity-100'
                                     }`}
                             >
-                                <Store size={16} className={deliveryType === 'pickup' ? 'text-[#f2642e]' : 'text-slate-400'} />
+                                <Store size={16} className={deliveryType === 'pickup' ? 'text-[#f2642e]' : 'text-slate-900'} />
                                 <span className="font-black text-xs uppercase text-slate-800">Retiro</span>
                             </button>
                         </div>
@@ -643,7 +554,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     {/* Shipping Section — solo visible en Delivery */}
                     {deliveryType === 'delivery' && <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-400">
+                        <div className="flex items-center gap-2 text-slate-900">
                             <MapPin size={16} />
                             <span className="text-[10px] font-black uppercase tracking-widest">Dirección de Entrega</span>
                         </div>
@@ -652,11 +563,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         {!isLoggedIn ? (
                             <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-6 rounded-3xl text-center space-y-4">
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
-                                    <LogIn size={20} className="text-slate-400" />
+                                    <LogIn size={20} className="text-slate-900" />
                                 </div>
                                 <div className="space-y-1">
                                     <p className="font-black text-[10px] uppercase tracking-widest text-slate-900">¿Eres cliente?</p>
-                                    <p className="text-[10px] font-bold text-slate-400">Inicia sesión para usar tus direcciones guardadas y acumular puntos.</p>
+                                    <p className="text-[10px] font-bold text-slate-900">Inicia sesión para usar tus direcciones guardadas y acumular puntos.</p>
                                 </div>
                                 <button
                                     onClick={() => (window as any).openAuthModal?.()}
@@ -692,7 +603,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${selectedAddressId === addr.id ? 'bg-orange-50 text-[#f2642e]' : 'bg-slate-50 text-slate-400'}`}>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${selectedAddressId === addr.id ? 'bg-orange-50 text-[#f2642e]' : 'bg-slate-50 text-slate-900'}`}>
                                                     <MapPin size={18} />
                                                 </div>
                                                 <div className="min-w-0 flex-1">
@@ -700,7 +611,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                     {addr.isDefault ? (
                                                         <span className="text-[8px] font-black uppercase text-[#f2642e] tracking-widest mt-0.5 block italic">Dirección Principal</span>
                                                     ) : (
-                                                        <span className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mt-0.5 block italic">Dirección Guardada</span>
+                                                        <span className="text-[8px] font-bold uppercase text-slate-900 tracking-widest mt-0.5 block italic">Dirección Guardada</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -708,7 +619,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                                         <button
                                             onClick={() => { setShowNewAddressInput(true); setAddress(''); setCoordinates(undefined); setStatus('idle'); }}
-                                            className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black uppercase text-slate-400 hover:text-[#f2642e] hover:border-[#f2642e] hover:bg-orange-50/30 transition-all mt-2 group flex items-center justify-center gap-2 italic"
+                                            className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black uppercase text-slate-900 hover:text-[#f2642e] hover:border-[#f2642e] hover:bg-orange-50/30 transition-all mt-2 group flex items-center justify-center gap-2 italic"
                                         >
                                             <Plus size={14} className="group-hover:rotate-90 transition-transform" strokeWidth={3} />
                                             Agregar nueva ubicación manual
@@ -742,7 +653,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                             {savedAddresses.length > 0 && (
                                                 <button
                                                     onClick={() => { setShowNewAddressInput(false); const def = savedAddresses.find(a => a.isDefault) || savedAddresses[0]; handleSelectSavedAddress(def); }}
-                                                    className="px-4 py-4 bg-slate-100 text-slate-400 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 italic"
+                                                    className="px-4 py-4 bg-slate-100 text-slate-900 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 italic"
                                                 >
                                                     Atrás
                                                 </button>
@@ -776,7 +687,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             <Store size={18} className="text-green-600 shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-black text-xs uppercase text-green-700">Retiro en Tienda</p>
-                                <p className="text-xs font-medium text-slate-500 mt-0.5">Pagas online y retiras cuando quieras. Te avisamos cuando está listo.</p>
+                                <p className="text-xs font-medium text-slate-900 mt-0.5">Pagas online y retiras cuando quieras. Te avisamos cuando está listo.</p>
                             </div>
                         </div>
                     )}
@@ -794,19 +705,19 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     <div className="mt-auto pt-6 border-t border-slate-200/50 space-y-4">
                         <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-400">
+                            <div className="flex justify-between text-xs font-bold uppercase text-slate-900">
                                 <span>Subtotal</span>
-                                <span>${total.toLocaleString()}</span>
+                                <span className="text-[#f2642e]">${total.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-400">
+                            <div className="flex justify-between text-xs font-bold uppercase text-slate-900">
                                 <span>Envío</span>
-                                <span>{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString()}` : '--'}</span>
+                                <span className="text-[#f2642e]">{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString()}` : '--'}</span>
                             </div>
                         </div>
 
                         <div className="flex justify-between items-end border-t border-slate-200 pt-4">
                             <span className="text-sm font-black uppercase text-slate-900 tracking-tight">Total a Pagar</span>
-                            <span className="text-4xl font-[900] text-slate-900 tracking-tighter leading-none">${finalTotal.toLocaleString()}</span>
+                            <span className="text-4xl font-[900] text-[#f2642e] tracking-tighter leading-none">${finalTotal.toLocaleString()}</span>
                         </div>
 
                         {/* MercadoPago Wallet Brick */}
@@ -835,7 +746,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                         <p className="text-[10px] font-black uppercase text-[#009EE3] tracking-widest italic">Finalizar Pago</p>
                                         <button
                                             onClick={() => { setPreferenceId(null); setStatus('ready'); }}
-                                            className="text-[9px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors"
+                                            className="text-[9px] font-black uppercase text-slate-900 hover:text-red-500 transition-colors"
                                         >
                                             Cancelar
                                         </button>
@@ -850,7 +761,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                         <div className="flex flex-col items-center gap-2 mt-2">
                             <img src="/assets/mercadopago/horizontal.svg" alt="Mercado Pago" className="h-5 object-contain" />
-                            <p className="text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] italic">Transacción segura</p>
+                            <p className="text-[8px] font-black uppercase text-slate-900 tracking-[0.3em] italic">Transacción segura</p>
                         </div>
                     </div>
                     </>
@@ -865,7 +776,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter">
                         {isFirstPlate ? 'Confirma tu primer plato' : 'Confirma tu pedido'}
                     </h2>
-                    <p className="text-sm font-bold text-slate-500">
+                    <p className="text-sm font-bold text-slate-900">
                         Revisa cantidad, precio e ingredientes. Si está bien, va a cocina.
                     </p>
                     {items.map((item) => (
@@ -876,11 +787,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             </div>
                             {item.modifiers?.dynamicSelections?.map((g: any) =>
                                 g.selectedOptions?.map((o: any, i: number) => (
-                                    <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-500">+ {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}</p>
+                                    <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-900">+ {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}</p>
                                 ))
                             )}
                             {item.modifiers?.selectedProteinNames?.map((n: string, i: number) => (
-                                <p key={`p-${i}`} className="text-xs font-bold text-slate-500">+ {n}</p>
+                                <p key={`p-${i}`} className="text-xs font-bold text-slate-900">+ {n}</p>
                             ))}
                             {item.modifiers?.removedIngredients?.map((n: string, i: number) => (
                                 <p key={`r-${i}`} className="text-xs font-bold text-red-500">Sin {n}</p>
@@ -889,7 +800,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     ))}
                     <div className="flex justify-between items-end">
                         <span className="text-sm font-black uppercase">Total</span>
-                        <span className="text-3xl font-black italic">${total.toLocaleString()}</span>
+                        <span className="text-3xl font-black italic text-[#f2642e]">${total.toLocaleString()}</span>
                     </div>
                     {errorMsg && <p className="text-xs font-bold text-red-600">{errorMsg}</p>}
                     <div className="grid grid-cols-2 gap-2">

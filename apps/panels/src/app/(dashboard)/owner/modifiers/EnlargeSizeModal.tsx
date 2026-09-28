@@ -161,13 +161,13 @@ export default function EnlargeSizeModal({
                 </div>
 
                 {loading ? (
-                    <div className="py-10 flex justify-center text-slate-400">
+                    <div className="py-10 flex justify-center text-slate-800">
                         <Loader2 className="animate-spin" size={28} />
                     </div>
                 ) : (
                     <>
                         <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">Plato</span>
+                            <span className="text-xs font-black text-slate-900 block mb-1">Plato</span>
                             <select
                                 value={productId}
                                 onChange={(e) => pickProduct(e.target.value)}
@@ -182,7 +182,7 @@ export default function EnlargeSizeModal({
 
                         <div className="grid grid-cols-2 gap-3">
                             <label className="block">
-                                <span className="text-xs font-black text-slate-500 block mb-1">De</span>
+                                <span className="text-xs font-black text-slate-900 block mb-1">De</span>
                                 <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3">
                                     <input
                                         type="number"
@@ -190,11 +190,11 @@ export default function EnlargeSizeModal({
                                         onChange={(e) => setFromGrams(Number(e.target.value) || 0)}
                                         className="w-full py-3 bg-transparent font-black outline-none"
                                     />
-                                    <span className="text-xs font-black text-slate-400">g</span>
+                                    <span className="text-xs font-black text-slate-800">g</span>
                                 </div>
                             </label>
                             <label className="block">
-                                <span className="text-xs font-black text-slate-500 block mb-1">A</span>
+                                <span className="text-xs font-black text-slate-900 block mb-1">A</span>
                                 <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3">
                                     <input
                                         type="number"
@@ -202,15 +202,15 @@ export default function EnlargeSizeModal({
                                         onChange={(e) => setToGrams(Number(e.target.value) || 0)}
                                         className="w-full py-3 bg-transparent font-black outline-none"
                                     />
-                                    <span className="text-xs font-black text-slate-400">g</span>
+                                    <span className="text-xs font-black text-slate-800">g</span>
                                 </div>
                             </label>
                         </div>
 
                         <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">Extra</span>
+                            <span className="text-xs font-black text-slate-900 block mb-1">Extra</span>
                             <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3">
-                                <span className="text-sm font-black text-slate-400">$</span>
+                                <span className="text-sm font-black text-slate-800">$</span>
                                 <input
                                     type="number"
                                     value={extra}
@@ -228,7 +228,7 @@ export default function EnlargeSizeModal({
                                 type="button"
                                 onClick={save}
                                 disabled={saving || !productId}
-                                className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 ${productId ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'}`}
+                                className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 ${productId ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-800'}`}
                             >
                                 {saving && <Loader2 size={14} className="animate-spin" />}
                                 Listo

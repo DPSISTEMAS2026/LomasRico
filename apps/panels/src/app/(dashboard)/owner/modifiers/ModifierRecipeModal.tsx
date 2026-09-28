@@ -193,7 +193,7 @@ export default function ModifierRecipeModal({
 
                 <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
                     {loading ? (
-                        <div className="py-16 flex flex-col items-center text-slate-400">
+                        <div className="py-16 flex flex-col items-center text-slate-800">
                             <Loader2 className="animate-spin mb-3" size={32} />
                             <p className="text-xs font-bold">Cargando…</p>
                         </div>
@@ -236,7 +236,7 @@ export default function ModifierRecipeModal({
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-black text-slate-800">Ingredientes</span>
-                                    <label className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-slate-800">
                                         Peso del plato
                                         <input
                                             type="number"
@@ -259,14 +259,14 @@ export default function ModifierRecipeModal({
                                                 onChange={(e) => setItems((prev) => prev.map((row, i) => i === idx ? { ...row, quantity: e.target.value } : row))}
                                                 className="w-24 p-2 bg-white rounded-lg font-black text-sm text-slate-800 outline-none border border-slate-200 text-center"
                                             />
-                                            <span className="w-10 text-[10px] font-black uppercase text-slate-400">{item.unit}</span>
+                                            <span className="w-10 text-[10px] font-black uppercase text-slate-800">{item.unit}</span>
                                             <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="p-1.5 text-slate-300 hover:text-red-500">
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
                                     ))}
                                     {items.length === 0 && (
-                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400">
+                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-800">
                                             <ChefHat className="mx-auto mb-2" size={28} />
                                             <p className="text-sm font-bold">Elige un plato</p>
                                         </div>

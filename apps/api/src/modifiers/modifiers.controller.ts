@@ -26,8 +26,12 @@ export class ModifiersController {
             name: string;
             displayName: string;
             type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+            role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
             minSelections?: number;
             maxSelections?: number;
+            showOnWeb?: boolean;
+            showOnPos?: boolean;
+            showOnSalon?: boolean;
             sortOrder?: number;
             options?: { name: string; priceAdjustment?: number; isDefault?: boolean; sortOrder?: number }[];
         },
@@ -44,8 +48,12 @@ export class ModifiersController {
             name?: string;
             displayName?: string;
             type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+            role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
             minSelections?: number;
             maxSelections?: number;
+            showOnWeb?: boolean;
+            showOnPos?: boolean;
+            showOnSalon?: boolean;
             sortOrder?: number;
         },
     ) {
@@ -59,6 +67,41 @@ export class ModifiersController {
         @Body() data: { items: { id: string; sortOrder: number }[] },
     ) {
         return this.modifiersService.reorderOptions(id, data.items);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('apply-suggestions')
+    applySuggestions() {
+        return this.modifiersService.applyRoleSuggestions();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('create-with-products')
+    createWithProducts(
+        @Body()
+        data: {
+            displayName: string;
+            role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
+            type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+            minSelections?: number;
+            maxSelections?: number;
+            showOnWeb?: boolean;
+            showOnPos?: boolean;
+            showOnSalon?: boolean;
+            options?: { name: string; priceAdjustment?: number }[];
+            productIds: string[];
+        },
+    ) {
+        return this.modifiersService.createWithProducts(data);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('groups/:id/products')
+    replaceProductAssignments(
+        @Param('id') id: string,
+        @Body() data: { productIds: string[]; isRequired?: boolean },
+    ) {
+        return this.modifiersService.replaceProductAssignments(id, data.productIds || [], { isRequired: data.isRequired });
     }
 
     @UseGuards(JwtAuthGuard)

@@ -83,7 +83,7 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
                         {product.name}
                     </h3>
 
-                    <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
+                    <p className="text-slate-800 text-sm font-medium leading-relaxed mb-6">
                         {product.description}
                     </p>
                 </div>

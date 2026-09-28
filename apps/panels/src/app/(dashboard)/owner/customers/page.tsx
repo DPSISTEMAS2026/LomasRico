@@ -149,17 +149,17 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <div className="bg-white p-3 md:p-5 rounded-2xl border border-slate-100 min-w-0">
-                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest">Total</p>
+                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest">Total</p>
                     <p className="text-lg md:text-3xl font-black italic tracking-tighter text-slate-900 truncate">{customers.length}</p>
                 </div>
                 <div className="bg-white p-3 md:p-5 rounded-2xl border border-slate-100 min-w-0">
-                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest">Puntos</p>
+                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest">Puntos</p>
                     <p className="text-lg md:text-3xl font-black italic tracking-tighter text-slate-900 truncate">
                         {customers.reduce((acc, c) => acc + (c.loyaltyPoints || 0), 0).toLocaleString()}
                     </p>
                 </div>
                 <div className="bg-white p-3 md:p-5 rounded-2xl border border-slate-100 min-w-0">
-                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest">Riesgo</p>
+                    <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest">Riesgo</p>
                     <p className="text-lg md:text-3xl font-black italic tracking-tighter text-slate-900 truncate">
                         {customers.filter(c => c.customerTag === 'En Riesgo').length}
                     </p>
@@ -180,7 +180,7 @@ export default function CustomersPage() {
                             fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'clientes-tab'})}).catch(()=>{});
                             // #endregion
                         }}
-                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] md:text-xs tracking-tight ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] md:text-xs tracking-tight ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >
                         {t.label}
                     </button>
@@ -195,7 +195,7 @@ export default function CustomersPage() {
                         <h2 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-900">
                             Aviso de reapertura
                         </h2>
-                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 max-w-2xl">
+                        <p className="text-slate-900 text-xs md:text-sm font-medium mt-1 max-w-2xl">
                             Canje de puntos queda apagado. Cuando quieras, sincronizamos la lista y mandamos el correo del nuevo sitio y los puntos.
                         </p>
                     </div>
@@ -206,15 +206,15 @@ export default function CustomersPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
                     <div className="bg-slate-50 rounded-2xl p-3">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Clientes locales</p>
+                        <p className="text-[8px] font-black uppercase text-slate-800 tracking-widest">Clientes locales</p>
                         <p className="text-lg font-black italic text-slate-900">{brevo?.localWithEmail ?? '—'}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-3">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Lista Brevo</p>
+                        <p className="text-[8px] font-black uppercase text-slate-800 tracking-widest">Lista Brevo</p>
                         <p className="text-lg font-black italic text-slate-900">{brevo?.listCount ?? '—'}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-3 col-span-2">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Remitente</p>
+                        <p className="text-[8px] font-black uppercase text-slate-800 tracking-widest">Remitente</p>
                         <p className="text-sm font-bold text-slate-700 truncate">{brevo?.senderEmail || 'Sin remitente verificado'}</p>
                     </div>
                 </div>
@@ -254,7 +254,7 @@ export default function CustomersPage() {
             {tab === 'list' && (
             <>
             <div className="relative">
-                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800" />
                 <input
                     type="text"
                     placeholder="Buscar por nombre, correo o teléfono"
@@ -263,7 +263,7 @@ export default function CustomersPage() {
                     className="w-full bg-white border border-slate-100 pl-11 pr-4 py-3 rounded-xl shadow-sm outline-none focus:border-orange-500 text-xs md:text-sm font-bold"
                 />
             </div>
-            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 italic px-1">
+            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-800 italic px-1">
                 {searchTerm.trim() ? `Hasta 10 coincidencias · ${filteredCustomers.length}` : 'Top 10 por consumo'}
             </p>
             <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl">
@@ -271,7 +271,7 @@ export default function CustomersPage() {
                     <button
                         key={tag}
                         onClick={() => setActiveFilter(tag)}
-                        className={`py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight italic min-w-0 truncate ${activeFilter === tag ? 'bg-orange-500 text-white shadow' : 'text-slate-400'}`}
+                        className={`py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-tight italic min-w-0 truncate ${activeFilter === tag ? 'bg-orange-500 text-white shadow' : 'text-slate-800'}`}
                     >
                         {tag === 'ALL' ? 'Todos' : tag === 'En Riesgo' ? 'Riesgo' : tag}
                     </button>
@@ -281,20 +281,20 @@ export default function CustomersPage() {
             <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                 {filteredCustomers.length > 0 ? filteredCustomers.map((customer, i) => (
                     <div key={customer.id} className="flex items-center gap-3 px-3 md:px-5 py-3 border-b border-slate-50 last:border-0">
-                        <span className="w-6 text-center font-black italic text-slate-300 text-sm shrink-0">{i + 1}</span>
+                        <span className="w-6 text-center font-black italic text-slate-900 text-sm shrink-0">{i + 1}</span>
                         <div className="min-w-0 flex-1">
                             <p className="font-black uppercase italic tracking-tighter text-slate-900 text-sm truncate">{customer.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400 truncate">{customer.email || customer.phone || '—'}</p>
+                            <p className="text-[10px] font-bold text-slate-800 truncate">{customer.email || customer.phone || '—'}</p>
                         </div>
                         <div className="text-right shrink-0">
                             <p className="text-sm font-black italic text-slate-900">${Number(customer.historicalSpent || 0).toLocaleString()}</p>
-                            <p className="text-[9px] font-black uppercase text-slate-400">{customer.historicalOrders || 0} ped.</p>
+                            <p className="text-[9px] font-black uppercase text-slate-800">{customer.historicalOrders || 0} ped.</p>
                         </div>
                     </div>
                 )) : (
                     <div className="py-14 flex flex-col items-center justify-center">
                         <Search size={28} className="text-slate-300 mb-3" />
-                        <p className="text-slate-400 font-black uppercase tracking-widest italic text-[10px] text-center px-6">
+                        <p className="text-slate-800 font-black uppercase tracking-widest italic text-[10px] text-center px-6">
                             {searchTerm.trim() ? 'Sin coincidencias' : 'Sin clientes'}
                         </p>
                     </div>

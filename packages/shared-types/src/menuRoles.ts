@@ -103,6 +103,56 @@ export function canEnlargeBySize(category?: string | null, name?: string | null)
     return /ceviche|crudo|roll|bowl|gohan/.test(label);
 }
 
+export function sizeGrams(label?: string | null) {
+    const value = String(label || '');
+    const kg = value.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
+    if (kg) return Number(kg[1].replace(',', '.')) * 1000;
+    const g = value.match(/(\d+(?:[.,]\d+)?)\s*g\b/i);
+    if (g) return Number(g[1].replace(',', '.'));
+    return null;
+}
+
+export function findSizeModifierGroup<T extends { role?: string | null; groupName?: string; displayName?: string }>(
+    groups: T[] | null | undefined,
+) {
+    return (groups || []).find((group) => resolveModifierRole(group.groupName, group.displayName, group.role) === 'SIZE') || null;
+}
+
+export function sortSizeOptions<T extends { name: string; sortOrder?: number }>(options: T[] | null | undefined) {
+    return [...(options || [])].sort((a, b) => {
+        const gramsA = sizeGrams(a.name);
+        const gramsB = sizeGrams(b.name);
+        if (gramsA != null && gramsB != null && gramsA !== gramsB) return gramsA - gramsB;
+        return (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0);
+    });
+}
+
+export function sizeUpgradePairs<T extends { id: string; name: string; priceAdjustment?: number; sortOrder?: number }>(
+    group: { options?: T[] } | null | undefined,
+) {
+    const options = sortSizeOptions(group?.options);
+    const pairs: { current: T; next: T; extra: number }[] = [];
+    for (let i = 0; i < options.length - 1; i++) {
+        const current = options[i];
+        const next = options[i + 1];
+        pairs.push({
+            current,
+            next,
+            extra: Number(next.priceAdjustment || 0) - Number(current.priceAdjustment || 0),
+        });
+    }
+    return pairs;
+}
+
+export function nextSizeUpgrade<T extends { options?: { id: string; name: string; priceAdjustment?: number; sortOrder?: number }[] }>(
+    group: T | null | undefined,
+    selectedId?: string | null,
+) {
+    if (!group || !selectedId) return null;
+    const pairs = sizeUpgradePairs(group);
+    return pairs.find((pair) => pair.current.id === selectedId) || null;
+}
+
 export function cleanModifierLabel(label?: string | null): string {
     if (!label) return '';
     return String(label)
@@ -113,13 +163,137 @@ export function cleanModifierLabel(label?: string | null): string {
         .trim();
 }
 
-export function isDishCoreModifier(groupName?: string, displayName?: string) {
+export type ModifierRole = 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
+export type ModifierChannel = 'web' | 'pos' | 'salon';
+
+/** Agrandar (mismo plato, siguiente tamaño) al cerrar el armado. El garzón elige el formato una sola vez en pantalla. */
+export function channelOffersSizeUpgrade(channel: ModifierChannel) {
+    return channel === 'web' || channel === 'pos';
+}
+
+/** Extras y limonada del plato, al final de cada compra. Solo web (delivery y QR). POS y salón los venden en la grilla. */
+export function channelOffersPerItemAddons(channel: ModifierChannel) {
+    return channel === 'web';
+}
+
+export const MODIFIER_ROLE_LABEL: Record<ModifierRole, string> = {
+    SIZE: 'Tamaño',
+    PROTEIN: 'Receta',
+    SAUCE: 'Salsa del plato',
+    FLAVOR: 'Sabor',
+    REMOVE: 'Quitar verduras',
+    PORTION: 'Cantidad',
+    UPSELL: 'Sugerencia',
+    OTHER: 'Otra opción',
+};
+
+export const PRODUCT_OPTION_ROLES: ModifierRole[] = ['SIZE', 'PROTEIN', 'SAUCE', 'FLAVOR', 'PORTION'];
+
+export function isAgrandarModifier(groupName?: string, displayName?: string) {
+    return /agranda tu ceviche/i.test(`${groupName || ''} ${displayName || ''}`);
+}
+
+export function resolveModifierRole(groupName?: string, displayName?: string, stored?: string | null): ModifierRole {
+    const display = (displayName || '').toLowerCase();
+    if (/formato|tama[ñn]o/.test(display) && !/quita/.test(display)) return 'SIZE';
+    if (isAgrandarModifier(groupName, displayName)) return 'UPSELL';
+    if (stored && stored !== 'OTHER') return stored as ModifierRole;
+    return suggestModifierRole(groupName, displayName);
+}
+
+export function isProductOptionRole(role?: string | null) {
+    if (!role || role === 'OTHER') return true;
+    return PRODUCT_OPTION_ROLES.includes(role as ModifierRole);
+}
+
+export function isSuggestionRole(role?: string | null, groupName?: string, displayName?: string) {
+    if (isAgrandarModifier(groupName, displayName)) return false;
+    if (role === 'UPSELL') return true;
+    return suggestModifierRole(groupName, displayName) === 'UPSELL';
+}
+
+export function isEspecialRole(role?: string | null, groupName?: string, displayName?: string) {
+    if (resolveModifierRole(groupName, displayName, role) === 'SIZE') return false;
+    if (role === 'REMOVE') return true;
+    return suggestModifierRole(groupName, displayName) === 'REMOVE';
+}
+
+export function suggestModifierRole(groupName?: string, displayName?: string): ModifierRole {
+    const display = (displayName || '').toLowerCase();
+    if (/formato|tama[ñn]o/.test(display) && !/quita/.test(display)) return 'SIZE';
+    const label = `${groupName || ''} ${displayName || ''}`.toLowerCase();
+    if (/extras?\s*lomasrico|extras?\s+lo\s*m[aá]s\s*rico|limonada\s+lomasrico|upsell/.test(label)) {
+        return 'UPSELL';
+    }
+    if (isAgrandarModifier(groupName, displayName)) return 'UPSELL';
+    if (/quita|sin verdura/.test(label)) return 'REMOVE';
+    if (/salsa/.test(label)) return 'SAUCE';
+    if (/protein|proteín|gohan|elige tu roll|topping|relleno|premium|doble prote/.test(label)) return 'PROTEIN';
+    if (/sabor|variedades|bebida lata|limonad|monster/.test(label)) return 'FLAVOR';
+    if (/formato|tama[ñn]o|opciones cc|\bcc\b|1\s*kg|crudo|full bajon|pisco/.test(label)) return 'SIZE';
+    if (/unidad|docena|dos x|hand roll|empanad|aros|papas|camar[oó]n|porci[oó]n/.test(label)) return 'PORTION';
+    if (/opciones|elige/.test(label)) return 'PORTION';
+    return 'OTHER';
+}
+
+export function isDishCoreModifier(groupName?: string, displayName?: string, role?: string | null) {
+    if (role === 'UPSELL') return false;
+    if (role && role !== 'OTHER') return true;
     const label = `${groupName || ''} ${displayName || ''}`.toLowerCase();
     // Delivery upsells: no se preguntan en salón / QR. Todo lo demás es pregunta del plato.
     if (/extras?\s*lomasrico|extras?\s+lo\s*m[aá]s\s*rico|limonada\s+lomasrico|upsell/.test(label)) {
         return false;
     }
     return true;
+}
+
+export function modifierVisibleOnChannel(
+    group: {
+        role?: string | null;
+        showOnWeb?: boolean;
+        showOnPos?: boolean;
+        showOnSalon?: boolean;
+        groupName?: string;
+        displayName?: string;
+    },
+    channel: ModifierChannel,
+) {
+    if (isAgrandarModifier(group.groupName, group.displayName)) return false;
+    if (isSuggestionRole(group.role, group.groupName, group.displayName)) {
+        return channelOffersPerItemAddons(channel) && group.showOnWeb !== false;
+    }
+    if (channel === 'web' && typeof group.showOnWeb === 'boolean') return group.showOnWeb;
+    if (channel === 'pos' && typeof group.showOnPos === 'boolean') return group.showOnPos;
+    if (channel === 'salon' && typeof group.showOnSalon === 'boolean') return group.showOnSalon;
+    return isDishCoreModifier(group.groupName, group.displayName, group.role);
+}
+
+export function filterModifiersForChannel<T extends {
+    role?: string | null;
+    showOnWeb?: boolean;
+    showOnPos?: boolean;
+    showOnSalon?: boolean;
+    groupName?: string;
+    displayName?: string;
+    sortOrder?: number;
+}>(groups: T[] | null | undefined, channel: ModifierChannel): T[] {
+    return (groups || [])
+        .filter((group) => modifierVisibleOnChannel(group, channel))
+        .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+}
+
+export function filterSuggestionsForChannel<T extends {
+    role?: string | null;
+    showOnWeb?: boolean;
+    groupName?: string;
+    displayName?: string;
+    sortOrder?: number;
+}>(groups: T[] | null | undefined, channel: ModifierChannel): T[] {
+    if (!channelOffersPerItemAddons(channel)) return [];
+    return (groups || [])
+        .filter((group) => isSuggestionRole(group.role, group.groupName, group.displayName) && !isAgrandarModifier(group.groupName, group.displayName))
+        .filter((group) => group.showOnWeb !== false)
+        .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
 }
 
 const SIZE_RE = /(\d+(?:[.,]\d+)?)\s*(cc|ml|l|lt|litro)s?\b/i;
@@ -163,6 +337,14 @@ export function stripDrinkSize(label?: string | null) {
         .replace(SIZE_RE, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
+}
+
+export function drinkOptionSizeMismatch(productName?: string | null, optionName?: string | null) {
+    const productSize = parseSize(productName);
+    const optionSize = parseSize(optionName);
+    if (!productSize || !optionSize) return null;
+    if (productSize.cc === optionSize.cc) return null;
+    return { productCc: Math.round(productSize.cc), optionCc: Math.round(optionSize.cc) };
 }
 
 function isDrinkCatalogItem(category?: string | null, name?: string | null) {

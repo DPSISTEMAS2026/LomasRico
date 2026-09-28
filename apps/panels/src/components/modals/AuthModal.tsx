@@ -77,14 +77,14 @@ export default function AuthModal({ isOpen, onClose }: Props) {
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 relative overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl">
                 <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <X size={20} className="text-slate-400" />
+                    <X size={20} className="text-slate-800" />
                 </button>
 
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
                         {mode === 'LOGIN' ? 'Bienvenido' : mode === 'REGISTER' ? 'Únete al Club' : 'Verificación'}
                     </h2>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 mt-2">
                         {mode === 'LOGIN' ? 'Ingresa para gestionar tus pedidos' : mode === 'REGISTER' ? 'Crea tu cuenta en segundos' : 'Ingresa el código enviado a tu correo'}
                     </p>
                 </div>
@@ -183,12 +183,12 @@ export default function AuthModal({ isOpen, onClose }: Props) {
 
                 {mode !== 'VERIFY' && (
                     <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
+                        <p className="text-slate-800 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
                         {/* Google Button Container */}
                         <div id="google-login-modal-btn" className="flex justify-center h-[40px]"></div>
 
                         <div className="mt-6 flex justify-center gap-1 text-xs font-bold">
-                            <span className="text-slate-400">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
+                            <span className="text-slate-800">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
                             <button
                                 onClick={() => { setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN'); setError(''); }}
                                 className="text-[#f2642e] uppercase hover:underline"

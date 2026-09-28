@@ -22,19 +22,19 @@ export function DiscountModal({ currentDiscount, currentType, onApply, onClose }
                         <TrendingDown size={32} className="text-red-500" />
                     </div>
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">Descuento Especial</h2>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Autorización del Administrador</p>
+                    <p className="text-slate-800 font-bold text-[10px] uppercase tracking-widest mt-1">Autorización del Administrador</p>
                 </div>
 
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
                     <button
                         onClick={() => setType('PERCENT')}
-                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'PERCENT' ? 'bg-white shadow-md text-slate-900' : 'text-slate-400'}`}
+                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'PERCENT' ? 'bg-white shadow-md text-slate-900' : 'text-slate-800'}`}
                     >
                         Porcentaje (%)
                     </button>
                     <button
                         onClick={() => setType('FIXED')}
-                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'FIXED' ? 'bg-white shadow-md text-slate-900' : 'text-slate-400'}`}
+                        className={`flex-1 py-3 rounded-xl font-black uppercase italic text-[10px] transition-all ${type === 'FIXED' ? 'bg-white shadow-md text-slate-900' : 'text-slate-800'}`}
                     >
                         Monto ($)
                     </button>
@@ -57,7 +57,7 @@ export function DiscountModal({ currentDiscount, currentType, onApply, onClose }
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
+                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-800 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
                         Cancelar
                     </button>
                     <button

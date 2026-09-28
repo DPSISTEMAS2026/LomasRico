@@ -125,17 +125,30 @@ enum ModifierType {
   MULTI_SELECT    // Múltiples opciones (ej: Proteínas, Extras)
 }
 
+enum ModifierRole {
+  SIZE      // Formato / tamaño / cc
+  PROTEIN   // Proteínas del plato
+  SAUCE     // Salsas
+  FLAVOR    // Sabor de bebida
+  REMOVE    // Quitar ingredientes
+  PORTION   // Unidad, media docena, 2x
+  UPSELL    // Extra o sugerencia (no es parte del plato)
+  OTHER     // Sin clasificar
+}
+
 model ModifierGroup {
   id             String           @id @default(uuid())
   name           String           // Clave interna (ej: "formato", "proteinas", "extras")
   displayName    String           // Nombre visible (ej: "Elige tu Formato", "Selecciona Proteínas")
   helpText       String?          // Texto de ayuda (ej: "Elige una opción para continuar")
   type           ModifierType     @default(SINGLE_SELECT)
+  role           ModifierRole     @default(OTHER)
   minSelections  Int              @default(0) // Mínimo de opciones a elegir (0 = opcional)
   maxSelections  Int              @default(1) // Máximo de opciones a elegir
   isGlobal       Boolean          @default(true) // Disponible para asignar a cualquier producto
   showOnWeb      Boolean          @default(true)
   showOnPos      Boolean          @default(true)
+  showOnSalon    Boolean          @default(true)
   sortOrder      Int              @default(0) // Orden de aparición en UI de admin
   externalId     String?          // Para integraciones opcionales (ej: FDB ID)
 

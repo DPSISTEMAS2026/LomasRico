@@ -23,7 +23,7 @@ export default function GlobalError({
           <h1 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 mb-2">
             Algo salió mal
           </h1>
-          <p className="text-sm text-slate-500 mb-8">
+          <p className="text-sm text-slate-900 mb-8">
             Hubo un problema al cargar la página. Intenta de nuevo.
           </p>
           <button

@@ -1,536 +1,1027 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-    Plus, X, Save, Trash2, ChevronDown, ChevronUp,
-    Layers, Loader2, CheckCircle2, DollarSign,
-    ArrowUp, ArrowDown, Search,
+    ArrowLeft, Check, ChefHat, Layers, Loader2, Pencil, Plus, Search, Sparkles, Trash2, UtensilsCrossed,
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
-import ModifierRecipeModal from './ModifierRecipeModal';
-import EnlargeSizeModal from './EnlargeSizeModal';
+import {
+    MODIFIER_ROLE_LABEL,
+    displayCategoryName,
+    drinkOptionSizeMismatch,
+    isAgrandarModifier,
+    isEspecialRole,
+    isProductOptionRole,
+    isSuggestionRole,
+    suggestModifierRole,
+    resolveModifierRole,
+    sizeUpgradePairs,
+    canEnlargeBySize,
+    type ModifierRole,
+} from '@lomasrico/shared-types';
 
-interface ModifierOption {
+type View = 'home' | 'create' | 'review' | 'suggestions' | 'especiales';
+
+type ProductRow = {
+    id: string;
+    name: string;
+    category: string;
+    isActive?: boolean;
+    modifiers?: ModifierGroup[];
+};
+
+type ModifierOption = {
     id: string;
     name: string;
     priceAdjustment: number;
-    isDefault: boolean;
-    sortOrder: number;
-    recipeId?: string | null;
-    recipeItemCount?: number;
-    recipeApplyMode?: 'OVERRIDE' | 'REPLACE' | null;
-    inventoryItemId?: string | null;
-    inventoryItemName?: string | null;
-}
+    sortOrder?: number;
+};
 
-interface ExtraItem {
-    id: string;
-    name: string;
-}
+type AssignedProduct = {
+    sellingProduct?: { id: string; name: string; category: string; isActive?: boolean };
+};
 
-interface ModifierGroup {
-    id: string;
-    name: string;
+type ModifierGroup = {
+    id?: string;
+    groupId?: string;
+    name?: string;
+    groupName?: string;
     displayName: string;
+    role?: ModifierRole;
     type: 'SINGLE_SELECT' | 'MULTI_SELECT';
-    minSelections: number;
-    maxSelections: number;
-    sortOrder: number;
+    minSelections?: number;
+    maxSelections?: number;
+    showOnWeb?: boolean;
+    showOnPos?: boolean;
+    showOnSalon?: boolean;
+    sortOrder?: number;
     options: ModifierOption[];
     assignedProductsCount?: number;
+    productModifiers?: AssignedProduct[];
+};
+
+const CREATE_KINDS: { role: ModifierRole; title: string; multi?: boolean }[] = [
+    { role: 'SIZE', title: 'Formato o Tamaño' },
+    { role: 'PROTEIN', title: 'Receta', multi: true },
+    { role: 'PORTION', title: 'Cantidad' },
+    { role: 'SAUCE', title: 'Salsa del plato' },
+    { role: 'FLAVOR', title: 'Sabor' },
+];
+
+function groupRole(group: ModifierGroup): ModifierRole {
+    return resolveModifierRole(group.groupName || group.name, group.displayName, group.role);
 }
 
-function optionEffect(option: ModifierOption): 'price' | 'extra' | 'recipe' {
-    if (option.recipeId) return 'recipe';
-    if (option.inventoryItemId) return 'extra';
-    return 'price';
+function groupKey(group: ModifierGroup) {
+    return group.groupId || group.id || group.displayName;
+}
+
+function overlayProductRoles(products: ProductRow[], groups: ModifierGroup[]): ProductRow[] {
+    const byId = new Map(groups.map((g) => [g.id, groupRole(g)]));
+    return products.map((p) => ({
+        ...p,
+        modifiers: (p.modifiers || []).map((m) => ({
+            ...m,
+            role: (m.groupId && byId.get(m.groupId)) || groupRole(m),
+        })),
+    }));
+}
+
+function isOptionOfProduct(group: ModifierGroup) {
+    const role = groupRole(group);
+    const labelA = group.groupName || group.name;
+    const labelB = group.displayName;
+    if (isEspecialRole(role, labelA, labelB)) return false;
+    if (isSuggestionRole(role, labelA, labelB)) return false;
+    return isProductOptionRole(role);
 }
 
 export default function ModifiersPage() {
-    const [groups, setGroups] = useState<ModifierGroup[]>([]);
+    const [view, setView] = useState<View>('home');
     const [loading, setLoading] = useState(true);
-    const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
-    const [editingGroup, setEditingGroup] = useState<ModifierGroup | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [saveSuccess, setSaveSuccess] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showEnlargeModal, setShowEnlargeModal] = useState(false);
-    const [newGroupDisplayName, setNewGroupDisplayName] = useState('');
-    const [newGroupType, setNewGroupType] = useState<'SINGLE_SELECT' | 'MULTI_SELECT'>('SINGLE_SELECT');
-    const [newOptionName, setNewOptionName] = useState('');
-    const [newOptionPrice, setNewOptionPrice] = useState(0);
-    const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
-    const [recipeOption, setRecipeOption] = useState<ModifierOption | null>(null);
-    const [pickingExtraFor, setPickingExtraFor] = useState<string | null>(null);
+    const [groups, setGroups] = useState<ModifierGroup[]>([]);
+    const [products, setProducts] = useState<ProductRow[]>([]);
 
-    const filteredGroups = groups.filter((g) =>
-        !searchQuery.trim() ||
-        g.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.options.some((o) => o.name.toLowerCase().includes(searchQuery.toLowerCase())),
-    );
+    const load = async () => {
+        const [gRes, pRes] = await Promise.all([
+            authFetch(`${API_URL}/modifiers/groups`),
+            authFetch(`${API_URL}/products`),
+        ]);
+        const parsedG = gRes.ok ? await gRes.json() : [];
+        const parsedP = pRes.ok ? await pRes.json() : [];
+        const groupsData = Array.isArray(parsedG) ? parsedG : [];
+        const productsData = Array.isArray(parsedP) ? parsedP : [];
+        let groupsNext = groupsData;
+        let productsNext = overlayProductRoles(productsData, groupsData);
+        const unclassified = groupsData.filter((g: ModifierGroup) => (g.role || 'OTHER') === 'OTHER').length;
+        let applyOk = false;
+        let applyUpdated = 0;
+        if (unclassified > 0) {
+            const classified = await authFetch(`${API_URL}/modifiers/apply-suggestions`, { method: 'POST' });
+            applyOk = classified.ok;
+            if (classified.ok) {
+                const payload = await classified.json().catch(() => ({}));
+                applyUpdated = Number(payload?.updated || 0);
+                const [g2, p2] = await Promise.all([
+                    authFetch(`${API_URL}/modifiers/groups`),
+                    authFetch(`${API_URL}/products`),
+                ]);
+                const parsedG2 = g2.ok ? await g2.json() : groupsData;
+                const parsedP2 = p2.ok ? await p2.json() : productsData;
+                groupsNext = Array.isArray(parsedG2) ? parsedG2 : groupsData;
+                const productsReloaded = Array.isArray(parsedP2) ? parsedP2 : productsData;
+                productsNext = overlayProductRoles(productsReloaded, groupsNext);
+            }
+        }
+        setGroups(groupsNext);
+        setProducts(productsNext);
+        const leftoverStored = groupsNext.filter((g: ModifierGroup) => (g.role || 'OTHER') === 'OTHER').length;
+        const leftoverShown = groupsNext.filter((g: ModifierGroup) => groupRole(g) === 'OTHER').map((g) => g.displayName);
+        const leftoverProd = productsNext.flatMap((p) => (p.modifiers || []).filter((m) => groupRole(m) === 'OTHER').map((m) => m.displayName));
+        const withMods = productsNext.filter((p: ProductRow) => (p.modifiers || []).some(isOptionOfProduct));
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H1',location:'modifiers/page.tsx:load',message:'roles after classify+overlay',data:{gOk:gRes.ok,pOk:pRes.ok,groups:groupsNext.length,products:productsNext.length,productsWithOptionMods:withMods.length,unclassifiedBefore:unclassified,applyOk,applyUpdated,leftoverStored,leftoverShown:leftoverShown.slice(0,20),leftoverProd:leftoverProd.slice(0,20),sample:withMods[0]?.name||null,sampleRoles:(withMods[0]?.modifiers||[]).map((m:ModifierGroup)=>({n:m.displayName,r:groupRole(m),stored:m.role}))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        setLoading(false);
+    };
 
     useEffect(() => {
-        loadGroups();
-        loadExtras();
+        void (async () => {
+            await load();
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-HOME',location:'modifiers/page.tsx:mount',message:'new modifiers module home',data:{view:'home'},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        })();
     }, []);
 
-    const loadGroups = async () => {
-        try {
-            const res = await authFetch(`${API_URL}/modifiers/groups`);
-            if (res.ok) {
-                const data = await res.json();
-                setGroups(data);
-                // #region agent log
-                const prueba = (Array.isArray(data) ? data : []).find((g: ModifierGroup) => /prueba/i.test(`${g.displayName} ${g.name}`));
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-COPY',location:'modifiers/page.tsx:loadGroups',message:'slim modifiers ui loaded',data:{copyMode:'slim',groupCount:Array.isArray(data)?data.length:0,pruebaFound:!!prueba,pruebaName:prueba?.displayName||null,pruebaOptions:(prueba?.options||[]).map((o:ModifierOption)=>({id:o.id,name:o.name,price:o.priceAdjustment,hasRecipe:!!o.recipeId,hasExtra:!!o.inventoryItemId}))},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
-            }
-        } finally {
-            setLoading(false);
+    const categories = useMemo(() => {
+        const map = new Map<string, ProductRow[]>();
+        for (const p of products.filter((x) => x.isActive !== false)) {
+            const key = p.category || 'Otros';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(p);
         }
-    };
+        return [...map.entries()].sort((a, b) => displayCategoryName(a[0]).localeCompare(displayCategoryName(b[0])));
+    }, [products]);
 
-    const loadExtras = async () => {
-        try {
-            const res = await authFetch(`${API_URL}/inventory`);
-            if (res.ok) {
-                const data = await res.json();
-                setExtraItems(
-                    (Array.isArray(data) ? data : [])
-                        .map((i: any) => ({ id: i.id, name: i.name }))
-                        .sort((a: ExtraItem, b: ExtraItem) => a.name.localeCompare(b.name)),
-                );
-            }
-        } catch {
-            setExtraItems([]);
+    const optionGroups = groups.filter((g) => isProductOptionRole(groupRole(g)) && !isEspecialRole(groupRole(g), g.name, g.displayName) && !isSuggestionRole(groupRole(g), g.name, g.displayName));
+    const suggestionGroups = groups.filter((g) => isSuggestionRole(groupRole(g), g.name, g.displayName) && !isAgrandarModifier(g.name, g.displayName));
+    const especialGroups = groups.filter((g) => isEspecialRole(groupRole(g), g.name, g.displayName));
+    const sizeGroups = groups.filter((g) => {
+        if (groupRole(g) !== 'SIZE' || sizeUpgradePairs(g).length === 0) return false;
+        const assigned = (g.productModifiers || []).map((pm) => pm.sellingProduct).filter(Boolean) as { category?: string; name?: string }[];
+        if (assigned.length === 0) {
+            const label = `${g.name || ''} ${g.displayName || ''}`;
+            return /formato|tama[ñn]o/i.test(label);
         }
+        return assigned.some((p) => canEnlargeBySize(p.category, p.name));
+    });
+
+    if (loading) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center py-24">
+                <Loader2 className="animate-spin text-orange-500 mb-4" size={40} />
+                <p className="font-black uppercase text-xs tracking-widest text-slate-800">Cargando…</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500 pb-20 min-w-0">
+            {view !== 'home' && (
+                <button
+                    type="button"
+                    onClick={() => setView('home')}
+                    className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-800 hover:text-orange-500"
+                >
+                    <ArrowLeft size={14} /> Volver
+                </button>
+            )}
+
+            {view === 'home' && (
+                <Home
+                    optionCount={optionGroups.length}
+                    suggestionCount={suggestionGroups.length}
+                    especialCount={especialGroups.length + sizeGroups.length}
+                    onOpen={setView}
+                />
+            )}
+            {view === 'create' && (
+                <CreateWizard
+                    categories={categories}
+                    onCancel={() => setView('home')}
+                    onSaved={async () => {
+                        await load();
+                        setView('review');
+                    }}
+                />
+            )}
+            {view === 'review' && (
+                <ReviewView categories={categories} groups={optionGroups} onReload={load} />
+            )}
+            {view === 'suggestions' && (
+                <SuggestionsView
+                    categories={categories}
+                    groups={suggestionGroups}
+                    onReload={load}
+                />
+            )}
+            {view === 'especiales' && (
+                <EspecialesView groups={especialGroups} sizeGroups={sizeGroups} onReload={load} />
+            )}
+        </div>
+    );
+}
+
+function Home({
+    optionCount, suggestionCount, especialCount, onOpen,
+}: {
+    optionCount: number;
+    suggestionCount: number;
+    especialCount: number;
+    onOpen: (view: View) => void;
+}) {
+    const cards: { view: View; title: string; count?: string; icon: typeof Plus; accent: string }[] = [
+        { view: 'create', title: 'Crear nuevo', icon: Plus, accent: 'bg-orange-500' },
+        { view: 'review', title: 'Revisar', count: `${optionCount}`, icon: Layers, accent: 'bg-slate-900' },
+        { view: 'suggestions', title: 'Sugerencias', count: `${suggestionCount}`, icon: Sparkles, accent: 'bg-amber-500' },
+        { view: 'especiales', title: 'Especiales', count: `${especialCount}`, icon: ChefHat, accent: 'bg-emerald-600' },
+    ];
+    return (
+        <>
+            <header className="w-full pl-14 lg:pl-0 text-right lg:text-left">
+                <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+                    Opciones del <span className="text-orange-500">menú</span>
+                </h1>
+            </header>
+            <div className="grid sm:grid-cols-2 gap-4">
+                {cards.map((card) => (
+                    <button
+                        key={card.view}
+                        type="button"
+                        onClick={() => {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-HOME',location:'modifiers/page.tsx:home',message:'opened modifiers section',data:{view:card.view},timestamp:Date.now()})}).catch(()=>{});
+                            // #endregion
+                            onOpen(card.view);
+                        }}
+                        className="text-left bg-white rounded-3xl border border-slate-100 p-6 hover:border-orange-300 hover:shadow-md transition-all"
+                    >
+                        <span className={`${card.accent} text-white w-10 h-10 rounded-2xl inline-flex items-center justify-center mb-4`}>
+                            <card.icon size={18} />
+                        </span>
+                        <h2 className="font-black italic uppercase text-xl text-slate-900">{card.title}</h2>
+                        {card.count && <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-orange-500">{card.count}</p>}
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+}
+
+function CreateWizard({
+    categories, onCancel, onSaved,
+}: {
+    categories: [string, ProductRow[]][];
+    onCancel: () => void;
+    onSaved: () => void;
+}) {
+    const [step, setStep] = useState(0);
+    const [role, setRole] = useState<ModifierRole | null>(null);
+    const [openCategory, setOpenCategory] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [displayName, setDisplayName] = useState('');
+    const [options, setOptions] = useState<{ name: string; price: number }[]>([{ name: '', price: 0 }]);
+    const [showOnWeb, setShowOnWeb] = useState(true);
+    const [showOnPos, setShowOnPos] = useState(true);
+    const [showOnSalon, setShowOnSalon] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const kind = CREATE_KINDS.find((k) => k.role === role);
+
+    const toggleProduct = (id: string) => {
+        setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
     };
 
-    const refreshGroup = async (groupId: string) => {
-        await loadGroups();
-        const groupRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`);
-        if (groupRes.ok) setEditingGroup(await groupRes.json());
-    };
-
-    const handleCreateGroup = async () => {
-        if (!newGroupDisplayName.trim()) return;
-        const res = await authFetch(`${API_URL}/modifiers/groups`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: `mod-${Date.now()}`,
-                displayName: newGroupDisplayName.trim(),
-                type: newGroupType,
-                minSelections: 0,
-                maxSelections: newGroupType === 'SINGLE_SELECT' ? 1 : 5,
-                sortOrder: groups.length,
-                options: [],
-            }),
-        });
-        if (res.ok) {
-            const created = await res.json();
-            setGroups((prev) => [{ ...created, assignedProductsCount: 0 }, ...prev]);
-            setEditingGroup(created);
-            setExpandedGroupId(created.id);
-            setShowCreateModal(false);
-            setNewGroupDisplayName('');
-            setNewGroupType('SINGLE_SELECT');
-        }
-    };
-
-    const handleUpdateGroup = async (group: ModifierGroup) => {
+    const save = async () => {
+        if (!role || !displayName.trim() || selectedIds.length === 0) return;
+        const cleanOpts = options.filter((o) => o.name.trim());
+        if (cleanOpts.length === 0) return;
         setSaving(true);
         try {
-            const res = await authFetch(`${API_URL}/modifiers/groups/${group.id}`, {
-                method: 'PATCH',
+            const payload = {
+                displayName: displayName.trim(),
+                role,
+                type: kind?.multi ? 'MULTI_SELECT' : 'SINGLE_SELECT',
+                minSelections: kind?.multi ? 1 : 1,
+                maxSelections: kind?.multi ? 3 : 1,
+                showOnWeb,
+                showOnPos,
+                showOnSalon,
+                productIds: selectedIds,
+                options: cleanOpts.map((o) => ({ name: o.name.trim(), priceAdjustment: Number(o.price) || 0 })),
+            };
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-SORT',location:'modifiers/page.tsx:create-save',message:'wizard save payload',data:{role,displayName:payload.displayName,productCount:selectedIds.length,options:payload.options,showOnWeb,showOnPos,showOnSalon},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            const res = await authFetch(`${API_URL}/modifiers/create-with-products`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    displayName: group.displayName,
-                    type: group.type,
-                    minSelections: group.minSelections,
-                    maxSelections: group.maxSelections,
-                }),
+                body: JSON.stringify(payload),
             });
             if (res.ok) {
-                setSaveSuccess(true);
-                loadGroups();
-                setTimeout(() => setSaveSuccess(false), 2000);
+                const created = await res.json().catch(() => ({}));
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-SORT',location:'modifiers/page.tsx:create-ok',message:'wizard create ok',data:{id:created?.id,role:created?.role,displayName:created?.displayName,optCount:(created?.options||[]).length},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                await onSaved();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err?.message || 'No se pudo crear.');
             }
         } finally {
             setSaving(false);
         }
     };
 
-    const handleDeleteGroup = async (id: string) => {
-        if (!confirm('¿Borrar esta pregunta? Se quita de todos los platos donde esté asignada.')) return;
-        await authFetch(`${API_URL}/modifiers/groups/${id}`, { method: 'DELETE' });
-        setGroups((prev) => prev.filter((g) => g.id !== id));
-        if (editingGroup?.id === id) setEditingGroup(null);
-    };
+    return (
+        <div className="space-y-6">
+            <header>
+                <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Crear nuevo</h1>
+                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mt-2">
+                    Paso {step + 1} de 3
+                </p>
+            </header>
 
-    const handleAddOption = async (groupId: string) => {
-        if (!newOptionName.trim()) return;
-        const res = await authFetch(`${API_URL}/modifiers/groups/${groupId}/options`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: newOptionName.trim(),
-                priceAdjustment: newOptionPrice,
-                sortOrder: editingGroup?.options?.length || 0,
-            }),
-        });
-        if (res.ok) {
-            setNewOptionName('');
-            setNewOptionPrice(0);
-            await refreshGroup(groupId);
+            {step === 0 && (
+                <div className="grid gap-3">
+                    {CREATE_KINDS.map((k) => (
+                        <button
+                            key={k.role}
+                            type="button"
+                            onClick={() => { setRole(k.role); setDisplayName(k.title); setStep(1); }}
+                            className="text-left bg-white rounded-2xl border-2 border-slate-100 p-5 hover:border-orange-400"
+                        >
+                            <p className="font-black italic uppercase text-slate-900">{k.title}</p>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {step === 1 && (
+                <div className="space-y-4">
+                    <p className="font-black uppercase text-sm text-slate-700">{kind?.title}</p>
+                    {categories.map(([cat, items]) => (
+                        <div key={cat} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setOpenCategory(openCategory === cat ? null : cat)}
+                                className="w-full flex items-center justify-between p-4 font-black uppercase italic text-sm"
+                            >
+                                <span>{displayCategoryName(cat)}</span>
+                                <span className="text-[10px] text-slate-800">{items.length} platos</span>
+                            </button>
+                            {openCategory === cat && (
+                                <div className="border-t border-slate-100 p-3 space-y-1">
+                                    {items.map((p) => {
+                                        const on = selectedIds.includes(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => toggleProduct(p.id)}
+                                                className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold ${on ? 'bg-orange-50 text-orange-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                                            >
+                                                {p.name}
+                                                {on && <Check size={16} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    <div className="flex gap-2">
+                        <button type="button" onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl bg-slate-100 font-black uppercase text-[10px]">Atrás</button>
+                        <button
+                            type="button"
+                            disabled={selectedIds.length === 0}
+                            onClick={() => setStep(2)}
+                            className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] ${selectedIds.length ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-800'}`}
+                        >
+                            Siguiente · {selectedIds.length} platos
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {step === 2 && (
+                <div className="space-y-5 bg-white rounded-3xl border border-slate-100 p-6">
+                    <label className="block">
+                        <span className="text-xs font-black text-slate-800 block mb-1">Pregunta</span>
+                        <input
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="w-full p-3 bg-slate-50 rounded-xl font-bold outline-none"
+                        />
+                    </label>
+                    <div className="space-y-2">
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-800">Opciones</p>
+                        {options.map((opt, i) => (
+                            <div key={i} className="flex gap-2">
+                                <input
+                                    value={opt.name}
+                                    onChange={(e) => setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, name: e.target.value } : o))}
+                                    className="flex-1 p-3 bg-slate-50 rounded-xl font-bold outline-none"
+                                />
+                                <div className="w-28 relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-800">+$</span>
+                                    <input
+                                        type="number"
+                                        value={opt.price}
+                                        onChange={(e) => setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, price: Number(e.target.value) } : o))}
+                                        className="w-full pl-7 p-3 bg-slate-50 rounded-xl font-bold text-center outline-none"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                        <button type="button" onClick={() => setOptions((prev) => [...prev, { name: '', price: 0 }])} className="text-[10px] font-black uppercase tracking-widest text-orange-500">
+                            Agregar
+                        </button>
+                    </div>
+                    <div>
+                        <span className="text-xs font-black text-slate-800 block mb-2">Dónde se muestra</span>
+                        <div className="flex flex-wrap gap-2">
+                            {([['web', showOnWeb, setShowOnWeb, 'Web'], ['pos', showOnPos, setShowOnPos, 'Caja'], ['salon', showOnSalon, setShowOnSalon, 'Salón']] as const).map(([key, on, set, label]) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => set(!on)}
+                                    className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] border-2 ${on ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl bg-slate-100 font-black uppercase text-[10px]">Atrás</button>
+                        <button type="button" onClick={onCancel} className="px-4 py-3 rounded-xl font-black uppercase text-[10px] text-slate-800">Cancelar</button>
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={saving || !displayName.trim()}
+                            className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] flex items-center justify-center gap-2"
+                        >
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                            Crear
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ReviewGroupEditor({
+    group, onCancel, onSaved,
+}: {
+    group: ModifierGroup;
+    onCancel: () => void;
+    onSaved: () => Promise<void>;
+}) {
+    const groupId = group.groupId || group.id || '';
+    const [displayName, setDisplayName] = useState(group.displayName || '');
+    const [options, setOptions] = useState<{ id?: string; name: string; price: number }[]>(
+        (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0 })),
+    );
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const save = async () => {
+        if (!groupId || !displayName.trim()) return;
+        const clean = options.filter((o) => o.name.trim());
+        if (clean.length === 0) {
+            setError('Deja al menos una respuesta.');
+            return;
+        }
+        setSaving(true);
+        setError(null);
+        try {
+            const nameRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ displayName: displayName.trim() }),
+            });
+            if (!nameRes.ok) throw new Error('group');
+            for (const opt of clean) {
+                if (!opt.id) {
+                    const created = await authFetch(`${API_URL}/modifiers/groups/${groupId}/options`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: opt.name.trim(), priceAdjustment: Number(opt.price) || 0 }),
+                    });
+                    if (!created.ok) throw new Error('add');
+                    continue;
+                }
+                const prev = (group.options || []).find((o) => o.id === opt.id);
+                if (prev && prev.name === opt.name.trim() && Number(prev.priceAdjustment) === Number(opt.price)) continue;
+                const patched = await authFetch(`${API_URL}/modifiers/options/${opt.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: opt.name.trim(), priceAdjustment: Number(opt.price) || 0 }),
+                });
+                if (!patched.ok) throw new Error('patch');
+            }
+            for (const prev of group.options || []) {
+                if (!clean.some((o) => o.id === prev.id)) {
+                    const removed = await authFetch(`${API_URL}/modifiers/options/${prev.id}`, { method: 'DELETE' });
+                    if (!removed.ok) throw new Error('delete');
+                }
+            }
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-EDIT1',location:'modifiers/page.tsx:review-save',message:'saved group options',data:{groupId,displayName:displayName.trim(),optCount:clean.length,names:clean.map((o)=>o.name)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            await onSaved();
+        } catch {
+            setError('No se pudo guardar.');
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDeleteOption = async (optionId: string, groupId: string) => {
-        await authFetch(`${API_URL}/modifiers/options/${optionId}`, { method: 'DELETE' });
-        await refreshGroup(groupId);
-    };
-
-    const handleUpdateOption = async (optionId: string, groupId: string, data: any) => {
-        await authFetch(`${API_URL}/modifiers/options/${optionId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        await refreshGroup(groupId);
-    };
-
-    const handleReorderOption = async (groupId: string, optionId: string, direction: 'up' | 'down') => {
-        if (!editingGroup) return;
-        const options = [...editingGroup.options];
-        const idx = options.findIndex((o) => o.id === optionId);
-        if (idx === -1) return;
-        if (direction === 'up' && idx === 0) return;
-        if (direction === 'down' && idx === options.length - 1) return;
-        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-        [options[idx], options[swapIdx]] = [options[swapIdx], options[idx]];
-        const reordered = options.map((o, i) => ({ ...o, sortOrder: i }));
-        setEditingGroup({ ...editingGroup, options: reordered });
-        await authFetch(`${API_URL}/modifiers/groups/${groupId}/reorder-options`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: reordered.map((o) => ({ id: o.id, sortOrder: o.sortOrder })) }),
-        });
-        loadGroups();
-    };
-
-    if (loading) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center">
-                <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-                <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Cargando…</p>
+    return (
+        <div className="mt-3 space-y-3">
+            <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">Pregunta</span>
+                <input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="mt-1 w-full p-2 bg-white rounded-lg font-bold text-sm outline-none border border-slate-200"
+                />
+            </label>
+            <div className="space-y-2">
+                <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest text-slate-800">
+                    <span className="flex-1">Opción</span>
+                    <span className="w-28 text-center">Recargo $</span>
+                    <span className="w-6" />
+                </div>
+                {options.map((opt, i) => (
+                    <div key={opt.id || `new-${i}`} className="flex gap-2">
+                        <input
+                            value={opt.name}
+                            onChange={(e) => setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, name: e.target.value } : o))}
+                            className="flex-1 p-2 bg-white rounded-lg font-bold text-sm outline-none border border-slate-200"
+                        />
+                        <div className="w-28 relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-800">+$</span>
+                            <input
+                                type="number"
+                                value={opt.price}
+                                onChange={(e) => setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, price: Number(e.target.value) } : o))}
+                                className="w-full pl-7 p-2 bg-white rounded-lg font-bold text-sm text-center outline-none border border-slate-200"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setOptions((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="text-slate-300 hover:text-red-500 p-1"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+                ))}
+                <button
+                    type="button"
+                    onClick={() => setOptions((prev) => [...prev, { name: '', price: 0 }])}
+                    className="text-[10px] font-black uppercase tracking-widest text-orange-500"
+                >
+                    Agregar
+                </button>
             </div>
-        );
-    }
+            {error && <p className="text-xs font-bold text-red-500">{error}</p>}
+            <div className="flex gap-2">
+                <button type="button" onClick={onCancel} className="flex-1 py-2 rounded-lg bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-800">Cancelar</button>
+                <button
+                    type="button"
+                    onClick={() => void save()}
+                    disabled={saving}
+                    className="flex-1 py-2 rounded-lg bg-slate-900 text-white font-black uppercase text-[10px] flex items-center justify-center gap-2"
+                >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Guardar
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function ReviewView({
+    categories, groups, onReload,
+}: {
+    categories: [string, ProductRow[]][];
+    groups: ModifierGroup[];
+    onReload: () => Promise<void>;
+}) {
+    const [openCategory, setOpenCategory] = useState<string | null>(null);
+    const [query, setQuery] = useState('');
+    const [busyId, setBusyId] = useState<string | null>(null);
+    const [editingKey, setEditingKey] = useState<string | null>(null);
+
+    const hydrateGroup = (g: ModifierGroup): ModifierGroup => {
+        const id = g.groupId || g.id;
+        const catalog = groups.find((x) => x.id === id);
+        const options = (g.options && g.options.length > 0 ? g.options : catalog?.options) || [];
+        return {
+            ...catalog,
+            ...g,
+            id,
+            groupId: id,
+            options,
+            productModifiers: catalog?.productModifiers || g.productModifiers,
+            assignedProductsCount: catalog?.assignedProductsCount || g.assignedProductsCount,
+        };
+    };
+
+    const groupsByProduct = (product: ProductRow) => {
+        const fromProduct = (product.modifiers || []).filter(isOptionOfProduct);
+        const base = fromProduct.length > 0
+            ? fromProduct
+            : groups.filter((g) =>
+                (g.productModifiers || []).some((pm) => pm.sellingProduct?.id === product.id),
+            );
+        return base.map(hydrateGroup).sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+    };
+
+    const unassign = async (productId: string, groupId: string) => {
+        setBusyId(groupId);
+        await authFetch(`${API_URL}/modifiers/product/${productId}/remove/${groupId}`, { method: 'DELETE' });
+        await onReload();
+        setBusyId(null);
+    };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-20 min-w-0 overflow-x-hidden">
-            <header className="space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="w-full pl-14 lg:pl-0 text-right lg:text-left">
-                        <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
-                            Extras y <span className="text-orange-500">Opciones</span>
-                        </h1>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowEnlargeModal(true)}
-                            className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-orange-600 flex items-center gap-2"
-                        >
-                            Agrandar tamaño
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowCreateModal(true)}
-                            className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 flex items-center gap-2"
-                        >
-                            <Plus size={16} /> Otra pregunta
-                        </button>
-                    </div>
-                </div>
-
-                <div className="relative">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar una pregunta o una respuesta…"
-                        className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-slate-100 focus:border-orange-500 rounded-2xl font-bold text-sm outline-none"
-                    />
-                </div>
+        <div className="space-y-5">
+            <header>
+                <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Revisar</h1>
             </header>
-
-            <div className="space-y-4">
-                {filteredGroups.map((group) => (
-                    <div key={group.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
-                        <div
-                            className="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-50/70"
-                            onClick={() => {
-                                const open = expandedGroupId !== group.id;
-                                setExpandedGroupId(open ? group.id : null);
-                                if (open) setEditingGroup(group);
+            <div className="relative">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar plato…" className="w-full pl-11 py-3 bg-white rounded-2xl border-2 border-slate-100 font-bold text-sm outline-none" />
+            </div>
+            {categories
+                .map(([cat, items]) => {
+                const filtered = items
+                    .filter((p) => !query.trim() || p.name.toLowerCase().includes(query.toLowerCase()))
+                    .sort((a, b) => {
+                        const aHas = groupsByProduct(a).length > 0 ? 0 : 1;
+                        const bHas = groupsByProduct(b).length > 0 ? 0 : 1;
+                        if (aHas !== bHas) return aHas - bHas;
+                        return a.name.localeCompare(b.name, 'es');
+                    });
+                return [cat, items, filtered] as const;
+            })
+            .filter(([, , filtered]) => filtered.length > 0)
+            .sort((a, b) => {
+                const aHas = a[2].some((p) => groupsByProduct(p).length > 0) ? 0 : 1;
+                const bHas = b[2].some((p) => groupsByProduct(p).length > 0) ? 0 : 1;
+                if (aHas !== bHas) return aHas - bHas;
+                return displayCategoryName(a[0]).localeCompare(displayCategoryName(b[0]), 'es');
+            })
+            .map(([cat, , filtered]) => (
+                    <div key={cat} className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
+                        <button type="button" onClick={() => {
+                            const next = openCategory === cat ? null : cat;
+                            setOpenCategory(next);
+                            if (next) {
+                                const withOpts = filtered.filter((p) => groupsByProduct(p).length > 0);
                                 // #region agent log
-                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-COPY',location:'modifiers/page.tsx:toggleGroup',message:'toggled modifier group',data:{copyMode:'slim',open,name:group.displayName,optionCount:group.options.length},timestamp:Date.now()})}).catch(()=>{});
+                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ORDER',location:'modifiers/page.tsx:review-open',message:'opened review category',data:{cat:next,total:filtered.length,withOpts:withOpts.length,sample:withOpts[0]?.name||null,sampleMods:withOpts[0]?groupsByProduct(withOpts[0]).map((m)=>({n:m.displayName,r:groupRole(m),sort:m.sortOrder,opts:(m.options||[]).map((o)=>o.name).slice(0,8),optCount:(m.options||[]).length})):[]},timestamp:Date.now()})}).catch(()=>{});
                                 // #endregion
-                            }}
-                        >
-                            <div>
-                                <h3 className="font-black uppercase italic text-lg text-slate-900">{group.displayName}</h3>
-                                <p className="text-xs font-bold text-slate-400 mt-1">
-                                    {group.type === 'SINGLE_SELECT' ? 'Una' : 'Varias'}
-                                    {' · '}
-                                    {group.options.length} respuesta{group.options.length === 1 ? '' : 's'}
-                                    {group.assignedProductsCount ? ` · en ${group.assignedProductsCount} platos` : ''}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
-                                    className="p-2 text-slate-300 hover:text-red-500"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                                {expandedGroupId === group.id ? <ChevronUp className="text-slate-400" /> : <ChevronDown className="text-slate-400" />}
-                            </div>
-                        </div>
-
-                        {expandedGroupId === group.id && editingGroup && (
-                            <div className="border-t border-slate-100 p-5 md:p-6 space-y-5 bg-slate-50/40">
-                                <div className="grid md:grid-cols-3 gap-3">
-                                    <label className="block md:col-span-2">
-                                        <span className="text-xs font-black text-slate-500 block mb-1">Pregunta</span>
-                                        <input
-                                            value={editingGroup.displayName}
-                                            onChange={(e) => setEditingGroup({ ...editingGroup, displayName: e.target.value })}
-                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none border-2 border-transparent focus:border-orange-500"
-                                        />
-                                    </label>
-                                    <label className="block">
-                                        <span className="text-xs font-black text-slate-500 block mb-1">Cuántas</span>
-                                        <select
-                                            value={editingGroup.type}
-                                            onChange={(e) => setEditingGroup({
-                                                ...editingGroup,
-                                                type: e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT',
-                                                maxSelections: e.target.value === 'SINGLE_SELECT' ? 1 : Math.max(editingGroup.maxSelections, 2),
-                                            })}
-                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none"
-                                        >
-                                            <option value="SINGLE_SELECT">Solo una</option>
-                                            <option value="MULTI_SELECT">Varias</option>
-                                        </select>
-                                    </label>
-                                </div>
-                                <div className="flex justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleUpdateGroup(editingGroup)}
-                                        className={`px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 ${saveSuccess ? 'bg-green-500 text-white' : 'bg-slate-900 text-white'}`}
-                                    >
-                                        {saving ? <Loader2 size={14} className="animate-spin" /> : saveSuccess ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                                        {saveSuccess ? 'Guardado' : 'Guardar pregunta'}
-                                    </button>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Respuestas</p>
-                                    {editingGroup.options.map((option, optIdx) => {
-                                        const effect = optionEffect(option);
-                                        return (
-                                            <div key={option.id} className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex flex-col">
-                                                        <button type="button" disabled={optIdx === 0} onClick={() => handleReorderOption(editingGroup.id, option.id, 'up')} className="text-slate-300 hover:text-orange-500 disabled:opacity-20"><ArrowUp size={12} /></button>
-                                                        <button type="button" disabled={optIdx === editingGroup.options.length - 1} onClick={() => handleReorderOption(editingGroup.id, option.id, 'down')} className="text-slate-300 hover:text-orange-500 disabled:opacity-20"><ArrowDown size={12} /></button>
-                                                    </div>
-                                                    <input
-                                                        key={`${option.id}-name-${option.name}`}
-                                                        defaultValue={option.name}
-                                                        onBlur={(e) => {
-                                                            const name = e.target.value.trim();
-                                                            if (name && name !== option.name) handleUpdateOption(option.id, editingGroup.id, { name });
-                                                        }}
-                                                        className="flex-1 bg-slate-50 rounded-xl px-3 py-2 font-black text-sm outline-none focus:border-orange-400 border border-transparent"
-                                                    />
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[10px] font-black text-slate-400">+$</span>
-                                                        <input
-                                                            type="number"
-                                                            key={`${option.id}-price-${option.priceAdjustment}`}
-                                                            defaultValue={option.priceAdjustment}
-                                                            onBlur={(e) => {
-                                                                const priceAdjustment = Number(e.target.value) || 0;
-                                                                if (priceAdjustment !== option.priceAdjustment) handleUpdateOption(option.id, editingGroup.id, { priceAdjustment });
-                                                            }}
-                                                            className="w-24 bg-slate-50 rounded-xl px-2 py-2 font-black text-sm text-center outline-none"
-                                                        />
-                                                    </div>
-                                                    <button type="button" onClick={() => handleDeleteOption(option.id, editingGroup.id)} className="p-2 text-slate-300 hover:text-red-500">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-
-                                                {(effect === 'extra' || pickingExtraFor === option.id) && (
-                                                    <select
-                                                        value={option.inventoryItemId || ''}
-                                                        onChange={(e) => {
-                                                            handleUpdateOption(option.id, editingGroup.id, { inventoryItemId: e.target.value || null });
-                                                            setPickingExtraFor(null);
-                                                        }}
-                                                        className="w-full p-3 bg-blue-50 rounded-xl font-bold text-sm outline-none"
-                                                    >
-                                                        <option value="">Extra…</option>
-                                                        {extraItems.map((item) => (
-                                                            <option key={item.id} value={item.id}>{item.name}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPickingExtraFor(pickingExtraFor === option.id ? null : option.id)}
-                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700"
-                                                    >
-                                                        Extra
-                                                    </button>
-                                                    {option.recipeId && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                // #region agent log
-                                                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-UI',location:'modifiers/page.tsx:openRecipe',message:'opened recipe modal',data:{optionId:option.id,hasRecipe:!!option.recipeId},timestamp:Date.now()})}).catch(()=>{});
-                                                                // #endregion
-                                                                setRecipeOption(option);
-                                                            }}
-                                                            className="text-[10px] font-black uppercase tracking-widest text-orange-500"
-                                                        >
-                                                            Receta
-                                                        </button>
-                                                    )}
-                                                </div>
+                            }
+                        }} className="w-full flex justify-between p-5 font-black italic uppercase">
+                            {displayCategoryName(cat)}
+                            <span className="text-[10px] text-slate-800 font-black tracking-widest">
+                                {filtered.filter((p) => groupsByProduct(p).length > 0).length}/{filtered.length} con opciones
+                            </span>
+                        </button>
+                        {openCategory === cat && (
+                            <div className="border-t border-slate-100 divide-y divide-slate-50">
+                                {filtered.map((p) => {
+                                    const assigned = groupsByProduct(p);
+                                    return (
+                                        <div key={p.id} className="p-5">
+                                            <p className="font-black text-slate-900">{p.name}</p>
+                                            {assigned.length === 0 && <p className="text-xs font-bold text-slate-800 mt-1">Sin opciones de producto</p>}
+                                            <div className="mt-2 space-y-2">
+                                                {assigned.map((g) => {
+                                                    const key = `${p.id}:${groupKey(g)}`;
+                                                    const open = editingKey === key;
+                                                    const shared = (g.productModifiers || []).length || g.assignedProductsCount || 0;
+                                                    return (
+                                                        <div key={key} className="bg-slate-50 rounded-xl px-3 py-2">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">{MODIFIER_ROLE_LABEL[groupRole(g)]}</p>
+                                                                    <p className="text-sm font-bold text-slate-800">{g.displayName}</p>
+                                                                    {!open && (
+                                                                        <p className="text-xs text-slate-800">
+                                                                            {(g.options || []).map((o) => {
+                                                                                const extra = Number(o.priceAdjustment) || 0;
+                                                                                return extra ? `${o.name} +$${extra}` : o.name;
+                                                                            }).join(' · ') || '—'}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const next = open ? null : key;
+                                                                            setEditingKey(next);
+                                                                            // #region agent log
+                                                                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-SIZE',location:'modifiers/page.tsx:review-edit',message:'opened group editor',data:{product:p.name,group:g.displayName,groupId:g.groupId||g.id,shared,options:(g.options||[]).slice(0,12).map((o)=>({n:o.name,p:Number(o.priceAdjustment)||0,mismatch:drinkOptionSizeMismatch(p.name,o.name)}))},timestamp:Date.now()})}).catch(()=>{});
+                                                                            // #endregion
+                                                                        }}
+                                                                        className="text-slate-800 hover:text-orange-500 p-1"
+                                                                        title="Editar respuestas"
+                                                                    >
+                                                                        <Pencil size={14} />
+                                                                    </button>
+                                                                    <button type="button" disabled={busyId === groupKey(g)} onClick={() => unassign(p.id, groupKey(g))} className="text-slate-300 hover:text-red-500 p-1" title="Quitar de este producto">
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {open && (
+                                                                <ReviewGroupEditor
+                                                                    group={g}
+                                                                    onCancel={() => setEditingKey(null)}
+                                                                    onSaved={async () => {
+                                                                        setEditingKey(null);
+                                                                        await onReload();
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        );
-                                    })}
-
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-orange-50/70 rounded-2xl border-2 border-dashed border-orange-200">
-                                        <input
-                                            value={newOptionName}
-                                            onChange={(e) => setNewOptionName(e.target.value)}
-                                            placeholder="Nueva respuesta"
-                                            className="flex-1 bg-transparent font-bold outline-none placeholder:text-orange-300"
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddOption(editingGroup.id); }}
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <DollarSign size={14} className="text-slate-400" />
-                                            <input
-                                                type="number"
-                                                value={newOptionPrice}
-                                                onChange={(e) => setNewOptionPrice(Number(e.target.value))}
-                                                className="w-24 bg-white rounded-xl p-2 font-black text-sm text-center outline-none"
-                                                placeholder="0"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => handleAddOption(editingGroup.id)}
-                                                disabled={!newOptionName.trim()}
-                                                className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] ${newOptionName.trim() ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'}`}
-                                            >
-                                                Agregar
-                                            </button>
                                         </div>
-                                    </div>
-                                </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
-                ))}
+            ))}
+        </div>
+    );
+}
 
-                {groups.length === 0 && (
-                    <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
-                        <Layers className="mx-auto text-slate-200 mb-4" size={48} />
-                        <p className="font-black italic uppercase text-slate-400 mb-6">Sin preguntas</p>
-                        <button type="button" onClick={() => setShowEnlargeModal(true)} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs">
-                            Agrandar tamaño
-                        </button>
-                    </div>
-                )}
-            </div>
+function SuggestionsView({
+    categories, groups, onReload,
+}: {
+    categories: [string, ProductRow[]][];
+    groups: ModifierGroup[];
+    onReload: () => Promise<void>;
+}) {
+    const [openId, setOpenId] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
 
-            {showEnlargeModal && (
-                <EnlargeSizeModal
-                    onClose={() => setShowEnlargeModal(false)}
-                    onSaved={async () => {
-                        setShowEnlargeModal(false);
-                        await loadGroups();
-                    }}
-                />
+    const saveProducts = async (group: ModifierGroup, productIds: string[]) => {
+        setSaving(true);
+        await authFetch(`${API_URL}/modifiers/groups/${group.id}/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productIds, isRequired: false }),
+        });
+        await onReload();
+        setSaving(false);
+    };
+
+    return (
+        <div className="space-y-5">
+            <header>
+                <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Sugerencias</h1>
+            </header>
+            {groups.length === 0 && (
+                <div className="bg-white rounded-3xl border border-slate-100 p-8 text-slate-800 font-bold">Sin sugerencias.</div>
             )}
-
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-md p-7 space-y-5">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h2 className="text-xl font-black italic uppercase">Nueva pregunta</h2>
+            {groups.map((group) => {
+                const assigned = new Set((group.productModifiers || []).map((pm) => pm.sellingProduct?.id).filter(Boolean) as string[]);
+                const optionSummary = (group.options || []).map((o) => {
+                    const extra = Number(o.priceAdjustment) || 0;
+                    return extra ? `${o.name} +$${extra}` : o.name;
+                }).join(' · ');
+                return (
+                    <div key={group.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = openId === group.id ? null : group.id || null;
+                                setOpenId(next);
+                                // #region agent log
+                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'sug-edit',hypothesisId:'H-SUG-LOCK',location:'modifiers/page.tsx:suggestions-open',message:'opened suggestion group',data:{id:group.id,displayName:group.displayName,open:!!next,optionCount:(group.options||[]).length,prices:(group.options||[]).map((o)=>({n:o.name,p:Number(o.priceAdjustment)||0}))},timestamp:Date.now()})}).catch(()=>{});
+                                // #endregion
+                            }}
+                            className="w-full text-left p-5"
+                        >
+                            <p className="font-black italic uppercase text-lg text-slate-900">{group.displayName}</p>
+                            <p className="text-xs font-bold text-slate-800 mt-1">En {assigned.size} platos · {optionSummary || '—'}</p>
+                        </button>
+                        {openId === group.id && (
+                            <div className="border-t border-slate-100 p-4 space-y-5">
+                                <ReviewGroupEditor
+                                    key={`${group.id}:${(group.options || []).map((o) => `${o.id}:${o.name}:${o.priceAdjustment}`).join('|')}`}
+                                    group={group}
+                                    onCancel={() => setOpenId(null)}
+                                    onSaved={async () => {
+                                        // #region agent log
+                                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'sug-edit',hypothesisId:'H-SUG-LIMONADA',location:'modifiers/page.tsx:suggestions-saved',message:'saved suggestion options',data:{id:group.id,displayName:group.displayName},timestamp:Date.now()})}).catch(()=>{});
+                                        // #endregion
+                                        await onReload();
+                                    }}
+                                />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">En qué platos se ofrece</p>
+                                {categories.map(([cat, items]) => (
+                                    <CategoryProductToggles
+                                        key={cat}
+                                        category={cat}
+                                        items={items}
+                                        selected={assigned}
+                                        disabled={saving}
+                                        onToggle={(id) => {
+                                            const next = new Set(assigned);
+                                            if (next.has(id)) next.delete(id);
+                                            else next.add(id);
+                                            void saveProducts(group, [...next]);
+                                        }}
+                                    />
+                                ))}
                             </div>
-                            <button type="button" onClick={() => setShowCreateModal(false)} className="p-2 text-slate-300"><X size={20} /></button>
-                        </div>
-                        <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">Pregunta</span>
-                            <input
-                                value={newGroupDisplayName}
-                                onChange={(e) => setNewGroupDisplayName(e.target.value)}
-                                placeholder="Elige el tamaño"
-                                className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none focus:border-orange-500 border-2 border-transparent"
-                                autoFocus
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-xs font-black text-slate-500 block mb-1">Cuántas</span>
-                            <select
-                                value={newGroupType}
-                                onChange={(e) => setNewGroupType(e.target.value as 'SINGLE_SELECT' | 'MULTI_SELECT')}
-                                className="w-full p-3.5 bg-slate-50 rounded-xl font-bold outline-none"
-                            >
-                                <option value="SINGLE_SELECT">Una</option>
-                                <option value="MULTI_SELECT">Varias</option>
-                            </select>
-                        </label>
-                        <div className="flex gap-2">
-                            <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 font-black uppercase text-[10px]">Cancelar</button>
-                            <button
-                                type="button"
-                                onClick={handleCreateGroup}
-                                disabled={!newGroupDisplayName.trim()}
-                                className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] ${newGroupDisplayName.trim() ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'}`}
-                            >
-                                Crear
-                            </button>
-                        </div>
+                        )}
                     </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function CategoryProductToggles({
+    category, items, selected, disabled, onToggle,
+}: {
+    category: string;
+    items: ProductRow[];
+    selected: Set<string>;
+    disabled: boolean;
+    onToggle: (id: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const count = items.filter((p) => selected.has(p.id)).length;
+    return (
+        <div className="rounded-2xl border border-slate-100">
+            <button type="button" onClick={() => setOpen(!open)} className="w-full flex justify-between p-3 font-black uppercase text-[11px] tracking-widest">
+                {displayCategoryName(category)}
+                <span className="text-orange-500">{count} activos</span>
+            </button>
+            {open && (
+                <div className="border-t border-slate-100 p-2 space-y-1">
+                    {items.map((p) => (
+                        <button
+                            key={p.id}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onToggle(p.id)}
+                            className={`w-full text-left rounded-xl px-3 py-2 text-sm font-bold ${selected.has(p.id) ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            {p.name}
+                        </button>
+                    ))}
                 </div>
             )}
+        </div>
+    );
+}
 
-            {recipeOption && editingGroup && (
-                <ModifierRecipeModal
-                    option={recipeOption}
-                    groupName={editingGroup.displayName}
-                    onClose={() => setRecipeOption(null)}
-                    onSaved={async () => {
-                        setRecipeOption(null);
-                        await refreshGroup(editingGroup.id);
-                    }}
-                />
+function EspecialesView({
+    groups, sizeGroups, onReload,
+}: {
+    groups: ModifierGroup[];
+    sizeGroups: ModifierGroup[];
+    onReload: () => Promise<void>;
+}) {
+    const [saving, setSaving] = useState<string | null>(null);
+
+    const savePrice = async (optionId: string, priceAdjustment: number, meta?: Record<string, unknown>) => {
+        setSaving(optionId);
+        await authFetch(`${API_URL}/modifiers/options/${optionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priceAdjustment }),
+        });
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ESP',location:'modifiers/page.tsx:especiales',message:'saved especial recargo',data:{optionId,priceAdjustment,...(meta||{})},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        await onReload();
+        setSaving(null);
+    };
+
+    useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ESP-SIZE',location:'modifiers/page.tsx:especiales-mount',message:'especiales size upgrades',data:{removeGroups:groups.map((g)=>({name:g.displayName,opts:g.options.map((o)=>({n:o.name,p:o.priceAdjustment}))})),sizeGroups:sizeGroups.map((g)=>({name:g.displayName,role:g.role,products:(g.productModifiers||[]).map((pm)=>pm.sellingProduct?.name).filter(Boolean),pairs:sizeUpgradePairs(g).map((p)=>({from:p.current.name,to:p.next.name,extra:p.extra,fromAdj:p.current.priceAdjustment,toAdj:p.next.priceAdjustment}))}))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [groups, sizeGroups]);
+
+    const empty = groups.length === 0 && sizeGroups.length === 0;
+
+    return (
+        <div className="space-y-5">
+            <header>
+                <h1 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Especiales</h1>
+            </header>
+            {empty && (
+                <div className="bg-white rounded-3xl border border-slate-100 p-8 text-slate-800 font-bold">Sin especiales.</div>
             )}
+            {sizeGroups.map((group) => {
+                const pairs = sizeUpgradePairs(group);
+                return (
+                    <div key={group.id || group.groupId} className="bg-white rounded-3xl border border-slate-100 p-6 space-y-5">
+                        <div className="flex items-start gap-3">
+                            <span className="bg-emerald-600 text-white w-10 h-10 rounded-2xl inline-flex items-center justify-center shrink-0">
+                                <ChefHat size={18} />
+                            </span>
+                            <div>
+                                <p className="font-black italic uppercase text-lg">Agrandar</p>
+                                <p className="text-xs font-bold text-slate-800 mt-1">
+                                    {(group.productModifiers || []).map((pm) => pm.sellingProduct?.name).filter(Boolean).join(', ')}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Recargo $</p>
+                            {pairs.map((pair) => (
+                                <label key={`${pair.current.id}-${pair.next.id}`} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2">
+                                    <span className="flex-1 font-black text-sm text-slate-800">{pair.current.name} → {pair.next.name}</span>
+                                    <span className="text-[10px] font-black text-slate-800">+$</span>
+                                    <input
+                                        type="number"
+                                        defaultValue={pair.extra}
+                                        disabled={saving === pair.next.id}
+                                        onBlur={(e) => {
+                                            const extra = Number(e.target.value) || 0;
+                                            if (extra === Number(pair.extra)) return;
+                                            const nextAdj = Number(pair.current.priceAdjustment || 0) + extra;
+                                            void savePrice(pair.next.id, nextAdj, {
+                                                kind: 'size-upgrade',
+                                                from: pair.current.name,
+                                                to: pair.next.name,
+                                                extra,
+                                                currentAdj: pair.current.priceAdjustment,
+                                                nextAdj,
+                                            });
+                                        }}
+                                        className="w-24 p-2 bg-white rounded-xl font-black text-sm text-center outline-none"
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+            {groups.map((group) => (
+                <div key={group.id} className="bg-white rounded-3xl border border-slate-100 p-6 space-y-5">
+                    <div className="flex items-start gap-3">
+                        <span className="bg-emerald-600 text-white w-10 h-10 rounded-2xl inline-flex items-center justify-center shrink-0">
+                            <UtensilsCrossed size={18} />
+                        </span>
+                        <div>
+                            <p className="font-black italic uppercase text-lg">{group.displayName}</p>
+                            <p className="text-xs font-bold text-slate-800 mt-1">
+                                {(group.productModifiers || []).map((pm) => pm.sellingProduct?.name).filter(Boolean).join(', ')}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Recargo $</p>
+                        {group.options.map((opt) => (
+                            <label key={opt.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2">
+                                <span className="flex-1 font-black text-sm text-slate-800">{opt.name}</span>
+                                <span className="text-[10px] font-black text-slate-800">+$</span>
+                                <input
+                                    type="number"
+                                    defaultValue={opt.priceAdjustment}
+                                    disabled={saving === opt.id}
+                                    onBlur={(e) => {
+                                        const price = Number(e.target.value) || 0;
+                                        if (price !== Number(opt.priceAdjustment)) void savePrice(opt.id, price, { kind: 'remove', name: opt.name });
+                                    }}
+                                    className="w-24 p-2 bg-white rounded-xl font-black text-sm text-center outline-none"
+                                />
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

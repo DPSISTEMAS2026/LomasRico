@@ -240,7 +240,7 @@ export default function MarketingPage() {
     if (loading && promos.length === 0) return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-[10px] tracking-widest text-slate-400 italic">Cargando marketing...</p>
+            <p className="font-black uppercase text-[10px] tracking-widest text-slate-800 italic">Cargando marketing...</p>
         </div>
     );
 
@@ -262,7 +262,7 @@ export default function MarketingPage() {
                     <h1 className="text-4xl md:text-5xl xl:text-6xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                         MARKETING <span className="text-orange-500">PRO</span>
                     </h1>
-                    <p className="text-slate-400 font-bold uppercase text-[8px] md:text-[10px] tracking-widest mt-2 px-1">
+                    <p className="text-slate-800 font-bold uppercase text-[8px] md:text-[10px] tracking-widest mt-2 px-1">
                         Banners Publicitarios y Códigos de Descuento
                     </p>
                 </div>
@@ -283,12 +283,12 @@ export default function MarketingPage() {
                                 <h3 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-900 leading-none">
                                     {editing ? 'Editar Elemento' : 'Nuevo Banner / Promoción'}
                                 </h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest mt-1">
                                     Configura visual, horarios y código de descuento
                                 </p>
                             </div>
                             <button onClick={() => setShowForm(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                                <X size={24} className="text-slate-400" />
+                                <X size={24} className="text-slate-800" />
                             </button>
                         </div>
                         
@@ -300,7 +300,7 @@ export default function MarketingPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Título (Int / Ext)</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Título (Int / Ext)</label>
                                             <input
                                                 value={form.title} placeholder="Ej: 20% dscto Martes Loco"
                                                 onChange={e => setForm(p => ({...p, title: e.target.value}))}
@@ -308,7 +308,7 @@ export default function MarketingPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Descripción / BasesLegales</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Descripción / BasesLegales</label>
                                             <input
                                                 value={form.description} placeholder="Válido solo en locales..."
                                                 onChange={e => setForm(p => ({...p, description: e.target.value}))}
@@ -319,7 +319,7 @@ export default function MarketingPage() {
                                     <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* DESKTOP BANNER */}
                                         <div>
-                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic"><Monitor size={10}/> Banner PC (1920×600)</label>
+                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic"><Monitor size={10}/> Banner PC (1920×600)</label>
                                             <div className="relative aspect-[3/1] bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center hover:bg-slate-100 transition-colors">
                                                 {form.bannerDesktopUrl ? (<>
                                                     <img src={form.bannerDesktopUrl} className="w-full h-full object-cover" />
@@ -330,7 +330,7 @@ export default function MarketingPage() {
                                                         </label>
                                                     </div>
                                                 </>) : (
-                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-orange-500">
+                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-800 hover:text-orange-500">
                                                         <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'desktop')} disabled={uploadingDesktop} />
                                                         {uploadingDesktop ? <Loader2 className="animate-spin mb-1" size={20}/> : <Monitor size={24} className="mb-1" />}
                                                         <span className="text-[9px] font-black uppercase tracking-widest italic">{uploadingDesktop ? 'SUBIENDO...' : 'SUBIR PC'}</span>
@@ -340,7 +340,7 @@ export default function MarketingPage() {
                                         </div>
                                         {/* MOBILE BANNER */}
                                         <div>
-                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic"><Smartphone size={10}/> Banner Móvil (600×400)</label>
+                                            <label className="flex items-center gap-1.5 text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic"><Smartphone size={10}/> Banner Móvil (600×400)</label>
                                             <div className="relative aspect-[3/2] bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center hover:bg-slate-100 transition-colors">
                                                 {form.bannerMobileUrl ? (<>
                                                     <img src={form.bannerMobileUrl} className="w-full h-full object-cover" />
@@ -351,7 +351,7 @@ export default function MarketingPage() {
                                                         </label>
                                                     </div>
                                                 </>) : (
-                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-orange-500">
+                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-800 hover:text-orange-500">
                                                         <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadBanner(e, 'mobile')} disabled={uploadingMobile} />
                                                         {uploadingMobile ? <Loader2 className="animate-spin mb-1" size={20}/> : <Smartphone size={24} className="mb-1" />}
                                                         <span className="text-[9px] font-black uppercase tracking-widest italic">{uploadingMobile ? 'SUBIENDO...' : 'SUBIR MÓVIL'}</span>
@@ -371,11 +371,11 @@ export default function MarketingPage() {
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic flex items-center gap-1"><Calendar size={10}/> Fecha Inicio Promoción</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic flex items-center gap-1"><Calendar size={10}/> Fecha Inicio Promoción</label>
                                             <input type="date" value={form.startDate} onChange={e => setForm(p => ({...p, startDate: e.target.value}))} className="w-full bg-slate-50 border-2 border-transparent focus:bg-white rounded-2xl px-5 py-3 font-bold text-sm outline-none focus:border-orange-500 transition-all"/>
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic flex items-center gap-1"><Calendar size={10}/> Fecha Fin Promoción</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic flex items-center gap-1"><Calendar size={10}/> Fecha Fin Promoción</label>
                                             <input type="date" value={form.endDate} onChange={e => setForm(p => ({...p, endDate: e.target.value}))} className="w-full bg-slate-50 border-2 border-transparent focus:bg-white rounded-2xl px-5 py-3 font-bold text-sm outline-none focus:border-orange-500 transition-all"/>
                                         </div>
                                     </div>
@@ -384,7 +384,7 @@ export default function MarketingPage() {
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             {DAYS.map(day => (
                                                 <button key={day.id} onClick={() => toggleDay(day.id)}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.activeDays.includes(day.id) ? 'bg-orange-500 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-400'}`}>
+                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.activeDays.includes(day.id) ? 'bg-orange-500 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-800'}`}>
                                                     {day.label}
                                                 </button>
                                             ))}
@@ -399,7 +399,7 @@ export default function MarketingPage() {
                                                 <input type="time" value={form.endTime} onChange={e => setForm(p => ({...p, endTime: e.target.value}))} className="bg-white border rounded-lg px-3 py-1 outline-none"/>
                                             </label>
                                         </div>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-2 italic">* Si dejas días/horas en blanco, estará activo 24/7 en el rango de fechas elegido.</p>
+                                        <p className="text-[8px] font-bold text-slate-800 uppercase tracking-widest mt-2 italic">* Si dejas días/horas en blanco, estará activo 24/7 en el rango de fechas elegido.</p>
                                     </div>
                                 </div>
                             </section>
@@ -416,7 +416,7 @@ export default function MarketingPage() {
                                             <input value={form.code} onChange={e => setForm(p => ({...p, code: e.target.value.toUpperCase()}))} placeholder="En blanco = Auto Generado" className="w-full bg-white border border-orange-100 rounded-xl px-4 py-3 font-black outline-none focus:border-orange-400 transition-all uppercase tracking-widest text-orange-600"/>
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Tipo de Descuento</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Tipo de Descuento</label>
                                             <select value={form.discountType} onChange={e => setForm(p => ({...p, discountType: e.target.value}))} className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold text-sm outline-none">
                                                 {DISCOUNT_TYPES.map(dt => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
                                             </select>
@@ -424,21 +424,21 @@ export default function MarketingPage() {
                                     </div>
                                     <div className="grid grid-cols-3 gap-4">
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Valor Recompensa</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Valor Recompensa</label>
                                             <input type="number" value={form.discountValue} onChange={e => setForm(p => ({...p, discountValue: Number(e.target.value)}))} className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-black text-center outline-none"/>
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Monto Mín. Compra ($)</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Monto Mín. Compra ($)</label>
                                             <input type="number" value={form.minOrderAmount} onChange={e => setForm(p => ({...p, minOrderAmount: Number(e.target.value)}))} placeholder="0" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold text-center outline-none"/>
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Usos Máx Globales</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Usos Máx Globales</label>
                                             <input type="number" value={form.maxUses} onChange={e => setForm(p => ({...p, maxUses: Number(e.target.value)}))} placeholder="Ilimitado" className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold text-center outline-none"/>
                                         </div>
                                     </div>
                                     {form.discountType === 'ITEM_DISCOUNT' && (
                                         <div className="mt-4">
-                                            <label className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-2 ml-1 italic">Producto Específico</label>
+                                            <label className="block text-[8px] font-black uppercase text-slate-800 tracking-widest mb-2 ml-1 italic">Producto Específico</label>
                                             <select value={form.targetProductId} onChange={e => setForm(p => ({...p, targetProductId: e.target.value}))} className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none">
                                                 <option value="">Selecciona Producto...</option>
                                                 {products.map((p: SimpleProduct) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -452,7 +452,7 @@ export default function MarketingPage() {
 
                         {/* Footer Buttons */}
                         <div className="sticky bottom-0 bg-white/95 backdrop-blur-md p-6 border-t border-slate-100 shrink-0 flex justify-end gap-4 z-20">
-                            <button onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl border border-slate-200 font-black uppercase text-[10px] text-slate-400 hover:text-slate-900 transition-colors">Cancelar</button>
+                            <button onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl border border-slate-200 font-black uppercase text-[10px] text-slate-800 hover:text-slate-900 transition-colors">Cancelar</button>
                             <button onClick={handleSubmit} disabled={saving} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-colors flex items-center gap-2">
                                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>} GUARDAR
                             </button>
@@ -536,11 +536,11 @@ export default function MarketingPage() {
                                     {/* Stats */}
                                     <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
                                         <div>
-                                            <p className="text-[8px] font-black uppercase text-slate-400">Usos</p>
+                                            <p className="text-[8px] font-black uppercase text-slate-800">Usos</p>
                                             <p className="text-xs font-black italic">{promo.currentUses} <span className="text-slate-300">/ {promo.maxUses || '∞'}</span></p>
                                         </div>
                                         <div>
-                                            <p className="text-[8px] font-black uppercase text-slate-400">Estado</p>
+                                            <p className="text-[8px] font-black uppercase text-slate-800">Estado</p>
                                             <p className={`text-[10px] font-black uppercase tracking-widest italic ${promo.isActive && !isExpired && !isExhausted ? 'text-green-500' : 'text-red-500'}`}>
                                                 {isExpired ? 'Expiró' : isExhausted ? 'Agotado' : promo.isActive ? 'Activo' : 'Pausado'}
                                             </p>

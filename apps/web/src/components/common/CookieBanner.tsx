@@ -85,7 +85,7 @@ export default function CookieBanner() {
                         <h3 className="font-[900] italic tracking-tight text-lg text-slate-900 uppercase">
                             Control de Cookies
                         </h3>
-                        <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-1">
+                        <p className="text-xs text-slate-900 font-semibold leading-relaxed mt-1">
                             Utilizamos cookies para garantizar el funcionamiento del e-commerce y analizar el tráfico de forma segura conforme a la ley de datos de Chile.
                         </p>
                     </div>
@@ -103,19 +103,19 @@ export default function CookieBanner() {
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     onClick={handleRejectAll}
-                                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-bold transition-all text-xs text-center"
+                                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-900 py-2.5 px-4 rounded-xl font-bold transition-all text-xs text-center"
                                 >
                                     Solo Necesarias
                                 </button>
                                 <button
                                     onClick={() => setShowConfig(true)}
-                                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-bold transition-all text-xs text-center flex items-center justify-center gap-1.5"
+                                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-900 py-2.5 px-4 rounded-xl font-bold transition-all text-xs text-center flex items-center justify-center gap-1.5"
                                 >
                                     <Settings size={14} /> Configurar
                                 </button>
                             </div>
                         </div>
-                        <div className="text-[10px] text-center text-slate-400 font-semibold mt-1">
+                        <div className="text-[10px] text-center text-slate-900 font-semibold mt-1">
                             Revisa nuestra{' '}
                             <Link href="/legal/cookies" className="text-[#f2642e] hover:underline font-bold">
                                 Política de Cookies
@@ -133,9 +133,9 @@ export default function CookieBanner() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="text-left">
                                     <p className="text-xs font-black text-slate-900 uppercase">Necesarias / Técnicas</p>
-                                    <p className="text-[10px] text-slate-400 font-semibold leading-tight">Sesión, Carro y Privacidad.</p>
+                                    <p className="text-[10px] text-slate-900 font-semibold leading-tight">Sesión, Carro y Privacidad.</p>
                                 </div>
-                                <span className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center cursor-not-allowed">
+                                <span className="w-8 h-8 rounded-full bg-slate-200 text-slate-900 flex items-center justify-center cursor-not-allowed">
                                     <Check size={14} strokeWidth={3} />
                                 </span>
                             </div>
@@ -146,7 +146,7 @@ export default function CookieBanner() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="text-left">
                                     <p className="text-xs font-black text-slate-900 uppercase">Estadísticas y Análisis</p>
-                                    <p className="text-[10px] text-slate-400 font-semibold leading-tight">Medición de visitas de forma anónima.</p>
+                                    <p className="text-[10px] text-slate-900 font-semibold leading-tight">Medición de visitas de forma anónima.</p>
                                 </div>
                                 <button
                                     onClick={() => setAnalytics(!analytics)}
@@ -162,7 +162,7 @@ export default function CookieBanner() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="text-left">
                                     <p className="text-xs font-black text-slate-900 uppercase">Marketing y Publicidad</p>
-                                    <p className="text-[10px] text-slate-400 font-semibold leading-tight">Personalización y anuncios relevantes.</p>
+                                    <p className="text-[10px] text-slate-900 font-semibold leading-tight">Personalización y anuncios relevantes.</p>
                                 </div>
                                 <button
                                     onClick={() => setMarketing(!marketing)}
@@ -176,7 +176,7 @@ export default function CookieBanner() {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowConfig(false)}
-                                className="w-1/3 bg-slate-50 hover:bg-slate-100 text-slate-700 py-3 px-4 rounded-xl font-bold transition-all text-xs"
+                                className="w-1/3 bg-slate-50 hover:bg-slate-100 text-slate-900 py-3 px-4 rounded-xl font-bold transition-all text-xs"
                             >
                                 Atrás
                             </button>

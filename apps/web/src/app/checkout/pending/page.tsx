@@ -26,7 +26,7 @@ function PendingContent() {
                     <h1 className="text-4xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-3">
                         Pago en<br />Verificación
                     </h1>
-                    <p className="text-slate-500 font-medium mb-8">
+                    <p className="text-slate-900 font-medium mb-8">
                         Tu pago está siendo procesado. Te notificaremos cuando sea confirmado.
                     </p>
 
@@ -51,7 +51,7 @@ function PendingContent() {
                             </span>
                         </div>
                         <div className="pt-2 border-t border-amber-100">
-                            <p className="text-xs font-medium text-slate-500">
+                            <p className="text-xs font-medium text-slate-900">
                                 Esto puede ocurrir con pagos en efectivo (Rapipago, Pago Fácil) o transferencias bancarias que requieren procesamiento adicional.
                             </p>
                         </div>
@@ -85,7 +85,7 @@ function PendingContent() {
                 </div>
 
                 {/* Footer */}
-                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">
+                <p className="text-center text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-6">
                     Te avisaremos por email cuando el pago sea confirmado
                 </p>
             </div>

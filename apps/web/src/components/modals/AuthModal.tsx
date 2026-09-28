@@ -77,14 +77,14 @@ export default function AuthModal({ isOpen, onClose }: Props) {
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] w-full max-w-md p-6 md:p-10 relative overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl">
                 <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <X size={20} className="text-slate-400" />
+                    <X size={20} className="text-slate-900" />
                 </button>
 
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
                         {mode === 'LOGIN' ? 'Bienvenido' : mode === 'REGISTER' ? 'Únete al Club' : 'Verificación'}
                     </h2>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 mt-2">
                         {mode === 'LOGIN' ? 'Ingresa para gestionar tus pedidos' : mode === 'REGISTER' ? 'Crea tu cuenta en segundos' : 'Ingresa el código enviado a tu correo'}
                     </p>
                 </div>
@@ -93,25 +93,25 @@ export default function AuthModal({ isOpen, onClose }: Props) {
                     {mode === 'REGISTER' && (
                         <>
                             <div className="relative group">
-                                <User className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+                                <User className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                                 <input
                                     type="text"
                                     placeholder="Nombre Completo"
                                     required
                                     value={name}
                                     onChange={e => setName(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-300 text-slate-900"
+                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                                 />
                             </div>
                             <div className="relative group">
-                                <Phone className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+                                <Phone className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                                 <input
                                     type="tel"
                                     placeholder="Teléfono (WhatsApp)"
                                     required
                                     value={phone}
                                     onChange={e => setPhone(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-300 text-slate-900"
+                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                                 />
                             </div>
                         </>
@@ -119,7 +119,7 @@ export default function AuthModal({ isOpen, onClose }: Props) {
 
                     {mode === 'VERIFY' && (
                         <div className="relative group">
-                            <Lock className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+                            <Lock className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                             <input
                                 type="text"
                                 placeholder="Código de 6 dígitos"
@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose }: Props) {
                                 maxLength={6}
                                 value={verificationCode}
                                 onChange={e => setVerificationCode(e.target.value)}
-                                className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-center text-xl tracking-[0.5em] outline-none focus:border-slate-900 transition-all placeholder:text-slate-300 text-slate-900"
+                                className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-center text-xl tracking-[0.5em] outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                             />
                         </div>
                     )}
@@ -135,19 +135,19 @@ export default function AuthModal({ isOpen, onClose }: Props) {
                     {(mode !== 'VERIFY') && (
                         <>
                             <div className="relative group">
-                                <Mail className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+                                <Mail className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                                 <input
                                     type="email"
                                     placeholder="Correo Electrónico"
                                     required
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-300 text-slate-900"
+                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                                 />
                             </div>
 
                             <div className="relative group">
-                                <Lock className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+                                <Lock className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                                 <input
                                     type="password"
                                     placeholder="Contraseña"
@@ -155,7 +155,7 @@ export default function AuthModal({ isOpen, onClose }: Props) {
                                     minLength={4}
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-300 text-slate-900"
+                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                                 />
                             </div>
                         </>
@@ -183,12 +183,12 @@ export default function AuthModal({ isOpen, onClose }: Props) {
 
                 {mode !== 'VERIFY' && (
                     <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
+                        <p className="text-slate-900 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
                         {/* Google Button Container */}
                         <div id="google-login-modal-btn" className="flex justify-center h-[40px]"></div>
 
                         <div className="mt-6 flex justify-center gap-1 text-xs font-bold">
-                            <span className="text-slate-400">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
+                            <span className="text-slate-900">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
                             <button
                                 onClick={() => { setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN'); setError(''); }}
                                 className="text-[#f2642e] uppercase hover:underline"

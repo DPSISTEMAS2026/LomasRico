@@ -1,12 +1,16 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { cleanModifierLabel } from '../common/clean-label';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class ModifiersService {
     private readonly logger = new Logger(ModifiersService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(
+        private prisma: PrismaService,
+        private productsService: ProductsService,
+    ) {}
 
     // ===============================================
     // MODIFIER GROUPS CRUD
@@ -33,6 +37,9 @@ export class ModifiersService {
                 },
                 _count: {
                     select: { productModifiers: true },
+                },
+                productModifiers: {
+                    include: { sellingProduct: { select: { id: true, name: true, category: true, isActive: true } } },
                 },
             },
             orderBy: { sortOrder: 'asc' },
@@ -84,18 +91,27 @@ export class ModifiersService {
         name: string;
         displayName: string;
         type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+        role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
         minSelections?: number;
         maxSelections?: number;
+        showOnWeb?: boolean;
+        showOnPos?: boolean;
+        showOnSalon?: boolean;
         sortOrder?: number;
         options?: { name: string; priceAdjustment?: number; isDefault?: boolean; sortOrder?: number }[];
     }) {
+        const role = data.role || 'OTHER';
         return this.prisma.modifierGroup.create({
             data: {
                 name: cleanModifierLabel(data.name) || data.name,
                 displayName: cleanModifierLabel(data.displayName) || data.displayName,
                 type: data.type || 'SINGLE_SELECT',
+                role,
                 minSelections: data.minSelections ?? 0,
                 maxSelections: data.maxSelections ?? 1,
+                showOnWeb: data.showOnWeb ?? true,
+                showOnPos: data.showOnPos ?? true,
+                showOnSalon: data.showOnSalon ?? role !== 'UPSELL',
                 sortOrder: data.sortOrder ?? 0,
                 options: data.options
                     ? {
@@ -119,8 +135,12 @@ export class ModifiersService {
             name?: string;
             displayName?: string;
             type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+            role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
             minSelections?: number;
             maxSelections?: number;
+            showOnWeb?: boolean;
+            showOnPos?: boolean;
+            showOnSalon?: boolean;
             sortOrder?: number;
         },
     ) {
@@ -133,6 +153,78 @@ export class ModifiersService {
             },
             include: { options: true },
         });
+    }
+
+    async applyRoleSuggestions() {
+        const groups = await this.prisma.modifierGroup.findMany({
+            select: { id: true, name: true, displayName: true, role: true },
+        });
+        let updated = 0;
+        const changes: { id: string; name: string; role: string }[] = [];
+        for (const group of groups) {
+            const role = this.suggestRole(group.name, group.displayName);
+            if (role === 'OTHER') continue;
+            const shouldFix = !group.role || group.role === 'OTHER' || (group.role === 'REMOVE' && role === 'SIZE');
+            if (!shouldFix) continue;
+            await this.prisma.modifierGroup.update({
+                where: { id: group.id },
+                data: {
+                    role,
+                    showOnSalon: role !== 'UPSELL',
+                    showOnWeb: true,
+                    showOnPos: true,
+                },
+            });
+            updated += 1;
+            changes.push({ id: group.id, name: group.displayName || group.name, role });
+        }
+        const agrandaIds = groups.filter((g) => /agranda tu ceviche/i.test(`${g.name} ${g.displayName}`)).map((g) => g.id);
+        const sizeIds = groups.filter((g) => this.suggestRole(g.name, g.displayName) === 'SIZE').map((g) => g.id);
+        let detachedAgrandar = 0;
+        if (agrandaIds.length && sizeIds.length) {
+            const withSize = await this.prisma.productModifier.findMany({
+                where: { modifierGroupId: { in: sizeIds } },
+                select: { sellingProductId: true },
+            });
+            const productIds = [...new Set(withSize.map((x) => x.sellingProductId))];
+            if (productIds.length) {
+                const removed = await this.prisma.productModifier.deleteMany({
+                    where: {
+                        modifierGroupId: { in: agrandaIds },
+                        sellingProductId: { in: productIds },
+                    },
+                });
+                detachedAgrandar = removed.count;
+            }
+        }
+        const leftover = groups
+            .filter((g) => {
+                const next = changes.find((c) => c.id === g.id)?.role || g.role || 'OTHER';
+                return next === 'OTHER';
+            })
+            .map((g) => `${g.name} | ${g.displayName}`);
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-AGRANDAR',location:'modifiers.service.ts:applyRoleSuggestions',message:'applied modifier role suggestions',data:{updated,total:groups.length,detachedAgrandar,leftover:leftover.slice(0,20),changes:changes.slice(0,40)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return { updated, changes };
+    }
+
+    private suggestRole(groupName?: string, displayName?: string) {
+        const display = (displayName || '').toLowerCase();
+        if (/formato|tama[ñn]o/.test(display) && !/quita/.test(display)) return 'SIZE' as const;
+        const label = `${groupName || ''} ${displayName || ''}`.toLowerCase();
+        if (/extras?\s*lomasrico|extras?\s+lo\s*m[aá]s\s*rico|limonada\s+lomasrico|upsell/.test(label)) {
+            return 'UPSELL' as const;
+        }
+        if (/agranda tu ceviche/.test(label)) return 'UPSELL' as const;
+        if (/quita|sin verdura/.test(label)) return 'REMOVE' as const;
+        if (/salsa/.test(label)) return 'SAUCE' as const;
+        if (/protein|proteín|gohan|elige tu roll|topping|relleno|premium|doble prote/.test(label)) return 'PROTEIN' as const;
+        if (/sabor|variedades|bebida lata|limonad|monster/.test(label)) return 'FLAVOR' as const;
+        if (/formato|tama[ñn]o|opciones cc|\bcc\b|1\s*kg|crudo|full bajon|pisco/.test(label)) return 'SIZE' as const;
+        if (/unidad|docena|dos x|hand roll|empanad|aros|papas|camar[oó]n|porci[oó]n/.test(label)) return 'PORTION' as const;
+        if (/opciones|elige/.test(label)) return 'PORTION' as const;
+        return 'OTHER' as const;
     }
 
     async deleteGroup(id: string) {
@@ -194,6 +286,21 @@ export class ModifiersService {
         modifierGroupId: string,
         config?: { isRequired?: boolean; sortOrder?: number; overrideMin?: number; overrideMax?: number },
     ) {
+        const existing = await this.prisma.productModifier.findUnique({
+            where: {
+                sellingProductId_modifierGroupId: {
+                    sellingProductId: productId,
+                    modifierGroupId,
+                },
+            },
+            select: { sortOrder: true },
+        });
+        const sortOrder = config?.sortOrder ?? existing?.sortOrder ?? await this.nextSortOrder(productId);
+        const update: { isRequired?: boolean; sortOrder?: number; overrideMin?: number; overrideMax?: number } = {};
+        if (config?.isRequired !== undefined) update.isRequired = config.isRequired;
+        if (config?.sortOrder !== undefined) update.sortOrder = config.sortOrder;
+        if (config?.overrideMin !== undefined) update.overrideMin = config.overrideMin;
+        if (config?.overrideMax !== undefined) update.overrideMax = config.overrideMax;
         return this.prisma.productModifier.upsert({
             where: {
                 sellingProductId_modifierGroupId: {
@@ -201,21 +308,84 @@ export class ModifiersService {
                     modifierGroupId,
                 },
             },
-            update: {
-                isRequired: config?.isRequired,
-                sortOrder: config?.sortOrder,
-                overrideMin: config?.overrideMin,
-                overrideMax: config?.overrideMax,
-            },
+            update,
             create: {
                 sellingProductId: productId,
                 modifierGroupId,
                 isRequired: config?.isRequired ?? false,
-                sortOrder: config?.sortOrder ?? 0,
+                sortOrder,
                 overrideMin: config?.overrideMin,
                 overrideMax: config?.overrideMax,
             },
         });
+    }
+
+    private async nextSortOrder(productId: string) {
+        const agg = await this.prisma.productModifier.aggregate({
+            where: { sellingProductId: productId },
+            _max: { sortOrder: true },
+        });
+        return (agg._max.sortOrder ?? -1) + 1;
+    }
+
+    async replaceProductAssignments(groupId: string, productIds: string[], config?: { isRequired?: boolean }) {
+        const uniqueIds = [...new Set(productIds.filter(Boolean))];
+        await this.prisma.productModifier.deleteMany({
+            where: {
+                modifierGroupId: groupId,
+                sellingProductId: { notIn: uniqueIds.length ? uniqueIds : ['__none__'] },
+            },
+        });
+        for (const productId of uniqueIds) {
+            await this.assignToProduct(productId, groupId, {
+                isRequired: config?.isRequired,
+            });
+        }
+        return this.findOneGroup(groupId);
+    }
+
+    async createWithProducts(data: {
+        displayName: string;
+        role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
+        type?: 'SINGLE_SELECT' | 'MULTI_SELECT';
+        minSelections?: number;
+        maxSelections?: number;
+        showOnWeb?: boolean;
+        showOnPos?: boolean;
+        showOnSalon?: boolean;
+        options?: { name: string; priceAdjustment?: number }[];
+        productIds: string[];
+    }) {
+        const single = (data.type || 'SINGLE_SELECT') === 'SINGLE_SELECT';
+        const created = await this.createGroup({
+            name: `mod-${Date.now()}`,
+            displayName: data.displayName,
+            role: data.role,
+            type: data.type,
+            minSelections: data.minSelections,
+            maxSelections: data.maxSelections,
+            showOnWeb: data.showOnWeb,
+            showOnPos: data.showOnPos,
+            showOnSalon: data.showOnSalon,
+            options: (data.options || []).map((o, i) => ({
+                name: o.name,
+                priceAdjustment: o.priceAdjustment ?? 0,
+                isDefault: single && i === 0,
+                sortOrder: i,
+            })),
+        });
+        const required = (data.minSelections ?? 0) > 0;
+        const assigned: { productId: string; sortOrder: number }[] = [];
+        for (const productId of data.productIds || []) {
+            const sortOrder = await this.nextSortOrder(productId);
+            await this.assignToProduct(productId, created.id, { isRequired: required, sortOrder });
+            assigned.push({ productId, sortOrder });
+        }
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-ORDER-OWNER',location:'modifiers.service.ts:createWithProducts',message:'created modifier with products',data:{id:created.id,role:data.role,displayName:data.displayName,assigned:assigned.slice(0,20),optionCount:(data.options||[]).length,orderByCatalog:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        this.productsService.invalidateActiveCatalog();
+        return this.findOneGroup(created.id);
     }
 
     async removeFromProduct(productId: string, modifierGroupId: string) {
@@ -253,6 +423,10 @@ export class ModifiersService {
             type: m.modifierGroup.type,
             isRequired: m.isRequired,
             sortOrder: m.sortOrder,
+            role: m.modifierGroup.role || 'OTHER',
+            showOnWeb: m.modifierGroup.showOnWeb !== false,
+            showOnPos: m.modifierGroup.showOnPos !== false,
+            showOnSalon: m.modifierGroup.showOnSalon !== false,
             minSelections: m.overrideMin ?? m.modifierGroup.minSelections,
             maxSelections: m.overrideMax ?? m.modifierGroup.maxSelections,
             options: m.modifierGroup.options.map((o) => ({

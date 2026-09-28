@@ -126,7 +126,7 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                         <h3 className="text-xl font-black text-slate-900 italic tracking-tighter uppercase truncate">{sale.code || `#${ticket.id.slice(0, 4)}`}</h3>
                         {minutesAgo > 15 && ticket.status !== 'READY' && <AlertCircle size={18} className="text-red-500 shrink-0" />}
                     </div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                    <p className="text-[9px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5 mt-1">
                         <Timer size={12} className="shrink-0" /> Hace {formatElapsedTime(minutesAgo)}
                     </p>
                 </div>
@@ -135,7 +135,7 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                         isUber ? 'bg-green-100 text-green-800' : isPedidosYa ? 'bg-red-100 text-red-800' : isTable ? 'bg-orange-100 text-orange-800' : sale.channel === 'POS' ? 'bg-slate-100 text-slate-700' : 'bg-purple-100 text-purple-700'
                     }`}>{platformLabel}</span>
                     {ticket.batchNumber ? (
-                        <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-slate-100 text-slate-500">Tanda {ticket.batchNumber}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-slate-100 text-slate-800">Tanda {ticket.batchNumber}</span>
                     ) : null}
                 </div>
             </div>
@@ -156,8 +156,8 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                     <div className={`p-2.5 space-y-1 ${isUber ? 'bg-green-50' : isPedidosYa ? 'bg-red-50' : 'bg-amber-50'}`}>
                         {sale.note.split('\n').filter(Boolean).slice(0, 3).map((line: string, i: number) => {
                             if (i === 0) { const m = line.match(/👤\s*(.+)/); return m ? <p key={i} className="text-[10px] font-black text-slate-700 uppercase">👤 {m[1]}</p> : <p key={i} className="text-[10px] font-bold text-slate-600">{line}</p>; }
-                            if (line.startsWith('•')) { const [n, ...mp] = line.replace('•', '').trim().split('→'); return <div key={i} className="text-[10px]"><span className="font-black text-slate-800 uppercase">{n}</span>{mp.length > 0 && <span className="text-slate-500 italic"> → {mp.join('→')}</span>}</div>; }
-                            return <p key={i} className="text-[9px] text-slate-500 italic">{line}</p>;
+                            if (line.startsWith('•')) { const [n, ...mp] = line.replace('•', '').trim().split('→'); return <div key={i} className="text-[10px]"><span className="font-black text-slate-800 uppercase">{n}</span>{mp.length > 0 && <span className="text-slate-800 italic"> → {mp.join('→')}</span>}</div>; }
+                            return <p key={i} className="text-[9px] text-slate-800 italic">{line}</p>;
                         })}
                     </div>
                 </div>

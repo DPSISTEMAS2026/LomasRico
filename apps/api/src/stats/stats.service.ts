@@ -25,15 +25,24 @@ export class StatsService {
             where: { status: { in: ['WAITING', 'PREPARING'] } }
         });
 
-        // Alertas reales: items debajo de su stock mínimo individual
-        const allItems = await (this.prisma as any).inventoryItem.findMany({
-            where: { isActive: true },
-            select: { id: true, currentStock: true, minStockThreshold: true }
-        });
-        const lowStockItems = allItems.filter((i: any) => {
-            const threshold = i.minStockThreshold ?? 10;
-            return (i.currentStock ?? 0) < threshold;
-        });
+        // InventoryItem no tiene isActive; un where con ese campo tumba /stats/dashboard
+        let lowStockItems: { id: string; currentStock: number; minStockThreshold: number }[] = [];
+        try {
+            const allItems = await (this.prisma as any).inventoryItem.findMany({
+                select: { id: true, currentStock: true, minStockThreshold: true }
+            });
+            lowStockItems = allItems.filter((i: any) => {
+                const threshold = i.minStockThreshold ?? 10;
+                return (i.currentStock ?? 0) < threshold;
+            });
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-STATS-ISACTIVE',location:'stats.service.ts:dashboard',message:'inventory alerts ok',data:{itemCount:allItems.length,lowStock:lowStockItems.length},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        } catch (err: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-STATS-ISACTIVE',location:'stats.service.ts:dashboard',message:'inventory alerts failed',data:{err:String(err?.message||err).slice(0,240)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        }
 
         const todayTotal = daySales._sum.total || 0;
         const yesterdayTotal = yesterdaySales._sum.total || 0;

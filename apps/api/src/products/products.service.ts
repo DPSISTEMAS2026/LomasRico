@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { cleanModifierLabel } from '../common/clean-label';
@@ -16,6 +16,10 @@ export class ProductsService implements OnModuleInit {
 
     private invalidateActiveCache() {
         this.activeCache = null;
+    }
+
+    invalidateActiveCatalog() {
+        this.invalidateActiveCache();
     }
 
     constructor(
@@ -149,6 +153,10 @@ export class ProductsService implements OnModuleInit {
                 groupName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
                 displayName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
                 type: pm.modifierGroup.type,
+                role: pm.modifierGroup.role || 'OTHER',
+                showOnWeb: pm.modifierGroup.showOnWeb !== false,
+                showOnPos: pm.modifierGroup.showOnPos !== false,
+                showOnSalon: pm.modifierGroup.showOnSalon !== false,
                 isRequired: pm.isRequired,
                 sortOrder: pm.sortOrder,
                 minSelections: pm.overrideMin ?? pm.modifierGroup.minSelections,
@@ -234,6 +242,10 @@ export class ProductsService implements OnModuleInit {
                                 name: true,
                                 displayName: true,
                                 type: true,
+                                role: true,
+                                showOnWeb: true,
+                                showOnPos: true,
+                                showOnSalon: true,
                                 minSelections: true,
                                 maxSelections: true,
                                 options: {
@@ -359,8 +371,23 @@ export class ProductsService implements OnModuleInit {
     }
 
     async create(data: any) {
+        const name = String(data?.name || '').trim();
+        const category = String(data?.category || '').trim();
+        if (!name) throw new BadRequestException('El producto necesita un nombre.');
+        if (!category) throw new BadRequestException('El producto necesita una categoría.');
         this.invalidateActiveCache();
-        return this.prisma.sellingProduct.create({ data });
+        const created = await this.prisma.sellingProduct.create({
+            data: {
+                ...data,
+                name,
+                category,
+                price: data.price ?? 0,
+            },
+        });
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CREATE',location:'products.service.ts:create',message:'product created',data:{id:created.id,name:created.name,category:created.category,price:Number(created.price),isActive:created.isActive},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return created;
     }
 
     async update(id: string, data: any) {
@@ -393,22 +420,22 @@ export class ProductsService implements OnModuleInit {
     async hardDelete(id: string) {
         this.logger.warn(`HARD DELETE product ${id} — this is irreversible!`);
 
-        return this.prisma.$transaction(async (tx: any) => {
-            // 1. Encontrar el producto con todas sus relaciones
+        try {
+            const result = await this.prisma.$transaction(async (tx: any) => {
             const product = await tx.sellingProduct.findUnique({
                 where: { id },
                 include: {
                     saleItems: { select: { id: true } },
                     variants: { select: { id: true, saleItems: { select: { id: true } } } },
                     recipe: { select: { id: true } },
+                    promotions: { select: { id: true } },
                 }
             });
 
             if (!product) {
-                throw new Error(`Producto ${id} no encontrado`);
+                throw new NotFoundException(`Producto ${id} no encontrado`);
             }
 
-            // 2. Eliminar RecipeSnapshots de SaleItems del producto
             const allSaleItemIds = [
                 ...product.saleItems.map((si: any) => si.id),
                 ...product.variants.flatMap((v: any) => v.saleItems.map((si: any) => si.id))
@@ -420,7 +447,6 @@ export class ProductsService implements OnModuleInit {
                 });
             }
 
-            // 3. Eliminar SaleItems del producto (directos y de variantes)
             await tx.saleItem.deleteMany({
                 where: { sellingProductId: id }
             });
@@ -431,22 +457,29 @@ export class ProductsService implements OnModuleInit {
                 });
             }
 
-            // 4. Eliminar Variants
             await tx.productVariant.deleteMany({
                 where: { sellingProductId: id }
             });
 
-            // 5. Eliminar ProductModifiers
             await tx.productModifier.deleteMany({
                 where: { sellingProductId: id }
             });
 
-            // 6. Eliminar Recipe y sus items
+            if (product.promotions?.length) {
+                await tx.promotion.updateMany({
+                    where: { targetProductId: id },
+                    data: { targetProductId: null },
+                });
+            }
+
             if (product.recipe) {
+                await tx.modifierOption.updateMany({
+                    where: { recipeId: product.recipe.id },
+                    data: { recipeId: null },
+                });
                 await tx.recipeItem.deleteMany({
                     where: { recipeId: product.recipe.id }
                 });
-                // Desenlazar antes de borrar
                 await tx.sellingProduct.update({
                     where: { id },
                     data: { recipeId: null }
@@ -456,11 +489,22 @@ export class ProductsService implements OnModuleInit {
                 });
             }
 
-            // 7. Finalmente, eliminar el producto
             await tx.sellingProduct.delete({ where: { id } });
 
-            return { success: true, deleted: product.name };
+            return { success: true, deleted: product.name, saleItems: allSaleItemIds.length, variants: product.variants.length, promotionsUnlinked: product.promotions?.length || 0 };
         }, { maxWait: 10000, timeout: 30000 });
+
+            this.invalidateActiveCache();
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'products.service.ts:hardDelete',message:'product hard-deleted',data:{id,...result},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return result;
+        } catch (error: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'products.service.ts:hardDelete',message:'product hard-delete failed',data:{id,err:String(error?.message||error)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            throw error;
+        }
     }
 
     /**
@@ -488,8 +532,13 @@ export class ProductsService implements OnModuleInit {
             }
         }
 
+        const failed = results.filter((r) => r.status !== 'deleted').length;
+        this.invalidateActiveCache();
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CAT-DEL-PARTIAL',location:'products.service.ts:deleteCategory',message:'category delete finished',data:{category,total:results.length,failed},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         return {
-            success: true,
+            success: failed === 0,
             category,
             totalProcessed: results.length,
             results

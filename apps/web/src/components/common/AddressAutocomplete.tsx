@@ -70,7 +70,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
 
     return (
         <div className="relative w-full group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900">
                 <MapPin size={18} />
             </div>
             <input
@@ -82,7 +82,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
                 onBlur={handleManualSubmit}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); } }}
                 disabled={!ready}
-                className="w-full p-4 pl-12 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-400"
+                className="w-full p-4 pl-12 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-900"
                 placeholder={placeholder}
             />
 
@@ -92,9 +92,9 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
                         <li
                             key={place_id}
                             onClick={() => handleSelect(description)}
-                            className="p-3 hover:bg-slate-50 cursor-pointer font-medium text-xs text-slate-700 border-b border-slate-50 last:border-none flex items-center gap-2"
+                            className="p-3 hover:bg-slate-50 cursor-pointer font-medium text-xs text-slate-900 border-b border-slate-50 last:border-none flex items-center gap-2"
                         >
-                            <MapPin size={14} className="text-slate-400" />
+                            <MapPin size={14} className="text-slate-900" />
                             {description}
                         </li>
                     ))}
@@ -115,7 +115,7 @@ function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Pr
 
     return (
         <div className="relative w-full">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900">
                 {loading ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
             </div>
             <input
@@ -123,7 +123,7 @@ function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Pr
                 onChange={(e) => setVal(e.target.value)}
                 onBlur={submit}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-                className={`w-full p-4 pl-12 rounded-xl bg-slate-50 border font-bold text-sm outline-none transition-all placeholder:text-slate-400 ${error ? 'border-red-200 bg-red-50' : 'border-slate-200 focus:border-slate-900'}`}
+                className={`w-full p-4 pl-12 rounded-xl bg-slate-50 border font-bold text-sm outline-none transition-all placeholder:text-slate-900 ${error ? 'border-red-200 bg-red-50' : 'border-slate-200 focus:border-slate-900'}`}
                 placeholder={loading ? 'Cargando mapa...' : (placeholder || 'Ingresa tu dirección manual...')}
                 disabled={loading}
             />

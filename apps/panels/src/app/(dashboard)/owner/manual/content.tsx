@@ -28,8 +28,8 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
     return (
         <div className="overflow-x-auto mb-4">
             <table className="w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
-                <thead className="bg-slate-50"><tr>{headers.map((h, i) => <th key={i} className="px-4 py-3 text-left text-xs font-black uppercase text-slate-500">{h}</th>)}</tr></thead>
-                <tbody className="divide-y divide-slate-100 text-slate-600">{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`px-4 py-3 ${j === 0 ? 'font-bold' : ''}`} dangerouslySetInnerHTML={{ __html: c }} />)}</tr>)}</tbody>
+                <thead className="bg-slate-50"><tr>{headers.map((h, i) => <th key={i} className="px-4 py-3 text-left text-xs font-black uppercase text-slate-900">{h}</th>)}</tr></thead>
+                <tbody className="divide-y divide-slate-100 text-slate-900">{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`px-4 py-3 ${j === 0 ? 'font-bold' : ''}`} dangerouslySetInnerHTML={{ __html: c }} />)}</tr>)}</tbody>
             </table>
         </div>
     );
@@ -50,8 +50,8 @@ export function ManualContent() {
                 <h1 className="text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-slate-900 mb-1">
                     Manual <span className="text-orange-500">Operativo</span>
                 </h1>
-                <p className="text-xs text-slate-400 font-bold italic">Lo Más Rico V3 · Versión 2.3.0 · Mayo 2026</p>
-                <p className="text-xs text-slate-400 mt-1"><strong>Para:</strong> Oscar (Dueño) · <strong>De:</strong> Daniel (Soporte Técnico)</p>
+                <p className="text-xs text-slate-800 font-bold italic">Lo Más Rico V3 · Versión 2.3.0 · Mayo 2026</p>
+                <p className="text-xs text-slate-800 mt-1"><strong>Para:</strong> Oscar (Dueño) · <strong>De:</strong> Daniel (Soporte Técnico)</p>
             </div>
 
             {/* 1 */}
@@ -267,10 +267,10 @@ export function ManualContent() {
 
             <div className="mt-10 bg-slate-900 rounded-2xl p-6 text-white">
                 <p className="font-black italic uppercase text-sm mb-1">¿Necesitas ayuda?</p>
-                <p className="text-slate-400 text-sm">WhatsApp directo con Daniel — <strong>Lun a Sáb 10:00 a 20:30 hrs</strong></p>
+                <p className="text-white text-sm">WhatsApp directo con Daniel — <strong>Lun a Sáb 10:00 a 20:30 hrs</strong></p>
             </div>
 
-            <p className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-8 italic">Lo Más Rico V3 · Manual Operativo v2.3.0 · Mayo 2026</p>
+            <p className="text-center text-[10px] text-slate-900 font-bold uppercase tracking-widest mt-8 italic">Lo Más Rico V3 · Manual Operativo v2.3.0 · Mayo 2026</p>
         </>
     );
 }

@@ -349,7 +349,7 @@ export default function InventoryManagementPage() {
     if (loading && items.length === 0) return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Sincronizando Inventario Real...</p>
+            <p className="font-black uppercase text-xs tracking-widest text-slate-800 italic">Sincronizando Inventario Real...</p>
         </div>
     );
 
@@ -361,7 +361,7 @@ export default function InventoryManagementPage() {
                     <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                         GESTIÓN <span className="text-orange-500">INVENTARIO</span>
                     </h1>
-                    <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-2 px-1">
+                    <p className="text-slate-800 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-2 px-1">
                         CONTROL DINÁMICO DESDE BASE DE DATOS
                     </p>
                 </div>
@@ -388,16 +388,16 @@ export default function InventoryManagementPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center hover:bg-slate-900 transition-all duration-500 group">
                     <div>
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1 italic group-hover:text-slate-500">Insumos Totales</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-[0.2em] mb-1 italic group-hover:text-slate-500">Insumos Totales</p>
                         <p className="text-3xl md:text-4xl font-black italic text-slate-900 tracking-tighter group-hover:text-white">{items.length}</p>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-2xl text-slate-400 group-hover:bg-slate-800">
+                    <div className="p-4 bg-slate-50 rounded-2xl text-slate-800 group-hover:bg-slate-800">
                         <Layers size={24} />
                     </div>
                 </div>
                 <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center hover:border-orange-500 transition-all duration-500">
                     <div>
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1 italic">Valor Total Stock</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-[0.2em] mb-1 italic">Valor Total Stock</p>
                         <p className="text-3xl md:text-4xl font-black italic text-orange-500 tracking-tighter">${inventoryValue.toLocaleString()}</p>
                     </div>
                     <div className="p-4 bg-orange-50 rounded-2xl text-orange-500">
@@ -406,7 +406,7 @@ export default function InventoryManagementPage() {
                 </div>
                 <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center hover:border-red-500 transition-all duration-500">
                     <div>
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1 italic">Alertas de Stock</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-[0.2em] mb-1 italic">Alertas de Stock</p>
                         <p className="text-3xl md:text-4xl font-black italic text-red-500 tracking-tighter">{lowStockItems.length}</p>
                     </div>
                     <div className="p-4 bg-red-50 rounded-2xl text-red-500">
@@ -426,7 +426,7 @@ export default function InventoryManagementPage() {
                             <div key={item.id} className="min-w-[220px] bg-white p-4 rounded-2xl border border-red-200 shadow-sm shrink-0">
                                 <p className="font-black text-slate-800 uppercase text-xs truncate italic">{item.name}</p>
                                 <div className="flex justify-between items-end mt-3">
-                                    <p className="text-xl font-black text-red-500 italic leading-none">{item.currentStock} <span className="text-[10px] uppercase text-slate-400">{item.unit}</span></p>
+                                    <p className="text-xl font-black text-red-500 italic leading-none">{item.currentStock} <span className="text-[10px] uppercase text-slate-800">{item.unit}</span></p>
                                     <button
                                         onClick={() => { setRestockItem(item); setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' }); }}
                                         className="text-[9px] font-black text-red-600 underline hover:text-red-800"
@@ -453,7 +453,7 @@ export default function InventoryManagementPage() {
                     />
                     {filter && (
                         <button onClick={() => setFilter('')} className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0">
-                            <X size={16} className="text-slate-400" />
+                            <X size={16} className="text-slate-800" />
                         </button>
                     )}
                 </div>
@@ -472,14 +472,14 @@ export default function InventoryManagementPage() {
                                 </option>
                             ))}
                         </select>
-                        <Package size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Package size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-800 pointer-events-none" />
                     </div>
                     <button
                         onClick={() => setShowCategoryManager(!showCategoryManager)}
                         className={`p-4 rounded-2xl transition-all shrink-0 shadow-sm ${
                             showCategoryManager
                                 ? 'bg-orange-500 text-white shadow-lg'
-                                : 'bg-white border border-slate-100 text-slate-400 hover:text-slate-900 hover:border-slate-300'
+                                : 'bg-white border border-slate-100 text-slate-800 hover:text-slate-900 hover:border-slate-300'
                         }`}
                         title="Gestionar Categorías"
                     >
@@ -498,16 +498,16 @@ export default function InventoryManagementPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-black italic uppercase text-slate-900 tracking-tighter">Gestión de <span className="text-orange-500">Categorías</span></h3>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Renombrar, eliminar o reorganizar categorías de insumos</p>
+                                <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest">Renombrar, eliminar o reorganizar categorías de insumos</p>
                             </div>
                         </div>
                         <button onClick={() => setShowCategoryManager(false)} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                            <X size={20} className="text-slate-400" />
+                            <X size={20} className="text-slate-800" />
                         </button>
                     </div>
 
                     {dynamicCategories.length === 0 ? (
-                        <p className="text-center text-slate-400 text-sm italic py-8">No hay categorías creadas aún.</p>
+                        <p className="text-center text-slate-800 text-sm italic py-8">No hay categorías creadas aún.</p>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                             {dynamicCategories.map(cat => (
@@ -570,7 +570,7 @@ export default function InventoryManagementPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => setDeletingCategory(null)}
-                                                    className="w-full py-2 text-slate-400 font-black uppercase text-[9px] tracking-widest hover:text-slate-600 transition-colors"
+                                                    className="w-full py-2 text-slate-800 font-black uppercase text-[9px] tracking-widest hover:text-slate-600 transition-colors"
                                                 >
                                                     Cancelar
                                                 </button>
@@ -585,7 +585,7 @@ export default function InventoryManagementPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-slate-900 uppercase italic text-xs tracking-tight">{cat}</p>
-                                                    <p className="text-[9px] font-bold text-slate-400">{categoryCounts[cat] || 0} insumo{(categoryCounts[cat] || 0) !== 1 ? 's' : ''}</p>
+                                                    <p className="text-[9px] font-bold text-slate-800">{categoryCounts[cat] || 0} insumo{(categoryCounts[cat] || 0) !== 1 ? 's' : ''}</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -617,7 +617,7 @@ export default function InventoryManagementPage() {
             <div className="hidden lg:block bg-white border border-slate-100 rounded-[3rem] overflow-x-auto overflow-y-hidden shadow-sm border-b-8 border-b-slate-900">
                 <table className="w-full min-w-[720px]">
                     <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-800 italic">
                             <th className="px-8 py-6 text-left">Insumo</th>
                             <th className="px-8 py-6 text-center">Stock Actual</th>
                             <th className="px-8 py-6 text-right">Costo Unitario</th>
@@ -636,7 +636,7 @@ export default function InventoryManagementPage() {
                                             </div>
                                             <div>
                                                 <p className="font-black text-slate-900 uppercase italic text-sm tracking-tight">{item.name}</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{item.category}</p>
+                                                <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest mt-0.5">{item.category}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -645,7 +645,7 @@ export default function InventoryManagementPage() {
                                             <span className={`text-2xl font-black italic tracking-tighter ${isLow ? 'text-red-500' : 'text-slate-900'}`}>
                                                 {item.currentStock || 0}
                                             </span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.unit}</span>
+                                            <span className="text-[8px] font-black text-slate-800 uppercase tracking-widest">{item.unit}</span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 text-right">
@@ -730,14 +730,14 @@ export default function InventoryManagementPage() {
                                 </div>
                                 <div>
                                     <h4 className="font-black text-slate-900 uppercase italic text-sm">{item.name}</h4>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
+                                    <p className="text-[8px] font-bold text-slate-800 uppercase tracking-widest">{item.category}</p>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <p className={`text-2xl font-black italic tracking-tighter leading-none ${(item.currentStock || 0) < 10 ? 'text-red-500' : 'text-slate-900'}`}>
                                     {item.currentStock || 0}
                                 </p>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{item.unit}</p>
+                                <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest">{item.unit}</p>
                             </div>
                         </div>
 
@@ -802,13 +802,13 @@ export default function InventoryManagementPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {/* Nombre */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nombre del Insumo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Nombre del Insumo</label>
                                 <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} placeholder="Ej: Salmón Fresco" autoFocus />
                             </div>
 
                             {/* Categoría */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Categoría</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Categoría</label>
                                 {!showNewCategoryInput ? (
                                     <div className="flex gap-2">
                                         <select className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.category} onChange={e => setNewItem({ ...newItem, category: e.target.value })}>
@@ -863,7 +863,7 @@ export default function InventoryManagementPage() {
 
                             {/* Rol */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol en Producción</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Rol en Producción</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.role} onChange={e => setNewItem({ ...newItem, role: e.target.value })}>
                                     <option value="BASE">Base / Abarrote</option>
                                     <option value="PROTEIN_MAIN">Proteína Principal</option>
@@ -876,7 +876,7 @@ export default function InventoryManagementPage() {
 
                             {/* Tipo */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Tipo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Tipo</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.type} onChange={e => setNewItem({ ...newItem, type: e.target.value })}>
                                     <option value="RAW">🪨 Materia Prima</option>
                                     <option value="PREPARED">🍳 Preparado / Sub-receta</option>
@@ -886,7 +886,7 @@ export default function InventoryManagementPage() {
 
                             {/* Unidad */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Unidad de Medida</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Unidad de Medida</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent" value={newItem.unit} onChange={e => setNewItem({ ...newItem, unit: e.target.value })}>
                                     <option value="KG">Kilogramo (KG)</option>
                                     <option value="GR">Gramo (GR)</option>
@@ -898,26 +898,26 @@ export default function InventoryManagementPage() {
 
                             {/* Rendimiento */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rendimiento %</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Rendimiento %</label>
                                 <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.yield} onChange={e => setNewItem({ ...newItem, yield: e.target.value })} placeholder="100" />
-                                <p className="text-[8px] text-slate-400 mt-1 italic text-center">100% = sin merma | 60% = 40% pérdida en limpieza</p>
+                                <p className="text-[8px] text-slate-800 mt-1 italic text-center">100% = sin merma | 60% = 40% pérdida en limpieza</p>
                             </div>
 
                             {/* Precio Compra */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Precio Compra ($ por {newItem.unit})</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Precio Compra ($ por {newItem.unit})</label>
                                 <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.purchasePrice} onChange={e => setNewItem({ ...newItem, purchasePrice: e.target.value })} placeholder="$0" />
                             </div>
 
                             {/* Stock Inicial */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Stock Inicial ({newItem.unit})</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Stock Inicial ({newItem.unit})</label>
                                 <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.currentStock} onChange={e => setNewItem({ ...newItem, currentStock: e.target.value })} placeholder="0" />
                             </div>
 
                             {/* Umbral Mínimo */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Alerta Stock Mínimo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Alerta Stock Mínimo</label>
                                 <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:ring-2 focus:ring-orange-500 transition-all border border-transparent text-center" value={newItem.minStock} onChange={e => setNewItem({ ...newItem, minStock: e.target.value })} placeholder="10" />
                             </div>
 
@@ -933,7 +933,7 @@ export default function InventoryManagementPage() {
                             )}
 
                             <div className="md:col-span-2 grid grid-cols-2 gap-4 mt-4">
-                                <button onClick={() => setIsCreating(false)} className="py-4 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar</button>
+                                <button onClick={() => setIsCreating(false)} className="py-4 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar</button>
                                 <button onClick={handleCreate} className="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase italic tracking-widest shadow-xl text-[11px] hover:bg-orange-600 transition-all">Crear Insumo →</button>
                             </div>
                         </div>
@@ -950,12 +950,12 @@ export default function InventoryManagementPage() {
                                 <TrendingUp size={32} />
                             </div>
                             <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Reponer <span className="text-orange-500">{restockItem.name}</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Se registrará una compra y se actualizará el costo unitario</p>
+                            <p className="text-[10px] font-black uppercase text-slate-800 tracking-widest mt-2 px-10">Se registrará una compra y se actualizará el costo unitario</p>
                         </div>
 
                         <div className="space-y-5">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad Comprada ({restockItem.unit})</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Cantidad Comprada ({restockItem.unit})</label>
                                 <input
                                     type="number"
                                     placeholder="0.00"
@@ -966,7 +966,7 @@ export default function InventoryManagementPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Costo Neto Unitario ($)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Costo Neto Unitario ($)</label>
                                 <input
                                     type="number"
                                     placeholder="$ 0.00"
@@ -978,7 +978,7 @@ export default function InventoryManagementPage() {
 
                             {/* Rendimiento / Yield */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic flex items-center gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic flex items-center gap-2">
                                     <Percent size={12} className="text-orange-500" /> Rendimiento del Insumo (%)
                                 </label>
                                 <div className="flex items-center gap-3">
@@ -998,7 +998,7 @@ export default function InventoryManagementPage() {
                                                 className={`px-3 py-2 rounded-xl font-black text-[9px] transition-all ${
                                                     restockData.yieldPercent === pct.toString()
                                                         ? 'bg-orange-500 text-white shadow-md'
-                                                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                                                 }`}
                                             >
                                                 {pct}%
@@ -1031,7 +1031,7 @@ export default function InventoryManagementPage() {
                                 <button onClick={handleRestock} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase italic tracking-widest shadow-xl text-xs hover:bg-green-600 transition-all flex items-center justify-center gap-3">
                                     <Save size={18} /> Confirmar Ingreso Stock
                                 </button>
-                                <button onClick={() => setRestockItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
+                                <button onClick={() => setRestockItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -1047,13 +1047,13 @@ export default function InventoryManagementPage() {
                                 <Factory size={32} />
                             </div>
                             <h3 className="text-2xl font-black italic uppercase text-slate-900 tracking-tighter">Producir <span className="text-green-500">{produceItem.name}</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2 px-10">Cada batch produce 1 {produceItem.unit} y descuenta los ingredientes de la receta</p>
+                            <p className="text-[10px] font-black uppercase text-slate-800 tracking-widest mt-2 px-10">Cada batch produce 1 {produceItem.unit} y descuenta los ingredientes de la receta</p>
                         </div>
 
                         {/* Recipe Preview */}
                         {produceItem.recipe && produceItem.recipe.items && produceItem.recipe.items.length > 0 ? (
                             <div className="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-100">
-                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-3 italic">📋 Receta por unidad</p>
+                                <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest mb-3 italic">📋 Receta por unidad</p>
                                 <div className="space-y-2">
                                     {produceItem.recipe.items.map((ri: any, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center text-xs">
@@ -1066,13 +1066,13 @@ export default function InventoryManagementPage() {
                         ) : (
                             <div className="bg-orange-50 rounded-2xl p-5 mb-6 border border-orange-100 text-center">
                                 <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">⚠️ Sin receta de producción configurada</p>
-                                <p className="text-[9px] text-slate-400 mt-1">Vaya a Recetas Maestras → Bases & Preps para configurar los ingredientes</p>
+                                <p className="text-[9px] text-slate-800 mt-1">Vaya a Recetas Maestras → Bases & Preps para configurar los ingredientes</p>
                             </div>
                         )}
 
                         <div className="space-y-5">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad a Producir (batches)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Cantidad a Producir (batches)</label>
                                 <input
                                     type="number"
                                     min="1"
@@ -1090,7 +1090,7 @@ export default function InventoryManagementPage() {
                                             className={`px-4 py-2 rounded-xl font-black text-[9px] transition-all ${
                                                 produceBatches === n.toString()
                                                     ? 'bg-green-500 text-white shadow-md'
-                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                                             }`}
                                         >
                                             {n}
@@ -1126,7 +1126,7 @@ export default function InventoryManagementPage() {
                                     {producing ? <Loader2 size={18} className="animate-spin" /> : <Factory size={18} />}
                                     {producing ? 'Produciendo...' : 'Confirmar Producción'}
                                 </button>
-                                <button onClick={() => setProduceItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
+                                <button onClick={() => setProduceItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -1144,13 +1144,13 @@ export default function InventoryManagementPage() {
                             <div className="w-20 h-20 rounded-[2rem] bg-slate-900 flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-slate-200">
                                 <ClipboardCheck size={36} />
                             </div>
-                            <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">AJUSTE <span className="text-slate-400">ESTRATÉGICO</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{adjustItem.name}</p>
+                            <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">AJUSTE <span className="text-slate-800">ESTRATÉGICO</span></h3>
+                            <p className="text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{adjustItem.name}</p>
                         </div>
 
                         <div className="space-y-6 relative z-10">
                             <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 block text-center italic">Ingresa el Stock Real Verificado</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 mb-4 block text-center italic">Ingresa el Stock Real Verificado</label>
                                 <div className="flex flex-col items-center">
                                     <div className="relative w-full">
                                         <input
@@ -1166,7 +1166,7 @@ export default function InventoryManagementPage() {
                                             {adjustItem.unit}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">
+                                    <div className="flex items-center gap-2 mt-4 text-[11px] font-bold text-slate-800 uppercase tracking-widest italic">
                                         <History size={14} /> Stock Actual en Sistema: {adjustItem.currentStock} {adjustItem.unit}
                                     </div>
                                 </div>
@@ -1180,7 +1180,7 @@ export default function InventoryManagementPage() {
                                     <span>ACTUALIZAR BASE DE DATOS</span>
                                     <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                 </button>
-                                <button onClick={() => setAdjustItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar Operación</button>
+                                <button onClick={() => setAdjustItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar Operación</button>
                             </div>
                         </div>
                     </div>
@@ -1198,12 +1198,12 @@ export default function InventoryManagementPage() {
                                 <Trash2 size={36} />
                             </div>
                             <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">REGISTRAR <span className="text-red-500">MERMA</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{wasteItem.name} — Stock: {wasteItem.currentStock} {wasteItem.unit}</p>
+                            <p className="text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{wasteItem.name} — Stock: {wasteItem.currentStock} {wasteItem.unit}</p>
                         </div>
 
                         <div className="space-y-5 relative z-10">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Cantidad Perdida ({wasteItem.unit})</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Cantidad Perdida ({wasteItem.unit})</label>
                                 <input
                                     type="number"
                                     placeholder="0.00"
@@ -1216,7 +1216,7 @@ export default function InventoryManagementPage() {
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Razón de la Merma</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Razón de la Merma</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {[
                                         { value: 'EXPIRED', label: '🕐 Vencido', color: 'orange' },
@@ -1231,7 +1231,7 @@ export default function InventoryManagementPage() {
                                             className={`py-3 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${
                                                 wasteData.reason === r.value
                                                     ? 'bg-red-500 text-white shadow-lg'
-                                                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                                    : 'bg-slate-50 text-slate-800 hover:bg-slate-100'
                                             }`}
                                         >
                                             {r.label}
@@ -1241,7 +1241,7 @@ export default function InventoryManagementPage() {
                             </div>
 
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nota (Opcional)</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Nota (Opcional)</label>
                                 <input
                                     type="text"
                                     placeholder="Ej: Salmón llegó en mal estado del proveedor"
@@ -1258,7 +1258,7 @@ export default function InventoryManagementPage() {
                                 >
                                     <Trash2 size={18} /> CONFIRMAR MERMA
                                 </button>
-                                <button onClick={() => setWasteItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
+                                <button onClick={() => setWasteItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-red-500 transition-colors italic">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -1277,13 +1277,13 @@ export default function InventoryManagementPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {/* Nombre */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Nombre del Insumo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Nombre del Insumo</label>
                                 <input className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
                             </div>
 
                             {/* Categoría (editable) */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Categoría</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Categoría</label>
                                 <div className="flex gap-2">
                                     <select className="flex-1 bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.category} onChange={e => setEditData({ ...editData, category: e.target.value })}>
                                         {dynamicCategories.map(cat => (
@@ -1308,7 +1308,7 @@ export default function InventoryManagementPage() {
 
                             {/* Rol */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Rol en Producción</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Rol en Producción</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.role} onChange={e => setEditData({ ...editData, role: e.target.value })}>
                                     <option value="PROTEIN_MAIN">Proteína Principal</option>
                                     <option value="PROTEIN_SPECIAL">Proteína Especial</option>
@@ -1321,7 +1321,7 @@ export default function InventoryManagementPage() {
 
                             {/* Tipo */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Tipo</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Tipo</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.type} onChange={e => setEditData({ ...editData, type: e.target.value })}>
                                     <option value="RAW">🧊 Materia Prima</option>
                                     <option value="PREPARED">🍲 Preparado / Sub-receta</option>
@@ -1331,7 +1331,7 @@ export default function InventoryManagementPage() {
 
                             {/* Unidad */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Unidad de Medida</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Unidad de Medida</label>
                                 <select className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent appearance-none" value={editData.unit} onChange={e => setEditData({ ...editData, unit: e.target.value })}>
                                     <option value="KG">KG – Kilogramo</option>
                                     <option value="GR">GR – Gramo</option>
@@ -1343,7 +1343,7 @@ export default function InventoryManagementPage() {
 
                             {/* Costo Unitario */}
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">Costo por {editData.unit}</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">Costo por {editData.unit}</label>
                                 <div className="relative">
                                     <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                                     <input type="number" className="w-full bg-slate-50 p-4 pl-10 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.costPerUnit} onChange={e => setEditData({ ...editData, costPerUnit: e.target.value })} />
@@ -1352,7 +1352,7 @@ export default function InventoryManagementPage() {
 
                             {/* Umbral Mínimo */}
                             <div className="md:col-span-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block italic">🔔 Alerta de Stock Mínimo ({editData.unit})</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2 block italic">🔔 Alerta de Stock Mínimo ({editData.unit})</label>
                                 <input type="number" className="w-full bg-slate-50 p-4 rounded-2xl font-black italic outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all border border-transparent" value={editData.minStockThreshold} onChange={e => setEditData({ ...editData, minStockThreshold: e.target.value })} placeholder="10" />
                             </div>
                         </div>
@@ -1378,7 +1378,7 @@ export default function InventoryManagementPage() {
                             >
                                 <Save size={18} /> GUARDAR CAMBIOS
                             </button>
-                            <button onClick={() => setEditItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-blue-500 transition-colors italic">Cancelar</button>
+                            <button onClick={() => setEditItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-blue-500 transition-colors italic">Cancelar</button>
                         </div>
                     </div>
                 </div>
@@ -1395,7 +1395,7 @@ export default function InventoryManagementPage() {
                                 <AlertCircle size={36} />
                             </div>
                             <h3 className="text-3xl font-black italic uppercase text-slate-900 tracking-tighter leading-none">ELIMINAR <span className="text-red-600">PRODUCTO</span></h3>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{deleteItem.name}</p>
+                            <p className="text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mt-3 bg-slate-100 py-1.5 px-3 rounded-full inline-block">{deleteItem.name}</p>
                         </div>
 
                         <div className="space-y-5 relative z-10">
@@ -1417,7 +1417,7 @@ export default function InventoryManagementPage() {
                                     {deleting ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
                                     {deleting ? 'ELIMINANDO...' : 'SÍ, ELIMINAR PERMANENTEMENTE'}
                                 </button>
-                                <button onClick={() => setDeleteItem(null)} className="w-full py-2 font-black uppercase text-slate-400 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar — No eliminar</button>
+                                <button onClick={() => setDeleteItem(null)} className="w-full py-2 font-black uppercase text-slate-800 text-[10px] tracking-widest hover:text-slate-900 transition-colors italic">Cancelar — No eliminar</button>
                             </div>
                         </div>
                     </div>

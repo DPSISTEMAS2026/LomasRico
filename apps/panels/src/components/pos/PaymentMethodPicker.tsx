@@ -42,7 +42,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                                     ? m.id === 'MP'
                                         ? 'bg-[#009ee3] border-[#009ee3] text-white shadow-md'
                                         : 'bg-white border-orange-500 text-orange-500 shadow-md'
-                                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                                    : 'bg-white border-slate-200 text-slate-900 hover:border-slate-400'}`}
                         >
                             {m.id === 'CASH' && <Banknote size={26} strokeWidth={2.2} />}
                             {m.id === 'TRANSFER' && <TrendingUp size={26} strokeWidth={2.2} />}
@@ -59,7 +59,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                 })}
             </div>
 
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400 px-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-800 px-1">
                 Tarjetas de alimentación
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -73,7 +73,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                             className={`h-[72px] px-2 rounded-2xl font-black italic uppercase text-[8px] tracking-widest border-2 transition-all flex items-center justify-center gap-2
                                 ${selected
                                     ? 'bg-white border-orange-500 text-orange-500 shadow-md'
-                                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                                    : 'bg-white border-slate-200 text-slate-900 hover:border-slate-400'}`}
                         >
                             <img
                                 src={m.logo}
@@ -87,7 +87,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
             </div>
 
             {isFoodPaymentMethod(value) && (
-                <p className="text-[10px] font-bold text-slate-500 px-1">
+                <p className="text-[10px] font-bold text-slate-900 px-1">
                     Cobra en el lector de alimentación y luego confirma la venta.
                 </p>
             )}

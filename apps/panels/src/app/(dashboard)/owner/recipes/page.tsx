@@ -227,7 +227,7 @@ export default function RecipesMasterPage() {
     if (loading) return (
         <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Procesando Ingeniería Gastronómica...</p>
+            <p className="font-black uppercase text-xs tracking-widest text-slate-800 italic">Procesando Ingeniería Gastronómica...</p>
         </div>
     );
 
@@ -240,7 +240,7 @@ export default function RecipesMasterPage() {
                         <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             RECETAS <span className="text-orange-500">MAESTRAS</span>
                         </h1>
-                        <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-2 px-1">
+                        <p className="text-slate-800 font-bold uppercase text-[9px] md:text-[10px] tracking-widest mt-2 px-1">
                             Control de Escandallo y Margen de Utilidad
                         </p>
                     </div>
@@ -249,14 +249,14 @@ export default function RecipesMasterPage() {
                         <button
                             onClick={() => setActiveTab('PRODUCTS')}
                             className={`flex-1 xl:flex-none px-4 md:px-8 py-2.5 md:py-3 rounded-xl md:rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all italic
-                            ${activeTab === 'PRODUCTS' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                            ${activeTab === 'PRODUCTS' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800 hover:bg-slate-50'}`}
                         >
                             Platos Finales
                         </button>
                         <button
                             onClick={() => setActiveTab('BASES')}
                             className={`flex-1 xl:flex-none px-4 md:px-8 py-2.5 md:py-3 rounded-xl md:rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all italic
-                            ${activeTab === 'BASES' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+                            ${activeTab === 'BASES' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800 hover:bg-slate-50'}`}
                         >
                             Bases & Preps
                         </button>
@@ -327,7 +327,7 @@ export default function RecipesMasterPage() {
 
                                 <div className="flex items-center justify-between relative z-10 border-t border-slate-50 pt-3 md:pt-4">
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest mb-0.5 md:mb-1 italic">Setup</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest mb-0.5 md:mb-1 italic">Setup</span>
                                         <span className={`text-[9px] md:text-[10px] font-black uppercase italic ${p.recipe ? 'text-green-600' : 'text-orange-500'}`}>
                                             {p.recipe ? 'Configurada' : 'Sin Receta'}
                                         </span>
@@ -373,7 +373,7 @@ export default function RecipesMasterPage() {
                                     </h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                         <label className="block">
-                                            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Peso Objetivo (KG)</span>
+                                            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Peso Objetivo (KG)</span>
                                             <div className="relative">
                                                 <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                                                 <input
@@ -387,7 +387,7 @@ export default function RecipesMasterPage() {
                                         </label>
                                         {editingTarget.type === 'PRODUCT' && (
                                             <label className="block">
-                                                <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Proteínas Permitidas</span>
+                                                <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Proteínas Permitidas</span>
                                                 <div className="relative">
                                                     <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                                                     <input
@@ -403,7 +403,7 @@ export default function RecipesMasterPage() {
 
                                 {/* Ingredient Search Integrated */}
                                 <div className="flex flex-col gap-3 md:gap-4">
-                                    <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 italic">Componentes y Materias Primas</label>
+                                    <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 italic">Componentes y Materias Primas</label>
                                     <div className="relative">
                                         <div className="bg-slate-900 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-xl flex items-center gap-3 md:gap-4">
                                             <Search className="text-orange-500" size={20} />
@@ -424,7 +424,7 @@ export default function RecipesMasterPage() {
                                                     >
                                                         <div className="text-left">
                                                             <p className="font-black italic uppercase text-xs md:text-sm tracking-tighter text-slate-900">{opt.name}</p>
-                                                            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">{opt.category}</p>
+                                                            <p className="text-[8px] md:text-[9px] font-bold text-slate-800 uppercase tracking-widest">{opt.category}</p>
                                                         </div>
                                                         <span className="text-[8px] md:text-[9px] font-black bg-slate-100 text-slate-500 px-2 md:px-3 py-1 rounded-full uppercase italic tracking-widest">
                                                             {opt.unit}
@@ -442,7 +442,7 @@ export default function RecipesMasterPage() {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left min-w-[700px] md:min-w-0">
                                         <thead className="bg-slate-50/50">
-                                            <tr className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
+                                            <tr className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 italic">
                                                 <th className="px-6 md:px-10 py-5 md:py-8">Rol Componente</th>
                                                 <th className="px-5 py-5 md:py-8">Insumo</th>
                                                 <th className="px-5 py-5 md:py-8 text-center">Cantidad</th>
@@ -487,7 +487,7 @@ export default function RecipesMasterPage() {
                                                         <select
                                                             value={item.unit}
                                                             onChange={e => updateItem(idx, 'unit', e.target.value)}
-                                                            className="bg-transparent font-black italic text-[9px] md:text-[10px] uppercase text-slate-400 outline-none"
+                                                            className="bg-transparent font-black italic text-[9px] md:text-[10px] uppercase text-slate-800 outline-none"
                                                         >
                                                             {['KG', 'G', 'LT', 'ML', 'UN'].map(u => <option key={u} value={u}>{u}</option>)}
                                                         </select>
@@ -559,7 +559,7 @@ export default function RecipesMasterPage() {
                                             <div className="flex flex-wrap gap-2">
                                                 {['250', '350', '500', '750', '1000'].map(f => (
                                                     <button key={f} onClick={() => setSimFormat(f)}
-                                                        className={`px-4 py-2.5 rounded-xl font-black italic text-sm tracking-tight transition-all ${simFormat === f ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                                                        className={`px-4 py-2.5 rounded-xl font-black italic text-sm tracking-tight transition-all ${simFormat === f ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-white/5 text-slate-800 hover:bg-white/10'}`}
                                                     >{f === '1000' ? '1 KG' : `${f}g`}</button>
                                                 ))}
                                             </div>
@@ -581,7 +581,7 @@ export default function RecipesMasterPage() {
                                                             className={`px-3 py-2 rounded-xl font-black italic text-xs tracking-tight transition-all border-2 ${
                                                                 isSelected
                                                                     ? isPremium ? 'bg-purple-500/20 border-purple-500 text-purple-300' : 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
-                                                                    : 'border-transparent bg-white/5 text-slate-400 hover:bg-white/10'
+                                                                    : 'border-transparent bg-white/5 text-slate-800 hover:bg-white/10'
                                                             }`}
                                                         >
                                                             {prot.name} {isPremium && '⭐'}
@@ -604,13 +604,13 @@ export default function RecipesMasterPage() {
                                                             <span className="font-black italic text-sm">{d.name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-4">
-                                                            <span className="text-slate-400 font-bold text-sm">{d.grams}g</span>
+                                                            <span className="text-slate-800 font-bold text-sm">{d.grams}g</span>
                                                             <span className="text-cyan-400 font-black text-sm">${Math.round(d.cost)}</span>
                                                         </div>
                                                     </div>
                                                 ))}
                                                 <div className="flex justify-between items-center pt-3 mt-2 border-t border-white/10">
-                                                    <span className="font-black italic text-xs text-slate-400 uppercase">Total Proteínas</span>
+                                                    <span className="font-black italic text-xs text-slate-800 uppercase">Total Proteínas</span>
                                                     <div className="flex items-center gap-4">
                                                         <span className="text-white font-bold text-sm">{simTotalGrams}g</span>
                                                         <span className="text-cyan-400 font-black text-sm">${Math.round(simProteinCost)}</span>
@@ -709,7 +709,7 @@ export default function RecipesMasterPage() {
 
                         {/* Modal Footer */}
                         <div className="p-6 md:p-10 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-4 md:gap-6 px-6 md:px-12">
-                            <button onClick={() => setEditingTarget(null)} className="px-6 md:px-10 py-3 md:py-5 font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400 hover:text-slate-900 transition-colors text-center">Descartar Cambios</button>
+                            <button onClick={() => setEditingTarget(null)} className="px-6 md:px-10 py-3 md:py-5 font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-800 hover:text-slate-900 transition-colors text-center">Descartar Cambios</button>
                             <button
                                 onClick={saveRecipe}
                                 className="bg-slate-900 text-white px-8 md:px-12 py-3 md:py-5 rounded-2xl md:rounded-3xl font-black uppercase italic text-xs md:text-sm tracking-widest shadow-2xl hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2 md:gap-3"
@@ -741,7 +741,7 @@ export default function RecipesMasterPage() {
                                 <option value="KG">KILOGRAMO (KG)</option><option value="LT">LITRO (LT)</option><option value="UN">UNIDAD (UN)</option>
                             </select>
                             <div className="flex gap-4 mt-8 md:mt-10">
-                                <button onClick={() => setIsCreatingBase(false)} className="flex-1 font-black uppercase text-slate-400 text-[10px] md:text-xs">Descartar</button>
+                                <button onClick={() => setIsCreatingBase(false)} className="flex-1 font-black uppercase text-slate-800 text-[10px] md:text-xs">Descartar</button>
                                 <button onClick={createBase} className="flex-1 bg-slate-900 text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase italic tracking-widest text-[10px] md:text-xs">Crear Base</button>
                             </div>
                         </div>
@@ -759,7 +759,7 @@ export default function RecipesMasterPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg md:text-2xl font-black italic uppercase text-slate-900">Eliminar</h3>
-                                <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Acción irreversible</p>
+                                <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest italic">Acción irreversible</p>
                             </div>
                         </div>
 
@@ -773,7 +773,7 @@ export default function RecipesMasterPage() {
                         <div className="flex gap-4">
                             <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="flex-1 font-black uppercase text-slate-400 text-[10px] md:text-xs hover:text-slate-900 transition-colors py-3"
+                                className="flex-1 font-black uppercase text-slate-800 text-[10px] md:text-xs hover:text-slate-900 transition-colors py-3"
                             >
                                 Cancelar
                             </button>

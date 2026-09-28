@@ -141,7 +141,7 @@ export default function MesaQrPage() {
 
             {step === 'party' && (
                 <div className="p-5 space-y-4 max-w-lg mx-auto w-full">
-                    <div className="flex items-center gap-2 text-slate-500">
+                    <div className="flex items-center gap-2 text-slate-900">
                         <Users size={18} />
                         <p className="text-sm font-bold">Escaneaste la mesa. ¿Cuántos son y cómo se llaman?</p>
                     </div>
@@ -167,7 +167,7 @@ export default function MesaQrPage() {
 
             {step === 'pick' && (
                 <div className="p-5 space-y-3 max-w-lg mx-auto w-full">
-                    <p className="text-sm font-bold text-slate-500">¿Quién eres en esta mesa?</p>
+                    <p className="text-sm font-bold text-slate-900">¿Quién eres en esta mesa?</p>
                     {table.guests.map((g: any) => (
                         <button
                             key={g.id}

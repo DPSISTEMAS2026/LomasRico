@@ -42,7 +42,7 @@ const STAT_COLORS: Record<string, string> = {
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
     return (
         <div className={`px-3 md:px-5 py-3 rounded-2xl border-2 w-full ${STAT_COLORS[color] || ''} flex flex-col min-w-0 md:min-w-[130px] transition-all`}>
-            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-70 mb-0.5 whitespace-nowrap">{label}</span>
+            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 whitespace-nowrap">{label}</span>
             <span className="text-xl md:text-3xl font-black italic tracking-tighter leading-none">{value}</span>
         </div>
     );
@@ -240,7 +240,7 @@ export default function KitchenPage() {
                             { key: 'WAITING' as TabKey, short: 'Entrada', full: TAB_CFG.WAITING.label, Icon: TAB_CFG.WAITING.icon, count: waitingTickets.length, on: 'bg-orange-500 text-white', off: TAB_CFG.WAITING.badge },
                             { key: 'PREPARING' as TabKey, short: 'Prep', full: TAB_CFG.PREPARING.label, Icon: TAB_CFG.PREPARING.icon, count: preparingTickets.length, on: 'bg-blue-500 text-white', off: TAB_CFG.PREPARING.badge },
                             { key: 'READY' as TabKey, short: 'Listos', full: TAB_CFG.READY.label, Icon: TAB_CFG.READY.icon, count: readyTickets.length, on: 'bg-green-500 text-white', off: TAB_CFG.READY.badge },
-                            { key: 'HISTORY' as TabKey, short: 'Hist', full: 'Historial', Icon: History, count: null, on: 'bg-slate-900 text-white', off: 'bg-white text-slate-500' },
+                            { key: 'HISTORY' as TabKey, short: 'Hist', full: 'Historial', Icon: History, count: null, on: 'bg-slate-900 text-white', off: 'bg-white text-slate-800' },
                         ]).map((t) => {
                             const active = activeTab === t.key;
                             const Icon = t.Icon;
@@ -254,7 +254,7 @@ export default function KitchenPage() {
                                         fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-tabs',hypothesisId:'H-MOBILE-TABS',location:'kitchen/page.tsx:tab',message:'kitchen tab tap',data:{tab:t.key,innerW:window.innerWidth},timestamp:Date.now()})}).catch(()=>{});
                                         // #endregion
                                     }}
-                                    className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight transition-all ${active ? t.on : 'text-slate-400'}`}
+                                    className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight transition-all ${active ? t.on : 'text-slate-800'}`}
                                 >
                                     <Icon size={15} />
                                     <span className="text-[9px] leading-none md:hidden">{t.short}</span>
@@ -268,7 +268,7 @@ export default function KitchenPage() {
                             );
                         })}
                     </div>
-                    <button onClick={() => activeTab === 'HISTORY' ? loadHistory() : loadTickets()} className="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-700 shrink-0" title="Actualizar">
+                    <button onClick={() => activeTab === 'HISTORY' ? loadHistory() : loadTickets()} className="p-2.5 rounded-xl bg-slate-100 text-slate-800 hover:text-slate-700 shrink-0" title="Actualizar">
                         <RefreshCw size={16} />
                     </button>
                 </div>
@@ -283,7 +283,7 @@ export default function KitchenPage() {
                             className="flex flex-col sm:flex-row gap-2"
                         >
                             <div className="relative flex-1">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800" size={16} />
                                 <input
                                     value={historyQ}
                                     onChange={(e) => setHistoryQ(e.target.value)}
@@ -295,15 +295,15 @@ export default function KitchenPage() {
                                 Buscar
                             </button>
                         </form>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-800">
                             Pedidos entregados de las últimas 48 horas · reimprimir comanda o boleta
                         </p>
                         {historyLoading ? (
-                            <p className="text-center py-16 font-black uppercase italic text-slate-400">Cargando historial...</p>
+                            <p className="text-center py-16 font-black uppercase italic text-slate-800">Cargando historial...</p>
                         ) : history.length === 0 ? (
                             <div className="flex flex-col items-center justify-center min-h-[30vh] bg-white rounded-3xl border-2 border-dashed border-slate-200 p-8 text-center">
                                 <History size={52} className="text-slate-200 mb-4" />
-                                <p className="text-lg font-black text-slate-400 uppercase italic">Sin pedidos entregados</p>
+                                <p className="text-lg font-black text-slate-800 uppercase italic">Sin pedidos entregados</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -316,12 +316,12 @@ export default function KitchenPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <h3 className="text-xl font-black italic uppercase text-slate-900">{sale.code || ticket.id.slice(0, 6)}</h3>
-                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500">{ticket.label || sale.channel}</span>
+                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-800">{ticket.label || sale.channel}</span>
                                                     {sale.status === 'CANCELLED' && <span className="px-2 py-0.5 rounded-full bg-red-50 text-[9px] font-black uppercase text-red-500">Cancelado</span>}
                                                     {ticket.dteFolio && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[9px] font-black uppercase text-emerald-700">DTE {ticket.dteFolio}</span>}
                                                 </div>
-                                                <p className="text-[11px] font-bold text-slate-400 mt-1">{when} · {items.length} ítem{items.length === 1 ? '' : 's'}{sale.total != null ? ` · $${Number(sale.total).toLocaleString('es-CL')}` : ''}</p>
-                                                <p className="text-[11px] font-bold text-slate-500 truncate mt-1">
+                                                <p className="text-[11px] font-bold text-slate-800 mt-1">{when} · {items.length} ítem{items.length === 1 ? '' : 's'}{sale.total != null ? ` · $${Number(sale.total).toLocaleString('es-CL')}` : ''}</p>
+                                                <p className="text-[11px] font-bold text-slate-800 truncate mt-1">
                                                     {items.map((item: any) => `${item.quantity}x ${item.sellingProduct?.name || 'Producto'}`).join(' · ')}
                                                 </p>
                                             </div>
@@ -350,8 +350,8 @@ export default function KitchenPage() {
                 ) : current.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[40vh] bg-white rounded-3xl md:rounded-[40px] border-2 border-dashed border-slate-200 p-8 text-center">
                         <Package size={60} className="text-slate-200 mb-4" />
-                        <p className="text-lg font-black text-slate-400 uppercase italic">Sin pedidos en {cfg?.label.toLowerCase()}</p>
-                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">Nuevos pedidos aparecerán aquí</p>
+                        <p className="text-lg font-black text-slate-800 uppercase italic">Sin pedidos en {cfg?.label.toLowerCase()}</p>
+                        <p className="text-[10px] text-slate-800 font-bold uppercase tracking-widest mt-1">Nuevos pedidos aparecerán aquí</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 auto-rows-min">

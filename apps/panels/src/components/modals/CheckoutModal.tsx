@@ -326,9 +326,9 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     </div>
                                     <div className="text-left">
                                         <p className="font-black text-[10px] uppercase text-slate-800 leading-tight group-hover:text-[#f2642e] transition-colors">{u.name}</p>
-                                        <p className="font-bold text-[10px] text-slate-400">+ ${u.price.toLocaleString()}</p>
+                                        <p className="font-bold text-[10px] text-slate-800">+ ${u.price.toLocaleString()}</p>
                                     </div>
-                                    <div className="ml-auto bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-[#f2642e] group-hover:text-white transition-all">
+                                    <div className="ml-auto bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center text-slate-800 group-hover:bg-[#f2642e] group-hover:text-white transition-all">
                                         <Plus size={12} strokeWidth={3} />
                                     </div>
                                 </button>
@@ -342,7 +342,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     {/* Delivery Type Selector */}
                     <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">¿Cómo lo recibís?</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">¿Cómo lo recibís?</p>
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => handleDeliveryTypeChange('delivery')}
@@ -351,7 +351,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     : 'border-slate-200 bg-transparent opacity-60 hover:opacity-100'
                                     }`}
                             >
-                                <Truck size={16} className={deliveryType === 'delivery' ? 'text-[#f2642e]' : 'text-slate-400'} />
+                                <Truck size={16} className={deliveryType === 'delivery' ? 'text-[#f2642e]' : 'text-slate-800'} />
                                 <span className="font-black text-xs uppercase text-slate-800">Delivery</span>
                             </button>
                             <button
@@ -361,7 +361,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     : 'border-slate-200 bg-transparent opacity-60 hover:opacity-100'
                                     }`}
                             >
-                                <Store size={16} className={deliveryType === 'pickup' ? 'text-[#f2642e]' : 'text-slate-400'} />
+                                <Store size={16} className={deliveryType === 'pickup' ? 'text-[#f2642e]' : 'text-slate-800'} />
                                 <span className="font-black text-xs uppercase text-slate-800">Retiro</span>
                             </button>
                         </div>
@@ -369,7 +369,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     {/* Shipping Section — solo visible en Delivery */}
                     {deliveryType === 'delivery' && <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-400">
+                        <div className="flex items-center gap-2 text-slate-800">
                             <MapPin size={16} />
                             <span className="text-[10px] font-black uppercase tracking-widest">Dirección de Entrega</span>
                         </div>
@@ -447,11 +447,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                     <div className="mt-auto pt-6 border-t border-slate-200/50 space-y-4">
                         <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-400">
+                            <div className="flex justify-between text-xs font-bold uppercase text-slate-800">
                                 <span>Subtotal</span>
                                 <span>${total.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-400">
+                            <div className="flex justify-between text-xs font-bold uppercase text-slate-800">
                                 <span>Envío</span>
                                 <span>{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString()}` : '--'}</span>
                             </div>
@@ -467,7 +467,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             disabled={!canPay || loading}
                             className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${canPay
                                 ? 'bg-[#f2642e] text-white hover:bg-[#d9501d] hover:scale-[1.02] shadow-orange-200'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                : 'bg-slate-200 text-slate-800 cursor-not-allowed'
                                 }`}
                         >
                             {status === 'paying' ? (

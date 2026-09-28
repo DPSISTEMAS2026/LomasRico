@@ -13,7 +13,7 @@ import { WaiterDishBuilder } from '../../../../components/modals/WaiterDishBuild
 import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
-import { normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
     PROMOS: { name: 'Promos', Icon: Gift },
@@ -235,9 +235,13 @@ export default function SalonTablePage() {
             alert('Primero agrega un comensal');
             return;
         }
-        const drinkGroups = normalizeDrinkModifiers(product);
+        const salonGroups = filterModifiersForChannel(product.modifiers, 'salon');
+        const drinkGroups = normalizeDrinkModifiers({
+            ...product,
+            modifiers: salonGroups,
+        });
         // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'drinks',hypothesisId:'H-DRINK',location:'salon/[id]/page.tsx:onProduct',message:'product tap',data:{name:product.name,category:product.category,rawGroups:product.modifiers?.length||0,drinkGroups:drinkGroups.length,opts:drinkGroups[0]?.options?.map((o:any)=>o.name)||[]},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-SALON',location:'salon/[id]/page.tsx:onProduct',message:'product tap',data:{name:product.name,category:product.category,rawGroups:product.modifiers?.length||0,salonGroups:salonGroups.length,drinkGroups:drinkGroups.length,opts:drinkGroups[0]?.options?.map((o:any)=>o.name)||[]},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         if (drinkGroups.length === 0 && /bebida|limonad|cervez|jugo|monster|agua/i.test(`${product.category} ${product.name}`)) {
             void persistItem({
@@ -250,7 +254,7 @@ export default function SalonTablePage() {
             });
             return;
         }
-        if (product.isConfigurable || product.allowsModifiers || (product.modifiers && product.modifiers.length > 0)) {
+        if (salonGroups.length > 0) {
             setConfigProduct(product);
             return;
         }
@@ -456,7 +460,7 @@ export default function SalonTablePage() {
                         </h1>
                     </div>
                     {guest && (
-                        <button type="button" onClick={leaveGuest} className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-red-500 shrink-0" title="Quitar comensal">
+                        <button type="button" onClick={leaveGuest} className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-800 hover:text-red-500 shrink-0" title="Quitar comensal">
                             <Trash2 size={18} />
                         </button>
                     )}
@@ -475,7 +479,7 @@ export default function SalonTablePage() {
                     <button
                         type="button"
                         onClick={openBill}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-white border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500"
+                        className="w-full px-4 py-2.5 rounded-2xl bg-white border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-800"
                     >
                         Ver cuenta de la mesa
                     </button>
@@ -483,7 +487,7 @@ export default function SalonTablePage() {
 
                 <div className="bg-white rounded-3xl p-3 border border-slate-100">
                     <div className="flex items-center justify-between mb-2 px-1">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 flex items-center gap-1">
                             <Users size={12} /> Comensales · cada uno su cuenta
                         </p>
                         <button type="button" onClick={openAddGuest} disabled={busy} className="text-[10px] font-black uppercase text-orange-500 flex items-center gap-1">
@@ -491,7 +495,7 @@ export default function SalonTablePage() {
                         </button>
                     </div>
                     {table.guests.length === 0 ? (
-                        <p className="text-xs font-bold text-slate-400 px-1 py-3">Esta mesa está libre. Agrega el primer comensal.</p>
+                        <p className="text-xs font-bold text-slate-800 px-1 py-3">Esta mesa está libre. Agrega el primer comensal.</p>
                     ) : (
                         <div className={`grid gap-2 w-full ${guestCount <= 2 ? 'grid-cols-2' : guestCount === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-4'}`}>
                             {table.guests.map((g: any) => (
@@ -504,7 +508,7 @@ export default function SalonTablePage() {
                                     }`}
                                 >
                                     <p className="text-sm font-black italic uppercase truncate">{g.name}</p>
-                                    <p className={`text-[10px] font-bold ${guestId === g.id ? 'text-orange-300' : 'text-slate-400'}`}>
+                                    <p className={`text-[10px] font-bold ${guestId === g.id ? 'text-orange-300' : 'text-slate-800'}`}>
                                         {table.billRequest?.guestId === g.id ? 'Pidió cuenta · ' : ''}
                                         {g.openSale ? `$${Number(g.openSale.total).toLocaleString()}` : 'Sin pedido'}
                                     </p>
@@ -521,7 +525,7 @@ export default function SalonTablePage() {
                         </button>
                     )}
                     <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800" size={18} />
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -548,7 +552,7 @@ export default function SalonTablePage() {
                         <cat.Icon size={22} className="text-orange-500" />
                         <div>
                             <p className="font-black uppercase italic text-sm leading-tight">{cat.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400">{cat.count} platos</p>
+                            <p className="text-[10px] font-bold text-slate-800">{cat.count} platos</p>
                         </div>
                     </button>
                 )) : filtered.map((product) => (
@@ -577,19 +581,19 @@ export default function SalonTablePage() {
                     className="w-full px-4 py-3 flex items-center justify-between gap-3"
                 >
                     <div className="min-w-0 text-left">
-                        <p className="text-[10px] font-black uppercase text-slate-400 truncate">{guest?.name || 'Cuenta'}</p>
+                        <p className="text-[10px] font-black uppercase text-slate-800 truncate">{guest?.name || 'Cuenta'}</p>
                         <p className="font-black italic text-lg leading-none">${accountTotal.toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] font-black uppercase text-orange-500">
                             {pendingItems.length} por enviar
                         </span>
-                        <ChevronUp size={18} className={`text-slate-400 transition-transform ${accountOpen ? '' : 'rotate-180'}`} />
+                        <ChevronUp size={18} className={`text-slate-800 transition-transform ${accountOpen ? '' : 'rotate-180'}`} />
                     </div>
                 </button>
                 {accountOpen && (
                     <div className="px-3 md:px-4 pb-3 space-y-3">
-                        <button type="button" onClick={openRenameGuest} className="text-[10px] font-black uppercase text-slate-400">
+                        <button type="button" onClick={openRenameGuest} className="text-[10px] font-black uppercase text-slate-800">
                             Cambiar nombre · {sentItems.length} en cocina
                         </button>
                         {accountItems.length > 0 && (
@@ -672,7 +676,7 @@ export default function SalonTablePage() {
                                     <span>${Number(g.total).toLocaleString()}</span>
                                 </div>
                                 {g.items.map((item: any) => (
-                                    <p key={item.id} className="text-xs font-bold text-slate-500">
+                                    <p key={item.id} className="text-xs font-bold text-slate-900">
                                         {item.quantity}x {item.name}
                                     </p>
                                 ))}
@@ -708,7 +712,7 @@ export default function SalonTablePage() {
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter">
                             {nameModal === 'add' ? 'Nombre del comensal' : 'Cambiar nombre'}
                         </h2>
-                        <p className="text-sm font-bold text-slate-500">
+                        <p className="text-sm font-bold text-slate-800">
                             Anótalo como te lo dijo. Sale en su cuenta y en la comanda.
                         </p>
                         <input

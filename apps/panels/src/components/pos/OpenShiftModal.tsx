@@ -43,13 +43,13 @@ export function OpenShiftModal({ userId, onSuccess, onClose }: Props) {
                         <Unlock size={36} className="text-green-500" />
                     </div>
                     <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Apertura de Caja</h2>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Ingresa el efectivo inicial en caja</p>
+                    <p className="text-slate-800 font-bold text-xs uppercase tracking-widest mt-1">Ingresa el efectivo inicial en caja</p>
                 </div>
 
                 <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Monto Inicial en Efectivo</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-800 tracking-widest mb-2">Monto Inicial en Efectivo</label>
                     <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-800 text-xl">$</span>
                         <input
                             type="number"
                             min="0"
@@ -65,7 +65,7 @@ export function OpenShiftModal({ userId, onSuccess, onClose }: Props) {
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
+                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-800 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
                         Cancelar
                     </button>
                     <button

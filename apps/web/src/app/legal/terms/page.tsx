@@ -25,12 +25,12 @@ export default function TermsPage() {
                     <h1 className="text-3xl sm:text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-4 break-words">
                         Términos y Condiciones
                     </h1>
-                    <p className="text-base md:text-lg text-slate-500 font-medium max-w-2xl">
+                    <p className="text-base md:text-lg text-slate-900 font-medium max-w-2xl">
                         Acuerdo legal que rige el uso de nuestra plataforma y las transacciones comerciales realizadas en el sitio web de LOMASRICO SpA.
                     </p>
                 </header>
 
-                <div className="space-y-8 text-slate-600 leading-relaxed font-medium">
+                <div className="space-y-8 text-slate-900 leading-relaxed font-medium">
                     {/* Sección 1 */}
                     <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm transition-all hover:shadow-md">
                         <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900 mb-4 flex items-center gap-3">
@@ -56,7 +56,7 @@ export default function TermsPage() {
                             <p>
                                 <strong>Garantía de Calidad:</strong> Garantizamos la óptima condición de nuestros productos. Si recibe un pedido que presenta:
                             </p>
-                            <ul className="list-disc pl-5 space-y-1.5 marker:text-[#f2642e] text-slate-600 font-medium">
+                            <ul className="list-disc pl-5 space-y-1.5 marker:text-[#f2642e] text-slate-900 font-medium">
                                 <li>Problemas evidentes de higiene, temperatura o mal estado del producto.</li>
                                 <li>Ítems incompletos o productos distintos a los solicitados.</li>
                                 <li>Daños graves ocasionados durante el trayecto por transportistas propios.</li>
@@ -79,7 +79,7 @@ export default function TermsPage() {
                             </div>
                             <div>
                                 <p className="text-sm md:text-base text-slate-700 font-semibold mb-2">Presencia de Alérgenos en Cocina</p>
-                                <p className="text-xs md:text-sm text-slate-600 font-medium">
+                                <p className="text-xs md:text-sm text-slate-900 font-medium">
                                     Nuestras especialidades gastronómicas se elaboran en cocinas que procesan ingredientes altamente alergénicos como: <strong>pescados, mariscos, lácteos, gluten (trigo), huevos, soya, maní y frutos secos</strong>.
                                     Aunque aplicamos estrictos protocolos de sanitización para mitigar la contaminación cruzada, no es posible garantizar la ausencia absoluta de trazas. Es deber exclusivo del cliente evaluar su grado de riesgo médico antes de consumir los productos.
                                 </p>
@@ -99,7 +99,7 @@ export default function TermsPage() {
                             </div>
                             <div>
                                 <p className="text-sm md:text-base text-slate-800 font-bold mb-2">Tratamiento Seguro de Información</p>
-                                <p className="text-xs md:text-sm text-slate-600 font-medium mb-3">
+                                <p className="text-xs md:text-sm text-slate-900 font-medium mb-3">
                                     La seguridad de su información es prioritaria. Los datos personales provistos por el usuario (como dirección de despacho, correo electrónico y RUT) serán tratados con confidencialidad absoluta de acuerdo con lo estipulado en nuestra Política de Privacidad y la normativa de protección de datos chilena.
                                 </p>
                                 <Link href="/legal/privacy" className="text-xs font-black uppercase tracking-wider text-[#f2642e] hover:underline">
@@ -132,7 +132,7 @@ export default function TermsPage() {
                     </div>
 
                     {/* Footer legal */}
-                    <div className="text-slate-400 text-xs font-semibold text-center pt-8 border-t border-slate-200">
+                    <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
                         <p>Santiago, Chile. Todos los derechos reservados.</p>
                     </div>

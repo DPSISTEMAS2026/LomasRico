@@ -25,17 +25,17 @@ function FailureContent() {
                     <h1 className="text-4xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-3">
                         Pago<br />Rechazado
                     </h1>
-                    <p className="text-slate-500 font-medium mb-8">
+                    <p className="text-slate-900 font-medium mb-8">
                         No pudimos procesar tu pago. El pedido no fue confirmado.
                     </p>
 
                     {/* Tips */}
                     <div className="bg-red-50 rounded-2xl p-6 mb-8 text-left space-y-2">
                         <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">Posibles causas</p>
-                        <p className="text-sm font-medium text-slate-600">• Fondos insuficientes en la tarjeta</p>
-                        <p className="text-sm font-medium text-slate-600">• Datos de la tarjeta incorrectos</p>
-                        <p className="text-sm font-medium text-slate-600">• Pago cancelado por el banco</p>
-                        <p className="text-sm font-medium text-slate-600">• Límite de crédito alcanzado</p>
+                        <p className="text-sm font-medium text-slate-900">• Fondos insuficientes en la tarjeta</p>
+                        <p className="text-sm font-medium text-slate-900">• Datos de la tarjeta incorrectos</p>
+                        <p className="text-sm font-medium text-slate-900">• Pago cancelado por el banco</p>
+                        <p className="text-sm font-medium text-slate-900">• Límite de crédito alcanzado</p>
                     </div>
 
                     {/* Brand */}
@@ -58,7 +58,7 @@ function FailureContent() {
                         </Link>
                         <Link
                             href="/"
-                            className="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-slate-100 text-slate-900 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
                         >
                             <ArrowLeft size={18} />
                             Volver al Inicio
@@ -67,7 +67,7 @@ function FailureContent() {
                 </div>
 
                 {/* Support */}
-                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">
+                <p className="text-center text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-6">
                     ¿Problemas? Contáctanos por Whatsapp
                 </p>
             </div>

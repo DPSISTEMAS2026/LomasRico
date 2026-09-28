@@ -122,7 +122,7 @@ export default function ReportsPage() {
     if (loading) return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Generando Auditoría...</p>
+            <p className="font-black uppercase text-xs tracking-widest text-slate-800 italic">Generando Auditoría...</p>
         </div>
     );
 
@@ -169,7 +169,7 @@ export default function ReportsPage() {
                             fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'reportes-tab'})}).catch(()=>{});
                             // #endregion
                         }}
-                        className={`py-2 rounded-xl font-black uppercase italic text-[9px] md:text-xs tracking-tight min-w-0 ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                        className={`py-2 rounded-xl font-black uppercase italic text-[9px] md:text-xs tracking-tight min-w-0 ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >
                         <span className="md:hidden">{t.short}</span>
                         <span className="hidden md:inline">{t.full}</span>
@@ -178,15 +178,15 @@ export default function ReportsPage() {
             </div>
 
             {tab === 'week' && (
-                <div className="bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-slate-900">
+                <div className="bg-white p-5 md:p-8 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-slate-900 min-w-0">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Ingresos 7 Días</h3>
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest italic">Live</span>
+                            <span className="text-[9px] font-black uppercase text-slate-800 tracking-widest italic">Live</span>
                         </div>
                     </div>
-                    <div className="h-[220px] md:h-[300px] w-full">
+                    <div className="h-[220px] md:h-[300px] w-full min-w-0 max-w-full overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dailyData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -210,9 +210,9 @@ export default function ReportsPage() {
                     <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border-b-4 border-b-orange-500 flex flex-col">
                         <h3 className="text-lg font-black italic tracking-tighter uppercase mb-6">Ventas por <span className="text-orange-400">Canal</span></h3>
                         <div className="space-y-3 flex-1">
-                            {channelData.length === 0 && <p className="text-slate-500 text-xs italic">Sin datos de canales</p>}
+                            {channelData.length === 0 && <p className="text-slate-900 text-xs italic">Sin datos de canales</p>}
                             {channelData.map((ch: any) => {
-                                const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-400', fill: '#64748b', label: ch.channel };
+                                const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-800', fill: '#64748b', label: ch.channel };
                                 const pct = totalRevenue > 0 ? ((ch._sum?.total || 0) / totalRevenue * 100) : 0;
                                 return (
                                     <div key={ch.channel} className="bg-white/5 rounded-2xl p-4 border border-white/5">
@@ -224,9 +224,9 @@ export default function ReportsPage() {
                                             <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${cfg.bg}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                            <span className="text-[10px] font-black text-slate-800 w-10 text-right">{pct.toFixed(0)}%</span>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-500 mt-1">{ch._count?.id || 0} pedidos</p>
+                                        <p className="text-[9px] font-bold text-slate-900 mt-1">{ch._count?.id || 0} pedidos</p>
                                     </div>
                                 );
                             })}
@@ -238,7 +238,7 @@ export default function ReportsPage() {
                             Ventas por <span className="text-orange-500">medio de pago</span>
                         </h3>
                         <div className="space-y-3 flex-1">
-                            {paymentData.length === 0 && <p className="text-slate-400 text-xs italic">Sin datos de medios de pago</p>}
+                            {paymentData.length === 0 && <p className="text-slate-800 text-xs italic">Sin datos de medios de pago</p>}
                             {paymentData.map((pm) => {
                                 const pct = totalRevenue > 0 ? (pm.total / totalRevenue * 100) : 0;
                                 const logo = PAYMENT_LOGOS[pm.method];
@@ -260,9 +260,9 @@ export default function ReportsPage() {
                                             <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${food ? 'bg-orange-500' : 'bg-slate-800'}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                                            <span className="text-[10px] font-black text-slate-800 w-10 text-right">{pct.toFixed(0)}%</span>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-400 mt-1">{pm.count} pedidos</p>
+                                        <p className="text-[9px] font-bold text-slate-800 mt-1">{pm.count} pedidos</p>
                                     </div>
                                 );
                             })}
@@ -281,7 +281,7 @@ export default function ReportsPage() {
                         <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Top 5 Productos</h3>
                     </div>
                     <div className="space-y-3">
-                        {topProducts.length === 0 && <p className="text-slate-400 text-xs italic font-bold">Sin datos de productos</p>}
+                        {topProducts.length === 0 && <p className="text-slate-800 text-xs italic font-bold">Sin datos de productos</p>}
                         {topProducts.map((p: any, i: number) => {
                             const maxQty = topProducts[0]?.quantity || 1;
                             const pct = (p.quantity / maxQty) * 100;
@@ -322,7 +322,7 @@ export default function ReportsPage() {
                             <div className="text-center py-8">
                                 <span className="text-3xl">✅</span>
                                 <p className="text-sm font-black text-green-600 uppercase italic mt-2">Stock OK</p>
-                                <p className="text-[10px] text-slate-400 font-bold">Todos los insumos por encima del mínimo</p>
+                                <p className="text-[10px] text-slate-800 font-bold">Todos los insumos por encima del mínimo</p>
                             </div>
                         )}
                         {lowStockItems.map((item: any) => {
@@ -340,7 +340,7 @@ export default function ReportsPage() {
                                             <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${isCritical ? 'bg-red-500' : 'bg-orange-400'}`} style={{ width: `${pct}%` }} />
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-500">{item.currentStock || 0}/{threshold} {item.unit}</span>
+                                            <span className="text-[9px] font-black text-slate-900">{item.currentStock || 0}/{threshold} {item.unit}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -353,16 +353,16 @@ export default function ReportsPage() {
             )}
 
             {tab === 'sales' && (
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden border-b-4 border-b-slate-900">
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-w-0 border-b-4 border-b-slate-900">
                 <div className="p-5 md:p-8 border-b border-slate-50 flex justify-between items-center">
                     <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900">Últimas Ventas</h3>
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest italic">{sales.length} registros</span>
+                    <span className="text-[9px] font-black uppercase text-slate-800 tracking-widest italic">{sales.length} registros</span>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[700px]">
+                <div className="overflow-x-auto min-w-0 max-w-full">
+                    <table className="w-full text-left min-w-[640px]">
                         <thead className="bg-slate-50/50">
-                            <tr className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 italic">
+                            <tr className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-800 italic">
                                 <th className="px-6 py-5">Código</th>
                                 <th className="px-4 py-5">Fecha</th>
                                 <th className="px-4 py-5 text-center">Canal</th>
@@ -388,8 +388,8 @@ export default function ReportsPage() {
                                             <p className="font-black italic text-sm tracking-tighter text-slate-900 uppercase">#{sale.code || sale.id.slice(0, 6)}</p>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <p className="text-xs font-bold text-slate-500 italic">{new Date(sale.createdAt).toLocaleDateString('es-CL')}</p>
-                                            <p className="text-[9px] font-bold text-slate-300">{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            <p className="text-xs font-bold text-slate-900 italic">{new Date(sale.createdAt).toLocaleDateString('es-CL')}</p>
+                                            <p className="text-[9px] font-bold text-slate-900">{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase italic tracking-wider ${
@@ -457,7 +457,7 @@ function KpiCard({ title, value, icon, trend, highlight }: { title: string, valu
                     </div>
                 )}
             </div>
-            <p className={`text-[8px] font-black uppercase tracking-widest italic ${highlight ? 'text-orange-200' : 'text-slate-400'}`}>{title}</p>
+            <p className={`text-[8px] font-black uppercase tracking-widest italic ${highlight ? 'text-white' : 'text-slate-900'}`}>{title}</p>
             <h3 className="text-xl md:text-2xl font-black italic tracking-tighter leading-none mt-1">{value}</h3>
         </div>
     );

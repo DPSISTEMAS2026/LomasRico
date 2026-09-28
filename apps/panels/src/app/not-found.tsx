@@ -12,7 +12,7 @@ export default function NotFound() {
         <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2">
           Acceso no encontrado
         </h1>
-        <p className="text-sm text-slate-400 mb-8">
+        <p className="text-sm text-slate-800 mb-8">
           Esta sección no existe o no tienes permisos para acceder.
         </p>
         <button

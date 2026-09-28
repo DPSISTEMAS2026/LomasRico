@@ -45,7 +45,7 @@ const SidebarItem = ({ href, icon: Icon, label, active, collapsed, onClick }: Si
             collapsed ? 'justify-center px-3 py-3' : 'px-5 py-3.5'
         } ${active
             ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 font-black'
-            : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900 font-bold'
+            : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900 font-bold'
         }`}
     >
         <Icon size={20} className={`shrink-0 ${active ? 'scale-110' : ''}`} />
@@ -69,19 +69,6 @@ export default function DashboardLayout({
         if (pathname === '/kitchen') {
             setIsCollapsed(true);
         }
-    }, [pathname]);
-
-    useEffect(() => {
-        // #region agent log
-        const main = document.querySelector('main');
-        const doc = document.documentElement;
-        const btn = document.querySelector('[data-mobile-menu-btn]');
-        const h1 = document.querySelector('main h1');
-        const btnR = btn?.getBoundingClientRect();
-        const h1R = h1?.getBoundingClientRect();
-        const overlaps = !!(btnR && h1R && !(btnR.right < h1R.left || btnR.left > h1R.right || btnR.bottom < h1R.top || btnR.top > h1R.bottom));
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'title-overlap',hypothesisId:'H-TITLE-OVERLAY',location:'layout.tsx:route',message:'hamburger vs title overlap',data:{pathname,innerWidth:window.innerWidth,hasBtn:!!btn,hasH1:!!h1,overlaps,btn:{t:btnR?.top,l:btnR?.left,r:btnR?.right,b:btnR?.bottom},h1:{t:h1R?.top,l:h1R?.left,r:h1R?.right,b:h1R?.bottom,text:h1?.textContent?.slice(0,48)||null},docOverflow:doc.scrollWidth>doc.clientWidth+2,canScrollX:!!main&&main.scrollWidth>main.clientWidth+2},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [pathname]);
 
     const menuItems = [
@@ -164,7 +151,7 @@ export default function DashboardLayout({
                         <X size={32} />
                     </div>
                     <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 mb-2">ACCESO RESTRINGIDO</h1>
-                    <p className="text-sm font-bold text-slate-400 uppercase italic mb-8">No tienes permisos para visualizar esta sección del ecosistema.</p>
+                    <p className="text-sm font-bold text-slate-800 uppercase italic mb-8">No tienes permisos para visualizar esta sección del ecosistema.</p>
                     <button
                         onClick={() => router.push(filteredMenu[0]?.href || '/')}
                         className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase italic text-xs tracking-widest shadow-xl"
@@ -204,12 +191,12 @@ export default function DashboardLayout({
                             <h1 className="text-xl font-black italic tracking-tighter uppercase leading-none">
                                 LO MÁS RICO <span className="text-orange-500">PRO</span>
                             </h1>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Gestión Unificada</p>
+                            <p className="text-[9px] font-black text-slate-800 uppercase tracking-widest mt-1">Gestión Unificada</p>
                         </div>
                     )}
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                        className="hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-800 hover:text-slate-600 transition-colors"
                         title={isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
                     >
                         {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -240,7 +227,7 @@ export default function DashboardLayout({
                             </div>
                             <div className="flex flex-col overflow-hidden">
                                 <span className="text-sm font-black italic truncate">{user?.name || 'Usuario'}</span>
-                                <span className="text-[10px] text-slate-400 uppercase font-black tracking-tight">{user?.role || 'Personal'}</span>
+                                <span className="text-[10px] text-slate-800 uppercase font-black tracking-tight">{user?.role || 'Personal'}</span>
                             </div>
                         </div>
                     )}
@@ -257,7 +244,7 @@ export default function DashboardLayout({
                     </button>
 
                     {!isCollapsed && (
-                        <div className="mt-3 italic font-black text-[10px] text-slate-300 uppercase tracking-widest text-center">
+                        <div className="mt-3 italic font-black text-[10px] text-slate-800 uppercase tracking-widest text-center">
                             v2.3.0
                         </div>
                     )}
@@ -276,7 +263,9 @@ export default function DashboardLayout({
             <main className={`flex-1 min-w-0 min-h-0 w-full relative ${isFullBleed ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-hidden overscroll-y-contain'}`}>
                 {/* Background Decoration */}
                 {!isKitchen && (
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10" aria-hidden>
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/5 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2" />
+                    </div>
                 )}
 
                 <div className={`w-full max-w-none min-w-0 ${

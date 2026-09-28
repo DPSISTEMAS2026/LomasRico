@@ -35,7 +35,7 @@ function SuccessContent() {
                     <h1 className="text-4xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-3">
                         ¡Pago<br />Exitoso!
                     </h1>
-                    <p className="text-slate-500 font-medium mb-8">
+                    <p className="text-slate-900 font-medium mb-8">
                         Tu pedido fue confirmado y está siendo preparado.
                     </p>
 
@@ -43,18 +43,18 @@ function SuccessContent() {
                     <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left space-y-3">
                         {orderId && (
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Orden</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Orden</span>
                                 <span className="font-black text-xs text-slate-700 font-mono">{orderId.slice(-8).toUpperCase()}</span>
                             </div>
                         )}
                         {paymentId && (
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID Pago</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">ID Pago</span>
                                 <span className="font-black text-xs text-slate-700 font-mono">{paymentId}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Estado</span>
                             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
                                 {status === 'approved' ? '✅ Aprobado' : status}
                             </span>
@@ -89,7 +89,7 @@ function SuccessContent() {
                 </div>
 
                 {/* Footer */}
-                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-6">
+                <p className="text-center text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-6">
                     Recibirás un email de confirmación pronto
                 </p>
             </div>

@@ -33,7 +33,16 @@ import {
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { supabase } from '../../../../lib/supabase';
-import { groupProductsByWebSection, webSectionKey, displayCategoryName } from '@lomasrico/shared-types';
+import { groupProductsByWebSection, webSectionKey, displayCategoryName, isAgrandarModifier, isEspecialRole, isSuggestionRole, resolveModifierRole, suggestModifierRole, MODIFIER_ROLE_LABEL } from '@lomasrico/shared-types';
+
+function catalogLayer(group?: { role?: string | null; name?: string; displayName?: string } | null) {
+    if (!group) return 'option' as const;
+    if (isAgrandarModifier(group.name, group.displayName)) return 'suggestion' as const;
+    const role = resolveModifierRole(group.name, group.displayName, group.role);
+    if (isEspecialRole(role, group.name, group.displayName)) return 'especial' as const;
+    if (isSuggestionRole(role, group.name, group.displayName)) return 'suggestion' as const;
+    return 'option' as const;
+}
 
 export default function CatalogManagementPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -70,6 +79,17 @@ export default function CatalogManagementPage() {
         fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-editor',hypothesisId:'H-TABS',location:'catalog/page.tsx:editorTab',message:'catalog editor tab',data:{tab:editorTab,productId:editingProduct.id,isNew:editingProduct.id==='NEW'},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
     }, [editorTab, editingProduct?.id]);
+
+    useEffect(() => {
+        if (!editingProduct || editorTab !== 'modifiers') return;
+        const layers = productModifiers.map((pm) => {
+            const g = allModifierGroups.find((x: any) => x.id === pm.groupId);
+            return { n: g?.displayName, role: g?.role, layer: catalogLayer(g), s: pm.sortOrder };
+        });
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ORDER',location:'catalog/page.tsx:modifiers-split',message:'catalog assigned by layer',data:{productId:editingProduct.id,layers},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [editorTab, editingProduct?.id, productModifiers, allModifierGroups]);
 
     const CATEGORIES = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter(Boolean) as string[];
@@ -110,6 +130,10 @@ export default function CatalogManagementPage() {
 
             const productsData = await prodRes.json();
             setProducts(productsData);
+            const cats = Array.from(new Set((productsData || []).map((p: any) => p.category).filter(Boolean)));
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-UI-DEL',location:'catalog/page.tsx:loadData',message:'catalog loaded',data:{count:Array.isArray(productsData)?productsData.length:0,categories:cats.length,sample:cats.slice(0,12)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         } catch (e: any) {
             console.error(e);
             setError(`Error de Conexión: ${e.message}`);
@@ -129,6 +153,8 @@ export default function CatalogManagementPage() {
 
     const loadProductModifiers = async (productId: string) => {
         try {
+            await authFetch(`${API_URL}/modifiers/apply-suggestions`, { method: 'POST' });
+            await loadModifierGroups();
             const res = await authFetch(`${API_URL}/modifiers/product/${productId}`);
             if (res.ok) {
                 const data = await res.json();
@@ -162,7 +188,15 @@ export default function CatalogManagementPage() {
     };
 
     const handleReorderProductModifier = async (productId: string, groupId: string, direction: 'up' | 'down') => {
-        const sorted = [...productModifiers].sort((a, b) => a.sortOrder - b.sortOrder);
+        const optionIds = new Set(
+            productModifiers
+                .filter((m) => {
+                    const group = allModifierGroups.find((g: any) => g.id === m.groupId);
+                    return catalogLayer(group) === 'option';
+                })
+                .map((m) => m.groupId),
+        );
+        const sorted = [...productModifiers].filter((m) => optionIds.has(m.groupId)).sort((a, b) => a.sortOrder - b.sortOrder);
         const idx = sorted.findIndex(m => m.groupId === groupId);
         if (idx === -1) return;
         if (direction === 'up' && idx === 0) return;
@@ -171,7 +205,9 @@ export default function CatalogManagementPage() {
         const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
         [sorted[idx], sorted[swapIdx]] = [sorted[swapIdx], sorted[idx]];
 
-        const reordered = sorted.map((m, i) => ({ ...m, sortOrder: i }));
+        const reorderedOptions = sorted.map((m, i) => ({ ...m, sortOrder: i }));
+        const others = productModifiers.filter((m) => !optionIds.has(m.groupId));
+        const reordered = [...reorderedOptions, ...others];
         setProductModifiers(reordered);
 
         try {
@@ -185,6 +221,17 @@ export default function CatalogManagementPage() {
             console.error('Error reordering product modifiers:', e);
         }
     };
+
+    const assignedOf = (layer: ReturnType<typeof catalogLayer>) =>
+        [...productModifiers]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((pm) => ({ pm, group: allModifierGroups.find((g: any) => g.id === pm.groupId) }))
+            .filter((x) => x.group && catalogLayer(x.group) === layer && !isAgrandarModifier(x.group.name, x.group.displayName))
+            .filter((x) => {
+                if (!modifierSearchQuery) return true;
+                const q = modifierSearchQuery.toLowerCase();
+                return x.group.displayName.toLowerCase().includes(q) || String(x.group.name || '').toLowerCase().includes(q);
+            });
 
     const loadSupabaseAssets = async () => {
         setLoadingAssets(true);
@@ -307,6 +354,12 @@ export default function CatalogManagementPage() {
 
     const handleSave = async () => {
         if (!editingProduct) return;
+        const name = String(editingProduct.name || '').trim();
+        const category = String(editingProduct.category || '').trim();
+        if (!name || !category) {
+            alert('Nombre y categoría son obligatorios.');
+            return;
+        }
         setSaveStatus('saving');
 
         const isNew = editingProduct.id === 'NEW';
@@ -314,10 +367,10 @@ export default function CatalogManagementPage() {
         const method = isNew ? 'POST' : 'PATCH';
 
         const payload = {
-            name: editingProduct.name,
+            name,
             description: editingProduct.description,
             price: editingProduct.price,
-            category: editingProduct.category,
+            category,
             imageUrl: editingProduct.imageUrl,
             imageKey: editingProduct.imageKey,
             hoverVideoUrl: editingProduct.hoverVideoUrl || undefined,
@@ -336,7 +389,7 @@ export default function CatalogManagementPage() {
             if (res.ok) {
                 const saved = await res.json().catch(() => payload);
                 // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H5',location:'catalog/page.tsx:handleSave',message:'Producto guardado desde admin',data:{id:editingProduct.id,name:saved?.name||payload.name,isActive:saved?.isActive??payload.isActive,descLen:(payload.description||'').length},timestamp:Date.now()})}).catch(()=>{});
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CREATE',location:'catalog/page.tsx:handleSave',message:'Producto guardado desde admin',data:{isNew,id:saved?.id||editingProduct.id,name:saved?.name||payload.name,category:payload.category,price:payload.price,isActive:saved?.isActive??payload.isActive,status:res.status},timestamp:Date.now()})}).catch(()=>{});
                 // #endregion
                 setSaveStatus('success');
                 loadData();
@@ -388,10 +441,14 @@ export default function CatalogManagementPage() {
         setDeletingProductId(id);
         try {
             const res = await authFetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
+            const data = await res.json().catch(() => ({}));
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'catalog/page.tsx:handleDeleteProduct',message:'delete product response',data:{id,name,ok:res.ok,status:res.status,body:data},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
             if (res.ok) {
                 setProducts(prev => prev.filter(p => p.id !== id));
+                if (editingProduct?.id === id) setEditingProduct(null);
             } else {
-                const data = await res.json().catch(() => ({}));
                 alert(`Error al eliminar: ${data.message || res.statusText}`);
             }
         } catch (e: any) {
@@ -416,11 +473,17 @@ export default function CatalogManagementPage() {
         setDeletingCategory(category);
         try {
             const res = await authFetch(`${API_URL}/products/category/${encodeURIComponent(category)}`, { method: 'DELETE' });
-            if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const failed = Array.isArray(data?.results) ? data.results.filter((r: any) => r.status !== 'deleted') : [];
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CAT-DEL-PARTIAL',location:'catalog/page.tsx:handleDeleteCategory',message:'delete category response',data:{category,productCount,ok:res.ok,status:res.status,failed:failed.length,results:(data?.results||[]).slice(0,20)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            if (res.ok && failed.length === 0) {
                 setProducts(prev => prev.filter(p => p.category !== category));
                 if (selectedCategory === category) setSelectedCategory('');
             } else {
-                alert('Error al eliminar la categoría.');
+                await loadData();
+                alert(failed.length ? `No se pudieron eliminar ${failed.length} productos.` : 'Error al eliminar la categoría.');
             }
         } catch (e) {
             alert('Error de conexión.');
@@ -544,7 +607,7 @@ export default function CatalogManagementPage() {
     if (loading) return (
         <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="animate-spin text-orange-500 mb-4" size={48} />
-            <p className="font-black uppercase text-xs tracking-widest text-slate-400 italic">Sincronizando Menú...</p>
+            <p className="font-black uppercase text-xs tracking-widest text-slate-800 italic">Sincronizando Menú...</p>
         </div>
     );
 
@@ -577,7 +640,7 @@ export default function CatalogManagementPage() {
             </header>
 
             <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800" size={16} />
                 <input
                     type="text"
                     placeholder={selectedCategory ? `Buscar en ${displayCategoryName(selectedCategory)}...` : 'Buscar producto por nombre'}
@@ -594,26 +657,39 @@ export default function CatalogManagementPage() {
 
             {showLobby && (
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic mb-3 px-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 italic mb-3 px-1">
                         ¿Qué categoría quieres trabajar?
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                         {CATEGORIES.map((cat) => (
-                            <button
+                            <div
                                 key={cat.id}
-                                type="button"
-                                onClick={() => {
-                                    setSelectedCategory(cat.id);
-                                    setCatalogTab('active');
-                                    // #region agent log
-                                    fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:cat.id,ua:`cat-pick:${cat.count}`})}).catch(()=>{});
-                                    // #endregion
-                                }}
-                                className="text-left bg-white border border-slate-100 rounded-2xl p-4 hover:border-orange-400 hover:shadow-md transition-all"
+                                className="text-left bg-white border border-slate-100 rounded-2xl p-4 hover:border-orange-400 hover:shadow-md transition-all flex items-start gap-2"
                             >
-                                <p className="font-black uppercase italic tracking-tighter text-slate-900 text-sm leading-tight">{cat.name}</p>
-                                <p className="text-[10px] font-black text-slate-400 mt-1">{cat.count} productos</p>
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedCategory(cat.id);
+                                        setCatalogTab('active');
+                                        // #region agent log
+                                        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:cat.id,ua:`cat-pick:${cat.count}`})}).catch(()=>{});
+                                        // #endregion
+                                    }}
+                                    className="min-w-0 flex-1 text-left"
+                                >
+                                    <p className="font-black uppercase italic tracking-tighter text-slate-900 text-sm leading-tight">{cat.name}</p>
+                                    <p className="text-[10px] font-black text-slate-800 mt-1">{cat.count} productos</p>
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={deletingCategory === cat.id}
+                                    onClick={() => void handleDeleteCategory(cat.id)}
+                                    className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-500 hover:bg-red-50"
+                                    title="Eliminar categoría"
+                                >
+                                    {deletingCategory === cat.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                </button>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -639,7 +715,7 @@ export default function CatalogManagementPage() {
                                         key={t.key}
                                         type="button"
                                         onClick={() => setCatalogTab(t.key)}
-                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${catalogTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-400'}`}
+                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${catalogTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-800'}`}
                                     >
                                         {t.label}
                                     </button>
@@ -683,10 +759,19 @@ export default function CatalogManagementPage() {
                                 >
                                     <Pencil className="w-4 h-4" />
                                 </button>
+                                <button
+                                    type="button"
+                                    disabled={deletingProductId === p.id}
+                                    onClick={() => void handleDeleteProduct(p.id, p.name)}
+                                    className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:text-red-500 hover:bg-red-50"
+                                    title="Eliminar"
+                                >
+                                    {deletingProductId === p.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </button>
                             </div>
                         )) : (
                             <div className="py-14 text-center">
-                                <p className="text-slate-400 font-black uppercase tracking-widest italic text-[10px]">
+                                <p className="text-slate-800 font-black uppercase tracking-widest italic text-[10px]">
                                     {searchQuery.trim() ? 'Sin coincidencias' : catalogTab === 'hidden' ? 'Nada oculto en esta categoría' : 'Sin productos'}
                                 </p>
                             </div>
@@ -728,7 +813,7 @@ export default function CatalogManagementPage() {
                                         type="button"
                                         onClick={() => setEditorTab(id)}
                                         className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-wider transition-all ${
-                                            editorTab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                                            editorTab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-800 hover:text-slate-600'
                                         }`}
                                     >
                                         <Icon size={14} className={editorTab === id ? 'text-orange-500' : ''} />
@@ -747,7 +832,7 @@ export default function CatalogManagementPage() {
                             <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 <div className="space-y-4 md:space-y-6">
                                     <label className="block">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Nombre (así se ve en la web)</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Nombre (así se ve en la web)</span>
                                         <input
                                             value={editingProduct.name || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
@@ -756,7 +841,7 @@ export default function CatalogManagementPage() {
                                         />
                                     </label>
                                     <label className="block">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Categoría</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Categoría</span>
                                         <select
                                             value={showNewCategory ? '__NEW__' : (editingProduct.category || '')}
                                             onChange={(e) => {
@@ -791,7 +876,7 @@ export default function CatalogManagementPage() {
                                     </label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <label className="block">
-                                            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Precio ($)</span>
+                                            <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Precio ($)</span>
                                             <input
                                                 type="number"
                                                 value={editingProduct.price}
@@ -804,7 +889,7 @@ export default function CatalogManagementPage() {
 
                                 <div className="space-y-4 md:space-y-6">
                                     <label className="block">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1 mb-1 md:mb-2 block italic">Descripción (se puede revisar y editar)</span>
+                                        <span className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest pl-1 mb-1 md:mb-2 block italic">Descripción (se puede revisar y editar)</span>
                                         <textarea
                                             value={editingProduct.description || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
@@ -822,14 +907,14 @@ export default function CatalogManagementPage() {
                                     onClick={() => setEditingProduct({ ...editingProduct, isActive: !editingProduct.isActive })}
                                 >
                                     <div className="flex gap-3 md:gap-4 items-center">
-                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${editingProduct.isActive ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${editingProduct.isActive ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-800'}`}>
                                             <Power size={18} className="md:w-5 md:h-5" />
                                         </div>
                                         <div>
                                             <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
                                                 {editingProduct.isActive ? 'Visible en la web' : 'Oculto en la web'}
                                             </p>
-                                            <p className="text-[10px] font-bold text-slate-400">
+                                            <p className="text-[10px] font-bold text-slate-800">
                                                 {editingProduct.isActive ? 'Los clientes lo ven en la carta' : 'No aparece en la web ni en el salón'}
                                             </p>
                                         </div>
@@ -873,7 +958,7 @@ export default function CatalogManagementPage() {
                                         </div>
                                         <div className="w-full max-w-[200px]">
                                             <input type="file" id="img-upload" className="hidden" onChange={handleFileUpload} disabled={uploading}/>
-                                            <label htmlFor="img-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-black shadow-lg shadow-slate-200'}`}>
+                                            <label htmlFor="img-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-800' : 'bg-slate-900 text-white hover:bg-black shadow-lg shadow-slate-200'}`}>
                                                 {uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} SUBIR IMAGEN
                                             </label>
                                         </div>
@@ -893,14 +978,14 @@ export default function CatalogManagementPage() {
                                         </div>
                                         <div className="w-full max-w-[200px]">
                                             <input type="file" id="vid-upload" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={handleVideoUpload} disabled={uploading}/>
-                                            <label htmlFor="vid-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-200'}`}>
+                                            <label htmlFor="vid-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-800' : 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-200'}`}>
                                                 {uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} SUBIR VIDEO
                                             </label>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-col justify-center gap-3">
-                                        <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase leading-relaxed text-center md:text-left">
+                                        <p className="text-[10px] md:text-xs font-bold text-slate-800 uppercase leading-relaxed text-center md:text-left">
                                             1. El video (.mp4) será el elemento magnético que se reproducirá de forma automática cuando el usuario pase el cursor sobre el producto.<br/><br/>
                                             2. La imagen será la portada estática clásica.
                                         </p>
@@ -915,7 +1000,7 @@ export default function CatalogManagementPage() {
                                 <div className="py-16 text-center">
                                     <Layers className="mx-auto mb-4 text-slate-300" size={36} />
                                     <p className="font-black uppercase italic text-slate-700">Guarda el producto primero</p>
-                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Después podrás asignarle modificadores</p>
+                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-800">Después podrás asignarle modificadores</p>
                                 </div>
                             ) : (
                                 <section className="bg-slate-50 rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 border border-slate-100">
@@ -925,7 +1010,7 @@ export default function CatalogManagementPage() {
                                             <h4 className="font-black italic uppercase tracking-tighter text-lg md:text-xl">
                                                 Modificadores Activos
                                             </h4>
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white px-2 py-1 rounded-full">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-800 bg-white px-2 py-1 rounded-full">
                                                 {productModifiers.length} asignados
                                             </span>
                                         </div>
@@ -951,77 +1036,79 @@ export default function CatalogManagementPage() {
                                     </div>
                                     <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                         {/* ── ASSIGNED MODIFIERS (ordered by sortOrder) ── */}
-                                        {productModifiers.length > 0 && (
-                                            <div className="mb-4">
-                                                <p className="text-[9px] font-black uppercase text-orange-500 tracking-widest mb-2 px-1 flex items-center gap-2">
-                                                    <GripVertical size={10} /> Orden de aparición en el producto
-                                                </p>
-                                                <div className="space-y-1.5">
-                                                    {[...productModifiers]
-                                                        .sort((a, b) => a.sortOrder - b.sortOrder)
-                                                        .map((pm, pmIdx) => {
-                                                            const group = allModifierGroups.find((g: any) => g.id === pm.groupId);
-                                                            if (!group) return null;
-                                                            // Apply search filter
-                                                            if (modifierSearchQuery && 
-                                                                !group.displayName.toLowerCase().includes(modifierSearchQuery.toLowerCase()) &&
-                                                                !group.name.toLowerCase().includes(modifierSearchQuery.toLowerCase())) return null;
-                                                            return (
-                                                                <div
-                                                                    key={pm.groupId}
-                                                                    className="flex items-center gap-2 p-3 rounded-2xl bg-orange-50 border-2 border-orange-200 transition-all group"
-                                                                >
-                                                                    <span className="w-6 h-6 rounded-lg bg-orange-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">
-                                                                        {pmIdx + 1}
-                                                                    </span>
-                                                                    <div className="flex flex-col gap-0.5 shrink-0">
-                                                                        <button
-                                                                            disabled={pmIdx === 0}
-                                                                            onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'up'); }}
-                                                                            className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                                        >
-                                                                            <ArrowUp size={10} />
-                                                                        </button>
-                                                                        <button
-                                                                            disabled={pmIdx === productModifiers.length - 1}
-                                                                            onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'down'); }}
-                                                                            className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                                                                        >
-                                                                            <ArrowDown size={10} />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                                        <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0">
-                                                                            <Layers size={16} />
+                                        {(['option', 'suggestion', 'especial'] as const).map((layer) => {
+                                            const rows = assignedOf(layer);
+                                            if (rows.length === 0) return null;
+                                            const title = layer === 'option' ? 'Opciones' : layer === 'suggestion' ? 'Sugerencias' : 'Especiales';
+                                            const ordered = layer === 'option';
+                                            return (
+                                                <div key={layer} className="mb-4">
+                                                    <p className="text-[9px] font-black uppercase text-orange-500 tracking-widest mb-2 px-1 flex items-center gap-2">
+                                                        {ordered && <GripVertical size={10} />}
+                                                        {title}
+                                                    </p>
+                                                    <div className="space-y-1.5">
+                                                        {rows.map(({ pm, group }, pmIdx) => (
+                                                            <div
+                                                                key={pm.groupId}
+                                                                className="flex items-center gap-2 p-3 rounded-2xl bg-orange-50 border-2 border-orange-200 transition-all"
+                                                            >
+                                                                {ordered ? (
+                                                                    <>
+                                                                        <span className="w-6 h-6 rounded-lg bg-orange-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                                            {pmIdx + 1}
+                                                                        </span>
+                                                                        <div className="flex flex-col gap-0.5 shrink-0">
+                                                                            <button
+                                                                                disabled={pmIdx === 0}
+                                                                                onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'up'); }}
+                                                                                className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                            >
+                                                                                <ArrowUp size={10} />
+                                                                            </button>
+                                                                            <button
+                                                                                disabled={pmIdx === rows.length - 1}
+                                                                                onClick={(e) => { e.stopPropagation(); handleReorderProductModifier(editingProduct.id, pm.groupId, 'down'); }}
+                                                                                className="w-5 h-4 rounded flex items-center justify-center text-orange-400 hover:text-orange-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                                                            >
+                                                                                <ArrowDown size={10} />
+                                                                            </button>
                                                                         </div>
-                                                                        <div className="min-w-0">
-                                                                            <p className="font-black italic uppercase tracking-tighter text-sm truncate">
-                                                                                {group.displayName}
-                                                                            </p>
-                                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                                                {group.type === 'SINGLE_SELECT' ? 'Única' : 'Multi'} · {group.options?.length || 0} opciones
-                                                                            </p>
-                                                                        </div>
+                                                                    </>
+                                                                ) : null}
+                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                    <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0">
+                                                                        <Layers size={16} />
                                                                     </div>
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); toggleModifierForProduct(editingProduct.id, pm.groupId, true); }}
-                                                                        className="p-1.5 text-orange-300 hover:text-red-500 transition-colors"
-                                                                        title="Quitar modificador"
-                                                                    >
-                                                                        <X size={16} />
-                                                                    </button>
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-black italic uppercase tracking-tighter text-sm truncate">
+                                                                            {group.displayName}
+                                                                        </p>
+                                                                        <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest">
+                                                                            {MODIFIER_ROLE_LABEL[(group.role && group.role !== 'OTHER' ? group.role : suggestModifierRole(group.name, group.displayName)) as keyof typeof MODIFIER_ROLE_LABEL] || ''}
+                                                                            {' · '}
+                                                                            {group.options?.length || 0}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            );
-                                                        })}
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); toggleModifierForProduct(editingProduct.id, pm.groupId, true); }}
+                                                                    className="p-1.5 text-orange-300 hover:text-red-500 transition-colors"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            );
+                                        })}
 
                                         {/* ── SEPARATOR ── */}
                                         {productModifiers.length > 0 && (
                                             <div className="flex items-center gap-3 py-2">
                                                 <div className="flex-1 h-px bg-slate-200" />
-                                                <span className="text-[8px] font-black uppercase text-slate-300 tracking-widest">Disponibles</span>
+                                                <span className="text-[8px] font-black uppercase text-slate-800 tracking-widest">Disponibles</span>
                                                 <div className="flex-1 h-px bg-slate-200" />
                                             </div>
                                         )}
@@ -1029,6 +1116,7 @@ export default function CatalogManagementPage() {
                                         {/* ── UNASSIGNED MODIFIERS ── */}
                                         {allModifierGroups
                                             .filter(g => !productModifiers.some(pm => pm.groupId === g.id))
+                                            .filter(g => !isAgrandarModifier(g.name, g.displayName))
                                             .filter(g => 
                                                 !modifierSearchQuery || 
                                                 g.displayName.toLowerCase().includes(modifierSearchQuery.toLowerCase()) ||
@@ -1042,15 +1130,17 @@ export default function CatalogManagementPage() {
                                                     className="flex items-center justify-between p-4 rounded-2xl border-2 bg-white border-slate-100 hover:border-slate-200 cursor-pointer transition-all"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                                                        <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center">
                                                             <Layers size={16} />
                                                         </div>
                                                         <div>
                                                             <p className="font-black italic uppercase tracking-tighter text-sm">
                                                                 {group.displayName}
                                                             </p>
-                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                                {group.type === 'SINGLE_SELECT' ? 'Única' : 'Multi'} · {group.options?.length || 0} opciones
+                                                            <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest">
+                                                                            {MODIFIER_ROLE_LABEL[(group.role && group.role !== 'OTHER' ? group.role : suggestModifierRole(group.name, group.displayName)) as keyof typeof MODIFIER_ROLE_LABEL] || ''}
+                                                                            {' · '}
+                                                                            {group.options?.length || 0}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -1062,14 +1152,14 @@ export default function CatalogManagementPage() {
                                             !modifierSearchQuery || 
                                             g.displayName.toLowerCase().includes(modifierSearchQuery.toLowerCase())
                                          ).length === 0 && (
-                                            <p className="text-center text-slate-400 font-bold text-[10px] uppercase italic py-8 bg-white rounded-2xl border-2 border-dashed border-slate-100">
+                                            <p className="text-center text-slate-800 font-bold text-[10px] uppercase italic py-8 bg-white rounded-2xl border-2 border-dashed border-slate-100">
                                                 No hay resultados para "{modifierSearchQuery}"
                                             </p>
                                         )}
                                     </div>
                                     {allModifierGroups.length === 0 && (
-                                        <p className="text-center text-slate-400 font-bold text-xs uppercase italic py-4">
-                                            No hay grupos de modificadores creados. Créalos desde el menú "Modificadores".
+                                        <p className="text-center text-slate-800 font-bold text-xs uppercase italic py-4">
+                                            Sin grupos.
                                         </p>
                                     )}
                                 </section>
@@ -1080,11 +1170,21 @@ export default function CatalogManagementPage() {
 
                         {/* Modal Footer */}
                         <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3 md:gap-4 px-6 md:px-10 shrink-0">
+                            {editingProduct.id !== 'NEW' && (
+                                <button
+                                    type="button"
+                                    disabled={deletingProductId === editingProduct.id}
+                                    onClick={() => void handleDeleteProduct(editingProduct.id, editingProduct.name)}
+                                    className="flex-1 sm:flex-none px-6 md:px-8 py-3 md:py-4 font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] text-red-500 hover:text-red-600 order-3 sm:mr-auto"
+                                >
+                                    {deletingProductId === editingProduct.id ? 'Eliminando…' : 'Eliminar'}
+                                </button>
+                            )}
                             <button onClick={() => {
                                 setEditingProduct(null);
                                 setModifierSearchQuery('');
                                 setEditorTab('config');
-                            }} className="flex-1 sm:flex-none px-6 md:px-8 py-3 md:py-4 font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors order-2 sm:order-1">
+                            }} className="flex-1 sm:flex-none px-6 md:px-8 py-3 md:py-4 font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] text-slate-800 hover:text-slate-900 transition-colors order-2 sm:order-1">
                                 Descartar
                             </button>
                             <button
@@ -1108,7 +1208,7 @@ export default function CatalogManagementPage() {
                         <div className="flex justify-between items-start mb-6 md:mb-12">
                             <div>
                                 <h2 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase italic tracking-tighter leading-none shrink-0">BIBLIOTECA <span className="text-orange-500">ASSETS</span></h2>
-                                <p className="text-slate-400 font-bold text-[8px] md:text-[10px] lg:text-xs uppercase tracking-[0.3em] mt-2 md:mt-3">Supabase Cloud Storage</p>
+                                <p className="text-slate-800 font-bold text-[8px] md:text-[10px] lg:text-xs uppercase tracking-[0.3em] mt-2 md:mt-3">Supabase Cloud Storage</p>
                             </div>
                             <button onClick={() => setShowAssetSelector(false)} className="bg-slate-100 p-3 md:p-4 lg:p-6 rounded-full hover:bg-orange-500 hover:text-white transition-all shrink-0">
                                 <X size={20} className="md:w-6 md:h-6 lg:w-8 lg:h-8" />
@@ -1167,11 +1267,11 @@ export default function CatalogManagementPage() {
                                     <h2 className="text-xl font-black italic tracking-tighter uppercase text-slate-900">
                                         Organizar <span className="text-orange-500">catálogo</span>
                                     </h2>
-                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mt-1">
+                                    <p className="text-[10px] font-bold uppercase text-slate-800 tracking-widest mt-1">
                                         {sortTab === 'categories' ? 'Qué categoría se ve primero en la web' : 'Qué plato se ve primero en su categoría'}
                                     </p>
                                 </div>
-                                <button type="button" onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 shrink-0">
+                                <button type="button" onClick={() => setShowSortModal(false)} className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-800 hover:bg-slate-50 shrink-0">
                                     <X size={18} />
                                 </button>
                             </div>
@@ -1192,7 +1292,7 @@ export default function CatalogManagementPage() {
                                             fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:t.key,ua:`H-SORT tab:${t.key}`})}).catch(()=>{});
                                             // #endregion
                                         }}
-                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${sortTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-400'}`}
+                                        className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${sortTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-800'}`}
                                     >
                                         {t.label}
                                     </button>
@@ -1208,13 +1308,13 @@ export default function CatalogManagementPage() {
                                         <span className="w-7 h-7 rounded-xl bg-white text-slate-500 text-[10px] font-black flex items-center justify-center shrink-0">{idx + 1}</span>
                                         <div className="min-w-0 flex-1">
                                             <p className="font-black uppercase italic text-sm text-slate-900 truncate">{section.name}</p>
-                                            <p className="text-[10px] font-black text-slate-400">{count} platos</p>
+                                            <p className="text-[10px] font-black text-slate-800">{count} platos</p>
                                         </div>
                                         <div className="flex gap-1 shrink-0">
-                                            <button type="button" disabled={idx === 0} onClick={() => moveSortCategory(section.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                            <button type="button" disabled={idx === 0} onClick={() => moveSortCategory(section.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-800 hover:text-orange-500 disabled:opacity-20">
                                                 <ArrowUp size={14} />
                                             </button>
-                                            <button type="button" disabled={idx === sortSections.length - 1} onClick={() => moveSortCategory(section.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                            <button type="button" disabled={idx === sortSections.length - 1} onClick={() => moveSortCategory(section.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-800 hover:text-orange-500 disabled:opacity-20">
                                                 <ArrowDown size={14} />
                                             </button>
                                         </div>
@@ -1224,7 +1324,7 @@ export default function CatalogManagementPage() {
 
                             {sortTab === 'products' && !sortFocusCategory && (
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic mb-3 px-1">¿Qué categoría quieres ordenar?</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 italic mb-3 px-1">¿Qué categoría quieres ordenar?</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         {sortSections.map((section) => (
                                             <button
@@ -1234,7 +1334,7 @@ export default function CatalogManagementPage() {
                                                 className="text-left bg-slate-50 rounded-2xl p-4"
                                             >
                                                 <p className="font-black uppercase italic text-sm leading-tight">{section.name}</p>
-                                                <p className="text-[10px] font-black text-slate-400 mt-1">{sortItems.filter((p) => webSectionKey(p.category, p.name) === section.id).length} platos</p>
+                                                <p className="text-[10px] font-black text-slate-800 mt-1">{sortItems.filter((p) => webSectionKey(p.category, p.name) === section.id).length} platos</p>
                                             </button>
                                         ))}
                                     </div>
@@ -1255,10 +1355,10 @@ export default function CatalogManagementPage() {
                                             {item.imageUrl ? <img src={item.imageUrl} className="w-9 h-9 rounded-lg object-cover shrink-0" alt="" /> : <div className="w-9 h-9 rounded-lg bg-white shrink-0" />}
                                             <span className="flex-1 font-bold text-xs text-slate-700 truncate">{item.name}</span>
                                             <div className="flex gap-1 shrink-0">
-                                                <button type="button" disabled={idx === 0} onClick={() => moveSortProduct(item.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                <button type="button" disabled={idx === 0} onClick={() => moveSortProduct(item.id, 'up')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-800 hover:text-orange-500 disabled:opacity-20">
                                                     <ArrowUp size={14} />
                                                 </button>
-                                                <button type="button" disabled={idx === list.length - 1} onClick={() => moveSortProduct(item.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-orange-500 disabled:opacity-20">
+                                                <button type="button" disabled={idx === list.length - 1} onClick={() => moveSortProduct(item.id, 'down')} className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-800 hover:text-orange-500 disabled:opacity-20">
                                                     <ArrowDown size={14} />
                                                 </button>
                                             </div>
@@ -1269,7 +1369,7 @@ export default function CatalogManagementPage() {
                         </div>
 
                         <div className="p-4 border-t border-slate-100 flex items-center justify-between shrink-0 bg-white">
-                            <button type="button" onClick={() => setShowSortModal(false)} className="px-6 py-3 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-wider">
+                            <button type="button" onClick={() => setShowSortModal(false)} className="px-6 py-3 rounded-xl text-slate-800 font-black uppercase text-[10px] tracking-wider">
                                 Cancelar
                             </button>
                             <button type="button" onClick={saveSortOrder} disabled={savingSort} className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 disabled:opacity-50">

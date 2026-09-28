@@ -22,7 +22,7 @@ export default function Error({
         <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 mb-2">
           Error al cargar
         </h2>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-slate-900 mb-6">
           {error.message || 'Hubo un problema al cargar esta sección.'}
         </p>
         <button

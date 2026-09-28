@@ -232,7 +232,7 @@ export class DailyHealthCheckService implements OnModuleInit, OnModuleDestroy {
         const groups = await (this.prisma as any).modifierGroup.findMany({
             include: {
                 options: { where: { isActive: true } },
-                productModifiers: { include: { product: { select: { name: true, isActive: true } } } },
+                productModifiers: { include: { sellingProduct: { select: { name: true, isActive: true } } } },
             },
         });
 
@@ -245,7 +245,7 @@ export class DailyHealthCheckService implements OnModuleInit, OnModuleDestroy {
             }
 
             // Grupo asignado a productos inactivos
-            const inactiveProducts = group.productModifiers.filter((pm: any) => !pm.product.isActive);
+            const inactiveProducts = group.productModifiers.filter((pm: any) => !pm.sellingProduct?.isActive);
             if (inactiveProducts.length > 0) {
                 issues.push(`Grupo "${group.name}" asignado a ${inactiveProducts.length} producto(s) inactivo(s)`);
             }

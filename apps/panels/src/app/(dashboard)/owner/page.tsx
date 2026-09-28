@@ -135,7 +135,7 @@ export default function OwnerDashboardPage() {
                                 fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'resumen-tab'})}).catch(()=>{});
                                 // #endregion
                             }}
-                            className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight text-[9px] md:text-xs transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                            className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight text-[9px] md:text-xs transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                         >
                             <Icon size={14} />
                             <span className="md:hidden">{t.short}</span>
@@ -146,9 +146,9 @@ export default function OwnerDashboardPage() {
             </div>
 
             {tab === 'channels' && (
-            <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
-                    <h3 className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">Canales de Venta</h3>
-                    <div className="h-[240px] md:h-[280px] w-full">
+            <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col min-w-0">
+                    <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">Canales de Venta</h3>
+                    <div className="h-[240px] md:h-[280px] w-full min-w-0 max-w-full overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -173,7 +173,7 @@ export default function OwnerDashboardPage() {
                     <div className="grid grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6">
                         {(data?.orders?.byChannel || []).map((entry: any, index: number) => (
                             <div key={entry.channel} className="flex flex-col p-2.5 md:p-3 bg-slate-50 rounded-xl md:rounded-2xl">
-                                <span className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[9px] font-black uppercase text-slate-400">
+                                <span className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[9px] font-black uppercase text-slate-800">
                                     <div className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                                     {entry.channel}
                                 </span>
@@ -187,13 +187,13 @@ export default function OwnerDashboardPage() {
             {tab === 'top' && (
                 <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
                     <div className="flex justify-between items-center mb-6 md:mb-10">
-                        <h3 className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Productos más Vendidos</h3>
+                        <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Productos más Vendidos</h3>
                         <div className="bg-orange-50 text-orange-600 px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase">Top 5</div>
                     </div>
                     <div className="space-y-4 md:space-y-6 flex-1">
                         {topProducts && topProducts.length > 0 ? topProducts.map((p, i) => (
                             <div key={p.name} className="flex items-center gap-4 md:gap-6 group">
-                                <span className="w-4 md:w-6 font-black italic text-slate-100 text-2xl md:text-3xl group-hover:text-orange-500 transition-colors duration-500">
+                                <span className="w-4 md:w-6 font-black italic text-slate-800 text-2xl md:text-3xl group-hover:text-orange-500 transition-colors duration-500">
                                     {i + 1}
                                 </span>
                                 <div className="flex-1">
@@ -201,7 +201,7 @@ export default function OwnerDashboardPage() {
                                         <span className="font-black uppercase text-xs md:text-sm italic tracking-tighter text-slate-700 truncate max-w-[150px] md:max-w-none">{p.name}</span>
                                         <div className="flex items-center gap-1 shrink-0 ml-2">
                                             <span className="font-black text-xs md:text-sm text-slate-900">{p.quantity}</span>
-                                            <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">Uni.</span>
+                                            <span className="text-[8px] md:text-[9px] font-bold text-slate-800 uppercase">Uni.</span>
                                         </div>
                                     </div>
                                     <div className="h-2 md:h-3 bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-100 shadow-inner">
@@ -215,7 +215,7 @@ export default function OwnerDashboardPage() {
                         )) : (
                             <div className="h-full min-h-[150px] flex flex-col items-center justify-center border-2 border-dashed border-slate-50 rounded-3xl md:rounded-[32px]">
                                 <ShoppingBag size={32} className="text-slate-100 mb-2 md:w-12 md:h-12" />
-                                <p className="text-slate-300 font-bold uppercase text-[9px] md:text-[10px] tracking-widest text-center px-4">Sin datos de productos</p>
+                                <p className="text-slate-800 font-bold uppercase text-[9px] md:text-[10px] tracking-widest text-center px-4">Sin datos de productos</p>
                             </div>
                         )}
                     </div>
@@ -223,17 +223,17 @@ export default function OwnerDashboardPage() {
             )}
 
             {tab === 'hours' && (
-            <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100">
+            <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 min-w-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-8 md:mb-12">
                     <div>
-                        <h3 className="text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Distribución Horaria</h3>
+                        <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Distribución Horaria</h3>
                         <p className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-slate-900 mt-1">Horas de Mayor Demanda</p>
                     </div>
                     <div className="hidden sm:flex gap-1.5 h-10 shrink-0">
                         {[0, 1, 2, 3, 4, 5, 6].map(i => <div key={i} className="w-1.5 md:w-2 bg-slate-100 rounded-full h-full" />)}
                     </div>
                 </div>
-                <div className="h-[250px] md:h-[300px]">
+                <div className="h-[250px] md:h-[300px] min-w-0 max-w-full overflow-hidden">
                     {peakHours && peakHours.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={peakHours}>
@@ -272,12 +272,12 @@ function StatCard({ title, value, trend, isUp, icon, color = "text-slate-900" }:
                 <div className="p-2 md:p-3 bg-slate-50 text-slate-900 rounded-xl shrink-0">
                     {icon}
                 </div>
-                <div className={`flex items-center gap-0.5 text-[8px] md:text-[10px] font-black uppercase italic ${isUp ? 'text-green-500' : 'text-slate-300'} shrink-0`}>
+                <div className={`flex items-center gap-0.5 text-[8px] md:text-[10px] font-black uppercase italic ${isUp ? 'text-green-500' : 'text-slate-800'} shrink-0`}>
                     {isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                     <span className="tracking-tight hidden sm:inline">{trend}</span>
                 </div>
             </div>
-            <p className="text-slate-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 truncate">{title}</p>
+            <p className="text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 truncate">{title}</p>
             <p className={`text-lg md:text-3xl font-black italic tracking-tighter uppercase leading-none truncate ${color}`}>
                 {value}
             </p>

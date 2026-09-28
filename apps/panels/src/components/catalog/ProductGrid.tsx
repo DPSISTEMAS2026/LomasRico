@@ -155,7 +155,7 @@ export const ProductGrid = () => {
                                     <span className="text-[#f2642e]">{category.icon}</span>
                                     {category.name}
                                 </h3>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full mb-1">
+                                <span className="text-xs font-bold text-slate-800 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full mb-1">
                                     {categoryProducts.length} opc.
                                 </span>
                             </div>

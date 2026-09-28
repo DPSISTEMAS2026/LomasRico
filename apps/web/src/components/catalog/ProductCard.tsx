@@ -107,7 +107,7 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
                         {product.name}
                     </h3>
 
-                    <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6 line-clamp-2">
+                    <p className="text-slate-900 text-xs font-semibold leading-relaxed mb-6 line-clamp-2">
                         {product.description}
                     </p>
                 </div>
@@ -115,10 +115,10 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
                 <div className="mt-auto pt-6 border-t border-slate-50">
                     <div className="flex flex-col gap-4 items-center">
                         <div className="flex flex-col gap-0.5 items-center">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-[#f2642e]/60">Precio unitario</span>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-[#f2642e]">Precio unitario</span>
                             <div className="flex items-baseline gap-0.5 justify-center">
-                                <span className={`text-sm font-black ${isOutOfStock ? 'text-slate-300' : 'text-slate-900'}`}>$</span>
-                                <span className={`text-3xl font-[950] tracking-tighter leading-none ${isOutOfStock ? 'text-slate-300' : 'text-slate-900'}`}>
+                                <span className={`text-sm font-black ${isOutOfStock ? 'text-slate-300' : 'text-[#f2642e]'}`}>$</span>
+                                <span className={`text-3xl font-[950] tracking-tighter leading-none ${isOutOfStock ? 'text-slate-300' : 'text-[#f2642e]'}`}>
                                     {Number(product.price || 0).toLocaleString('es-CL')}
                                 </span>
                             </div>

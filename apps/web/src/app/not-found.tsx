@@ -8,7 +8,7 @@ export default function NotFound() {
         <h1 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 mb-2">
           Página no encontrada
         </h1>
-        <p className="text-sm text-slate-500 mb-8">
+        <p className="text-sm text-slate-900 mb-8">
           Lo sentimos, esta página no existe o fue movida.
         </p>
         <Link

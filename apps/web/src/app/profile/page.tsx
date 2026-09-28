@@ -116,7 +116,7 @@ export default function ProfilePage() {
 
     if (authLoading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <Loader2 className="animate-spin text-slate-400" size={40} />
+            <Loader2 className="animate-spin text-slate-900" size={40} />
         </div>
     );
 
@@ -126,7 +126,7 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 p-4 md:p-6 flex items-start md:items-center justify-center pt-10 md:pt-6">
             <div className="max-w-md w-full animate-in fade-in zoom-in-95 duration-500">
-                <button onClick={() => router.push('/')} className="mb-6 md:mb-8 flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors font-black text-[10px] md:text-xs uppercase tracking-widest italic">
+                <button onClick={() => router.push('/')} className="mb-6 md:mb-8 flex items-center gap-2 text-slate-900 hover:text-slate-900 transition-colors font-black text-[10px] md:text-xs uppercase tracking-widest italic">
                     <ArrowLeft size={16} /> VOLVER AL INICIO
                 </button>
 
@@ -159,16 +159,16 @@ export default function ProfilePage() {
                         {/* Form */}
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">
+                                <label className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-900 tracking-widest ml-1 italic">
                                     <Mail size={12} className="text-orange-500" /> Correo Institucional
                                 </label>
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs md:text-sm font-bold text-slate-600 truncate">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs md:text-sm font-bold text-slate-900 truncate">
                                     {user.email}
                                 </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">
+                                <label className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-900 tracking-widest ml-1 italic">
                                     <Phone size={12} className="text-orange-500" /> WhatsApp Directo
                                 </label>
                                 <input
@@ -237,7 +237,7 @@ export default function ProfilePage() {
                                             </button>
                                             <button
                                                 onClick={() => setShowAddrForm(false)}
-                                                className="px-4 bg-white text-slate-400 rounded-xl font-black uppercase text-[10px] border border-slate-200"
+                                                className="px-4 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] border border-slate-200"
                                             >
                                                 X
                                             </button>
@@ -245,13 +245,13 @@ export default function ProfilePage() {
                                     </div>
                                 ) : addresses.length === 0 ? (
                                     <div className="p-10 text-center bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
-                                        <Home size={28} className="mx-auto text-slate-300 mb-3 opacity-20" />
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic leading-tight">Sin direcciones<br />registradas</p>
+                                        <Home size={28} className="mx-auto text-slate-900 mb-3" />
+                                        <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest italic leading-tight">Sin direcciones<br />registradas</p>
                                     </div>
                                 ) : (
                                     addresses.map(addr => (
                                         <div key={addr.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center gap-4 group shadow-sm hover:border-orange-200 transition-colors">
-                                            <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:text-orange-500 transition-colors">
+                                            <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-900 group-hover:text-orange-500 transition-colors">
                                                 <Home size={16} />
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -269,7 +269,7 @@ export default function ProfilePage() {
                             {!showPassForm ? (
                                 <button
                                     onClick={() => setShowPassForm(true)}
-                                    className="w-full py-3 text-[9px] md:text-[10px] font-black uppercase text-slate-400 hover:text-orange-500 transition-all tracking-widest italic"
+                                    className="w-full py-3 text-[9px] md:text-[10px] font-black uppercase text-slate-900 hover:text-orange-500 transition-all tracking-widest italic"
                                 >
                                     ¿NECESITAS CAMBIAR TU CONTRASEÑA?
                                 </button>
@@ -300,7 +300,7 @@ export default function ProfilePage() {
                                         </button>
                                         <button
                                             onClick={() => setShowPassForm(false)}
-                                            className="px-4 p-3.5 bg-white text-slate-400 rounded-xl font-black uppercase text-[10px] border border-slate-200"
+                                            className="px-4 p-3.5 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] border border-slate-200"
                                         >
                                             X
                                         </button>

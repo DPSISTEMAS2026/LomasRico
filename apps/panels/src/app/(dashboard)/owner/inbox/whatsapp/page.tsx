@@ -67,7 +67,7 @@ export default function WhatsAppInboxPage() {
   if (loading && !conversations.length) return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
       <Loader2 className="animate-spin text-orange-500 mb-6" size={48} />
-      <p className="font-black text-slate-400 text-xs uppercase italic tracking-widest">Cargando chats...</p>
+      <p className="font-black text-slate-800 text-xs uppercase italic tracking-widest">Cargando chats...</p>
     </div>
   );
 
@@ -83,7 +83,7 @@ export default function WhatsAppInboxPage() {
             WHATS<span className="text-orange-500">APP</span>
           </h2>
           <div className="relative mt-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-800" size={16} />
             <input placeholder="Buscar chats..." className="w-full pl-9 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500 transition-all" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
@@ -95,15 +95,15 @@ export default function WhatsAppInboxPage() {
 
         {/* Conversation List */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 && <div className="text-center p-8 text-xs font-black uppercase text-slate-400 italic">No hay conversaciones</div>}
+          {filtered.length === 0 && <div className="text-center p-8 text-xs font-black uppercase text-slate-800 italic">No hay conversaciones</div>}
           {filtered.map(c => (
             <div key={c.id} onClick={() => { setSelectedId(c.id); setShowInfo(true); }}
               className={`p-4 border-b border-slate-100 cursor-pointer transition-colors relative flex items-center gap-3 ${selectedId === c.id ? 'bg-orange-50 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-orange-500' : 'bg-white hover:bg-slate-50'}`}>
-              <div className="w-11 h-11 bg-slate-200 rounded-full flex items-center justify-center shrink-0"><User size={20} className="text-slate-400" /></div>
+              <div className="w-11 h-11 bg-slate-200 rounded-full flex items-center justify-center shrink-0"><User size={20} className="text-slate-800" /></div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-black text-slate-800 text-sm truncate">{c.customerName || fmt(c.contactId)}</span>
-                  <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-2">{fmtTime(c.lastMessageAt)}</span>
+                  <span className="text-[10px] font-bold text-slate-800 shrink-0 ml-2">{fmtTime(c.lastMessageAt)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-[11px] text-slate-500 truncate flex-1 flex items-center gap-1">
@@ -128,7 +128,7 @@ export default function WhatsAppInboxPage() {
           <header className="px-4 md:px-6 py-3 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm z-10">
             <div className="flex items-center gap-3 min-w-0">
               <button onClick={() => setSelectedId(null)} className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"><ArrowLeft size={20} /></button>
-              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center shrink-0"><User size={18} className="text-slate-400" /></div>
+              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center shrink-0"><User size={18} className="text-slate-800" /></div>
               <div className="min-w-0">
                 <h3 className="font-black text-slate-800 text-sm uppercase italic tracking-tighter truncate">{conv.customerName || fmt(conv.contactId)}</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -159,13 +159,13 @@ export default function WhatsAppInboxPage() {
               const showDateSep = !prev || fmtDate(m.createdAt) !== fmtDate(prev.createdAt);
               return (
                 <div key={m.id}>
-                  {showDateSep && <div className="text-center my-4"><span className="bg-white text-slate-400 font-bold text-[10px] px-4 py-1.5 rounded-lg shadow-sm uppercase italic">{fmtDate(m.createdAt)}</span></div>}
+                  {showDateSep && <div className="text-center my-4"><span className="bg-white text-slate-800 font-bold text-[10px] px-4 py-1.5 rounded-lg shadow-sm uppercase italic">{fmtDate(m.createdAt)}</span></div>}
                   <div className={`flex w-full ${isIn ? 'justify-start' : 'justify-end'}`}>
                     <div className={`max-w-[80%] md:max-w-[65%] rounded-2xl p-3 shadow-sm ${isIn ? 'bg-white text-slate-800 rounded-tl-sm' : 'bg-orange-50 border border-orange-100 text-slate-800 rounded-tr-sm'}`}>
                       <p className="text-[13px] md:text-sm leading-relaxed whitespace-pre-wrap">{m.body}</p>
                       <div className="flex justify-end items-center gap-2 mt-1.5">
-                        {!isIn && <span className="text-[9px] font-black uppercase italic text-slate-400">{m.authorType === 'BOT' ? '🤖 Bot' : '👤 Tú'}</span>}
-                        <span className="text-[9px] font-bold text-slate-400">{fmtTime(m.createdAt)}</span>
+                        {!isIn && <span className="text-[9px] font-black uppercase italic text-slate-800">{m.authorType === 'BOT' ? '🤖 Bot' : '👤 Tú'}</span>}
+                        <span className="text-[9px] font-bold text-slate-800">{fmtTime(m.createdAt)}</span>
                       </div>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function WhatsAppInboxPage() {
           <div className="text-center p-10">
             <div className="w-28 h-28 bg-white rounded-[3rem] shadow-xl flex items-center justify-center mx-auto mb-8 border border-slate-100"><Store size={48} className="text-slate-200" /></div>
             <h3 className="text-3xl font-black italic tracking-tighter uppercase text-slate-800">LO MÁS RICO <span className="text-orange-500">WEB</span></h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4 italic">Selecciona un chat para comenzar</p>
+            <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest mt-4 italic">Selecciona un chat para comenzar</p>
           </div>
         </main>
       )}
@@ -205,7 +205,7 @@ export default function WhatsAppInboxPage() {
           <div className="p-6 border-b border-slate-100 text-center">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-slate-200"><User size={32} className="text-slate-300" /></div>
             <h4 className="font-black text-slate-800 text-lg uppercase italic tracking-tighter">{conv.customerName || 'Cliente Nuevo'}</h4>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 tracking-widest uppercase">{fmt(conv.contactId)}</p>
+            <p className="text-[10px] font-bold text-slate-800 mt-1 tracking-widest uppercase">{fmt(conv.contactId)}</p>
             <div className="mt-3 flex justify-center">
               <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase ${conv.mode === 'BOT' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-700'}`}>{conv.mode === 'BOT' ? '🤖 Bot Activo' : '👤 Modo Manual'}</span>
             </div>
@@ -213,7 +213,7 @@ export default function WhatsAppInboxPage() {
 
           {/* Orders */}
           <div className="p-5 border-b border-slate-100">
-            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><ShoppingBag size={12} />Últimos Pedidos</h5>
+            <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><ShoppingBag size={12} />Últimos Pedidos</h5>
             {conv.customer?.sales?.length > 0 ? conv.customer.sales.map((s: any) => (
               <div key={s.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2 hover:border-orange-200 transition">
                 <div className="flex justify-between items-baseline">
@@ -221,14 +221,14 @@ export default function WhatsAppInboxPage() {
                   <span className="font-black text-[11px] text-slate-800">${Number(s.total).toLocaleString('es-CL')}</span>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1 leading-tight">{s.items?.join(', ')}</p>
-                <p className="text-[9px] text-slate-400 mt-1 font-bold">{fmtDate(s.createdAt)} · {s.status}</p>
+                <p className="text-[9px] text-slate-800 mt-1 font-bold">{fmtDate(s.createdAt)} · {s.status}</p>
               </div>
-            )) : <p className="text-[10px] text-slate-400 italic font-bold">Sin pedidos registrados</p>}
+            )) : <p className="text-[10px] text-slate-800 italic font-bold">Sin pedidos registrados</p>}
           </div>
 
           {/* Addresses */}
           <div className="p-5 border-b border-slate-100">
-            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><MapPin size={12} />Direcciones</h5>
+            <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><MapPin size={12} />Direcciones</h5>
             {conv.customer?.addresses?.length > 0 ? conv.customer.addresses.map((a: any) => (
               <div key={a.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2 flex items-start gap-2 hover:border-orange-200 transition">
                 <MapPin size={14} className="text-orange-500 mt-0.5 shrink-0" />
@@ -237,12 +237,12 @@ export default function WhatsAppInboxPage() {
                   <p className="text-[10px] text-slate-500 mt-0.5">{a.address}, {a.city}</p>
                 </div>
               </div>
-            )) : <p className="text-[10px] text-slate-400 italic font-bold">Sin direcciones registradas</p>}
+            )) : <p className="text-[10px] text-slate-800 italic font-bold">Sin direcciones registradas</p>}
           </div>
 
           {/* Notes */}
           <div className="p-5">
-            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><StickyNote size={12} />Notas del Equipo</h5>
+            <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-3 italic flex items-center gap-1.5"><StickyNote size={12} />Notas del Equipo</h5>
             <div className="bg-orange-50/50 p-3 rounded-xl border border-orange-100 mb-3">
               <textarea className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none resize-none" placeholder="Agregar nota..." rows={3} value={noteText} onChange={e => setNoteText(e.target.value)} />
               <button onClick={doNote} disabled={!noteText.trim()} className="mt-2 w-full bg-slate-900 hover:bg-orange-500 text-white font-black py-2 rounded-xl text-[10px] disabled:opacity-30 transition-all uppercase italic tracking-widest">Guardar Nota</button>
@@ -250,7 +250,7 @@ export default function WhatsAppInboxPage() {
             {conv.notes?.map((n: any) => (
               <div key={n.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
                 <p className="text-[11px] text-slate-700 leading-relaxed">{n.text}</p>
-                <div className="flex justify-between text-[9px] text-slate-400 font-bold mt-2">
+                <div className="flex justify-between text-[9px] text-slate-800 font-bold mt-2">
                   <span className="flex items-center gap-1"><User size={9} />{n.user?.name}</span>
                   <span>{fmtDate(n.createdAt)}</span>
                 </div>

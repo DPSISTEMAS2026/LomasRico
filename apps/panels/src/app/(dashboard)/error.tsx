@@ -25,7 +25,7 @@ export default function DashboardError({
         <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 mb-2">
           Error en el módulo
         </h1>
-        <p className="text-sm font-bold text-slate-400 uppercase italic mb-2">
+        <p className="text-sm font-bold text-slate-800 uppercase italic mb-2">
           {error.message || 'Ocurrió un error inesperado.'}
         </p>
         <p className="text-xs text-slate-300 mb-8 font-mono">

@@ -45,13 +45,13 @@ export function WithdrawalModal({ shiftId, onSuccess, onClose }: Props) {
                         <Coins size={32} className="text-orange-500" />
                     </div>
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">Retiro de Caja</h2>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Registra la salida de efectivo</p>
+                    <p className="text-slate-800 font-bold text-[10px] uppercase tracking-widest mt-1">Registra la salida de efectivo</p>
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Monto a retirar</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-800 tracking-widest mb-2">Monto a retirar</label>
                     <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-800 text-xl">$</span>
                         <input
                             type="number"
                             min="0"
@@ -65,7 +65,7 @@ export function WithdrawalModal({ shiftId, onSuccess, onClose }: Props) {
                 </div>
 
                 <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Motivo / Justificación</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-800 tracking-widest mb-2">Motivo / Justificación</label>
                     <textarea
                         value={note}
                         onChange={e => setNote(e.target.value)}
@@ -78,7 +78,7 @@ export function WithdrawalModal({ shiftId, onSuccess, onClose }: Props) {
                 {error && <p className="text-red-500 text-xs font-bold mb-4 text-center">{error}</p>}
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
+                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-800 font-black uppercase italic text-xs hover:bg-slate-50 transition-all">
                         Cancelar
                     </button>
                     <button

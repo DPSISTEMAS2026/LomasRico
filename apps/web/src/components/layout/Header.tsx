@@ -47,7 +47,7 @@ export default function Header({ onCartOpen, onOrdersOpen, onAuthOpen }: HeaderP
                     </div>
                     <div className="text-left hidden md:block">
                       <p className="text-[10px] font-black uppercase text-slate-900 leading-none truncate max-w-[80px]">{user?.name?.split(' ')[0]}</p>
-                      <p className="text-[8px] font-bold uppercase text-slate-400 tracking-wider">Mi Perfil</p>
+                      <p className="text-[8px] font-bold uppercase text-slate-900 tracking-wider">Mi Perfil</p>
                     </div>
                   </a>
 
@@ -59,7 +59,7 @@ export default function Header({ onCartOpen, onOrdersOpen, onAuthOpen }: HeaderP
                   <div className="hidden md:flex gap-2">
                     <button
                       onClick={onOrdersOpen}
-                      className="p-2.5 bg-slate-100 hover:bg-slate-900 text-slate-400 hover:text-white rounded-full transition-all group"
+                      className="p-2.5 bg-slate-100 hover:bg-slate-900 text-slate-900 hover:text-white rounded-full transition-all group"
                       title="Mis Pedidos"
                     >
                       <ShoppingBag size={18} />

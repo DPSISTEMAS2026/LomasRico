@@ -67,7 +67,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
 
     return (
         <div className="relative w-full group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800 z-10">
                 <MapPin size={18} />
             </div>
             <input
@@ -87,7 +87,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
 
             {status === "OK" && (
                 <ul className="absolute z-[100] bottom-full mb-3 w-full bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="p-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black uppercase text-slate-400 tracking-widest italic px-5">Direcciones Sugeridas</div>
+                    <div className="p-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black uppercase text-slate-800 tracking-widest italic px-5">Direcciones Sugeridas</div>
                     {data.map(({ place_id, description }) => (
                         <li
                             key={place_id}
@@ -118,7 +118,7 @@ function ManualInput({ onSelect, defaultValue = '', placeholder, error, loading 
     return (
         <div className="relative w-full flex gap-2">
             <div className="relative flex-1">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800">
                     {loading ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
                 </div>
                 <input

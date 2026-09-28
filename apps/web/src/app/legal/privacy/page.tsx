@@ -25,7 +25,7 @@ export default function PrivacyPage() {
                     <h1 className="text-3xl sm:text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-4 break-words">
                         Política de Privacidad
                     </h1>
-                    <p className="text-base md:text-lg text-slate-500 font-medium max-w-2xl">
+                    <p className="text-base md:text-lg text-slate-900 font-medium max-w-2xl">
                         En cumplimiento con la Ley N° 19.628 sobre Protección de la Vida Privada (Chile) y las normativas alineadas al estándar del proyecto de reforma constitucional y legal de datos personales.
                     </p>
                 </header>
@@ -39,24 +39,24 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">1. Responsable del Tratamiento</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium mb-4">
+                        <p className="text-slate-900 leading-relaxed font-medium mb-4">
                             El responsable del tratamiento de sus datos personales recolectados a través de esta plataforma web es:
                         </p>
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 grid md:grid-cols-2 gap-4 text-sm font-semibold text-slate-700">
                             <div>
-                                <p className="text-slate-400 text-xs font-black uppercase tracking-wider">Razón Social</p>
+                                <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Razón Social</p>
                                 <p className="text-base text-slate-950 font-black">LOMASRICO SpA</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-xs font-black uppercase tracking-wider">RUT de la Empresa</p>
+                                <p className="text-slate-900 text-xs font-black uppercase tracking-wider">RUT de la Empresa</p>
                                 <p className="text-base text-slate-950 font-black">77.615.941-7</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-xs font-black uppercase tracking-wider">Dirección Comercial</p>
+                                <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Dirección Comercial</p>
                                 <p className="text-base text-slate-950 font-black">Santiago, República de Chile</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-xs font-black uppercase tracking-wider">Contacto de Privacidad</p>
+                                <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Contacto de Privacidad</p>
                                 <a href="mailto:privacidad@lomasrico.cl" className="text-[#f2642e] hover:underline font-black">privacidad@lomasrico.cl</a>
                             </div>
                         </div>
@@ -70,32 +70,32 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">2. Datos que Recopilamos</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium mb-4">
+                        <p className="text-slate-900 leading-relaxed font-medium mb-4">
                             Recopilamos únicamente los datos necesarios para entregar una experiencia gastronómica premium y procesar sus solicitudes. Estos se dividen en:
                         </p>
                         <div className="space-y-4">
                             <div className="border-l-4 border-orange-500 pl-4 py-1">
                                 <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Datos de Identificación y Contacto</p>
-                                <p className="text-sm text-slate-600 font-medium">Nombre completo, dirección de correo electrónico, y teléfono móvil.</p>
+                                <p className="text-sm text-slate-900 font-medium">Nombre completo, dirección de correo electrónico, y teléfono móvil.</p>
                             </div>
                             <div className="border-l-4 border-slate-400 pl-4 py-1">
                                 <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Datos de Despacho y Facturación</p>
-                                <p className="text-sm text-slate-600 font-medium">Dirección física de entrega, comuna, notas del repartidor y datos para boletas/facturas electrónicas.</p>
+                                <p className="text-sm text-slate-900 font-medium">Dirección física de entrega, comuna, notas del repartidor y datos para boletas/facturas electrónicas.</p>
                             </div>
                             <div className="border-l-4 border-slate-400 pl-4 py-1">
                                 <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Datos de Transacción y Fidelización</p>
-                                <p className="text-sm text-slate-600 font-medium">Historial de pedidos, montos facturados, método de pago seleccionado, y acumulación de puntos (Club Puntos).</p>
+                                <p className="text-sm text-slate-900 font-medium">Historial de pedidos, montos facturados, método de pago seleccionado, y acumulación de puntos (Club Puntos).</p>
                             </div>
                             <div className="border-l-4 border-slate-400 pl-4 py-1">
                                 <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Datos de Autenticación de Google</p>
-                                <p className="text-sm text-slate-600 font-medium">Mediante Google OAuth 2.0 recopilamos de forma segura su identificador único de Google, dirección de correo, nombre y fotografía de perfil.</p>
+                                <p className="text-sm text-slate-900 font-medium">Mediante Google OAuth 2.0 recopilamos de forma segura su identificador único de Google, dirección de correo, nombre y fotografía de perfil.</p>
                             </div>
                             <div className="border-l-4 border-slate-400 pl-4 py-1">
                                 <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Datos de Navegación (Cookies)</p>
-                                <p className="text-sm text-slate-600 font-medium">Datos técnicos de sesión para mantener el estado de su carro de compras e identificar preferencias analíticas aceptadas por el usuario.</p>
+                                <p className="text-sm text-slate-900 font-medium">Datos técnicos de sesión para mantener el estado de su carro de compras e identificar preferencias analíticas aceptadas por el usuario.</p>
                             </div>
                         </div>
-                        <p className="mt-4 text-xs font-bold text-slate-400 italic">
+                        <p className="mt-4 text-xs font-bold text-slate-900 italic">
                             * Nota importante sobre pagos: Toda la información transaccional de tarjetas de crédito o débito es procesada directamente bajo estándares de seguridad PCI-DSS por MercadoPago. No almacenamos credenciales bancarias en nuestros servidores.
                         </p>
                     </div>
@@ -108,10 +108,10 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">3. Finalidades y Bases de Licitud</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium mb-4">
+                        <p className="text-slate-900 leading-relaxed font-medium mb-4">
                             De acuerdo a la Ley N° 19.628, el tratamiento de sus datos personales se fundamenta en las siguientes bases legales y finalidades específicas:
                         </p>
-                        <ul className="grid gap-4 font-medium text-slate-600">
+                        <ul className="grid gap-4 font-medium text-slate-900">
                             <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <span className="font-black text-[9px] uppercase tracking-wider bg-orange-100 text-orange-950 px-2.5 py-1 rounded-md">Contrato</span>
                                 <div>
@@ -163,7 +163,7 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">5. Destinatarios y Transferencias Internacionales</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium mb-4 text-sm md:text-base">
+                        <p className="text-slate-900 leading-relaxed font-medium mb-4 text-sm md:text-base">
                             Para poder operar con eficiencia, compartimos datos estrictamente necesarios con proveedores que garantizan un estándar equivalente o superior a la ley chilena en seguridad digital:
                         </p>
                         <ul className="space-y-3 text-sm text-slate-700 font-semibold pl-1">
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">6. Período de Conservación</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium text-sm md:text-base">
+                        <p className="text-slate-900 leading-relaxed font-medium text-sm md:text-base">
                             Conservaremos sus datos personales únicamente durante el tiempo que sea necesario para cumplir con los fines para los cuales fueron recopilados (la entrega del pedido) y para cumplir con requerimientos legales obligatorios (como el registro tributario de boletas por un período de 6 años bajo la ley del SII en Chile). Posteriormente, los datos se eliminan de forma segura o se anonimizan para fines estadísticos.
                         </p>
                     </div>
@@ -203,24 +203,24 @@ export default function PrivacyPage() {
                             </div>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900">7. Sus Derechos (ARCO)</h2>
                         </div>
-                        <p className="text-slate-600 leading-relaxed font-medium mb-6 text-sm md:text-base">
+                        <p className="text-slate-900 leading-relaxed font-medium mb-6 text-sm md:text-base">
                             Usted tiene control absoluto sobre su información. La legislación chilena le garantiza los derechos **ARCO**:
                         </p>
                         <div className="grid md:grid-cols-2 gap-4 mb-6">
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <span className="font-black text-slate-900 block text-xs uppercase mb-1">Acceso y Rectificación</span>
-                                <p className="text-xs text-slate-500 font-medium">Permite consultar qué datos suyos almacenamos y corregirlos en caso de que existan imprecisiones o estén desactualizados.</p>
+                                <p className="text-xs text-slate-900 font-medium">Permite consultar qué datos suyos almacenamos y corregirlos en caso de que existan imprecisiones o estén desactualizados.</p>
                             </div>
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <span className="font-black text-slate-900 block text-xs uppercase mb-1">Cancelación y Oposición</span>
-                                <p className="text-xs text-slate-500 font-medium">Permite solicitar la eliminación definitiva de su cuenta y sus datos, u oponerse a que los tratemos para fines publicitarios directos.</p>
+                                <p className="text-xs text-slate-900 font-medium">Permite solicitar la eliminación definitiva de su cuenta y sus datos, u oponerse a que los tratemos para fines publicitarios directos.</p>
                             </div>
                         </div>
                         <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100">
                             <p className="text-sm text-slate-700 font-bold mb-4">
                                 ¿Cómo ejercer sus derechos o solicitar la eliminación total de su cuenta?
                             </p>
-                            <p className="text-xs text-slate-600 font-medium mb-4">
+                            <p className="text-xs text-slate-900 font-medium mb-4">
                                 Para solicitar el ejercicio de cualquiera de sus derechos o la eliminación inmediata y permanente de toda su información en nuestros servidores, envíe su requerimiento de forma gratuita adjuntando su nombre completo y copia o número de cédula de identidad/RUT para verificación al correo electrónico:
                             </p>
                             <a href="mailto:privacidad@lomasrico.cl" className="inline-flex items-center gap-2 bg-[#f2642e] hover:bg-[#d94e1b] text-white px-5 py-2.5 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:scale-105 shadow-md shadow-orange-700/20">
@@ -230,7 +230,7 @@ export default function PrivacyPage() {
                     </div>
 
                     {/* Footer legal */}
-                    <div className="text-slate-400 text-xs font-semibold text-center pt-8 border-t border-slate-200">
+                    <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
                         <p>Santiago, Chile. Todos los derechos reservados.</p>
                     </div>

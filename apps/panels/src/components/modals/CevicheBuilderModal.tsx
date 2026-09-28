@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft, Loader2, Info, Search } from 'lucide-react';
 import { Product, ModifierGroup, ModifierOption } from '../../types';
-import { cleanModifierLabel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { cleanModifierLabel, canEnlargeBySize, channelOffersSizeUpgrade, filterModifiersForChannel, findSizeModifierGroup, nextSizeUpgrade, normalizeDrinkModifiers, resolveModifierRole } from '@lomasrico/shared-types';
 
 interface CevicheBuilderModalProps {
     isOpen: boolean;
@@ -30,8 +30,12 @@ export const CevicheBuilderModal = ({
 
     // Selections State (Map: groupId -> selected Option IDs)
     const [selections, setSelections] = useState<Record<string, string[]>>({});
+    const [originalSizeId, setOriginalSizeId] = useState<string | null>(null);
 
-    const modifiers = useMemo(() => normalizeDrinkModifiers(product) as ModifierGroup[], [product]);
+    const modifiers = useMemo(() => {
+        const scoped = { ...product, modifiers: filterModifiersForChannel(product.modifiers, 'pos') };
+        return normalizeDrinkModifiers(scoped) as ModifierGroup[];
+    }, [product]);
     const hasDynamicModifiers = modifiers.length > 0;
     
     // Setup initial selections based on defaults
@@ -39,6 +43,7 @@ export const CevicheBuilderModal = ({
         if (isOpen) {
             setStep(0);
             setSearchQuery('');
+            setOriginalSizeId(null);
             
             if (hasDynamicModifiers) {
                 const initial: Record<string, string[]> = {};
@@ -50,6 +55,9 @@ export const CevicheBuilderModal = ({
                 });
                 setSelections(initial);
             }
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:pos-open',message:'pos builder groups',data:{product:product.name,channel:'pos',steps:modifiers.map((g)=>({n:g.displayName||g.groupName})),extrasInSteps:modifiers.some((g)=>/extras|limonad/i.test(`${g.displayName||''} ${g.groupName||''}`))},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
         }
     }, [product, isOpen, hasDynamicModifiers, modifiers]);
 
@@ -106,6 +114,9 @@ export const CevicheBuilderModal = ({
             if (currentCount < (group.minSelections || 0)) {
                 alert(`Por favor selecciona al menos ${group.minSelections} opción(es) de ${group.displayName}`);
                 return;
+            }
+            if (resolveModifierRole(group.groupName, group.displayName, group.role) === 'SIZE') {
+                setOriginalSizeId(selections[group.groupId]?.[0] || null);
             }
             setStep(step + 1);
         } else {
@@ -200,7 +211,7 @@ export const CevicheBuilderModal = ({
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all">
+                    <button onClick={onClose} className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center text-slate-800 hover:bg-slate-50 transition-all">
                         <X size={18} />
                     </button>
                 </header>
@@ -232,7 +243,7 @@ export const CevicheBuilderModal = ({
                                     </h3>
                                     <div className="flex items-center gap-2 mt-1">
                                         <Info size={12} className="text-orange-400" />
-                                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em] italic">
+                                        <p className="text-slate-800 font-bold uppercase text-[9px] tracking-[0.2em] italic">
                                             {currentModifier.type === 'SINGLE_SELECT' ? 'Elige 1 de la lista' : `Selecciona de ${currentModifier.minSelections} a ${currentModifier.maxSelections}`}
                                         </p>
                                     </div>
@@ -242,7 +253,7 @@ export const CevicheBuilderModal = ({
                                     {/* Search Input */}
                                     {currentModifier.options.length > 5 && (
                                         <div className="relative mb-2">
-                                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
+                                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-800">
                                                 <Search size={14} />
                                             </div>
                                             <input
@@ -255,7 +266,7 @@ export const CevicheBuilderModal = ({
                                             {searchQuery && (
                                                 <button 
                                                     onClick={() => setSearchQuery('')}
-                                                    className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-orange-500"
+                                                    className="absolute inset-y-0 right-4 flex items-center text-slate-800 hover:text-orange-500"
                                                 >
                                                     <X size={14} />
                                                 </button>
@@ -316,12 +327,12 @@ export const CevicheBuilderModal = ({
                                         })
                                     ) : (
                                         <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-800">
                                                 <Search size={20} />
                                             </div>
                                             <div>
                                                 <p className="font-black italic uppercase text-xs text-slate-700 tracking-tight">No hay resultados</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Intenta con otra palabra</p>
+                                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest mt-1">Intenta con otra palabra</p>
                                             </div>
                                             <button 
                                                 onClick={() => setSearchQuery('')}
@@ -340,7 +351,7 @@ export const CevicheBuilderModal = ({
                                     <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900">
                                         REVISA TU PEDIDO
                                     </h3>
-                                    <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest mt-1">
+                                    <p className="text-slate-800 font-bold uppercase text-[9px] tracking-widest mt-1">
                                         Todo listo para sumarlo al carrito
                                     </p>
                                 </div>
@@ -368,12 +379,47 @@ export const CevicheBuilderModal = ({
                                     })}
                                     
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
-                                        <span className="font-black italic uppercase text-xs text-slate-400 tracking-tighter">Total Personalizado</span>
+                                        <span className="font-black italic uppercase text-xs text-slate-800 tracking-tighter">Total Personalizado</span>
                                         <span className="text-xl font-black italic text-slate-900 tracking-tighter">
                                             ${finalPrice.toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
+
+                                {(() => {
+                                    const canEnlarge = channelOffersSizeUpgrade('pos') && canEnlargeBySize(product.category, product.name);
+                                    const sizeGroup = findSizeModifierGroup(modifiers);
+                                    const selectedId = sizeGroup ? (selections[sizeGroup.groupId] || [])[0] : null;
+                                    const upgrade = nextSizeUpgrade(sizeGroup, selectedId);
+                                    const isUpsold = !!(originalSizeId && selectedId && selectedId !== originalSizeId);
+                                    // #region agent log
+                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:pos-summary',message:'channel offer policy',data:{product:product.name,channel:'pos',sizeUpgrade:channelOffersSizeUpgrade('pos'),perItemAddons:false,canEnlarge,willShow:!!(canEnlarge && sizeGroup && (upgrade || isUpsold)),next:upgrade?.next?.name||null,extra:upgrade?.extra??null},timestamp:Date.now()})}).catch(()=>{});
+                                    // #endregion
+                                    if (!canEnlarge || !sizeGroup || (!upgrade && !isUpsold)) return null;
+                                    return (
+                                        <div className="space-y-2">
+                                            {upgrade && !isUpsold && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleOption(sizeGroup.groupId, upgrade.next.id, 'SINGLE_SELECT', 1)}
+                                                    className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-orange-50 flex items-center justify-between"
+                                                >
+                                                    <span className="font-black italic uppercase text-sm text-orange-700">Agrandar a {upgrade.next.name}</span>
+                                                    <span className="text-xs font-black text-orange-600">+${upgrade.extra.toLocaleString()}</span>
+                                                </button>
+                                            )}
+                                            {isUpsold && originalSizeId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleOption(sizeGroup.groupId, originalSizeId, 'SINGLE_SELECT', 1)}
+                                                    className="w-full p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 font-black italic uppercase text-sm text-slate-600"
+                                                >
+                                                    Volver al tamaño anterior
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>
@@ -384,7 +430,7 @@ export const CevicheBuilderModal = ({
                     {step > 0 && (
                         <button 
                             onClick={handleBack}
-                            className="w-14 h-14 rounded-2xl border-2 border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
+                            className="w-14 h-14 rounded-2xl border-2 border-slate-200 flex items-center justify-center text-slate-800 hover:text-slate-900 transition-all"
                         >
                             <ChevronLeft size={20} />
                         </button>

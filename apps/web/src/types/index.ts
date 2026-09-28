@@ -18,6 +18,10 @@ export interface ModifierGroup {
     sortOrder: number;
     minSelections: number;
     maxSelections: number;
+    role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
+    showOnWeb?: boolean;
+    showOnPos?: boolean;
+    showOnSalon?: boolean;
     options: ModifierOption[];
 }
 

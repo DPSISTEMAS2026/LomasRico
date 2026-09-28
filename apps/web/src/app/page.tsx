@@ -50,7 +50,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
                     leaveTable();
                   }
                 }}
-                className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black uppercase text-slate-500 hover:text-slate-900"
+                className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black uppercase text-slate-900 hover:text-[#f2642e]"
               >
                 Salir
               </button>
@@ -71,7 +71,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
                   onClick={() => {
                     if (confirm(`¿Dejar de pedir como ${session.name}?`)) leaveTable();
                   }}
-                  className="px-2 py-2 text-[10px] font-black uppercase text-slate-400"
+                  className="px-2 py-2 text-[10px] font-black uppercase text-slate-900"
                 >
                   Salir
                 </button>
@@ -91,7 +91,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
                     </div>
                     <div className="text-left hidden md:block">
                       <p className="text-[10px] font-black uppercase text-slate-900 leading-none truncate max-w-[80px]">{user?.name?.split(' ')[0]}</p>
-                      <p className="text-[8px] font-bold uppercase text-slate-400 tracking-wider">Mi Perfil</p>
+                      <p className="text-[8px] font-bold uppercase text-slate-900 tracking-wider">Mi Perfil</p>
                     </div>
                   </a>
 
@@ -103,7 +103,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
                   <div className="hidden md:flex gap-2">
                     <button
                       onClick={onOrdersOpen}
-                      className="p-2.5 bg-slate-100 hover:bg-slate-900 text-slate-400 hover:text-white rounded-full transition-all group"
+                      className="p-2.5 bg-slate-100 hover:bg-slate-900 text-slate-900 hover:text-white rounded-full transition-all group"
                       title="Mis Pedidos"
                     >
                       <ShoppingBag size={18} />
@@ -206,11 +206,11 @@ function HomeContent() {
       {/* Footer */}
       <footer className="bg-slate-50 border-t border-slate-100 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3 opacity-50 grayscale hover:grayscale-0 transition-all">
+          <div className="flex items-center gap-3">
             <img src="/assets/Logo Restaurante.png" alt="Logo" className="h-10 w-10" />
-            <span className="font-black italic text-sm tracking-tighter">LO MÁS RICO &copy; 2026</span>
+            <span className="font-black italic text-sm tracking-tighter text-slate-900">LO MÁS RICO &copy; 2026</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-6 md:gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
             <a href="/legal/terms" className="hover:text-orange-600 transition-colors">Terminos</a>
             <a href="/legal/privacy" className="hover:text-orange-600 transition-colors">Privacidad</a>
             <a href="#" className="hover:text-orange-600 transition-colors">Soporte</a>

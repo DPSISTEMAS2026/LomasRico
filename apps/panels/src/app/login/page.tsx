@@ -75,7 +75,7 @@ export default function LoginPage() {
                             <h1 className="text-3xl font-black italic tracking-tighter uppercase text-slate-900 leading-none">
                                 LOMASRICO <span className="text-orange-500">PRO</span>
                             </h1>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3 italic">
+                            <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.3em] mt-3 italic">
                                 Ingreso con PIN
                             </p>
                         </div>
@@ -134,7 +134,7 @@ export default function LoginPage() {
                         </div>
 
                         {loading && (
-                            <div className="mt-6 flex items-center justify-center gap-2 text-slate-400">
+                            <div className="mt-6 flex items-center justify-center gap-2 text-slate-800">
                                 <Loader2 className="animate-spin" size={20} />
                                 <span className="text-xs font-black uppercase italic">Entrando...</span>
                             </div>
@@ -142,7 +142,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] italic">
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-[0.2em] italic">
                             Panel táctil • 4 dígitos
                         </p>
                     </div>

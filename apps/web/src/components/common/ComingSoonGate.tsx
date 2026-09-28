@@ -82,7 +82,7 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                     <h1 className="text-3xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-none">
                         Atento a nuestra<br />reapertura
                     </h1>
-                    <p className="mt-4 text-sm font-bold text-slate-500 leading-relaxed">
+                    <p className="mt-4 text-sm font-bold text-slate-900 leading-relaxed">
                         Nueva dirección. Síguenos y enterate primero.
                     </p>
                     <ArrowDown className="mx-auto mt-5 mb-2 text-[#f2642e] animate-bounce" size={28} strokeWidth={2.5} />
@@ -95,7 +95,7 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                         <Instagram size={16} />
                         @cevichelomasrico
                     </a>
-                    <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <p className="mt-5 text-[10px] font-bold uppercase tracking-widest text-slate-900">
                         Cevichería · Concepción
                     </p>
                 </div>

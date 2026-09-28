@@ -57,30 +57,30 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                         <Lock size={36} className="text-red-500" />
                     </div>
                     <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Cierre de Caja</h2>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Turno abierto desde las {openTime}</p>
+                    <p className="text-slate-800 font-bold text-xs uppercase tracking-widest mt-1">Turno abierto desde las {openTime}</p>
                 </div>
 
                 {/* Resumen del turno */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Efectivo Inicial</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Efectivo Inicial</p>
                         <p className="text-lg font-black italic text-slate-900 mt-1">${Number(shift?.startAmount || 0).toLocaleString()}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Ventas</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Ventas</p>
                         <p className="text-lg font-black italic text-orange-500 mt-1">{salesCount}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Sistema</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Sistema</p>
                         <p className="text-lg font-black italic text-green-600 mt-1">${systemAmount.toLocaleString()}</p>
                     </div>
                 </div>
 
                 {/* Efectivo contado */}
                 <div className="mb-4">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Efectivo Contado en Caja</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-800 tracking-widest mb-2">Efectivo Contado en Caja</label>
                     <div className="relative">
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">$</span>
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-800 text-xl">$</span>
                         <input
                             type="number"
                             min="0"
@@ -105,7 +105,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
 
                 {/* Nota */}
                 <div className="mb-6">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Nota (opcional)</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-800 tracking-widest mb-2">Nota (opcional)</label>
                     <textarea
                         value={note}
                         onChange={e => setNote(e.target.value)}
@@ -118,7 +118,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                 {error && <p className="text-red-500 text-xs font-bold mb-4 text-center">{error}</p>}
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-400 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
+                    <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-800 font-black uppercase italic text-sm hover:border-slate-300 transition-all">
                         Cancelar
                     </button>
                     <button

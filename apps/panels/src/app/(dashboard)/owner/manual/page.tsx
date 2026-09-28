@@ -39,7 +39,7 @@ export default function ManualPage() {
             {/* TOC sticky */}
             <nav className="hidden lg:block w-56 shrink-0">
                 <div className="sticky top-4 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 italic mb-4 flex items-center gap-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-800 italic mb-4 flex items-center gap-2">
                         <BookOpen size={12} className="text-orange-500" /> Índice
                     </p>
                     <div className="space-y-1">
@@ -50,7 +50,7 @@ export default function ManualPage() {
                                 className={`block text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all ${
                                     activeId === t.id
                                         ? 'bg-orange-50 text-orange-600 border-l-2 border-orange-500'
-                                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                                        : 'text-slate-800 hover:text-slate-700 hover:bg-slate-50'
                                 }`}
                             >
                                 {t.label}
