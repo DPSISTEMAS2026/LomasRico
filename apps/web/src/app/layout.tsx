@@ -10,6 +10,13 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "LoMasRico | Cevichería & Más",
   description: "Los mejores ceviches y empanadas preparados al momento.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: { url: "/apple-icon.png", sizes: "180x180" },
+  },
 };
 
 import { AuthProvider } from "../context/AuthContext";
