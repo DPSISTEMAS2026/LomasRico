@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Get, Query, Param, HttpCode, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Param, HttpCode, Headers, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreatePaymentDto } from './dto/payment.dto';
 
 @Controller('payments')
@@ -35,6 +36,7 @@ export class PaymentsController {
      * Body: { orderId: string, status: 'APPROVED' | 'REJECTED' }
      */
     @Post('simulate-callback')
+    @UseGuards(JwtAuthGuard)
     async simulateCallback(@Body() body: { orderId: string, status: 'APPROVED' | 'REJECTED' }) {
         return this.paymentsService.processSimulation(body.orderId, body.status);
     }

@@ -62,8 +62,10 @@ model StockMovement {
   unitCost        Float?        // Costo unitario de la compra (solo RESTOCK) — historial de precios
   reason          String        // "SALE", "PRODUCTION_INPUT", "PRODUCTION_OUTPUT", "ADJUSTMENT", "WASTE"
   referenceId     String?       // ID de Venta u Orden de Produccion relacionada
-  
+
   createdAt       DateTime      @default(now())
+
+  @@index([referenceId])
 }
 
 // --------------------------------------------------------
@@ -349,6 +351,9 @@ model Sale {
   updatedAt   DateTime     @updatedAt
 
   @@index([tableId, paymentStatus])
+  @@index([guestId])
+  @@index([shiftId])
+  @@index([createdAt])
 }
 
 model SaleItem {
@@ -370,6 +375,8 @@ model SaleItem {
   
   // Snapshot Obligatorio: La receta congelada al momento de la venta
   recipeSnapshot RecipeSnapshot?
+
+  @@index([saleId])
 }
 
 // Congela la estructura de costos y consumo para siempre
@@ -433,6 +440,7 @@ enum TransactionType {
   SALE_INCOME
   EXPENSE
   WITHDRAWAL
+  CANCELLED_SALE
 }
 
 model User {
@@ -608,8 +616,11 @@ model CashTransaction {
   description   String?
   
   relatedSaleId String?         // Si viene de una venta
-  
+
   createdAt     DateTime        @default(now())
+
+  @@index([shiftId])
+  @@index([relatedSaleId])
 }
 
 model UserAddress {
@@ -651,6 +662,7 @@ model KitchenTicket {
   createdAt DateTime     @default(now())
 
   @@index([saleId])
+  @@index([status, createdAt])
 }
 
 // --------------------------------------------------------

@@ -91,13 +91,17 @@ export default function KitchenPage() {
     }, []);
 
     const hasLoaded = useRef(false);
+    const inFlight = useRef(false);
+    const [offline, setOffline] = useState(false);
 
     const loadTickets = useCallback(async () => {
+        if (inFlight.current) return;
+        inFlight.current = true;
         try {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            const ids = new Set(data.map((t: any) => t.id));
+            const ids = new Set<string>(data.map((t: any) => t.id));
             if (hasLoaded.current && data.some((t: any) => !prevTicketIds.current.has(t.id))) {
                 playNotificationSound();
             }
@@ -105,14 +109,23 @@ export default function KitchenPage() {
             hasLoaded.current = true;
             setTickets(data);
             setError('');
+            setOffline(false);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Error de conexión');
+            if (hasLoaded.current) setOffline(true);
+            else setError(e instanceof Error ? e.message : 'Error de conexión');
         } finally {
+            inFlight.current = false;
             setLoading(false);
         }
     }, [playNotificationSound]);
 
-    useEffect(() => { loadTickets(); const i = setInterval(loadTickets, 8000); return () => clearInterval(i); }, [loadTickets]);
+    useEffect(() => {
+        loadTickets();
+        const i = setInterval(() => { if (!document.hidden) loadTickets(); }, 8000);
+        const onVisible = () => { if (!document.hidden) loadTickets(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVisible); };
+    }, [loadTickets]);
 
     const updateStatus = async (id: string, status: string) => {
         try {
@@ -153,8 +166,8 @@ export default function KitchenPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setHistory(Array.isArray(data) ? data : []);
-        } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Error de historial');
+        } catch {
+            setHistory([]);
         } finally {
             setHistoryLoading(false);
         }
@@ -193,7 +206,7 @@ export default function KitchenPage() {
             <div className="bg-red-50 p-8 rounded-3xl border-2 border-red-100">
                 <AlertCircle size={64} className="text-red-500 mx-auto mb-4" />
                 <h1 className="text-2xl font-black text-red-900 mb-2 uppercase">ERROR DE CONEXIÓN</h1>
-                <p className="text-slate-600 mb-6">{error}</p>
+                <p className="text-slate-900 mb-6">{error}</p>
                 <button onClick={loadTickets} className="w-full bg-red-500 text-white px-6 py-4 rounded-2xl font-black uppercase italic tracking-tighter hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Reintentar</button>
             </div>
         </div>
@@ -201,6 +214,11 @@ export default function KitchenPage() {
 
     return (
         <div className="flex flex-col h-full min-h-0 overflow-hidden">
+            {offline && (
+                <div className="shrink-0 bg-red-500 text-white text-xs font-black uppercase tracking-wide text-center py-1.5">
+                    Sin conexión · reintentando
+                </div>
+            )}
             {/* Header */}
             <div className="shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-0">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-3">

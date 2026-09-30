@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 // USAMOS CONSTANTES PARA ESTADOS PARA EVITAR ERRORES DE REGENERACION
@@ -157,6 +157,9 @@ export class KitchenService {
     }
 
     async updateStatus(id: string, status: string) {
+        const allowed = [TicketStatus.WAITING, TicketStatus.PREPARING, TicketStatus.READY, TicketStatus.DELIVERED, 'CANCELLED'];
+        if (!allowed.includes(status)) throw new BadRequestException(`Estado inválido: ${status}`);
+
         const ticket = await (this.prisma as any).kitchenTicket.findUnique({
             where: { id },
             include: { sale: true },
@@ -166,6 +169,8 @@ export class KitchenService {
             throw new NotFoundException(`KitchenTicket ${id} not found`);
         }
 
+        if (status === 'CANCELLED') return this.cancelTicket(ticket);
+
         const updateData: any = { status };
         const saleUpdateData: any = {};
 
@@ -174,69 +179,82 @@ export class KitchenService {
             saleUpdateData.status = OrderStatus.PREPARING;
         } else if (status === TicketStatus.READY) {
             if (!ticket.endTime) updateData.endTime = new Date();
-            // No marcar COMPLETED aún — se marca cuando se entrega
         } else if (status === TicketStatus.DELIVERED) {
             if (!ticket.endTime) updateData.endTime = new Date();
             if (ticket.sale?.paymentStatus === 'APPROVED') {
                 saleUpdateData.status = OrderStatus.COMPLETED;
             }
-        } else if (status === 'CANCELLED') {
-            // Cancelación: quitar de la vista activa y marcar sale como cancelada
-            updateData.status = TicketStatus.DELIVERED; // Removes from active view
-            updateData.endTime = new Date();
-            saleUpdateData.status = OrderStatus.CANCELLED;
         }
+
+        const ops: any[] = [(this.prisma as any).kitchenTicket.update({ where: { id }, data: updateData })];
+        if (Object.keys(saleUpdateData).length > 0) {
+            ops.push((this.prisma as any).sale.update({ where: { id: ticket.saleId }, data: saleUpdateData }));
+        }
+        const [updatedTicket] = await this.prisma.$transaction(ops);
+        return updatedTicket;
+    }
+
+    /**
+     * Una tanda de mesa sin pagar solo saca sus platos de la cuenta del comensal;
+     * cualquier otro ticket anula la venta completa.
+     */
+    private async cancelTicket(ticket: any) {
+        const sale = ticket.sale;
+        const batchIds: string[] = ticket.itemIds || [];
+        const isOpenTableBatch = sale?.fulfillmentType === 'DINE_IN' && sale?.paymentStatus === 'PENDING' && batchIds.length > 0;
 
         return (this.prisma as any).$transaction(async (tx: any) => {
             const updatedTicket = await tx.kitchenTicket.update({
-                where: { id },
-                data: updateData
+                where: { id: ticket.id },
+                data: { status: TicketStatus.DELIVERED, endTime: new Date() },
             });
 
-            if (Object.keys(saleUpdateData).length > 0) {
-                await tx.sale.update({
-                    where: { id: ticket.saleId },
-                    data: saleUpdateData
-                });
-            }
-
-            // ✅ REVERSIÓN DE INVENTARIO AL CANCELAR
-            if (status === 'CANCELLED') {
-                const saleItems = await tx.saleItem.findMany({
-                    where: { saleId: ticket.saleId },
-                    include: { recipeSnapshot: true }
-                });
-
-                for (const item of saleItems) {
-                    if (item.recipeSnapshot?.resolvedBoM) {
-                        const bom = item.recipeSnapshot.resolvedBoM as any[];
-                        for (const bomItem of bom) {
-                            const totalQty = bomItem.quantity * item.quantity;
-                            await tx.inventoryItem.update({
-                                where: { id: bomItem.inventoryItemId },
-                                data: {
-                                    currentStock: { increment: totalQty },
-                                    movements: {
-                                        create: {
-                                            quantity: totalQty,
-                                            reason: 'CANCELLATION',
-                                            referenceId: ticket.saleId
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
+            if (isOpenTableBatch) {
+                const remaining = await tx.saleItem.count({ where: { saleId: sale.id, id: { notIn: batchIds } } });
+                if (remaining > 0) {
+                    const items = await tx.saleItem.findMany({
+                        where: { id: { in: batchIds }, saleId: sale.id },
+                        select: { id: true, quantity: true, priceUnit: true },
+                    });
+                    const removed = items.reduce((sum: number, i: any) => sum + Number(i.priceUnit) * i.quantity, 0);
+                    await tx.recipeSnapshot.deleteMany({ where: { saleItemId: { in: batchIds } } });
+                    await tx.saleItem.deleteMany({ where: { id: { in: batchIds }, saleId: sale.id } });
+                    await tx.sale.update({
+                        where: { id: sale.id },
+                        data: { total: { decrement: removed } },
+                    });
+                    return updatedTicket;
                 }
-
-                // Revertir la CashTransaction asociada
-                await tx.cashTransaction.updateMany({
-                    where: { relatedSaleId: ticket.saleId, type: 'SALE_INCOME' },
-                    data: { type: 'CANCELLED_SALE', description: `[CANCELADA] Venta ${ticket.sale.code || ''}` }
-                });
-
-                console.log(`🔄 Inventario revertido + CashTransaction anulada para Sale ${ticket.saleId}`);
             }
+
+            await tx.sale.update({ where: { id: sale.id }, data: { status: OrderStatus.CANCELLED } });
+
+            const alreadyReverted = await tx.stockMovement.count({
+                where: { referenceId: sale.id, reason: 'CANCELLATION' },
+            });
+            if (!alreadyReverted) {
+                const consumed = await tx.stockMovement.findMany({
+                    where: { referenceId: sale.id, reason: 'SALE' },
+                    select: { inventoryItemId: true, quantity: true },
+                });
+                const byItem = new Map<string, number>();
+                for (const m of consumed) byItem.set(m.inventoryItemId, (byItem.get(m.inventoryItemId) || 0) - Number(m.quantity));
+                for (const [inventoryItemId, qty] of byItem) {
+                    if (qty <= 0) continue;
+                    await tx.inventoryItem.update({
+                        where: { id: inventoryItemId },
+                        data: {
+                            currentStock: { increment: qty },
+                            movements: { create: { quantity: qty, reason: 'CANCELLATION', referenceId: sale.id } },
+                        },
+                    });
+                }
+            }
+
+            await tx.cashTransaction.updateMany({
+                where: { relatedSaleId: sale.id, type: 'SALE_INCOME' },
+                data: { type: 'CANCELLED_SALE', description: `[CANCELADA] Venta ${sale.code || ''}` },
+            });
 
             return updatedTicket;
         });

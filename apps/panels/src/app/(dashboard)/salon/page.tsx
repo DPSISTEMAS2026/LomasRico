@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { API_URL } from '../../../services/api';
@@ -11,23 +11,31 @@ export default function SalonPage() {
     const router = useRouter();
     const [tables, setTables] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const inFlight = useRef(false);
 
     const load = async () => {
+        if (inFlight.current) return;
+        inFlight.current = true;
         try {
             const res = await authFetch(`${API_URL}/tables`);
             if (res.ok) {
                 const data = await res.json();
                 setTables(data);
             }
+        } catch {
+            /* se reintenta en el siguiente ciclo */
         } finally {
+            inFlight.current = false;
             setLoading(false);
         }
     };
 
     useEffect(() => {
         load();
-        const id = setInterval(load, 8000);
-        return () => clearInterval(id);
+        const id = setInterval(() => { if (!document.hidden) load(); }, 8000);
+        const onVisible = () => { if (!document.hidden) load(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
     }, []);
 
     return (

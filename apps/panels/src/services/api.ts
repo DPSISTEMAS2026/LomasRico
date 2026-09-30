@@ -1,3 +1,5 @@
+import { authFetch } from './authFetch';
+
 function isLocalDevHost(host?: string) {
     if (!host) return false;
     if (host === 'localhost' || host === '127.0.0.1') return true;
@@ -208,9 +210,8 @@ export async function createSale(items: any[], options: {
 }
 
 export async function simulateMPCallback(orderId: string, status: 'APPROVED' | 'REJECTED') {
-    const res = await fetch(`${API_URL}/payments/simulate-callback`, {
+    const res = await authFetch(`${API_URL}/payments/simulate-callback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status })
     });
     if (!res.ok) throw new Error('Failed to simulate callback');
@@ -219,7 +220,7 @@ export async function simulateMPCallback(orderId: string, status: 'APPROVED' | '
 
 export async function fetchOwnerDashboard() {
     try {
-        const res = await fetch(`${API_URL}/stats/dashboard`, { cache: 'no-store' });
+        const res = await authFetch(`${API_URL}/stats/dashboard`, { cache: 'no-store' });
         if (!res.ok) return {
             sales: { today: 0, month: 0, trend: 0 },
             orders: { active: 0, byChannel: [] },
@@ -237,7 +238,7 @@ export async function fetchOwnerDashboard() {
 
 export async function fetchTopProducts() {
     try {
-        const res = await fetch(`${API_URL}/stats/top-products`, { cache: 'no-store' });
+        const res = await authFetch(`${API_URL}/stats/top-products`, { cache: 'no-store' });
         if (!res.ok) return [];
         return res.json();
     } catch { return []; }
@@ -245,7 +246,7 @@ export async function fetchTopProducts() {
 
 export async function fetchPeakHours() {
     try {
-        const res = await fetch(`${API_URL}/stats/peak-hours`, { cache: 'no-store' });
+        const res = await authFetch(`${API_URL}/stats/peak-hours`, { cache: 'no-store' });
         if (!res.ok) return [];
         return res.json();
     } catch { return []; }

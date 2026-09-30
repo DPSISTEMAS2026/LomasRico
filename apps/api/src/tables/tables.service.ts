@@ -57,7 +57,6 @@ export class TablesService implements OnModuleInit {
     }
 
     async list() {
-        const t0 = Date.now();
         const [tables, openSales] = await Promise.all([
             (this.prisma as any).diningTable.findMany({
                 where: { isActive: true },
@@ -70,7 +69,7 @@ export class TablesService implements OnModuleInit {
                     guests: {
                         where: { isActive: true },
                         orderBy: { seat: 'asc' },
-                        select: { id: true, name: true, seat: true, isActive: true, claimToken: true },
+                        select: { id: true, name: true, seat: true, isActive: true, claimToken: true, createdAt: true },
                     },
                 },
             }),
@@ -255,9 +254,9 @@ export class TablesService implements OnModuleInit {
         });
     }
 
-    private async nextSaleCode() {
+    private async nextSaleCode(client: any = this.prisma) {
         for (let attempt = 0; attempt < 5; attempt++) {
-            const lastSale = await (this.prisma as any).sale.findFirst({
+            const lastSale = await client.sale.findFirst({
                 orderBy: { createdAt: 'desc' },
                 select: { code: true },
             });
@@ -267,29 +266,10 @@ export class TablesService implements OnModuleInit {
                 if (match) nextNumber = parseInt(match[0], 10) + 1 + attempt;
             }
             const code = `#${nextNumber.toString().padStart(4, '0')}`;
-            const exists = await (this.prisma as any).sale.findUnique({ where: { code } });
+            const exists = await client.sale.findUnique({ where: { code } });
             if (!exists) return code;
         }
         return `#${Date.now().toString().slice(-6)}`;
-    }
-
-    private async createOpenSale(guest: any, extras: any = {}) {
-        const code = await this.nextSaleCode();
-        return (this.prisma as any).sale.create({
-            data: {
-                code,
-                channel: 'POS',
-                status: 'PENDING',
-                total: 0,
-                paymentStatus: 'PENDING',
-                fulfillmentType: 'DINE_IN',
-                tableId: guest.tableId,
-                guestId: guest.id,
-                shiftId: extras.shiftId || undefined,
-                userId: extras.userId || undefined,
-                note: extras.note || guest.name,
-            },
-        });
     }
 
     private async appendItems(saleId: string, items: any[]) {
@@ -346,21 +326,18 @@ export class TablesService implements OnModuleInit {
         });
     }
 
-    async addItemsToGuest(tableId: string, guestId: string, dto: any) {
-        const t0 = Date.now();
+    async addItemsToGuest(tableId: string, guestId: string, dto: any, withTable = true) {
+        const findOpen = (client: any) => client.sale.findFirst({
+            where: this.openSaleWhere({ guestId }),
+            select: { id: true },
+            orderBy: { createdAt: 'desc' },
+        });
         const [guest, existing] = await Promise.all([
             this.requireGuest(tableId, guestId),
-            (this.prisma as any).sale.findFirst({
-                where: this.openSaleWhere({ guestId }),
-                select: { id: true },
-                orderBy: { createdAt: 'desc' },
-            }),
+            findOpen(this.prisma as any),
         ]);
-        const afterGuest = Date.now();
-        const sale = existing || await this.createOpenSale(guest, dto);
-        const afterSale = Date.now();
+        const sale = existing || await this.openSaleForGuestLocked(guest, dto, findOpen);
         const added = dto.items?.length ? await this.appendItems(sale.id, dto.items) : 0;
-        const afterItems = Date.now();
         if (dto.discount && dto.discount > 0) {
             await this.recalcTotal(sale.id, dto.discount, dto.discountType);
         } else if (added) {
@@ -369,106 +346,164 @@ export class TablesService implements OnModuleInit {
                 data: { total: { increment: added } },
             });
         }
-        const afterRecalc = Date.now();
-        const table = await this.getTable(tableId);
-        return table;
+        return withTable ? this.getTable(tableId) : null;
     }
 
-    async sendGuestToKitchen(tableId: string, guestId: string, dto: any = {}) {
+    private async openSaleForGuestLocked(guest: any, dto: any, findOpen: (client: any) => Promise<any>) {
+        return (this.prisma as any).$transaction(async (tx: any) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${guest.id}))`;
+            const again = await findOpen(tx);
+            if (again) return again;
+            const code = await this.nextSaleCode(tx);
+            return tx.sale.create({
+                data: {
+                    code,
+                    channel: 'POS',
+                    status: 'PENDING',
+                    total: 0,
+                    paymentStatus: 'PENDING',
+                    fulfillmentType: 'DINE_IN',
+                    tableId: guest.tableId,
+                    guestId: guest.id,
+                    shiftId: dto.shiftId || undefined,
+                    userId: dto.userId || undefined,
+                    note: dto.note || guest.name,
+                },
+                select: { id: true },
+            });
+        });
+    }
+
+    async sendGuestToKitchen(tableId: string, guestId: string, dto: any = {}, withTable = true) {
         if (dto.items?.length) {
-            await this.addItemsToGuest(tableId, guestId, dto);
+            await this.addItemsToGuest(tableId, guestId, dto, false);
         }
-        const sale = await this.getOpenSaleForGuest(guestId);
+        const sale = await (this.prisma as any).sale.findFirst({
+            where: this.openSaleWhere({ guestId }),
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                code: true,
+                status: true,
+                table: { select: { number: true } },
+                guest: { select: { name: true } },
+            },
+        });
         if (!sale) throw new BadRequestException('Este comensal no tiene platos');
 
-        const unsent = sale.items.filter((item: any) => !item.sentToKitchenAt);
-        if (!unsent.length) throw new BadRequestException('No hay platos nuevos para enviar a cocina');
-
-        const guest = sale.guest;
-        const batchNumber = (sale.kitchenTickets?.length || 0) + 1;
-        const label = `MESA ${sale.table?.number ?? ''} · ${guest?.name || 'Comensal'}`;
-        const ticket = await (this.prisma as any).kitchenTicket.create({
-            data: {
-                saleId: sale.id,
-                batchNumber,
-                label,
-                itemIds: unsent.map((item: any) => item.id),
-                status: 'PREPARING',
-                startTime: new Date(),
-            },
-        });
-
-        await (this.prisma as any).saleItem.updateMany({
-            where: { id: { in: unsent.map((item: any) => item.id) } },
-            data: { sentToKitchenAt: new Date(), kitchenTicketId: ticket.id },
-        });
-
-        if (sale.status === 'PENDING') {
-            await (this.prisma as any).sale.update({
-                where: { id: sale.id },
-                data: { status: 'PREPARING' },
-            });
-        }
-
-        return { sale: await this.getSale(sale.id), ticket, table: await this.getTable(tableId) };
-    }
-
-    async payGuest(tableId: string, guestId: string, dto: any) {
-        if (dto.items?.length) {
-            await this.addItemsToGuest(tableId, guestId, dto);
-        }
-        let sale = await this.getOpenSaleForGuest(guestId);
-        if (!sale) throw new BadRequestException('Este comensal no tiene cuenta abierta');
-
-        if (sale.items.some((item: any) => !item.sentToKitchenAt)) {
-            await this.sendGuestToKitchen(tableId, guestId, {});
-            sale = await this.getOpenSaleForGuest(guestId);
-        }
-
-        const paymentMethod = dto.paymentMethod === 'MP' ? 'MERCADO_PAGO' : (dto.paymentMethod || 'CASH');
-        const paid = await (this.prisma as any).sale.update({
-            where: { id: sale.id },
-            data: {
-                paymentMethod,
-                paymentStatus: 'APPROVED',
-                status: 'CONFIRMED',
-                shiftId: dto.shiftId || sale.shiftId,
-            },
-            include: this.saleInclude(),
-        });
-
-        if (paid.shiftId) {
-            await (this.prisma as any).cashTransaction.create({
+        const label = `MESA ${sale.table?.number ?? ''} · ${sale.guest?.name || 'Comensal'}`;
+        const ticket = await (this.prisma as any).$transaction(async (tx: any) => {
+            const claimed: { id: string }[] = await tx.$queryRaw`
+                UPDATE "SaleItem" SET "sentToKitchenAt" = now()
+                WHERE "saleId" = ${sale.id} AND "sentToKitchenAt" IS NULL
+                RETURNING id`;
+            if (!claimed.length) throw new BadRequestException('No hay platos nuevos para enviar a cocina');
+            const itemIds = claimed.map((row) => row.id);
+            const batches = await tx.kitchenTicket.count({ where: { saleId: sale.id } });
+            const created = await tx.kitchenTicket.create({
                 data: {
-                    shiftId: paid.shiftId,
-                    type: 'SALE_INCOME',
-                    amount: paid.total,
-                    description: `Salón ${paid.code} Mesa ${sale.table?.number} ${sale.guest?.name || ''} (${paymentMethod})`,
-                    relatedSaleId: paid.id,
+                    saleId: sale.id,
+                    batchNumber: batches + 1,
+                    label,
+                    itemIds,
+                    status: 'PREPARING',
+                    startTime: new Date(),
                 },
             });
+            await tx.saleItem.updateMany({ where: { id: { in: itemIds } }, data: { kitchenTicketId: created.id } });
+            if (sale.status === 'PENDING') {
+                await tx.sale.update({ where: { id: sale.id }, data: { status: 'PREPARING' } });
+            }
+            return created;
+        });
+
+        return {
+            sale: { id: sale.id, code: sale.code },
+            ticket,
+            table: withTable ? await this.getTable(tableId) : null,
+        };
+    }
+
+    private async currentShiftId(): Promise<string | null> {
+        const shift = await (this.prisma as any).cashShift.findFirst({
+            where: { status: 'OPEN' },
+            orderBy: { openingTime: 'desc' },
+            select: { id: true },
+        });
+        return shift?.id || null;
+    }
+
+    async payGuest(tableId: string, guestId: string, dto: any, settle = true) {
+        if (dto.items?.length) {
+            await this.addItemsToGuest(tableId, guestId, dto, false);
+        }
+        const open = await (this.prisma as any).sale.findFirst({
+            where: this.openSaleWhere({ guestId }),
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                shiftId: true,
+                items: { where: { sentToKitchenAt: null }, select: { id: true }, take: 1 },
+            },
+        });
+        if (!open) throw new BadRequestException('Este comensal no tiene cuenta abierta');
+
+        if (open.items.length) {
+            try {
+                await this.sendGuestToKitchen(tableId, guestId, {}, false);
+            } catch (e) {
+                if (!(e instanceof BadRequestException)) throw e;
+            }
         }
 
-        await (this.prisma as any).tableGuest.update({
-            where: { id: guestId },
-            data: { isActive: false },
+        const shiftId = dto.shiftId || open.shiftId || await this.currentShiftId();
+        const paymentMethod = dto.paymentMethod === 'MP' ? 'MERCADO_PAGO' : (dto.paymentMethod || 'CASH');
+        const paid = await (this.prisma as any).$transaction(async (tx: any) => {
+            const res = await tx.sale.updateMany({
+                where: { id: open.id, paymentStatus: 'PENDING' },
+                data: { paymentMethod, paymentStatus: 'APPROVED', status: 'CONFIRMED', shiftId: shiftId || undefined },
+            });
+            if (res.count !== 1) throw new BadRequestException('Esta cuenta ya fue cobrada');
+            const sale = await tx.sale.findUnique({
+                where: { id: open.id },
+                select: {
+                    id: true,
+                    code: true,
+                    total: true,
+                    shiftId: true,
+                    table: { select: { number: true } },
+                    guest: { select: { name: true } },
+                },
+            });
+            if (sale.shiftId) {
+                await tx.cashTransaction.create({
+                    data: {
+                        shiftId: sale.shiftId,
+                        type: 'SALE_INCOME',
+                        amount: sale.total,
+                        description: `Salón ${sale.code} Mesa ${sale.table?.number} ${sale.guest?.name || ''} (${paymentMethod})`,
+                        relatedSaleId: sale.id,
+                    },
+                });
+            }
+            await tx.$executeRaw`
+                UPDATE "TableGuest" SET "isActive" = false, "claimToken" = NULL, "updatedAt" = now()
+                WHERE id = ${guestId}`;
+            return sale;
         });
-        await this.prisma.$executeRawUnsafe(
-            `UPDATE "TableGuest" SET "claimToken" = NULL WHERE id = $1`,
-            guestId,
-        );
-        await this.clearBillRequestIfSettled(tableId, guestId);
 
-        return { sale: paid, table: await this.getTable(tableId) };
+        const table = settle ? await this.clearBillRequestIfSettled(tableId, guestId) : null;
+        return { sale: paid, table };
     }
 
     async payAll(tableId: string, dto: any = {}) {
+        const { items, discount, discountType, ...payDto } = dto || {};
         const table = await this.getTable(tableId);
         const unpaid = table.guests.filter((g: any) => g.openSale);
         if (!unpaid.length) throw new BadRequestException('La mesa no tiene cuentas abiertas');
         const paid = [];
         for (const guest of unpaid) {
-            const result = await this.payGuest(tableId, guest.id, dto);
+            const result = await this.payGuest(tableId, guest.id, payDto, false);
             paid.push({ guestId: guest.id, name: guest.name, sale: result.sale });
         }
         await this.prisma.$executeRawUnsafe(
@@ -633,12 +668,14 @@ export class TablesService implements OnModuleInit {
         const remaining = table.guests.filter((g: any) => g.openSale);
         const req = table.billRequest;
         const forThisGuest = !!(req && guestId && req.guestId === guestId);
-        if (!remaining.length || forThisGuest) {
+        if (req && (!remaining.length || forThisGuest)) {
             await this.prisma.$executeRawUnsafe(
                 `UPDATE "DiningTable" SET "billRequest" = NULL WHERE id = $1`,
                 tableId,
             );
+            return { ...table, billRequest: null };
         }
+        return table;
     }
 
     async assertClaim(guestId: string, claimToken: string) {
@@ -657,14 +694,18 @@ export class TablesService implements OnModuleInit {
         return guest;
     }
 
+    private publicItemsOnly(dto: any = {}) {
+        return { items: Array.isArray(dto?.items) ? dto.items : undefined, note: dto?.note };
+    }
+
     async publicAddItems(guestId: string, claimToken: string, dto: any) {
         const guest = await this.assertClaim(guestId, claimToken);
-        return this.addItemsToGuest(guest.tableId, guestId, dto);
+        return this.addItemsToGuest(guest.tableId, guestId, this.publicItemsOnly(dto));
     }
 
     async publicSendKitchen(guestId: string, claimToken: string, dto: any = {}) {
         const guest = await this.assertClaim(guestId, claimToken);
-        return this.sendGuestToKitchen(guest.tableId, guestId, dto);
+        return this.sendGuestToKitchen(guest.tableId, guestId, this.publicItemsOnly(dto));
     }
 
     async publicRequestBill(number: number, dto: any = {}) {
