@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
+import { SalonFloorPlan } from '../../../components/salon/SalonFloorPlan';
 
 export default function SalonPage() {
     const router = useRouter();
@@ -56,52 +57,10 @@ export default function SalonPage() {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
-                    {tables.map((table) => {
-                        const occupied = table.occupied;
-                        const bill = table.billRequest;
-                        const billText = bill?.guestName
-                            ? (bill.mode === 'GUEST' ? `${bill.guestName} pidió su cuenta` : `${bill.guestName} pidió la cuenta`)
-                            : bill ? 'Pidieron cuenta' : occupied ? 'Ocupada' : 'Libre';
-                        const names = (table.guests || []).map((g: any) => g.name).filter(Boolean).join(' · ');
-                        return (
-                            <button
-                                key={table.id}
-                                type="button"
-                                onClick={() => router.push(`/salon/${table.id}?cuenta=${bill ? '1' : '0'}`)}
-                                className={`relative aspect-square rounded-[2rem] p-5 text-left transition-all active:scale-95 border-4 ${
-                                    bill
-                                        ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-xl shadow-amber-200'
-                                        : occupied
-                                        ? 'bg-orange-500 text-white border-orange-600 shadow-xl shadow-orange-200'
-                                        : 'bg-white text-slate-900 border-dashed border-slate-200 hover:border-orange-300'
-                                }`}
-                            >
-                                <div className={`absolute inset-6 rounded-[1.6rem] border-2 ${bill || occupied ? 'border-white/30' : 'border-slate-100'}`} />
-                                <div className="relative h-full flex flex-col justify-between">
-                                    <div>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest ${occupied && !bill ? 'text-white/70' : bill ? 'text-slate-800' : 'text-slate-800'}`}>
-                                            {billText}
-                                        </p>
-                                        <p className="text-4xl md:text-5xl font-black italic tracking-tighter leading-none mt-1">
-                                            {table.number}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="flex items-center gap-2 text-sm font-black uppercase italic">
-                                            <Users size={16} />
-                                            {table.guestCount ? `${table.guestCount} comensal${table.guestCount === 1 ? '' : 'es'}` : 'Sin comensales'}
-                                        </p>
-                                        {names && <p className="text-[11px] font-bold mt-1 truncate">{names}</p>}
-                                        {occupied && (
-                                            <p className="text-lg font-black mt-1">${Number(table.openTotal || 0).toLocaleString()}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
+                <SalonFloorPlan
+                    tables={tables}
+                    onOpen={(table) => router.push(`/salon/${table.id}?cuenta=${table.billRequest ? '1' : '0'}`)}
+                />
             </div>
         </div>
     );
