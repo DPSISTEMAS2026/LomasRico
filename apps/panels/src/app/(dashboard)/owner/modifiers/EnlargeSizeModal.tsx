@@ -56,9 +56,6 @@ export default function EnlargeSizeModal({
                 const excluded = all.filter((p: ProductLite) => !canEnlargeBySize(p.category, p.name));
                 const list = all.filter((p: ProductLite) => canEnlargeBySize(p.category, p.name));
                 setProducts(list);
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-CAT',location:'EnlargeSizeModal.tsx:open',message:'enlarge size modal opened',data:{productCount:list.length,excludedCount:excluded.length,shown:list.map((p:ProductLite)=>p.name),excluded:excluded.map((p:ProductLite)=>({name:p.name,category:p.category}))},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
             } catch {
                 setError('No se pudieron cargar los platos.');
             } finally {
@@ -138,14 +135,8 @@ export default function EnlargeSizeModal({
                 if (!assign.ok) throw new Error('assign');
             }
 
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-FLOW',location:'EnlargeSizeModal.tsx:save',message:'enlarge size saved',data:{ok:true,productId:product.id,fromGrams,toGrams,extra,reusedGroup:!!existing?.id,groupId},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             onSaved();
         } catch {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-slim',hypothesisId:'H-FLOW',location:'EnlargeSizeModal.tsx:save',message:'enlarge size save failed',data:{productId,fromGrams,toGrams,extra},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             setError('No se pudo guardar.');
         } finally {
             setSaving(false);

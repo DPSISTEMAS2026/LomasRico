@@ -24,12 +24,6 @@ export function getApiUrl() {
         }
         resolved = url.replace(/\/$/, '');
     }
-    // #region agent log
-    if (typeof window !== 'undefined' && !(window as any).__lrApiUrlLogged) {
-        (window as any).__lrApiUrlLogged = true;
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:window.location.href,apiUrl:resolved,ua:`H-BACKEND-REWRITE ${via}`})}).catch(()=>{});
-    }
-    // #endregion
     return resolved;
 }
 
@@ -51,9 +45,6 @@ export async function fetchCatalog() {
     const t0 = Date.now();
     const res = await fetch(`${API_URL}/products/active`);
     const ms = Date.now() - t0;
-    // #region agent log
-    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'slow-product',hypothesisId:'H-CAT',location:'panels/api.ts:fetchCatalog',message:'client catalog fetch',data:{ok:res.ok,ms,apiUrl:API_URL},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!res.ok) throw new Error('Failed to fetch catalog');
     return res.json();
 }

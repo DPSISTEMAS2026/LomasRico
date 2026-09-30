@@ -203,9 +203,6 @@ export class ModifiersService {
                 return next === 'OTHER';
             })
             .map((g) => `${g.name} | ${g.displayName}`);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-AGRANDAR',location:'modifiers.service.ts:applyRoleSuggestions',message:'applied modifier role suggestions',data:{updated,total:groups.length,detachedAgrandar,leftover:leftover.slice(0,20),changes:changes.slice(0,40)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return { updated, changes };
     }
 
@@ -381,9 +378,6 @@ export class ModifiersService {
             await this.assignToProduct(productId, created.id, { isRequired: required, sortOrder });
             assigned.push({ productId, sortOrder });
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-ORDER-OWNER',location:'modifiers.service.ts:createWithProducts',message:'created modifier with products',data:{id:created.id,role:data.role,displayName:data.displayName,assigned:assigned.slice(0,20),optionCount:(data.options||[]).length,orderByCatalog:true},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         this.productsService.invalidateActiveCatalog();
         return this.findOneGroup(created.id);
     }
@@ -568,9 +562,6 @@ export class ModifiersService {
             });
         });
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-SAVE',location:'modifiers.service.ts:upsertOptionRecipe',message:'saved option recipe',data:{optionId,recipeId:saved?.id,itemCount:normalizedItems.length,applyMode},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         return saved;
     }

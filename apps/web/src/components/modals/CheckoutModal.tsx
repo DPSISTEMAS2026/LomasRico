@@ -93,14 +93,8 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             await loadTableBill();
             setStatus('success');
             setShowConfirmPopup(false);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K6',location:'CheckoutModal.tsx:sendToTableAccount',message:'diner confirmed and sent to kitchen',data:{tableNumber:tableSession.tableNumber,itemCount:items.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
             setErrorMsg(e.message || 'No se pudo enviar a tu cuenta');
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H3',location:'CheckoutModal.tsx:sendToTableAccount',message:'web cart to table failed',data:{error:String(e?.message||e)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } finally {
             setLoading(false);
         }
@@ -123,9 +117,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             if (!res.ok) throw new Error(data.message || 'No se pudo pedir la cuenta');
             setTableBill(data);
             alert(mode === 'ALL' ? 'Se pidió una sola cuenta. El garzón ya puede cobrar.' : 'Se pidió tu cuenta. El garzón ya puede cobrar.');
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H5',location:'CheckoutModal.tsx:requestTableBill',message:'web requested table bill',data:{mode},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
             setErrorMsg(e.message);
         } finally {
@@ -135,9 +126,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
     useEffect(() => {
         if (!isOpen) return;
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CheckoutModal.tsx:upsell',message:'checkout dump off; extras live on each product',data:{dineIn,checkoutDump:false,perItemAddons:true},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [isOpen, dineIn]);
 
     useEffect(() => {
@@ -503,9 +491,6 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                 type="button"
                                 onClick={() => {
                                     setShowConfirmPopup(true);
-                                    // #region agent log
-                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K8',location:'CheckoutModal.tsx:openConfirm',message:'diner confirm popup opened',data:{itemCount:items.length},timestamp:Date.now()})}).catch(()=>{});
-                                    // #endregion
                                 }}
                                 disabled={items.length === 0}
                                 className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl ${

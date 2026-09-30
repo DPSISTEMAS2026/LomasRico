@@ -148,9 +148,6 @@ export default function ModifierRecipeModal({
                     })),
                 }),
             });
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-UI',location:'ModifierRecipeModal.tsx:save',message:'ui saved option recipe',data:{optionId:option.id,ok:res.ok,itemCount:items.length,applyMode},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (!res.ok) throw new Error('No se pudo guardar');
             onSaved();
         } catch {

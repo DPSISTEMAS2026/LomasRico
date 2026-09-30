@@ -60,9 +60,6 @@ export default function CustomersPage() {
 
         const visible = result.slice(0, 10);
         setFilteredCustomers(visible);
-        // #region agent log
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/customers',apiUrl:q?'search':'top10',ua:`shown:${visible.length}|total:${customers.length}`})}).catch(()=>{});
-        // #endregion
     }, [searchTerm, activeFilter, customers]);
 
     const loadCustomers = async () => {
@@ -176,9 +173,6 @@ export default function CustomersPage() {
                         type="button"
                         onClick={() => {
                             setTab(t.key);
-                            // #region agent log
-                            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'clientes-tab'})}).catch(()=>{});
-                            // #endregion
                         }}
                         className={`py-2 rounded-xl font-black uppercase italic text-[10px] md:text-xs tracking-tight ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >

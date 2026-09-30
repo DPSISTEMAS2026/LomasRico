@@ -24,12 +24,6 @@ export function getApiUrl() {
         }
         resolved = url.replace(/\/$/, '');
     }
-    // #region agent log
-    if (typeof window !== 'undefined' && !(window as any).__lrApiUrlLogged) {
-        (window as any).__lrApiUrlLogged = true;
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'prod-api',hypothesisId:'H-BACKEND-REWRITE',location:'web/api.ts:getApiUrl',message:'resolved api url',data:{host:window.location.hostname,via,resolved},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
     return resolved;
 }
 

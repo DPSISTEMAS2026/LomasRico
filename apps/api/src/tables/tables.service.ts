@@ -17,9 +17,6 @@ export class TablesService implements OnModuleInit {
             await this.ensureTables();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-TABLES',location:'tables.service.ts:onModuleInit',message:'ensureTables failed but bootstrap continues',data:{message:message.slice(0,240)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             console.warn('ensureTables skipped:', message);
         }
     }
@@ -48,9 +45,6 @@ export class TablesService implements OnModuleInit {
                 create: { number: n, name: `Mesa ${n}` },
             });
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-guests',hypothesisId:'G1',location:'tables.service.ts:ensureTables',message:'dining tables ready',data:{count:TABLE_COUNT},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }
 
     private openSaleWhere(extra: any = {}) {
@@ -86,9 +80,6 @@ export class TablesService implements OnModuleInit {
             }),
         ]);
         const result = tables.map((table: any) => this.decorateTable(table, openSales));
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-TABLE',location:'tables.service.ts:list',message:'salon list ms',data:{ms:Date.now()-t0,tables:tables.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return result;
     }
 
@@ -133,9 +124,6 @@ export class TablesService implements OnModuleInit {
         ]);
         if (!table) throw new NotFoundException('Mesa no existe');
         const decorated = this.decorateTable(table, openSales);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-TABLE',location:'tables.service.ts:getTable',message:'getTable ms',data:{ms:Date.now()-t0,guestCount:decorated.guestCount,saleCount:openSales.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return decorated;
     }
 
@@ -155,13 +143,7 @@ export class TablesService implements OnModuleInit {
                 ...tableIds,
             );
             for (const row of claimRows) if (row.claimToken) claims.set(row.id, row.claimToken);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H1',location:'tables.service.ts:loadQrExtras',message:'qr extras loaded',data:{tableCount:tableIds.length,billFlags:billRows.filter((r:any)=>r.billRequest).length,claimed:claims.size},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H1',location:'tables.service.ts:loadQrExtras',message:'qr extras failed',data:{error:String(e?.message||e)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         }
         return { bills, claims };
     }
@@ -199,9 +181,6 @@ export class TablesService implements OnModuleInit {
                 isActive: true,
             },
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-guests',hypothesisId:'G2',location:'tables.service.ts:addGuest',message:'guest added',data:{tableNumber:table.number,seat,guestId:guest.id,hasName:!!dto.name?.trim(),nameLen:(dto.name||'').trim().length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return this.getTable(tableId);
     }
 
@@ -392,9 +371,6 @@ export class TablesService implements OnModuleInit {
         }
         const afterRecalc = Date.now();
         const table = await this.getTable(tableId);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-ADD',location:'tables.service.ts:addItemsToGuest',message:'add item phases',data:{itemCount:dto.items?.length||0,guestMs:afterGuest-t0,saleMs:afterSale-afterGuest,itemsMs:afterItems-afterSale,recalcMs:afterRecalc-afterItems,tableMs:Date.now()-afterRecalc,totalMs:Date.now()-t0,parallel:true},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return table;
     }
 
@@ -434,9 +410,6 @@ export class TablesService implements OnModuleInit {
             });
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K5',location:'tables.service.ts:sendGuestToKitchen',message:'mesa ticket skips preparar',data:{label,itemCount:unsent.length,status:'PREPARING'},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return { sale: await this.getSale(sale.id), ticket, table: await this.getTable(tableId) };
     }
 
@@ -486,9 +459,6 @@ export class TablesService implements OnModuleInit {
         );
         await this.clearBillRequestIfSettled(tableId, guestId);
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-bill',hypothesisId:'H-PAY',location:'tables.service.ts:payGuest',message:'guest paid and qr revoked',data:{tableId,guestId,saleCode:paid.code,total:Number(paid.total)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return { sale: paid, table: await this.getTable(tableId) };
     }
 
@@ -549,9 +519,6 @@ export class TablesService implements OnModuleInit {
             payload,
             tableId,
         );
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H5',location:'tables.service.ts:requestBill',message:'bill requested',data:{mode,hasGuestId:!!dto.guestId},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return this.getBill(tableId);
     }
 
@@ -564,9 +531,6 @@ export class TablesService implements OnModuleInit {
     async getPublicTable(number: number) {
         const table = await this.findByNumber(number);
         const full = await this.getTable(table.id);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H2',location:'tables.service.ts:getPublicTable',message:'public table ready',data:{number:full.number,occupied:full.occupied,guestCount:full.guestCount,hasBillRequest:!!full.billRequest},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return {
             id: full.id,
             number: full.number,
@@ -604,9 +568,6 @@ export class TablesService implements OnModuleInit {
             });
             created.push({ id: guest.id, name: guest.name, claimToken: null, seat });
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'Q1',location:'tables.service.ts:openParty',message:'qr party opened',data:{tableNumber:number,guestCount:created.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return { table: await this.getPublicTable(number), guests: created };
     }
 
@@ -633,9 +594,6 @@ export class TablesService implements OnModuleInit {
             token,
             guest.id,
         );
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-bill',hypothesisId:'H-CLAIM',location:'tables.service.ts:claimGuest',message:'guest claimed',data:{forced:!!dto.force,hadExisting:!!existing},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return { id: guest.id, name: guest.name, claimToken: token, alreadyClaimed: false };
     }
 

@@ -55,9 +55,6 @@ export const CevicheBuilderModal = ({
                 });
                 setSelections(initial);
             }
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:pos-open',message:'pos builder groups',data:{product:product.name,channel:'pos',steps:modifiers.map((g)=>({n:g.displayName||g.groupName})),extrasInSteps:modifiers.some((g)=>/extras|limonad/i.test(`${g.displayName||''} ${g.groupName||''}`))},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         }
     }, [product, isOpen, hasDynamicModifiers, modifiers]);
 
@@ -392,9 +389,6 @@ export const CevicheBuilderModal = ({
                                     const selectedId = sizeGroup ? (selections[sizeGroup.groupId] || [])[0] : null;
                                     const upgrade = nextSizeUpgrade(sizeGroup, selectedId);
                                     const isUpsold = !!(originalSizeId && selectedId && selectedId !== originalSizeId);
-                                    // #region agent log
-                                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:pos-summary',message:'channel offer policy',data:{product:product.name,channel:'pos',sizeUpgrade:channelOffersSizeUpgrade('pos'),perItemAddons:false,canEnlarge,willShow:!!(canEnlarge && sizeGroup && (upgrade || isUpsold)),next:upgrade?.next?.name||null,extra:upgrade?.extra??null},timestamp:Date.now()})}).catch(()=>{});
-                                    // #endregion
                                     if (!canEnlarge || !sizeGroup || (!upgrade && !isUpsold)) return null;
                                     return (
                                         <div className="space-y-2">

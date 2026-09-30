@@ -11,9 +11,6 @@ export function BannerSection() {
   const handleLoad = (id: 'desktop' | 'mobile', ev: React.SyntheticEvent<HTMLImageElement>) => {
     setLoaded((prev) => ({ ...prev, [id]: true }));
     const img = ev.currentTarget;
-    // #region agent log
-    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'banner-size',hypothesisId:'H-STRETCH',location:'BannerSection.tsx:onLoad',message:'banner render size',data:{id,naturalW:img.naturalWidth,naturalH:img.naturalHeight,clientW:img.clientWidth,clientH:img.clientHeight,scale:img.naturalWidth?Number((img.clientWidth/img.naturalWidth).toFixed(2)):null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
   };
 
   return (

@@ -95,9 +95,6 @@ export default function KitchenPage() {
     const loadTickets = useCallback(async () => {
         try {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
-            // #region agent log
-            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:String(API_URL),ua:'kitchen-fetch:'+res.status})}).catch(()=>{});
-            // #endregion
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const ids = new Set(data.map((t: any) => t.id));
@@ -108,13 +105,7 @@ export default function KitchenPage() {
             hasLoaded.current = true;
             setTickets(data);
             setError('');
-            // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-flow',hypothesisId:'K5',location:'kitchen/page.tsx:loadTickets',message:'kitchen tickets loaded',data:{total:data.length,tableTickets:data.filter((t:any)=>t.label?.includes('MESA')||t.sale?.table).length,waiting:data.filter((t:any)=>t.status==='WAITING').length,preparing:data.filter((t:any)=>t.status==='PREPARING').length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: unknown) {
-            // #region agent log
-            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:String(API_URL),ua:'kitchen-error:'+(e instanceof Error?e.message:String(e))})}).catch(()=>{});
-            // #endregion
             setError(e instanceof Error ? e.message : 'Error de conexión');
         } finally {
             setLoading(false);
@@ -142,9 +133,6 @@ export default function KitchenPage() {
     };
     const printTicket = (id: string) => { void openPrintHtml(`/kitchen/${id}/print`); };
     const printAccount = async (ticket: any) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-history',hypothesisId:'H-REPRINT',location:'kitchen/page.tsx:printAccount',message:'reprint boleta/account',data:{id:ticket.id,code:ticket.sale?.code,dteFolio:ticket.dteFolio||null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (ticket.dteTipo && ticket.dteFolio) {
             const res = await fetch(`${API_URL}/billing/pdf/${ticket.dteTipo}/${ticket.dteFolio}`);
             const data = await res.json().catch(() => null);
@@ -165,9 +153,6 @@ export default function KitchenPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setHistory(Array.isArray(data) ? data : []);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-history',hypothesisId:'H-HIST',location:'kitchen/page.tsx:loadHistory',message:'history loaded',data:{count:Array.isArray(data)?data.length:0,q:q||null},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Error de historial');
         } finally {
@@ -183,9 +168,6 @@ export default function KitchenPage() {
         const measure = () => {
             const el = tabBarRef.current;
             if (!el) return;
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-tabs',hypothesisId:'H-OVERFLOW',location:'kitchen/page.tsx:measure',message:'kitchen tab bar overflow',data:{innerW:window.innerWidth,scrollW:el.scrollWidth,clientW:el.clientWidth,overflows:el.scrollWidth>el.clientWidth+1,tab:activeTab},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         };
         measure();
         window.addEventListener('resize', measure);
@@ -250,9 +232,6 @@ export default function KitchenPage() {
                                     type="button"
                                     onClick={() => {
                                         setActiveTab(t.key);
-                                        // #region agent log
-                                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-tabs',hypothesisId:'H-MOBILE-TABS',location:'kitchen/page.tsx:tab',message:'kitchen tab tap',data:{tab:t.key,innerW:window.innerWidth},timestamp:Date.now()})}).catch(()=>{});
-                                        // #endregion
                                     }}
                                     className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight transition-all ${active ? t.on : 'text-slate-800'}`}
                                 >

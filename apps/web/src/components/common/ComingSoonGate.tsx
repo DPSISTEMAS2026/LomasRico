@@ -29,9 +29,6 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
             sessionStorage.getItem(PREVIEW_KEY) === '1',
         );
         setChecked(true);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-scroll',hypothesisId:'H-X',location:'ComingSoonGate.tsx:check',message:'web overflow',data:{enabled:ENABLED,preview:localStorage.getItem(PREVIEW_KEY)==='1',path:pathname,scrollW:document.documentElement.scrollWidth,clientW:document.documentElement.clientWidth},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [pathname]);
 
     const tableBypass = pathname.startsWith('/mesa') || pathname.startsWith('/admin') || Boolean(session) || mesaQuery;

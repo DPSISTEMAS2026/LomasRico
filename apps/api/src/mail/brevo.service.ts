@@ -91,9 +91,6 @@ export class BrevoService {
         this.listName = process.env.BREVO_LIST_NAME || LIST_NAME_DEFAULT;
         if (this.apiKey) this.logger.log('Brevo API configurada');
         else this.logger.warn('Brevo sin BREVO_API_KEY — correo masivo en espera');
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'render-start',hypothesisId:'H-MAIL',location:'brevo.service.ts:constructor',message:'BrevoService constructed',data:{hasApiKey:!!this.apiKey,hasSenderEmail:!!this.senderEmail},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }
 
     isConfigured() {
@@ -103,9 +100,6 @@ export class BrevoService {
     async getStatus() {
         const configured = this.isConfigured();
         if (!configured) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo', hypothesisId: 'H-KEY', location: 'brevo.service.ts:status', message: 'Brevo sin API key', data: { configured: false }, timestamp: Date.now() }) }).catch(() => {});
-            // #endregion
             return {
                 configured: false,
                 readyToSend: false,
@@ -148,17 +142,11 @@ export class BrevoService {
             missing: senderEmail ? [] : ['BREVO_SENDER_EMAIL o remitente verificado en Brevo'],
         };
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo', hypothesisId: 'H-CONN', location: 'brevo.service.ts:status', message: 'Estado Brevo', data: { configured: true, readyToSend: status.readyToSend, hasSender: !!senderEmail, listId: list.id, listCount: status.listCount, localWithEmail: status.localWithEmail }, timestamp: Date.now() }) }).catch(() => {});
-        // #endregion
 
         return status;
         } catch (err: any) {
             const message = String(err?.message || err);
             const ipBlocked = /unrecognised IP|authorized_ips|authorised_ips/i.test(message);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo', hypothesisId: 'H-IP', location: 'brevo.service.ts:status', message: 'Brevo rechazó la llamada', data: { configured: true, ipBlocked, statusCode: err?.status || null }, timestamp: Date.now() }) }).catch(() => {});
-            // #endregion
             return {
                 configured: true,
                 readyToSend: false,
@@ -209,9 +197,6 @@ export class BrevoService {
             if (res.processId) processes.push(String(res.processId));
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo', hypothesisId: 'H-SYNC', location: 'brevo.service.ts:sync', message: 'Contactos enviados a Brevo', data: { imported: recipients.length, batches: chunks.length, listId: list.id }, timestamp: Date.now() }) }).catch(() => {});
-        // #endregion
 
         return {
             ok: true,
@@ -240,9 +225,6 @@ export class BrevoService {
             }),
         });
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo-logo', hypothesisId: 'H-LOGO', location: 'brevo.service.ts:test', message: 'Correo de prueba enviado', data: { hasMessageId: !!res.messageId, httpsLogo: (html || defaultAnnounceHtml()).includes('https://'), noDataUri: !(html || defaultAnnounceHtml()).includes('data:image') }, timestamp: Date.now() }) }).catch(() => {});
-        // #endregion
 
         return { ok: true, messageId: res.messageId || null };
     }
@@ -280,9 +262,6 @@ export class BrevoService {
             if (res.messageId) messageIds.push(res.messageId);
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88a466' }, body: JSON.stringify({ sessionId: '88a466', runId: 'brevo', hypothesisId: 'H-SEND', location: 'brevo.service.ts:announce', message: 'Aviso masivo enviado', data: { sent, batches: batches.length }, timestamp: Date.now() }) }).catch(() => {});
-        // #endregion
 
         return { ok: true, sent, batches: batches.length, messageIds };
     }

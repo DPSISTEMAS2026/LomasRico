@@ -36,9 +36,6 @@ export const CevicheBuilderModal = ({
     const [isSuccess, setIsSuccess] = useState(false);
     useEffect(() => {
         if (!isSuccess) return;
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'CevicheBuilderModal.tsx:success',message:'success buttons order',data:{primary:'seguir-comprando',secondary:'ver-pedido',startInSuccess,product:product.name},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [isSuccess]);
     const [isAdding, setIsAdding] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -91,9 +88,6 @@ export const CevicheBuilderModal = ({
     // Setup initial selections based on defaults
     useEffect(() => {
         if (isOpen) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'CevicheBuilderModal.tsx:web',message:'purchase modifier order',data:{product:product.name,channel:tableSession?'qr':'web',startInSuccess,showedSuccess:!!startInSuccess,openedCheckout:false,steps:mainSteps.map((g)=>({n:g.displayName||g.groupName,suggestion:isSuggestionRole(g.role,g.groupName,g.displayName)})),extrasInSteps:mainSteps.some((g)=>isSuggestionRole(g.role,g.groupName,g.displayName)),emptyBuilder:hasDynamicModifiers&&mainSteps.length===0,hasDynamicModifiers},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             setIsSuccess(!!startInSuccess);
             setSearchQuery('');
             setQuantity(1);
@@ -495,9 +489,6 @@ export const CevicheBuilderModal = ({
                                         const selectedOptId = formatoGroup ? (selections[formatoGroup.groupId] || [])[0] : null;
                                         const upgrade = nextSizeUpgrade(formatoGroup, selectedOptId);
                                         const isUpsold = !!(originalFormatoId && selectedOptId && selectedOptId !== originalFormatoId);
-                                        // #region agent log
-                                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'CevicheBuilderModal.tsx:web-summary',message:'summary is last screen',data:{product:product.name,addonsOnSummary:false,suggestionSteps:mainSteps.filter((g)=>isSuggestionRole(g.role,g.groupName,g.displayName)).map((g)=>g.displayName||g.groupName),canEnlarge,willShow:!!(canEnlarge && formatoGroup && (upgrade || isUpsold))},timestamp:Date.now()})}).catch(()=>{});
-                                        // #endregion
                                         if (!canEnlarge || !formatoGroup || (!upgrade && !isUpsold)) return null;
                                         return (
                                             <div className="space-y-2">

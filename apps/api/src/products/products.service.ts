@@ -197,15 +197,9 @@ export class ProductsService implements OnModuleInit {
 
     async findActive() {
         if (this.activeCache && (Date.now() - this.activeCache.ts) < this.ACTIVE_TTL_MS) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CACHE',location:'products.service.ts:findActive',message:'catalog cache hit',data:{ageMs:Date.now()-this.activeCache.ts,count:this.activeCache.data.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             return this.activeCache.data;
         }
         if (this.activeInflight) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CACHE',location:'products.service.ts:findActive',message:'catalog inflight join',data:{},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             return this.activeInflight;
         }
         this.activeInflight = this.loadActiveCatalog().finally(() => { this.activeInflight = null; });
@@ -274,16 +268,10 @@ export class ProductsService implements OnModuleInit {
                 modifierAvailMap = new Map();
             }
             const afterAll = Date.now();
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-CAT',location:'products.service.ts:findActive',message:'catalog active phases',data:{count:products.length,queryMs,availMs:afterAll-tAvail,modAvailMs:Date.now()-afterAll,totalMs:Date.now()-t0,cached:false,inv:isInventoryEnforced()},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (error) {
             this.logger.error('Error calculating availability, returning all as available', error);
             availabilityMap = new Map();
             modifierAvailMap = new Map();
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'slow-product',hypothesisId:'H-CAT',location:'products.service.ts:findActive',message:'catalog avail failed',data:{queryMs,err:String((error as any)?.message||error)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         }
 
         const enriched = products.map(p => {
@@ -384,9 +372,6 @@ export class ProductsService implements OnModuleInit {
                 price: data.price ?? 0,
             },
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CREATE',location:'products.service.ts:create',message:'product created',data:{id:created.id,name:created.name,category:created.category,price:Number(created.price),isActive:created.isActive},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return created;
     }
 
@@ -495,14 +480,8 @@ export class ProductsService implements OnModuleInit {
         }, { maxWait: 10000, timeout: 30000 });
 
             this.invalidateActiveCache();
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'products.service.ts:hardDelete',message:'product hard-deleted',data:{id,...result},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             return result;
         } catch (error: any) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'products.service.ts:hardDelete',message:'product hard-delete failed',data:{id,err:String(error?.message||error)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             throw error;
         }
     }
@@ -534,9 +513,6 @@ export class ProductsService implements OnModuleInit {
 
         const failed = results.filter((r) => r.status !== 'deleted').length;
         this.invalidateActiveCache();
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CAT-DEL-PARTIAL',location:'products.service.ts:deleteCategory',message:'category delete finished',data:{category,total:results.length,failed},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return {
             success: failed === 0,
             category,

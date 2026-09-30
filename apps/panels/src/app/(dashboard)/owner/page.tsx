@@ -131,9 +131,6 @@ export default function OwnerDashboardPage() {
                             type="button"
                             onClick={() => {
                                 setTab(t.key);
-                                // #region agent log
-                                fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'resumen-tab'})}).catch(()=>{});
-                                // #endregion
                             }}
                             className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight text-[9px] md:text-xs transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                         >

@@ -165,9 +165,6 @@ export default function ReportsPage() {
                         type="button"
                         onClick={() => {
                             setTab(t.key);
-                            // #region agent log
-                            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,apiUrl:t.key,ua:'reportes-tab'})}).catch(()=>{});
-                            // #endregion
                         }}
                         className={`py-2 rounded-xl font-black uppercase italic text-[9px] md:text-xs tracking-tight min-w-0 ${tab === t.key ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
                     >

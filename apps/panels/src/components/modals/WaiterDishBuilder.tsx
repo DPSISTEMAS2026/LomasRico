@@ -42,9 +42,6 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
                 .map((opt) => opt.id);
         });
         setSelections(initial);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-CANAL',location:'WaiterDishBuilder.tsx:open',message:'salon builder policy',data:{product:product.name,sizeUpgrade:channelOffersSizeUpgrade('salon'),perItemAddons:false,shown:groups.map((g)=>({name:g.displayName||g.groupName}))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [isOpen, product.id, groups]);
 
     if (!isOpen) return null;

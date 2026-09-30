@@ -140,18 +140,12 @@ export default function ModifiersPage() {
         const leftoverShown = groupsNext.filter((g: ModifierGroup) => groupRole(g) === 'OTHER').map((g) => g.displayName);
         const leftoverProd = productsNext.flatMap((p) => (p.modifiers || []).filter((m) => groupRole(m) === 'OTHER').map((m) => m.displayName));
         const withMods = productsNext.filter((p: ProductRow) => (p.modifiers || []).some(isOptionOfProduct));
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H1',location:'modifiers/page.tsx:load',message:'roles after classify+overlay',data:{gOk:gRes.ok,pOk:pRes.ok,groups:groupsNext.length,products:productsNext.length,productsWithOptionMods:withMods.length,unclassifiedBefore:unclassified,applyOk,applyUpdated,leftoverStored,leftoverShown:leftoverShown.slice(0,20),leftoverProd:leftoverProd.slice(0,20),sample:withMods[0]?.name||null,sampleRoles:(withMods[0]?.modifiers||[]).map((m:ModifierGroup)=>({n:m.displayName,r:groupRole(m),stored:m.role}))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         setLoading(false);
     };
 
     useEffect(() => {
         void (async () => {
             await load();
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-HOME',location:'modifiers/page.tsx:mount',message:'new modifiers module home',data:{view:'home'},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         })();
     }, []);
 
@@ -261,9 +255,6 @@ function Home({
                         key={card.view}
                         type="button"
                         onClick={() => {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-HOME',location:'modifiers/page.tsx:home',message:'opened modifiers section',data:{view:card.view},timestamp:Date.now()})}).catch(()=>{});
-                            // #endregion
                             onOpen(card.view);
                         }}
                         className="text-left bg-white rounded-3xl border border-slate-100 p-6 hover:border-orange-300 hover:shadow-md transition-all"
@@ -321,9 +312,6 @@ function CreateWizard({
                 productIds: selectedIds,
                 options: cleanOpts.map((o) => ({ name: o.name.trim(), priceAdjustment: Number(o.price) || 0 })),
             };
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-SORT',location:'modifiers/page.tsx:create-save',message:'wizard save payload',data:{role,displayName:payload.displayName,productCount:selectedIds.length,options:payload.options,showOnWeb,showOnPos,showOnSalon},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             const res = await authFetch(`${API_URL}/modifiers/create-with-products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -331,9 +319,6 @@ function CreateWizard({
             });
             if (res.ok) {
                 const created = await res.json().catch(() => ({}));
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'create-mod',hypothesisId:'H-SORT',location:'modifiers/page.tsx:create-ok',message:'wizard create ok',data:{id:created?.id,role:created?.role,displayName:created?.displayName,optCount:(created?.options||[]).length},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 await onSaved();
             } else {
                 const err = await res.json().catch(() => ({}));
@@ -539,9 +524,6 @@ function ReviewGroupEditor({
                     if (!removed.ok) throw new Error('delete');
                 }
             }
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-EDIT1',location:'modifiers/page.tsx:review-save',message:'saved group options',data:{groupId,displayName:displayName.trim(),optCount:clean.length,names:clean.map((o)=>o.name)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             await onSaved();
         } catch {
             setError('No se pudo guardar.');
@@ -695,9 +677,6 @@ function ReviewView({
                             setOpenCategory(next);
                             if (next) {
                                 const withOpts = filtered.filter((p) => groupsByProduct(p).length > 0);
-                                // #region agent log
-                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ORDER',location:'modifiers/page.tsx:review-open',message:'opened review category',data:{cat:next,total:filtered.length,withOpts:withOpts.length,sample:withOpts[0]?.name||null,sampleMods:withOpts[0]?groupsByProduct(withOpts[0]).map((m)=>({n:m.displayName,r:groupRole(m),sort:m.sortOrder,opts:(m.options||[]).map((o)=>o.name).slice(0,8),optCount:(m.options||[]).length})):[]},timestamp:Date.now()})}).catch(()=>{});
-                                // #endregion
                             }
                         }} className="w-full flex justify-between p-5 font-black italic uppercase">
                             {displayCategoryName(cat)}
@@ -739,9 +718,6 @@ function ReviewView({
                                                                         onClick={() => {
                                                                             const next = open ? null : key;
                                                                             setEditingKey(next);
-                                                                            // #region agent log
-                                                                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-SIZE',location:'modifiers/page.tsx:review-edit',message:'opened group editor',data:{product:p.name,group:g.displayName,groupId:g.groupId||g.id,shared,options:(g.options||[]).slice(0,12).map((o)=>({n:o.name,p:Number(o.priceAdjustment)||0,mismatch:drinkOptionSizeMismatch(p.name,o.name)}))},timestamp:Date.now()})}).catch(()=>{});
-                                                                            // #endregion
                                                                         }}
                                                                         className="text-slate-800 hover:text-orange-500 p-1"
                                                                         title="Editar respuestas"
@@ -820,9 +796,6 @@ function SuggestionsView({
                             onClick={() => {
                                 const next = openId === group.id ? null : group.id || null;
                                 setOpenId(next);
-                                // #region agent log
-                                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'sug-edit',hypothesisId:'H-SUG-LOCK',location:'modifiers/page.tsx:suggestions-open',message:'opened suggestion group',data:{id:group.id,displayName:group.displayName,open:!!next,optionCount:(group.options||[]).length,prices:(group.options||[]).map((o)=>({n:o.name,p:Number(o.priceAdjustment)||0}))},timestamp:Date.now()})}).catch(()=>{});
-                                // #endregion
                             }}
                             className="w-full text-left p-5"
                         >
@@ -836,9 +809,6 @@ function SuggestionsView({
                                     group={group}
                                     onCancel={() => setOpenId(null)}
                                     onSaved={async () => {
-                                        // #region agent log
-                                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'sug-edit',hypothesisId:'H-SUG-LIMONADA',location:'modifiers/page.tsx:suggestions-saved',message:'saved suggestion options',data:{id:group.id,displayName:group.displayName},timestamp:Date.now()})}).catch(()=>{});
-                                        // #endregion
                                         await onReload();
                                     }}
                                 />
@@ -919,17 +889,11 @@ function EspecialesView({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ priceAdjustment }),
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ESP',location:'modifiers/page.tsx:especiales',message:'saved especial recargo',data:{optionId,priceAdjustment,...(meta||{})},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         await onReload();
         setSaving(null);
     };
 
     useEffect(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ESP-SIZE',location:'modifiers/page.tsx:especiales-mount',message:'especiales size upgrades',data:{removeGroups:groups.map((g)=>({name:g.displayName,opts:g.options.map((o)=>({n:o.name,p:o.priceAdjustment}))})),sizeGroups:sizeGroups.map((g)=>({name:g.displayName,role:g.role,products:(g.productModifiers||[]).map((pm)=>pm.sellingProduct?.name).filter(Boolean),pairs:sizeUpgradePairs(g).map((p)=>({from:p.current.name,to:p.next.name,extra:p.extra,fromAdj:p.current.priceAdjustment,toAdj:p.next.priceAdjustment}))}))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [groups, sizeGroups]);
 
     const empty = groups.length === 0 && sizeGroups.length === 0;

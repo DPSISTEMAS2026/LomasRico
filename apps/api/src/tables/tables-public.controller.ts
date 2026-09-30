@@ -7,9 +7,6 @@ export class TablesPublicController {
 
     @Get(':number')
     async getTable(@Param('number') number: string) {
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H2',location:'tables-public.controller.ts:getTable',message:'public table requested',data:{number},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return this.tablesService.getPublicTable(Number(number));
     }
 

@@ -75,9 +75,6 @@ export default function CatalogManagementPage() {
 
     useEffect(() => {
         if (!editingProduct) return;
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-editor',hypothesisId:'H-TABS',location:'catalog/page.tsx:editorTab',message:'catalog editor tab',data:{tab:editorTab,productId:editingProduct.id,isNew:editingProduct.id==='NEW'},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [editorTab, editingProduct?.id]);
 
     useEffect(() => {
@@ -86,9 +83,6 @@ export default function CatalogManagementPage() {
             const g = allModifierGroups.find((x: any) => x.id === pm.groupId);
             return { n: g?.displayName, role: g?.role, layer: catalogLayer(g), s: pm.sortOrder };
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-ORDER',location:'catalog/page.tsx:modifiers-split',message:'catalog assigned by layer',data:{productId:editingProduct.id,layers},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [editorTab, editingProduct?.id, productModifiers, allModifierGroups]);
 
     const CATEGORIES = useMemo(() => {
@@ -104,9 +98,6 @@ export default function CatalogManagementPage() {
 
     useEffect(() => {
         loadData();
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H-width',location:'catalog/page.tsx:mount',message:'Ancho disponible del panel',data:{innerWidth:typeof window!=='undefined'?window.innerWidth:0,cappedAt7xl:false},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, []);
 
     useEffect(() => {
@@ -131,9 +122,6 @@ export default function CatalogManagementPage() {
             const productsData = await prodRes.json();
             setProducts(productsData);
             const cats = Array.from(new Set((productsData || []).map((p: any) => p.category).filter(Boolean)));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-UI-DEL',location:'catalog/page.tsx:loadData',message:'catalog loaded',data:{count:Array.isArray(productsData)?productsData.length:0,categories:cats.length,sample:cats.slice(0,12)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
             console.error(e);
             setError(`Error de Conexión: ${e.message}`);
@@ -388,9 +376,6 @@ export default function CatalogManagementPage() {
 
             if (res.ok) {
                 const saved = await res.json().catch(() => payload);
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CREATE',location:'catalog/page.tsx:handleSave',message:'Producto guardado desde admin',data:{isNew,id:saved?.id||editingProduct.id,name:saved?.name||payload.name,category:payload.category,price:payload.price,isActive:saved?.isActive??payload.isActive,status:res.status},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 setSaveStatus('success');
                 loadData();
                 setTimeout(() => {
@@ -421,9 +406,6 @@ export default function CatalogManagementPage() {
                 body: JSON.stringify({ [field]: next })
             });
             if (!res.ok) throw new Error(String(res.status));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'admin-catalog',hypothesisId:'H3',location:'catalog/page.tsx:toggle',message:'Publicado en web cambiado',data:{id,field,next},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e) {
             setProducts(prev => prev.map(p =>
                 p.id === id ? { ...p, [field]: currentStatus } : p
@@ -442,9 +424,6 @@ export default function CatalogManagementPage() {
         try {
             const res = await authFetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
             const data = await res.json().catch(() => ({}));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-DEL-FK',location:'catalog/page.tsx:handleDeleteProduct',message:'delete product response',data:{id,name,ok:res.ok,status:res.status,body:data},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (res.ok) {
                 setProducts(prev => prev.filter(p => p.id !== id));
                 if (editingProduct?.id === id) setEditingProduct(null);
@@ -475,9 +454,6 @@ export default function CatalogManagementPage() {
             const res = await authFetch(`${API_URL}/products/category/${encodeURIComponent(category)}`, { method: 'DELETE' });
             const data = await res.json().catch(() => ({}));
             const failed = Array.isArray(data?.results) ? data.results.filter((r: any) => r.status !== 'deleted') : [];
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-crud',hypothesisId:'H-CAT-DEL-PARTIAL',location:'catalog/page.tsx:handleDeleteCategory',message:'delete category response',data:{category,productCount,ok:res.ok,status:res.status,failed:failed.length,results:(data?.results||[]).slice(0,20)},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (res.ok && failed.length === 0) {
                 setProducts(prev => prev.filter(p => p.category !== category));
                 if (selectedCategory === category) setSelectedCategory('');
@@ -519,9 +495,6 @@ export default function CatalogManagementPage() {
         setSortTab(selectedCategory ? 'products' : 'categories');
         setSortFocusCategory(focus);
         setShowSortModal(true);
-        // #region agent log
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:grouped.map((s)=>s.name).join('|'),ua:`H-SORT web:${grouped.length} raw:${rawCats.length} zeros:${zeros}`})}).catch(()=>{});
-        // #endregion
     };
 
     const moveSortCategory = (id: string, direction: 'up' | 'down') => {
@@ -565,9 +538,6 @@ export default function CatalogManagementPage() {
                 return sorted ? { ...p, sortOrder: sorted.sortOrder } : p;
             }));
             setShowSortModal(false);
-            // #region agent log
-            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:sortSections.map((s)=>s.name).join('|'),ua:`H-SORT saved sections:${sortSections.length} items:${items.length}`})}).catch(()=>{});
-            // #endregion
         } catch (e) {
             console.error('Error saving sort order:', e);
             alert('Error al guardar el orden');
@@ -671,9 +641,6 @@ export default function CatalogManagementPage() {
                                     onClick={() => {
                                         setSelectedCategory(cat.id);
                                         setCatalogTab('active');
-                                        // #region agent log
-                                        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:cat.id,ua:`cat-pick:${cat.count}`})}).catch(()=>{});
-                                        // #endregion
                                     }}
                                     className="min-w-0 flex-1 text-left"
                                 >
@@ -1288,9 +1255,6 @@ export default function CatalogManagementPage() {
                                             if (t.key === 'products' && !sortFocusCategory && selectedCategory) {
                                                 setSortFocusCategory(webSectionKey(selectedCategory, ''));
                                             }
-                                            // #region agent log
-                                            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/owner/catalog',apiUrl:t.key,ua:`H-SORT tab:${t.key}`})}).catch(()=>{});
-                                            // #endregion
                                         }}
                                         className={`py-2 rounded-xl font-black uppercase italic text-[10px] ${sortTab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-800'}`}
                                     >

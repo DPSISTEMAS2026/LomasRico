@@ -61,9 +61,6 @@ export class KitchenService {
             },
         }).then((tickets: any[]) => {
             const mapped = tickets.map((ticket) => this.withTicketItems(ticket));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'perf-all',hypothesisId:'H-KDS',location:'kitchen.service.ts:findAllActive',message:'kitchen mapped tickets',data:{total:mapped.length,ms:Date.now()-t0},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             return mapped;
         });
     }
@@ -122,9 +119,6 @@ export class KitchenService {
             return { ...withItems, dteTipo: dte?.tipo || null, dteFolio: dte?.folio || null };
         });
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'kitchen-history',hypothesisId:'H-HIST',location:'kitchen.service.ts:findHistory',message:'kitchen delivered history',data:{count:mapped.length,q:query||null,withDte:mapped.filter((t:any)=>t.dteFolio).length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return mapped;
     }
 

@@ -17,9 +17,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
             log: ['info', 'warn', 'error'],
             ...(raw ? { datasources: { db: { url: withPoolLimit(raw) } } } : {}),
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-POOL',location:'prisma.service.ts:constructor',message:'prisma pool cap',data:{hadUrl:!!raw,alreadyLimited:/[?&]connection_limit=/.test(raw),appliedLimit:PRISMA_CONNECTION_LIMIT},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }
 
     async onModuleInit() {

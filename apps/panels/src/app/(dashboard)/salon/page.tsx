@@ -18,9 +18,6 @@ export default function SalonPage() {
             if (res.ok) {
                 const data = await res.json();
                 setTables(data);
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-mesa',hypothesisId:'H5',location:'salon/page.tsx:load',message:'salon floor loaded',data:{count:data.length,occupied:data.filter((t:any)=>t.occupied).length,billRequests:data.filter((t:any)=>t.billRequest).length},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
             }
         } finally {
             setLoading(false);
@@ -30,9 +27,6 @@ export default function SalonPage() {
     useEffect(() => {
         load();
         const id = setInterval(load, 8000);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-only',hypothesisId:'H-CAJA',location:'salon/page.tsx:mount',message:'salon floor sin caja',data:{hasCajaTile:false,innerWidth:typeof window!=='undefined'?window.innerWidth:0},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return () => clearInterval(id);
     }, []);
 

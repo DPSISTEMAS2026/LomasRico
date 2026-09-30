@@ -65,10 +65,6 @@ export default function SalonTablePage() {
     }, [printSale, handlePrint]);
 
     useEffect(() => {
-        // #region agent log
-        const catalogH = document.querySelector('[data-salon-catalog]')?.clientHeight ?? 0;
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cart',hypothesisId:'H-SPACE',location:'salon/[id]/page.tsx:layout',message:'espacio catalogo vs cuenta',data:{accountOpen,catalogH,innerH:typeof window!=='undefined'?window.innerHeight:0},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     }, [accountOpen, table]);
 
     const loadTable = async (preferGuestId?: string | null) => {
@@ -95,9 +91,6 @@ export default function SalonTablePage() {
                     setShowBill(true);
                 }
             }
-            // #region agent log
-            fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:request?'auto-open':'no-bill-request',ua:'H-AUTO-OPEN restore'})}).catch(()=>{});
-            // #endregion
         });
         fetchCatalog().then(setProducts).catch(() => {});
     }, [id]);
@@ -122,9 +115,6 @@ export default function SalonTablePage() {
         document.addEventListener('touchmove', blockBackground, { passive: false });
 
         const catalogOverflow = catalog ? getComputedStyle(catalog).overflowY : 'missing';
-        // #region agent log
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:catalogOverflow,ua:'H-CATALOG-SCROLL lock'})}).catch(()=>{});
-        // #endregion
 
         return () => {
             if (catalog) catalog.style.overflow = prevCatalog;
@@ -201,9 +191,6 @@ export default function SalonTablePage() {
                 }),
             });
             const data = await res.json().catch(() => ({}));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-layout',hypothesisId:'C',location:'salon/[id]/page.tsx:persistItem',message:'item persisted',data:{ok:res.ok,guestId,itemCount:1,saleCode:data.code||null},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (!res.ok) throw new Error(data.message || 'No se pudo guardar el plato');
             const afterApi = Date.now();
             if (data.guests) {
@@ -217,12 +204,6 @@ export default function SalonTablePage() {
                 await loadTable(guestId);
             }
             backToCategories();
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix-anotar',hypothesisId:'H-UI',location:'salon/[id]/page.tsx:persistItem',message:'persist timings',data:{name:item.name,apiMs:afterApi-t0,reloadMs:Date.now()-afterApi,totalMs:Date.now()-t0,usedTable:!!data.guests},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H2',location:'salon/[id]/page.tsx:persistItem',message:'added then back to categories',data:{guestId,fromCategory:selectedCategory},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
             alert(e.message);
         } finally {
@@ -240,9 +221,6 @@ export default function SalonTablePage() {
             ...product,
             modifiers: salonGroups,
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-SALON',location:'salon/[id]/page.tsx:onProduct',message:'product tap',data:{name:product.name,category:product.category,rawGroups:product.modifiers?.length||0,salonGroups:salonGroups.length,drinkGroups:drinkGroups.length,opts:drinkGroups[0]?.options?.map((o:any)=>o.name)||[]},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (drinkGroups.length === 0 && /bebida|limonad|cervez|jugo|monster|agua/i.test(`${product.category} ${product.name}`)) {
             void persistItem({
                 productId: product.id,
@@ -296,9 +274,6 @@ export default function SalonTablePage() {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.message || 'No se pudo agregar comensal');
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-names',hypothesisId:'N1',location:'salon/[id]/page.tsx:submitGuestName',message:'guest named',data:{action:'add',nameLen:name.length,guestCount:data.guests?.length||0},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 setTable(data);
                 const newest = data.guests?.[data.guests.length - 1];
                 if (newest) setGuestId(newest.id);
@@ -330,9 +305,6 @@ export default function SalonTablePage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'No se pudo enviar a cocina');
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H3',location:'salon/[id]/page.tsx:sendKitchen',message:'comanda sent',data:{label:data.ticket?.label||null,batch:data.ticket?.batchNumber||null,itemCount:pendingItems.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             setPrintSale({
                 code: data.sale?.code || '',
                 items: pendingItems,
@@ -395,9 +367,6 @@ export default function SalonTablePage() {
         const res = await authFetch(`${API_URL}/tables/${id}/bill`);
         if (res.ok) setBill(await res.json());
         setShowBill(true);
-        // #region agent log
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'open-bill',ua:'H-NO-CLOSE open-manual'})}).catch(()=>{});
-        // #endregion
     };
 
     const payAll = async () => {
@@ -543,9 +512,6 @@ export default function SalonTablePage() {
                         type="button"
                         onClick={() => {
                             setSelectedCategory(cat.id);
-                            // #region agent log
-                            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cats',hypothesisId:'H1',location:'salon/[id]/page.tsx:selectCategory',message:'waiter opened category',data:{category:cat.id,count:cat.count},timestamp:Date.now()})}).catch(()=>{});
-                            // #endregion
                         }}
                         className="bg-white rounded-2xl p-4 text-left border border-slate-100 active:scale-95 min-h-[140px] md:min-h-[160px] flex flex-col justify-between"
                     >
@@ -574,9 +540,6 @@ export default function SalonTablePage() {
                     type="button"
                     onClick={() => {
                         setAccountOpen((open) => !open);
-                        // #region agent log
-                        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-cart',hypothesisId:'H-CART',location:'salon/[id]/page.tsx:toggleAccount',message:'cuenta inferior',data:{next:!accountOpen,pending:pendingItems.length},timestamp:Date.now()})}).catch(()=>{});
-                        // #endregion
                     }}
                     className="w-full px-4 py-3 flex items-center justify-between gap-3"
                 >
@@ -636,9 +599,6 @@ export default function SalonTablePage() {
                     className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-3 overflow-hidden overscroll-none touch-none"
                     onClick={() => {
                         setShowBill(false);
-                        // #region agent log
-                        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'close-bill',ua:'salon-bill-close'})}).catch(()=>{});
-                        // #endregion
                     }}
                 >
                     <div className="w-full max-w-lg bg-white rounded-[2rem] max-h-[85vh] flex flex-col overscroll-contain touch-auto" onClick={(e) => e.stopPropagation()}>
@@ -651,9 +611,6 @@ export default function SalonTablePage() {
                                 type="button"
                                 onClick={() => {
                                     setShowBill(false);
-                                    // #region agent log
-                                    fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:'/salon/bill',apiUrl:'close-x',ua:'H-NO-CLOSE close-x'})}).catch(()=>{});
-                                    // #endregion
                                 }}
                                 className="p-2.5 rounded-full bg-slate-50 hover:bg-red-50 hover:text-red-500 shrink-0"
                                 title="Cerrar"

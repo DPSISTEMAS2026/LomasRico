@@ -167,9 +167,6 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
                 const urls = [...new Set(plates.map((p: { imageUrl: string }) => p.imageUrl))];
                 fromApi = urls.length;
                 if (urls.length >= 4) photosRef.current = urls;
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix',hypothesisId:'H-FLASH',location:'FloatingDishes.tsx:load',message:'floating dish photos loaded',data:{count:photosRef.current.length,fromApi,usedFallback:fromApi<4,excludedCount:excluded.length},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
             } catch {
                 photosRef.current = FALLBACK_PHOTOS;
             }
@@ -218,9 +215,6 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
             }
             ballsRef.current = next;
             setBalls(next.map((b) => ({ ...b })));
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix2',hypothesisId:'H-HOLE',location:'FloatingDishes.tsx:spawn',message:'spawned floating dishes',data:{mobile,count:next.length,w,h,r,behindCard:mobile,reduced:reduced.current,srcHost:(next[0]?.src||'').startsWith('http')?new URL(next[0].src).hostname:'local'},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         };
 
         spawn();
@@ -293,9 +287,6 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
 
             if ((swapped || ejected) && now - lastLogRef.current > 4000) {
                 lastLogRef.current = now;
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'coming-soon-fix2',hypothesisId:'H-SWAP',location:'FloatingDishes.tsx:tick',message:'dishes tick',data:{swapped,ejected,moving:true,n:items.length,mobile},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
             }
 
             frameRef.current = requestAnimationFrame(tick);

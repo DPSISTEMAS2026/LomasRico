@@ -21,9 +21,6 @@ export default function MesaQrPage() {
 
     const goToWeb = (guest: { id: string; name: string; claimToken: string }) => {
         save({ tableNumber: String(number), ...guest });
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H1',location:'mesa/[number]/page.tsx:goToWeb',message:'diner redirected to web catalog',data:{tableNumber:number},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         router.replace(`/?mesa=${number}`);
     };
 
@@ -50,9 +47,6 @@ export default function MesaQrPage() {
                 }
                 setStep(data.occupied ? 'pick' : 'party');
             } catch (e: any) {
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H2',location:'mesa/[number]/page.tsx:load',message:'diner table load failed',data:{error:String(e?.message||e)},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 setError(e.message || 'No se pudo abrir la mesa');
             }
         })();
@@ -83,9 +77,6 @@ export default function MesaQrPage() {
             if (!res.ok) throw new Error(data.message || 'No se pudo abrir la mesa');
             setTable(data.table);
             setStep('pick');
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H1',location:'mesa/[number]/page.tsx:startParty',message:'diner party started',data:{tableNumber:number,guestCount:clean.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         } catch (e: any) {
             alert(e.message);
         } finally {

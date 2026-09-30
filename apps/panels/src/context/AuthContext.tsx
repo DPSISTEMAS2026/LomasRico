@@ -80,9 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const loginWithPin = async (pin: string) => {
         try {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'phone-login',hypothesisId:'H-LOAD',location:'AuthContext.tsx:pin',message:'pin login start',data:{apiUrl:API_URL,host:typeof window!=='undefined'?window.location.host:null},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             const apiBase = typeof window !== 'undefined' && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(window.location.hostname)
                 ? `${window.location.origin}/backend`
                 : API_URL;
@@ -92,9 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 body: JSON.stringify({ pin })
             });
 
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'phone-login',hypothesisId:'H-LOAD',location:'AuthContext.tsx:pin',message:'pin login response',data:{ok:res.ok,status:res.status},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (!res.ok) throw new Error('PIN incorrecto');
 
             const { user: dbUser, accessToken } = await res.json();
@@ -102,9 +96,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('lr_user', JSON.stringify(dbUser));
             localStorage.setItem('lr_token', accessToken);
         } catch (error) {
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'phone-login',hypothesisId:'H-LOAD',location:'AuthContext.tsx:pin',message:'pin login failed',data:{err:error instanceof Error?error.message:String(error),apiUrl:API_URL},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             throw error;
         }
     };

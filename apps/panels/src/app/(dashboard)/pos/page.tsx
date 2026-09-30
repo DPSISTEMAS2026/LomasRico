@@ -214,9 +214,6 @@ export default function POSPage() {
 
         const visibleMods = filterModifiersForChannel(product.modifiers, 'pos');
         const needsConfig = visibleMods.length > 0;
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-org',hypothesisId:'H-POS',location:'pos/page.tsx:click',message:'pos product click',data:{name:product.name,needsConfig,modCount:product.modifiers?.length||0,visible:visibleMods.map((m:any)=>m.displayName||m.groupName)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (needsConfig) {
             setSelectedProductForConfig(product);
         } else {

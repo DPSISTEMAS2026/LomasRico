@@ -126,23 +126,14 @@ export const ProductGrid = () => {
                         const vis = filterModifiersForChannel(p.modifiers, channel).some((m: any) => m.options?.length);
                         return raw && !vis;
                     }).map((p: any) => p.name);
-                    // #region agent log
-                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'catalog-health',hypothesisId:'H-A',location:'ProductGrid.tsx:fetch',message:'catalog health',data:{source:'api',count:list.length,names,cats,hasLegacy,api:API_URL,leftover,missing,emptyAfterWeb:emptyAfterFilter('web'),emptyAfterQr:emptyAfterFilter('salon'),sections:groupProductsByWebSection(list).map((s)=>({id:s.id,name:s.name,n:s.products.length}))},timestamp:Date.now()})}).catch(()=>{});
-                    // #endregion
                     setProducts(list);
                 } else {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'empty-http',status:prodResponse.status,api:API_URL},timestamp:Date.now()})}).catch(()=>{});
-                    // #endregion
                     setProducts([]);
                 }
 
                 setAvailableProteins(PROTEINS);
             } catch (error) {
                 console.warn('API error', error);
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'live-catalog',hypothesisId:'H-FALLBACK',location:'ProductGrid.tsx:fetch',message:'catalog source',data:{source:'empty-error',api:API_URL,err:String(error),origin:window.location.origin},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 setProducts([]);
                 setAvailableProteins(PROTEINS);
             } finally {
@@ -169,24 +160,15 @@ export const ProductGrid = () => {
 
     const categories = useMemo(() => {
         const next = buildMenuSections(products);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-ORDER',location:'ProductGrid.tsx:sections',message:'web section order',data:{order:next.map((s)=>s.name)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return next;
     }, [products]);
 
     useEffect(() => {
         const fromUrl = new URLSearchParams(window.location.search).get('cat');
         if (fromUrl) setSelectedCategory(fromUrl);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-VIEW',location:'ProductGrid.tsx:init',message:'catalog view init',data:{view:fromUrl?'products':'categories',cat:fromUrl,path:window.location.pathname},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         const onPop = () => {
             const cat = new URLSearchParams(window.location.search).get('cat');
             setSelectedCategory(cat);
-            // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-POP',location:'ProductGrid.tsx:popstate',message:'catalog back/forward',data:{view:cat?'products':'categories',cat},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
         };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
@@ -195,17 +177,11 @@ export const ProductGrid = () => {
     const openCategory = (categoryId: string) => {
         history.pushState({ catalog: categoryId }, '', catalogHref(categoryId));
         setSelectedCategory(categoryId);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-LOBBY',location:'ProductGrid.tsx:open',message:'open category',data:{cat:categoryId,samePage:true,noScrollJump:true,layout:'tiles'},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     };
 
     const backToCategories = () => {
         history.pushState({ catalog: null }, '', catalogHref(null));
         setSelectedCategory(null);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'cat-nav',hypothesisId:'H-LOBBY',location:'ProductGrid.tsx:back',message:'back to categories',data:{view:'categories',noScrollJump:true},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     };
 
     const handleAddClick = (product: Product) => {
@@ -215,9 +191,6 @@ export const ProductGrid = () => {
         const channel = tableSession ? 'salon' : 'web';
         const visibleMods = filterModifiersForChannel(product.modifiers, channel);
         const hasRealModifiers = visibleMods.some(m => m.options && m.options.length > 0);
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'add-notice',hypothesisId:'H-NOTICE',location:'ProductGrid.tsx:add',message:'add product path',data:{name:product.name,channel,rawGroups:(product.modifiers||[]).map((m)=>m.displayName||m.groupName),visibleGroups:visibleMods.map((m)=>m.displayName||m.groupName),opensBuilder:hasRealModifiers,showsAddedNotice:!hasRealModifiers,openedCheckout:false},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         if (hasRealModifiers) {
             setDirectAdded(false);

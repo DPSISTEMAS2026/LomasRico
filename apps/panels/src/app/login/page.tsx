@@ -16,9 +16,6 @@ export default function LoginPage() {
     const [pin, setPin] = useState('');
 
     useEffect(() => {
-        // #region agent log
-        fetch('/api/debug-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({href:typeof window!=='undefined'?window.location.href:null,ua:typeof navigator!=='undefined'?navigator.userAgent:null,apiUrl:String(API_URL)})}).catch(()=>{});
-        // #endregion
         if (!user) return;
         if (user.role === 'KITCHEN') {
             router.push('/kitchen');

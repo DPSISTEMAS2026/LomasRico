@@ -541,9 +541,6 @@ export class RecipeResolverService {
             if (optionRecipe.baseWeight > 0) recipe.baseWeight = optionRecipe.baseWeight;
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mod-recipe',hypothesisId:'H-RESOLVE',location:'recipe-resolver.service.ts:applyModifierOptionRecipes',message:'applied modifier option recipes',data:{productId:product.id,optionCount:withRecipe.length,replaced:!!replaceFirst,itemCount:recipe?.items?.length||0},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         return { applied: true, recipe };
     }

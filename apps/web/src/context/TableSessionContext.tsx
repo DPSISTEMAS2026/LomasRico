@@ -54,9 +54,6 @@ export function TableSessionProvider({ children }: { children: ReactNode }) {
         })
             .then((res) => res.json())
             .then((data) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'salon-bill',hypothesisId:'H-QR',location:'TableSessionContext.tsx:validate',message:'qr session checked',data:{valid:!!data.valid,reason:data.reason||null},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 if (!data.valid) {
                     setSessionEnd({ reason: data.reason || 'GONE', name: data.name });
                     setSession(null);
@@ -70,9 +67,6 @@ export function TableSessionProvider({ children }: { children: ReactNode }) {
         setSessionEnd(null);
         setSession(next);
         localStorage.setItem(STORAGE, JSON.stringify(next));
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qr-web',hypothesisId:'H1',location:'TableSessionContext.tsx:save',message:'diner session saved',data:{tableNumber:next.tableNumber},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
     };
 
     const clear = () => {
