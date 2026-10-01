@@ -11,6 +11,7 @@ import { fetchCatalog, API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { WaiterDishBuilder } from '../../../../components/modals/WaiterDishBuilder';
 import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
+import { BoletaPrinter, type BoletaGuest } from '../../../../components/printer/BoletaPrinter';
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
 import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
@@ -53,7 +54,16 @@ export default function SalonTablePage() {
     const [accountOpen, setAccountOpen] = useState(false);
     const [bill, setBill] = useState<any>(null);
     const nameRef = useRef<HTMLInputElement>(null);
-    const [printSale, setPrintSale] = useState<{ code: string; items: CartItem[]; channel: string; guestName?: string; kind?: 'kitchen' | 'account'; total?: number } | null>(null);
+    const [printSale, setPrintSale] = useState<{
+        code: string;
+        items: CartItem[];
+        channel: string;
+        guestName?: string;
+        kind?: 'kitchen' | 'account';
+        total?: number;
+        mode?: 'guest' | 'table';
+        guests?: BoletaGuest[];
+    } | null>(null);
     const printerRef = useRef<HTMLDivElement>(null);
     const handlePrint = useReactToPrint({
         contentRef: printerRef as any,
@@ -348,6 +358,12 @@ export default function SalonTablePage() {
                 channel: `MESA ${table?.number}`,
                 guestName: payGuestRow?.name,
                 kind: 'account',
+                mode: 'guest',
+                guests: [{
+                    name: payGuestRow?.name || 'Comensal',
+                    items: payItems,
+                    total: Number(payGuestRow?.openSale?.total || 0),
+                }],
                 total: Number(payGuestRow?.openSale?.total || 0),
             });
             setShowBill(false);
@@ -360,6 +376,57 @@ export default function SalonTablePage() {
             alert(e.message);
         } finally {
             setBusy(false);
+        }
+    };
+
+    const printPreCuenta = (targetGuestId?: string) => {
+        if (!bill) return;
+        if (targetGuestId) {
+            const g = bill.guests?.find((x: any) => x.id === targetGuestId);
+            if (!g) return;
+            const items: CartItem[] = (g.items || []).map((i: any) => ({
+                tempId: i.id,
+                productId: i.sellingProductId,
+                variantId: 'default',
+                name: i.name,
+                price: Number(i.priceUnit || 0),
+                quantity: i.quantity,
+                modifiers: i.modifiers || {},
+            }));
+            setPrintSale({
+                code: bill.saleCode || '',
+                items,
+                channel: `MESA ${bill.number}`,
+                guestName: g.name,
+                kind: 'account',
+                mode: 'guest',
+                guests: [{ name: g.name, items, total: Number(g.total || 0) }],
+                total: Number(g.total || 0),
+            });
+        } else {
+            const tableGuests: BoletaGuest[] = (bill.guests || []).map((g: any) => ({
+                name: g.name,
+                items: (g.items || []).map((i: any) => ({
+                    tempId: i.id,
+                    productId: i.sellingProductId,
+                    variantId: 'default',
+                    name: i.name,
+                    price: Number(i.priceUnit || 0),
+                    quantity: i.quantity,
+                    modifiers: i.modifiers || {},
+                })),
+                total: Number(g.total || 0),
+            })).filter((g: any) => g.items.length > 0);
+
+            setPrintSale({
+                code: bill.saleCode || '',
+                items: tableGuests.flatMap(g => g.items),
+                channel: `MESA ${bill.number}`,
+                kind: 'account',
+                mode: 'table',
+                guests: tableGuests,
+                total: Number(bill.grandTotal || 0),
+            });
         }
     };
 
@@ -379,6 +446,34 @@ export default function SalonTablePage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'No se pudo cobrar la mesa');
+
+            const tableGuests: BoletaGuest[] = (table?.guests || []).map((g: any) => ({
+                name: g.name,
+                items: (g.openSale?.items || []).map((item: any) => ({
+                    tempId: item.id,
+                    productId: item.sellingProductId,
+                    variantId: 'default',
+                    name: item.sellingProduct?.name || 'Producto',
+                    price: Number(item.priceUnit),
+                    quantity: item.quantity,
+                    modifiers: item.modifiers || {},
+                    sentToKitchen: true,
+                })),
+                total: Number(g.openSale?.total || 0),
+            })).filter((g: any) => g.items.length > 0);
+
+            if (tableGuests.length > 0) {
+                setPrintSale({
+                    code: data.sale?.code || '',
+                    items: tableGuests.flatMap(g => g.items),
+                    channel: `MESA ${table?.number}`,
+                    kind: 'account',
+                    mode: 'table',
+                    guests: tableGuests,
+                    total: tableGuests.reduce((s, g) => s + (g.total || 0), 0),
+                });
+            }
+
             setTable(data.table);
             setShowBill(false);
             setGuestId(null);
@@ -388,6 +483,7 @@ export default function SalonTablePage() {
             setBusy(false);
         }
     };
+
 
     const leaveGuest = async () => {
         if (!guestId) return;
@@ -637,23 +733,48 @@ export default function SalonTablePage() {
                                         {item.quantity}x {item.name}
                                     </p>
                                 ))}
-                                <button
-                                    type="button"
-                                    disabled={busy || !g.total}
-                                    onClick={() => { setGuestId(g.id); void payGuest(g.id); }}
-                                    className="mt-2 w-full py-3 rounded-xl bg-slate-100 font-black uppercase italic text-[11px] disabled:opacity-40"
-                                >
-                                    Cobrar {g.name}
-                                </button>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <button
+                                        type="button"
+                                        disabled={busy || !g.total}
+                                        onClick={() => printPreCuenta(g.id)}
+                                        className="py-3 rounded-xl bg-slate-100 hover:bg-slate-200 font-black uppercase italic text-[11px] disabled:opacity-40 flex items-center justify-center gap-1.5"
+                                    >
+                                        <Printer size={13} /> Pre-cuenta
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={busy || !g.total}
+                                        onClick={() => { setGuestId(g.id); void payGuest(g.id); }}
+                                        className="py-3 rounded-xl bg-slate-900 text-white font-black uppercase italic text-[11px] disabled:opacity-40"
+                                    >
+                                        Cobrar {g.name}
+                                    </button>
+                                </div>
                             </div>
                         ))}
                         <div className="flex justify-between text-xl font-black italic">
                             <span>Total mesa</span>
                             <span>${Number(bill.grandTotal).toLocaleString()}</span>
                         </div>
-                        <button type="button" onClick={payAll} disabled={busy || !bill.grandTotal} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs">
-                            Un solo pago · toda la mesa
-                        </button>
+                        <div className="grid grid-cols-2 gap-2 pt-2">
+                            <button
+                                type="button"
+                                disabled={busy || !bill.grandTotal}
+                                onClick={() => printPreCuenta()}
+                                className="py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 font-black uppercase italic text-xs flex items-center justify-center gap-2"
+                            >
+                                <Printer size={16} /> Pre-cuenta mesa
+                            </button>
+                            <button
+                                type="button"
+                                onClick={payAll}
+                                disabled={busy || !bill.grandTotal}
+                                className="py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs"
+                            >
+                                Cobrar toda la mesa
+                            </button>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -704,15 +825,30 @@ export default function SalonTablePage() {
 
             <div style={{ display: 'none' }}>
                 {printSale && (
-                    <ComandaPrinter
-                        ref={printerRef}
-                        saleCode={printSale.code}
-                        items={printSale.items}
-                        channel={printSale.channel}
-                        customerInfo={printSale.guestName}
-                        kind={printSale.kind || 'kitchen'}
-                        total={printSale.total}
-                    />
+                    printSale.kind === 'account' ? (
+                        <BoletaPrinter
+                            ref={printerRef}
+                            mode={printSale.mode || (printSale.guests && printSale.guests.length > 1 ? 'table' : 'guest')}
+                            tableNumber={table?.number}
+                            saleCode={printSale.code ? `#${printSale.code}` : undefined}
+                            guests={printSale.guests || [{
+                                name: printSale.guestName || 'Comensal',
+                                items: printSale.items,
+                                total: printSale.total,
+                            }]}
+                            waiter={user?.name || undefined}
+                        />
+                    ) : (
+                        <ComandaPrinter
+                            ref={printerRef}
+                            saleCode={printSale.code}
+                            items={printSale.items}
+                            channel={printSale.channel}
+                            customerInfo={printSale.guestName}
+                            kind="kitchen"
+                            total={printSale.total}
+                        />
+                    )
                 )}
             </div>
         </div>
