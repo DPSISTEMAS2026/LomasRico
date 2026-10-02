@@ -62,9 +62,9 @@ type ModifierGroup = {
     productModifiers?: AssignedProduct[];
 };
 
-const CREATE_KINDS: { role: ModifierRole; title: string; multi?: boolean }[] = [
+const CREATE_KINDS: { role: ModifierRole; title: string }[] = [
     { role: 'SIZE', title: 'Formato o Tamaño' },
-    { role: 'PROTEIN', title: 'Receta', multi: true },
+    { role: 'PROTEIN', title: 'Receta' },
     { role: 'PORTION', title: 'Cantidad' },
     { role: 'SAUCE', title: 'Salsa del plato' },
     { role: 'FLAVOR', title: 'Sabor' },
@@ -93,11 +93,12 @@ function namedOptionCount(options: { name: string }[]) {
     return options.filter((option) => option.name.trim()).length;
 }
 
-function sauceSelection(maxChoices: number) {
+function choiceLimit(maxChoices: number, currentMin = 1) {
     const max = Math.max(1, Math.floor(Number(maxChoices) || 1));
+    const min = currentMin > 0 ? Math.min(currentMin, max) : 0;
     return {
         type: (max > 1 ? 'MULTI_SELECT' : 'SINGLE_SELECT') as ModifierGroup['type'],
-        minSelections: 1,
+        minSelections: min,
         maxSelections: max,
     };
 }
@@ -136,7 +137,7 @@ function MaxChoicesControl({
                 <span className="text-xs font-bold text-slate-600 leading-tight">de estas opciones</span>
             </div>
             <p className="mt-2 text-[11px] font-bold text-slate-500">
-                {shown <= 1 ? 'Con 1, el cliente elige una sola salsa.' : `El cliente puede marcar hasta ${shown}.`}
+                {shown <= 1 ? 'Con 1, el cliente elige solo una.' : `Con ${shown}, el cliente puede marcar hasta ${shown}.`}
                 {optionCount < 2 ? ' Escribe al menos dos opciones para subir el máximo.' : ''}
             </p>
         </div>
@@ -354,16 +355,15 @@ function CreateWizard({
         if (!role || !displayName.trim() || selectedIds.length === 0) return;
         const cleanOpts = options.filter((o) => o.name.trim());
         if (cleanOpts.length === 0) return;
-        const isSauce = role === 'SAUCE';
-        const sauce = isSauce ? sauceSelection(Math.min(maxChoices, cleanOpts.length)) : null;
+        const limit = choiceLimit(Math.min(maxChoices, cleanOpts.length));
         setSaving(true);
         try {
             const payload = {
                 displayName: displayName.trim(),
                 role,
-                type: sauce?.type || (kind?.multi ? 'MULTI_SELECT' : 'SINGLE_SELECT'),
-                minSelections: sauce?.minSelections ?? 1,
-                maxSelections: sauce?.maxSelections ?? (kind?.multi ? 3 : 1),
+                type: limit.type,
+                minSelections: limit.minSelections,
+                maxSelections: limit.maxSelections,
                 showOnWeb,
                 showOnPos,
                 showOnSalon,
@@ -492,13 +492,11 @@ function CreateWizard({
                             Agregar
                         </button>
                     </div>
-                    {role === 'SAUCE' && (
-                        <MaxChoicesControl
-                            value={maxChoices}
-                            optionCount={namedOptionCount(options)}
-                            onChange={setMaxChoices}
-                        />
-                    )}
+                    <MaxChoicesControl
+                        value={maxChoices}
+                        optionCount={namedOptionCount(options)}
+                        onChange={setMaxChoices}
+                    />
                     <div>
                         <span className="text-xs font-black text-slate-800 block mb-2">Dónde se muestra</span>
                         <div className="flex flex-wrap gap-2">
@@ -545,7 +543,6 @@ function ReviewGroupEditor({
     const [options, setOptions] = useState<{ id?: string; name: string; price: number; isDefault?: boolean }[]>(
         (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0, isDefault: o.isDefault })),
     );
-    const isSauce = groupRole(group) === 'SAUCE';
     const sharedPlates = (group.productModifiers || []).length || group.assignedProductsCount || 0;
     const [maxChoices, setMaxChoices] = useState(Math.max(1, Number(group.maxSelections) || 1));
     const [saving, setSaving] = useState(false);
@@ -561,13 +558,14 @@ function ReviewGroupEditor({
         setSaving(true);
         setError(null);
         try {
-            const sauce = isSauce ? sauceSelection(Math.min(maxChoices, clean.length)) : null;
+            const currentMin = group.minSelections == null ? 1 : Number(group.minSelections);
+            const limit = choiceLimit(Math.min(maxChoices, clean.length), currentMin);
             const nameRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     displayName: displayName.trim(),
-                    ...(sauce || {}),
+                    ...limit,
                 }),
             });
             if (!nameRes.ok) throw new Error('group');
@@ -582,7 +580,7 @@ function ReviewGroupEditor({
                     continue;
                 }
                 const prev = (group.options || []).find((o) => o.id === opt.id);
-                const clearDefault = !!sauce && sauce.maxSelections > 1 && !!prev?.isDefault;
+                const clearDefault = limit.maxSelections > 1 && !!prev?.isDefault;
                 if (prev && prev.name === opt.name.trim() && Number(prev.priceAdjustment) === Number(opt.price) && !clearDefault) continue;
                 const patched = await authFetch(`${API_URL}/modifiers/options/${opt.id}`, {
                     method: 'PATCH',
@@ -658,20 +656,18 @@ function ReviewGroupEditor({
                     Agregar
                 </button>
             </div>
-            {isSauce && (
-                <div className="space-y-2">
-                    <MaxChoicesControl
-                        value={maxChoices}
-                        optionCount={namedOptionCount(options)}
-                        onChange={setMaxChoices}
-                    />
-                    {sharedPlates > 1 && (
-                        <p className="text-[11px] font-bold text-slate-500">
-                            Este máximo vale para los {sharedPlates} platos que usan esta salsa.
-                        </p>
-                    )}
-                </div>
-            )}
+            <div className="space-y-2">
+                <MaxChoicesControl
+                    value={maxChoices}
+                    optionCount={namedOptionCount(options)}
+                    onChange={setMaxChoices}
+                />
+                {sharedPlates > 1 && (
+                    <p className="text-[11px] font-bold text-slate-500">
+                        Este máximo queda en la opción y vale para los {sharedPlates} platos que la usan. No hay que repetirlo en cada uno.
+                    </p>
+                )}
+            </div>
             {error && <p className="text-xs font-bold text-red-500">{error}</p>}
             <div className="flex gap-2">
                 <button type="button" onClick={onCancel} className="flex-1 py-2 rounded-lg bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-800">Cancelar</button>
@@ -802,11 +798,9 @@ function ReviewView({
                                                                                     return extra ? `${o.name} +$${extra}` : o.name;
                                                                                 }).join(' · ') || '—'}
                                                                             </p>
-                                                                            {groupRole(g) === 'SAUCE' && (
-                                                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">
-                                                                                    El cliente elige máximo {Math.max(1, Number(g.maxSelections) || 1)}
-                                                                                </p>
-                                                                            )}
+                                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">
+                                                                                El cliente elige máximo {Math.max(1, Number(g.maxSelections) || 1)}
+                                                                            </p>
                                                                         </>
                                                                     )}
                                                                 </div>
