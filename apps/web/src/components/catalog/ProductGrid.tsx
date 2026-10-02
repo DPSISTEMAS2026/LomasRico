@@ -5,7 +5,7 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webMenuSectionId, groupProductsByWebSection, filterModifiersForChannel } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webSectionKey, groupProductsByWebSection, filterModifiersForChannel } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
@@ -228,11 +228,7 @@ export const ProductGrid = () => {
 
     const currentCat = categories.find((c) => c.id === selectedCategory);
     const displayProducts = currentCat
-        ? products.filter((p) => {
-            const sectionId = webMenuSectionId(p.category, p.name);
-            if (sectionId) return sectionId === currentCat.id;
-            return currentCat.id === `other-${p.category || 'otros'}`;
-        })
+        ? products.filter((p) => webSectionKey(p.category) === currentCat.id)
         : [];
 
     return (
@@ -291,7 +287,7 @@ export const ProductGrid = () => {
                                     <CategoryMosaic photos={cat.photos} />
                                     <div className="absolute inset-0 bg-black/45 transition-colors duration-300 group-hover:bg-black/25" />
                                     <div className="absolute inset-0 flex flex-col items-center justify-center px-3 transition-transform duration-300 group-hover:scale-105">
-                                        <span className="w-full font-black uppercase text-[clamp(1.45rem,5.8vw,2.15rem)] tracking-wide text-white leading-[0.95] drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
+                                        <span className="w-full px-3 font-black uppercase text-center text-[clamp(1.05rem,4.2vw,1.7rem)] tracking-wide text-white leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
                                             {cat.name}
                                         </span>
                                         <span className="mt-2 text-[11px] sm:text-sm font-bold uppercase tracking-[0.2em] text-white/85">

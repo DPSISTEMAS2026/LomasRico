@@ -41,35 +41,27 @@ export function webMenuSectionId(category?: string | null, name?: string | null)
     return WEB_MENU_SECTIONS.find((section) => section.match(value))?.id || null;
 }
 
-export function webSectionKey(category?: string | null, name?: string | null): string {
-    return webMenuSectionId(category, name) || `other-${category || 'otros'}`;
+export function webSectionKey(category?: string | null, _name?: string | null): string {
+    return (category || '').trim() || 'otros';
 }
 
+/** Una tarjeta por categoría del catálogo, en el orden en que llegan los productos. */
 export function groupProductsByWebSection<T extends { category?: string | null; name?: string | null; sortOrder?: number }>(
     products: T[],
 ) {
-    const sections = WEB_MENU_SECTIONS.map((section) => ({
-        id: section.id,
-        name: section.name,
-        products: [] as T[],
-    }));
-    const leftovers = new Map<string, { id: string; name: string; products: T[] }>();
-
+    const sections: { id: string; name: string; products: T[] }[] = [];
+    const index = new Map<string, number>();
     for (const product of products) {
-        const sectionId = webMenuSectionId(product.category, product.name);
-        if (sectionId) {
-            sections.find((section) => section.id === sectionId)?.products.push(product);
+        const id = webSectionKey(product.category);
+        const at = index.get(id);
+        if (at === undefined) {
+            index.set(id, sections.length);
+            sections.push({ id, name: displayCategoryName(id), products: [product] });
             continue;
         }
-        const key = product.category || 'otros';
-        if (!leftovers.has(key)) leftovers.set(key, { id: `other-${key}`, name: key, products: [] });
-        leftovers.get(key)!.products.push(product);
+        sections[at].products.push(product);
     }
-
-    return [
-        ...sections.filter((section) => section.products.length > 0),
-        ...[...leftovers.values()].filter((section) => section.products.length > 0),
-    ];
+    return sections;
 }
 
 export function displayCategoryName(category?: string | null) {
