@@ -15,7 +15,6 @@ const MAIN_METHODS: { id: PosPaymentMethod; label: string }[] = [
 ];
 
 const FOOD_METHODS: { id: PosPaymentMethod; label: string; logo: string }[] = [
-    { id: 'FOOD_CARD', label: 'Cobra', logo: '/assets/alimentacion/cobra.svg' },
     { id: 'EDENRED', label: 'Edenred', logo: '/assets/alimentacion/edenred.png' },
     { id: 'PLUXEE', label: 'Pluxee', logo: '/assets/alimentacion/pluxee.svg' },
     { id: 'JUNAEB', label: 'JUNAEB', logo: '/assets/alimentacion/junaeb.png' },
@@ -62,7 +61,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
             <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-800 px-1">
                 Tarjetas de alimentación
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
                 {FOOD_METHODS.map((m) => {
                     const selected = value === m.id;
                     return (
@@ -70,7 +69,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                             key={m.id}
                             type="button"
                             onClick={() => onChange(m.id)}
-                            className={`h-[72px] px-2 rounded-2xl font-black italic uppercase text-[8px] tracking-widest border-2 transition-all flex items-center justify-center gap-2
+                            className={`h-[84px] px-1.5 rounded-2xl font-black italic uppercase text-[8px] tracking-widest border-2 transition-all flex flex-col items-center justify-center gap-1.5
                                 ${selected
                                     ? 'bg-white border-orange-500 text-orange-500 shadow-md'
                                     : 'bg-white border-slate-200 text-slate-900 hover:border-slate-400'}`}
@@ -80,7 +79,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                                 alt=""
                                 className="h-8 w-12 object-contain shrink-0"
                             />
-                            <span className="leading-tight text-left">{m.label}</span>
+                            <span className="leading-tight text-center">{m.label}</span>
                         </button>
                     );
                 })}
@@ -88,7 +87,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
 
             {isFoodPaymentMethod(value) && (
                 <p className="text-[10px] font-bold text-slate-900 px-1">
-                    Cobra en el lector de alimentación y luego confirma la venta.
+                    Pasa la tarjeta en el lector de alimentación y luego confirma la venta.
                 </p>
             )}
         </div>
