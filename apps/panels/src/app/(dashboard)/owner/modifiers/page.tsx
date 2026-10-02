@@ -35,6 +35,7 @@ type ModifierOption = {
     id: string;
     name: string;
     priceAdjustment: number;
+    isDefault?: boolean;
     sortOrder?: number;
 };
 
@@ -61,9 +62,9 @@ type ModifierGroup = {
     productModifiers?: AssignedProduct[];
 };
 
-const CREATE_KINDS: { role: ModifierRole; title: string; multi?: boolean }[] = [
+const CREATE_KINDS: { role: ModifierRole; title: string }[] = [
     { role: 'SIZE', title: 'Formato o Tamaño' },
-    { role: 'PROTEIN', title: 'Receta', multi: true },
+    { role: 'PROTEIN', title: 'Receta' },
     { role: 'PORTION', title: 'Cantidad' },
     { role: 'SAUCE', title: 'Salsa del plato' },
     { role: 'FLAVOR', title: 'Sabor' },
@@ -86,6 +87,61 @@ function overlayProductRoles(products: ProductRow[], groups: ModifierGroup[]): P
             role: (m.groupId && byId.get(m.groupId)) || groupRole(m),
         })),
     }));
+}
+
+function namedOptionCount(options: { name: string }[]) {
+    return options.filter((option) => option.name.trim()).length;
+}
+
+function choiceLimit(maxChoices: number, currentMin = 1) {
+    const max = Math.max(1, Math.floor(Number(maxChoices) || 1));
+    const min = currentMin > 0 ? Math.min(currentMin, max) : 0;
+    return {
+        type: (max > 1 ? 'MULTI_SELECT' : 'SINGLE_SELECT') as ModifierGroup['type'],
+        minSelections: min,
+        maxSelections: max,
+    };
+}
+
+function MaxChoicesControl({
+    value, optionCount, onChange,
+}: {
+    value: number;
+    optionCount: number;
+    onChange: (next: number) => void;
+}) {
+    const cap = Math.max(1, optionCount);
+    const shown = Math.min(Math.max(1, value), cap);
+    return (
+        <div>
+            <span className="text-xs font-black text-slate-800 block mb-2">El cliente podrá elegir máximo</span>
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => onChange(Math.max(1, shown - 1))}
+                    className="w-10 h-10 rounded-xl bg-slate-100 font-black text-slate-900"
+                    aria-label="Bajar máximo"
+                >
+                    −
+                </button>
+                <span className="w-8 text-center text-2xl font-black tabular-nums text-slate-900">{shown}</span>
+                <button
+                    type="button"
+                    disabled={shown >= cap}
+                    onClick={() => onChange(Math.min(cap, shown + 1))}
+                    className="w-10 h-10 rounded-xl bg-slate-900 text-white font-black disabled:opacity-30"
+                    aria-label="Subir máximo"
+                >
+                    +
+                </button>
+                <span className="text-xs font-bold text-slate-600 leading-tight">de estas opciones</span>
+            </div>
+            <p className="mt-2 text-[11px] font-bold text-slate-500">
+                {shown <= 1 ? 'Con 1, el cliente elige solo una.' : `Con ${shown}, el cliente puede marcar hasta ${shown}.`}
+                {optionCount < 2 ? ' Escribe al menos dos opciones para subir el máximo.' : ''}
+            </p>
+        </div>
+    );
 }
 
 function isOptionOfProduct(group: ModifierGroup) {
@@ -284,6 +340,7 @@ function CreateWizard({
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [displayName, setDisplayName] = useState('');
     const [options, setOptions] = useState<{ name: string; price: number }[]>([{ name: '', price: 0 }]);
+    const [maxChoices, setMaxChoices] = useState(1);
     const [showOnWeb, setShowOnWeb] = useState(true);
     const [showOnPos, setShowOnPos] = useState(true);
     const [showOnSalon, setShowOnSalon] = useState(true);
@@ -298,14 +355,15 @@ function CreateWizard({
         if (!role || !displayName.trim() || selectedIds.length === 0) return;
         const cleanOpts = options.filter((o) => o.name.trim());
         if (cleanOpts.length === 0) return;
+        const limit = choiceLimit(Math.min(maxChoices, cleanOpts.length));
         setSaving(true);
         try {
             const payload = {
                 displayName: displayName.trim(),
                 role,
-                type: kind?.multi ? 'MULTI_SELECT' : 'SINGLE_SELECT',
-                minSelections: kind?.multi ? 1 : 1,
-                maxSelections: kind?.multi ? 3 : 1,
+                type: limit.type,
+                minSelections: limit.minSelections,
+                maxSelections: limit.maxSelections,
                 showOnWeb,
                 showOnPos,
                 showOnSalon,
@@ -434,6 +492,11 @@ function CreateWizard({
                             Agregar
                         </button>
                     </div>
+                    <MaxChoicesControl
+                        value={maxChoices}
+                        optionCount={namedOptionCount(options)}
+                        onChange={setMaxChoices}
+                    />
                     <div>
                         <span className="text-xs font-black text-slate-800 block mb-2">Dónde se muestra</span>
                         <div className="flex flex-wrap gap-2">
@@ -477,9 +540,11 @@ function ReviewGroupEditor({
 }) {
     const groupId = group.groupId || group.id || '';
     const [displayName, setDisplayName] = useState(group.displayName || '');
-    const [options, setOptions] = useState<{ id?: string; name: string; price: number }[]>(
-        (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0 })),
+    const [options, setOptions] = useState<{ id?: string; name: string; price: number; isDefault?: boolean }[]>(
+        (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0, isDefault: o.isDefault })),
     );
+    const sharedPlates = (group.productModifiers || []).length || group.assignedProductsCount || 0;
+    const [maxChoices, setMaxChoices] = useState(Math.max(1, Number(group.maxSelections) || 1));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -493,10 +558,15 @@ function ReviewGroupEditor({
         setSaving(true);
         setError(null);
         try {
+            const currentMin = group.minSelections == null ? 1 : Number(group.minSelections);
+            const limit = choiceLimit(Math.min(maxChoices, clean.length), currentMin);
             const nameRes = await authFetch(`${API_URL}/modifiers/groups/${groupId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ displayName: displayName.trim() }),
+                body: JSON.stringify({
+                    displayName: displayName.trim(),
+                    ...limit,
+                }),
             });
             if (!nameRes.ok) throw new Error('group');
             for (const opt of clean) {
@@ -510,11 +580,16 @@ function ReviewGroupEditor({
                     continue;
                 }
                 const prev = (group.options || []).find((o) => o.id === opt.id);
-                if (prev && prev.name === opt.name.trim() && Number(prev.priceAdjustment) === Number(opt.price)) continue;
+                const clearDefault = limit.maxSelections > 1 && !!prev?.isDefault;
+                if (prev && prev.name === opt.name.trim() && Number(prev.priceAdjustment) === Number(opt.price) && !clearDefault) continue;
                 const patched = await authFetch(`${API_URL}/modifiers/options/${opt.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: opt.name.trim(), priceAdjustment: Number(opt.price) || 0 }),
+                    body: JSON.stringify({
+                        name: opt.name.trim(),
+                        priceAdjustment: Number(opt.price) || 0,
+                        ...(clearDefault ? { isDefault: false } : {}),
+                    }),
                 });
                 if (!patched.ok) throw new Error('patch');
             }
@@ -580,6 +655,18 @@ function ReviewGroupEditor({
                 >
                     Agregar
                 </button>
+            </div>
+            <div className="space-y-2">
+                <MaxChoicesControl
+                    value={maxChoices}
+                    optionCount={namedOptionCount(options)}
+                    onChange={setMaxChoices}
+                />
+                {sharedPlates > 1 && (
+                    <p className="text-[11px] font-bold text-slate-500">
+                        Este máximo queda en la opción y vale para los {sharedPlates} platos que la usan. No hay que repetirlo en cada uno.
+                    </p>
+                )}
             </div>
             {error && <p className="text-xs font-bold text-red-500">{error}</p>}
             <div className="flex gap-2">
@@ -704,12 +791,17 @@ function ReviewView({
                                                                     <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">{MODIFIER_ROLE_LABEL[groupRole(g)]}</p>
                                                                     <p className="text-sm font-bold text-slate-800">{g.displayName}</p>
                                                                     {!open && (
-                                                                        <p className="text-xs text-slate-800">
-                                                                            {(g.options || []).map((o) => {
-                                                                                const extra = Number(o.priceAdjustment) || 0;
-                                                                                return extra ? `${o.name} +$${extra}` : o.name;
-                                                                            }).join(' · ') || '—'}
-                                                                        </p>
+                                                                        <>
+                                                                            <p className="text-xs text-slate-800">
+                                                                                {(g.options || []).map((o) => {
+                                                                                    const extra = Number(o.priceAdjustment) || 0;
+                                                                                    return extra ? `${o.name} +$${extra}` : o.name;
+                                                                                }).join(' · ') || '—'}
+                                                                            </p>
+                                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">
+                                                                                El cliente elige máximo {Math.max(1, Number(g.maxSelections) || 1)}
+                                                                            </p>
+                                                                        </>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex items-center gap-1 shrink-0">
