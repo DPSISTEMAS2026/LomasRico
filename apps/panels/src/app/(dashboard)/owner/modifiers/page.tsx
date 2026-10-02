@@ -69,6 +69,52 @@ const CREATE_KINDS: { role: ModifierRole; title: string; multi?: boolean }[] = [
     { role: 'FLAVOR', title: 'Sabor' },
 ];
 
+function choiceLabel(min: number, max: number) {
+    if (max <= 1) return min > 0 ? 'Elige 1' : 'Elige 1 (opcional)';
+    if (min <= 0) return `Elige hasta ${max} (opcional)`;
+    if (min === max) return `Elige ${max}`;
+    return `Elige de ${min} a ${max}`;
+}
+
+function Stepper({ label, value, min, max, onChange }: {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    onChange: (v: number) => void;
+}) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 w-16">{label}</span>
+            <button type="button" disabled={value <= min} onClick={() => onChange(value - 1)} className="w-8 h-8 rounded-lg bg-white border border-slate-200 font-black text-slate-900 disabled:opacity-30">−</button>
+            <span className="w-6 text-center font-black text-slate-900">{value}</span>
+            <button type="button" disabled={value >= max} onClick={() => onChange(value + 1)} className="w-8 h-8 rounded-lg bg-white border border-slate-200 font-black text-slate-900 disabled:opacity-30">+</button>
+        </div>
+    );
+}
+
+function ChoiceLimits({ min, max, optionCount, onChange }: {
+    min: number;
+    max: number;
+    optionCount: number;
+    onChange: (min: number, max: number) => void;
+}) {
+    const top = Math.max(1, optionCount);
+    const mx = Math.min(Math.max(1, max), top);
+    const mn = Math.min(min, mx);
+    return (
+        <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">
+                El cliente elige · <span className="text-orange-500">{choiceLabel(mn, mx)}</span>
+            </p>
+            <div className="flex flex-wrap gap-4">
+                <Stepper label="Mínimo" value={mn} min={0} max={mx} onChange={(v) => onChange(v, mx)} />
+                <Stepper label="Máximo" value={mx} min={Math.max(1, mn)} max={top} onChange={(v) => onChange(Math.min(mn, v), v)} />
+            </div>
+        </div>
+    );
+}
+
 function groupRole(group: ModifierGroup): ModifierRole {
     return resolveModifierRole(group.groupName || group.name, group.displayName, group.role);
 }
@@ -287,6 +333,8 @@ function CreateWizard({
     const [showOnWeb, setShowOnWeb] = useState(true);
     const [showOnPos, setShowOnPos] = useState(true);
     const [showOnSalon, setShowOnSalon] = useState(true);
+    const [minSel, setMinSel] = useState(1);
+    const [maxSel, setMaxSel] = useState(1);
     const [saving, setSaving] = useState(false);
     const kind = CREATE_KINDS.find((k) => k.role === role);
 
@@ -298,14 +346,16 @@ function CreateWizard({
         if (!role || !displayName.trim() || selectedIds.length === 0) return;
         const cleanOpts = options.filter((o) => o.name.trim());
         if (cleanOpts.length === 0) return;
+        const maxSelections = Math.max(1, Math.min(maxSel, cleanOpts.length));
+        const minSelections = Math.min(minSel, maxSelections);
         setSaving(true);
         try {
             const payload = {
                 displayName: displayName.trim(),
                 role,
-                type: kind?.multi ? 'MULTI_SELECT' : 'SINGLE_SELECT',
-                minSelections: kind?.multi ? 1 : 1,
-                maxSelections: kind?.multi ? 3 : 1,
+                type: maxSelections > 1 ? 'MULTI_SELECT' : 'SINGLE_SELECT',
+                minSelections,
+                maxSelections,
                 showOnWeb,
                 showOnPos,
                 showOnSalon,
@@ -344,7 +394,7 @@ function CreateWizard({
                         <button
                             key={k.role}
                             type="button"
-                            onClick={() => { setRole(k.role); setDisplayName(k.title); setStep(1); }}
+                            onClick={() => { setRole(k.role); setDisplayName(k.title); setMinSel(1); setMaxSel(k.multi ? 3 : 1); setStep(1); }}
                             className="text-left bg-white rounded-2xl border-2 border-slate-100 p-5 hover:border-orange-400"
                         >
                             <p className="font-black italic uppercase text-slate-900">{k.title}</p>
@@ -434,6 +484,12 @@ function CreateWizard({
                             Agregar
                         </button>
                     </div>
+                    <ChoiceLimits
+                        min={minSel}
+                        max={maxSel}
+                        optionCount={options.length}
+                        onChange={(mn, mx) => { setMinSel(mn); setMaxSel(mx); }}
+                    />
                     <div>
                         <span className="text-xs font-black text-slate-800 block mb-2">Dónde se muestra</span>
                         <div className="flex flex-wrap gap-2">
@@ -469,17 +525,22 @@ function CreateWizard({
 }
 
 function ReviewGroupEditor({
-    group, onCancel, onSaved,
+    group, productId, onCancel, onSaved,
 }: {
     group: ModifierGroup;
+    productId?: string;
     onCancel: () => void;
     onSaved: () => Promise<void>;
 }) {
     const groupId = group.groupId || group.id || '';
+    const initialMin = Number(group.minSelections ?? 0);
+    const initialMax = Math.max(1, Number(group.maxSelections ?? 1));
     const [displayName, setDisplayName] = useState(group.displayName || '');
     const [options, setOptions] = useState<{ id?: string; name: string; price: number }[]>(
         (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0 })),
     );
+    const [minSel, setMinSel] = useState(initialMin);
+    const [maxSel, setMaxSel] = useState(initialMax);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -523,6 +584,26 @@ function ReviewGroupEditor({
                     const removed = await authFetch(`${API_URL}/modifiers/options/${prev.id}`, { method: 'DELETE' });
                     if (!removed.ok) throw new Error('delete');
                 }
+            }
+            const overrideMax = Math.max(1, Math.min(maxSel, clean.length));
+            const overrideMin = Math.min(minSel, overrideMax);
+            if (overrideMin !== initialMin || overrideMax !== initialMax) {
+                const limits = productId
+                    ? await authFetch(`${API_URL}/modifiers/product/${productId}/assign`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ modifierGroupId: groupId, overrideMin, overrideMax }),
+                    })
+                    : await authFetch(`${API_URL}/modifiers/groups/${groupId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            minSelections: overrideMin,
+                            maxSelections: overrideMax,
+                            type: overrideMax > 1 ? 'MULTI_SELECT' : 'SINGLE_SELECT',
+                        }),
+                    });
+                if (!limits.ok) throw new Error('limits');
             }
             await onSaved();
         } catch {
@@ -581,6 +662,12 @@ function ReviewGroupEditor({
                     Agregar
                 </button>
             </div>
+            <ChoiceLimits
+                min={minSel}
+                max={maxSel}
+                optionCount={options.filter((o) => o.name.trim()).length}
+                onChange={(mn, mx) => { setMinSel(mn); setMaxSel(mx); }}
+            />
             {error && <p className="text-xs font-bold text-red-500">{error}</p>}
             <div className="flex gap-2">
                 <button type="button" onClick={onCancel} className="flex-1 py-2 rounded-lg bg-white border border-slate-200 font-black uppercase text-[10px] text-slate-800">Cancelar</button>
@@ -711,6 +798,11 @@ function ReviewView({
                                                                             }).join(' · ') || '—'}
                                                                         </p>
                                                                     )}
+                                                                    {!open && (
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mt-1">
+                                                                            {choiceLabel(Number(g.minSelections ?? 0), Math.max(1, Number(g.maxSelections ?? 1)))}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                                 <div className="flex items-center gap-1 shrink-0">
                                                                     <button
@@ -732,6 +824,7 @@ function ReviewView({
                                                             {open && (
                                                                 <ReviewGroupEditor
                                                                     group={g}
+                                                                    productId={p.id}
                                                                     onCancel={() => setEditingKey(null)}
                                                                     onSaved={async () => {
                                                                         setEditingKey(null);

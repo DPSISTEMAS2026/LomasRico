@@ -144,7 +144,7 @@ export class ModifiersService {
             sortOrder?: number;
         },
     ) {
-        return this.prisma.modifierGroup.update({
+        const updated = await this.prisma.modifierGroup.update({
             where: { id },
             data: {
                 ...data,
@@ -153,6 +153,8 @@ export class ModifiersService {
             },
             include: { options: true },
         });
+        this.productsService.invalidateActiveCatalog();
+        return updated;
     }
 
     async applyRoleSuggestions() {
@@ -293,12 +295,16 @@ export class ModifiersService {
             select: { sortOrder: true },
         });
         const sortOrder = config?.sortOrder ?? existing?.sortOrder ?? await this.nextSortOrder(productId);
+        const overrideMax = config?.overrideMax !== undefined ? Math.max(1, Math.floor(Number(config.overrideMax) || 1)) : undefined;
+        let overrideMin = config?.overrideMin !== undefined ? Math.max(0, Math.floor(Number(config.overrideMin) || 0)) : undefined;
+        if (overrideMin !== undefined && overrideMax !== undefined && overrideMin > overrideMax) overrideMin = overrideMax;
+        const isRequired = config?.isRequired ?? (overrideMin !== undefined ? overrideMin > 0 : undefined);
         const update: { isRequired?: boolean; sortOrder?: number; overrideMin?: number; overrideMax?: number } = {};
-        if (config?.isRequired !== undefined) update.isRequired = config.isRequired;
+        if (isRequired !== undefined) update.isRequired = isRequired;
         if (config?.sortOrder !== undefined) update.sortOrder = config.sortOrder;
-        if (config?.overrideMin !== undefined) update.overrideMin = config.overrideMin;
-        if (config?.overrideMax !== undefined) update.overrideMax = config.overrideMax;
-        return this.prisma.productModifier.upsert({
+        if (overrideMin !== undefined) update.overrideMin = overrideMin;
+        if (overrideMax !== undefined) update.overrideMax = overrideMax;
+        const saved = await this.prisma.productModifier.upsert({
             where: {
                 sellingProductId_modifierGroupId: {
                     sellingProductId: productId,
@@ -309,12 +315,14 @@ export class ModifiersService {
             create: {
                 sellingProductId: productId,
                 modifierGroupId,
-                isRequired: config?.isRequired ?? false,
+                isRequired: isRequired ?? false,
                 sortOrder,
-                overrideMin: config?.overrideMin,
-                overrideMax: config?.overrideMax,
+                overrideMin,
+                overrideMax,
             },
         });
+        this.productsService.invalidateActiveCatalog();
+        return saved;
     }
 
     private async nextSortOrder(productId: string) {
@@ -414,7 +422,7 @@ export class ModifiersService {
             groupId: m.modifierGroupId,
             groupName: cleanModifierLabel(m.modifierGroup.displayName || m.modifierGroup.name),
             displayName: cleanModifierLabel(m.modifierGroup.displayName || m.modifierGroup.name),
-            type: m.modifierGroup.type,
+            type: (m.overrideMax ?? m.modifierGroup.maxSelections) > 1 ? 'MULTI_SELECT' : m.modifierGroup.type,
             isRequired: m.isRequired,
             sortOrder: m.sortOrder,
             role: m.modifierGroup.role || 'OTHER',

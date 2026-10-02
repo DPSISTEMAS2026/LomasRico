@@ -523,9 +523,11 @@ export class TablesService implements OnModuleInit {
             guests: table.guests.map((g: any) => ({
                 id: g.id,
                 name: g.name,
+                saleCode: g.openSale?.code || null,
                 total: Number(g.openSale?.total || 0),
                 items: (g.openSale?.items || []).map((item: any) => ({
                     id: item.id,
+                    sellingProductId: item.sellingProductId,
                     name: item.sellingProduct?.name || 'Producto',
                     quantity: item.quantity,
                     price: Number(item.priceUnit),

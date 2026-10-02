@@ -151,7 +151,7 @@ export class BotService {
                 groupId: pm.modifierGroupId,
                 groupName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
                 displayName: cleanModifierLabel(pm.modifierGroup.displayName || pm.modifierGroup.name),
-                type: pm.modifierGroup.type,
+                type: (pm.overrideMax ?? pm.modifierGroup.maxSelections) > 1 ? 'MULTI_SELECT' : pm.modifierGroup.type,
                 isRequired: pm.isRequired,
                 sortOrder: pm.sortOrder,
                 minSelections: pm.overrideMin ?? pm.modifierGroup.minSelections,

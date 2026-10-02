@@ -389,12 +389,12 @@ export default function SalonTablePage() {
                 productId: i.sellingProductId,
                 variantId: 'default',
                 name: i.name,
-                price: Number(i.priceUnit || 0),
+                price: Number(i.price || 0),
                 quantity: i.quantity,
                 modifiers: i.modifiers || {},
             }));
             setPrintSale({
-                code: bill.saleCode || '',
+                code: g.saleCode || '',
                 items,
                 channel: `MESA ${bill.number}`,
                 guestName: g.name,
@@ -411,7 +411,7 @@ export default function SalonTablePage() {
                     productId: i.sellingProductId,
                     variantId: 'default',
                     name: i.name,
-                    price: Number(i.priceUnit || 0),
+                    price: Number(i.price || 0),
                     quantity: i.quantity,
                     modifiers: i.modifiers || {},
                 })),
@@ -419,7 +419,7 @@ export default function SalonTablePage() {
             })).filter((g: any) => g.items.length > 0);
 
             setPrintSale({
-                code: bill.saleCode || '',
+                code: '',
                 items: tableGuests.flatMap(g => g.items),
                 channel: `MESA ${bill.number}`,
                 kind: 'account',
@@ -679,7 +679,7 @@ export default function SalonTablePage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={payGuest}
+                                onClick={() => void payGuest()}
                                 disabled={busy || !guestId || accountItems.length === 0}
                                 className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
                             >
@@ -830,7 +830,7 @@ export default function SalonTablePage() {
                             ref={printerRef}
                             mode={printSale.mode || (printSale.guests && printSale.guests.length > 1 ? 'table' : 'guest')}
                             tableNumber={table?.number}
-                            saleCode={printSale.code ? `#${printSale.code}` : undefined}
+                            saleCode={printSale.code ? `#${String(printSale.code).replace(/^#+/, '')}` : undefined}
                             guests={printSale.guests || [{
                                 name: printSale.guestName || 'Comensal',
                                 items: printSale.items,

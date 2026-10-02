@@ -107,6 +107,9 @@ reporte_clientes*
 packages/database/*.js
 packages/database/log*.txt
 
+# === EDITOR / AGENTES ===
+.cursor/
+
 # === ARCHIVO ANTIGUO ===
 _ARCHIVE/
 start.bat
