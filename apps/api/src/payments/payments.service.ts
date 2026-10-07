@@ -269,7 +269,8 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
                 where: { id: orderId, status: 'PENDING' },
                 data: {
                     status: 'CONFIRMED',
-                    paymentStatus: 'APPROVED'
+                    paymentStatus: 'APPROVED',
+                    paymentMethod: 'MERCADO_PAGO',
                 }
             });
             if (claim.count === 0) return false;
