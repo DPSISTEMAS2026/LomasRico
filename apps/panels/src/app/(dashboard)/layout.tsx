@@ -21,6 +21,9 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     BookOpen,
+    Mail,
+    MessageCircle,
+    ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -73,8 +76,8 @@ export default function DashboardLayout({
 
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
-        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER'] },
-        { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
+        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER'] },
+        { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'] },
         { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
         { href: '/owner/catalog', icon: Package, label: 'Catálogo', moduleId: 'catalog', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/modifiers', icon: Layers, label: 'Modificadores', moduleId: 'modifiers', roles: ['OWNER', 'ADMIN'] },
@@ -85,6 +88,7 @@ export default function DashboardLayout({
         { href: '/owner/customers', icon: Users, label: 'Clientes', moduleId: 'customers', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/inbox/whatsapp', icon: MessageSquare, label: 'WhatsApp Bot', moduleId: 'whatsapp', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/cashiers', icon: User, label: 'Personal', moduleId: 'cashiers', roles: ['OWNER', 'ADMIN'] },
+        { href: '/owner/audit', icon: ShieldCheck, label: 'Registro', moduleId: 'audit', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/manual', icon: BookOpen, label: 'Manual', moduleId: 'manual', roles: ['OWNER', 'ADMIN'] },
     ];
 
@@ -99,22 +103,17 @@ export default function DashboardLayout({
     const isOwnerOrAdmin = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
     // Filter items based on user role + individual module permissions
-    const filteredMenu = menuItems.filter(item => {
-        if (isModulePaused(item.moduleId)) return false;
-        // OWNER y ADMIN siempre ven todo
+    // El rol fija el máximo; los módulos individuales solo restringen dentro de él.
+    const canSee = (item: (typeof menuItems)[number]) => {
         if (isOwnerOrAdmin) return true;
-        // Si tiene módulos individuales definidos, usarlos
-        if (userModules.length > 0) return userModules.includes(item.moduleId);
-        // Fallback: usar permisos por rol base
-        return user?.role && item.roles.includes(user.role);
-    });
+        if (!user?.role || !item.roles.includes(user.role)) return false;
+        return userModules.length === 0 || userModules.includes(item.moduleId);
+    };
 
-    // Check if user has permission for current path
+    const filteredMenu = menuItems.filter(item => !isModulePaused(item.moduleId) && canSee(item));
+
     const currentItem = menuItems.find(item => item.href === pathname);
-    const hasPermission = !currentItem || isOwnerOrAdmin ||
-        (userModules.length > 0
-            ? userModules.includes(currentItem.moduleId)
-            : user?.role && currentItem.roles.includes(user.role));
+    const hasPermission = !currentItem || canSee(currentItem);
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -185,18 +184,15 @@ export default function DashboardLayout({
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
                 {/* Logo */}
-                <div className={`flex items-center justify-between ${isCollapsed ? 'p-3' : 'p-6 pb-4'}`}>
-                    {!isCollapsed && (
-                        <div>
-                            <h1 className="text-xl font-black italic tracking-tighter uppercase leading-none">
-                                LO MÁS RICO <span className="text-orange-500">PRO</span>
-                            </h1>
-                            <p className="text-[9px] font-black text-slate-800 uppercase tracking-widest mt-1">Gestión Unificada</p>
-                        </div>
-                    )}
+                <div className={`relative flex flex-col items-center ${isCollapsed ? 'p-3 gap-2' : 'p-6 pb-4'}`}>
+                    <img
+                        src="/assets/Logo Restaurante.png"
+                        alt="Lo Más Rico"
+                        className={`object-contain ${isCollapsed ? 'w-10 h-10' : 'w-28 h-28'}`}
+                    />
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-800 hover:text-slate-600 transition-colors"
+                        className={`hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-800 hover:text-slate-600 transition-colors ${isCollapsed ? '' : 'absolute top-4 right-3'}`}
                         title={isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
                     >
                         {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -243,11 +239,26 @@ export default function DashboardLayout({
                         {!isCollapsed && <span className="text-sm uppercase italic tracking-tighter text-red-600">Cerrar Sesión</span>}
                     </button>
 
-                    {!isCollapsed && (
-                        <div className="mt-3 italic font-black text-[10px] text-slate-800 uppercase tracking-widest text-center">
-                            v2.3.0
-                        </div>
-                    )}
+                    <div className={`mt-3 grid gap-2 ${isCollapsed ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        <a
+                            href="mailto:contacto@dpsistemas.cl"
+                            title="contacto@dpsistemas.cl"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors"
+                        >
+                            <Mail size={16} />
+                            {!isCollapsed && 'Correo'}
+                        </a>
+                        <a
+                            href="https://wa.me/56974342276"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="+56 9 7434 2276"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-green-600 text-white py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-colors"
+                        >
+                            <MessageCircle size={16} />
+                            {!isCollapsed && 'WhatsApp'}
+                        </a>
+                    </div>
                 </div>
             </aside>
 

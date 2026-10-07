@@ -1,12 +1,26 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Res, Req } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { KitchenService } from './kitchen.service';
 import { UpdateTicketStatusDto } from './dto/update-ticket.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PrismaService } from '../database/prisma.service';
+import { KITCHEN_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('kitchen')
 @UseGuards(JwtAuthGuard)
+@Roles(...KITCHEN_ROLES)
 export class KitchenController {
-    constructor(private readonly kitchenService: KitchenService) { }
+    constructor(
+        private readonly kitchenService: KitchenService,
+        private readonly prisma: PrismaService,
+        private readonly audit: AuditService,
+    ) { }
+
+    @Get('version')
+    version() {
+        return { v: this.prisma.liveVersion };
+    }
 
     @Get('active')
     findAll() {
@@ -19,11 +33,14 @@ export class KitchenController {
     }
 
     @Patch(':id/status')
-    updateStatus(
+    async updateStatus(
         @Param('id') id: string,
         @Body() updateDto: UpdateTicketStatusDto,
+        @Req() req: any,
     ) {
-        return this.kitchenService.updateStatus(id, updateDto.status);
+        if (String(updateDto.status) !== 'CANCELLED') return this.kitchenService.updateStatus(id, updateDto.status);
+        const { approver, reason } = await this.audit.authorize(req, updateDto.approvalPin, updateDto.reason);
+        return this.kitchenService.updateStatus(id, updateDto.status, { actorId: req.user?.userId, approver, reason });
     }
 
     @Get(':id/print')

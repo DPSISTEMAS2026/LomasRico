@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { isInventoryEnforced } from '../config/flags';
+import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
 
 const TABLE_COUNT = 5;
+const TABLE_CLOSED = 'Pídele al garzón que abra la mesa para pedir desde el celular.';
 
 @Injectable()
 export class TablesService implements OnModuleInit {
@@ -281,20 +283,14 @@ export class TablesService implements OnModuleInit {
             select: { id: true, price: true },
         });
         const byId = new Map(products.map((p) => [p.id, p]));
+        const extrasByItem = await modifierExtrasByItem(this.prisma, rows);
         let added = 0;
         const created = [];
-        for (const itemDto of rows) {
+        for (const [index, itemDto] of rows.entries()) {
             const product = byId.get(itemDto.sellingProductId);
             if (!product) throw new BadRequestException(`Producto no encontrado: ${itemDto.sellingProductId}`);
-            const extras = Number(
-                (itemDto.modifiers?.dynamicSelections || []).reduce(
-                    (sum: number, group: any) =>
-                        sum + (group.selectedOptions || []).reduce((s: number, o: any) => s + Number(o.price || 0), 0),
-                    0,
-                ),
-            );
-            const price = Number(product.price) + extras;
-            const quantity = itemDto.quantity || 1;
+            const price = Number(product.price) + extrasByItem[index];
+            const quantity = validQuantity(itemDto.quantity);
             added += price * quantity;
             created.push({
                 saleId,
@@ -523,6 +519,7 @@ export class TablesService implements OnModuleInit {
             guests: table.guests.map((g: any) => ({
                 id: g.id,
                 name: g.name,
+                saleId: g.openSale?.id || null,
                 saleCode: g.openSale?.code || null,
                 total: Number(g.openSale?.total || 0),
                 items: (g.openSale?.items || []).map((item: any) => ({
@@ -584,28 +581,16 @@ export class TablesService implements OnModuleInit {
         };
     }
 
-    async openParty(number: number, names: string[]) {
+    /** El QR solo sirve con la mesa abierta por el personal: así nadie pide a cocina desde fuera del local. */
+    private async requireOpenTable(number: number) {
         const table = await this.findByNumber(number);
-        const current = await this.getTable(table.id);
-        if (current.guestCount > 0) {
-            throw new BadRequestException('Esta mesa ya tiene comensales. Elige tu nombre o agrégate.');
-        }
-        const clean = (names || []).map((n) => String(n || '').trim()).filter(Boolean);
-        if (!clean.length) throw new BadRequestException('Escribe al menos un nombre');
-        if (clean.length > 8) throw new BadRequestException('Máximo 8 comensales por mesa');
-        const created: any[] = [];
-        for (const name of clean) {
-            const last = await (this.prisma as any).tableGuest.findFirst({
-                where: { tableId: table.id },
-                orderBy: { seat: 'desc' },
-            });
-            const seat = (last?.seat || 0) + 1;
-            const guest = await (this.prisma as any).tableGuest.create({
-                data: { tableId: table.id, seat, name, isActive: true },
-            });
-            created.push({ id: guest.id, name: guest.name, claimToken: null, seat });
-        }
-        return { table: await this.getPublicTable(number), guests: created };
+        const full = await this.getTable(table.id);
+        if (!full.guestCount) throw new ForbiddenException(TABLE_CLOSED);
+        return full;
+    }
+
+    async openParty(_number: number, _names: string[]): Promise<never> {
+        throw new ForbiddenException(TABLE_CLOSED);
     }
 
     async claimGuest(number: number, guestId: string, dto: { currentToken?: string; force?: boolean } = {}) {
@@ -635,8 +620,11 @@ export class TablesService implements OnModuleInit {
     }
 
     async joinGuest(number: number, name: string) {
-        const table = await this.findByNumber(number);
-        const added = await this.addGuest(table.id, { name });
+        const table = await this.requireOpenTable(number);
+        const clean = String(name || '').trim().slice(0, 40);
+        if (!clean) throw new BadRequestException('Escribe tu nombre');
+        if (table.guestCount >= 12) throw new BadRequestException('La mesa está completa. Pídele al garzón que te agregue.');
+        const added = await this.addGuest(table.id, { name: clean });
         const newest = added.guests[added.guests.length - 1];
         return this.claimGuest(number, newest.id, { force: true });
     }
@@ -711,8 +699,8 @@ export class TablesService implements OnModuleInit {
     }
 
     async publicRequestBill(number: number, dto: any = {}) {
-        const table = await this.findByNumber(number);
-        return this.requestBill(table.id, dto);
+        const table = await this.requireOpenTable(number);
+        return this.requestBill(table.id, { mode: dto?.mode, guestId: dto?.guestId, guestName: dto?.guestName });
     }
 
     async publicBill(number: number) {

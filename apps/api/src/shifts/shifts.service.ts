@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ShiftsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private audit: AuditService) { }
 
     // Abrir turno
     async openShift(data: { cashierId: string; startAmount: number }) {
@@ -16,7 +17,7 @@ export class ShiftsService {
         });
 
         if (openShift) {
-            throw new Error('Ya existe un turno abierto para este cajero');
+            throw new BadRequestException('Ya existe un turno abierto para este cajero');
         }
 
         // Crear o obtener caja principal
@@ -62,8 +63,58 @@ export class ShiftsService {
         return shift;
     }
 
+    /**
+     * Solo el efectivo debe estar en el cajón: tarjetas, transferencias y MercadoPago
+     * se informan por medio de pago pero no suman al monto esperado.
+     */
+    async cashSummary(shift: any) {
+        const txs: any[] = shift.transactions || [];
+        const saleIds = [...new Set(txs.map((t) => t.relatedSaleId).filter(Boolean))];
+        const sales = saleIds.length
+            ? await (this.prisma as any).sale.findMany({ where: { id: { in: saleIds } }, select: { id: true, paymentMethod: true } })
+            : [];
+        const methodOf = new Map<string, string>(sales.map((s: any) => [s.id, s.paymentMethod || 'CASH']));
+        const byMethod: Record<string, number> = {};
+        let expectedCash = Number(shift.startAmount || 0);
+        let expenses = 0;
+        let withdrawals = 0;
+        let refunds = 0;
+        for (const tx of txs) {
+            const amount = Number(tx.amount);
+            const method = tx.relatedSaleId ? (methodOf.get(tx.relatedSaleId) || 'CASH') : 'CASH';
+            if (tx.type === 'SALE_INCOME') {
+                byMethod[method] = (byMethod[method] || 0) + amount;
+                if (method === 'CASH') expectedCash += amount;
+            } else if (tx.type === 'REFUND') {
+                byMethod[method] = (byMethod[method] || 0) - amount;
+                refunds += amount;
+                if (method === 'CASH') expectedCash -= amount;
+            } else if (tx.type === 'EXPENSE') {
+                expenses += amount;
+                expectedCash -= amount;
+            } else if (tx.type === 'WITHDRAWAL') {
+                withdrawals += amount;
+                expectedCash -= amount;
+            }
+        }
+        return { startAmount: Number(shift.startAmount || 0), expectedCash, byMethod, expenses, withdrawals, refunds };
+    }
+
+    /** El turno debe existir, estar abierto y ser de quien opera (salvo dueño/admin). */
+    async assertOpenShiftOf(shiftId: string, user: any) {
+        const shift = await (this.prisma as any).cashShift.findUnique({ where: { id: shiftId }, select: { id: true, cashierId: true, status: true } });
+        if (!shift) throw new NotFoundException('Turno no encontrado');
+        if (shift.status !== 'OPEN') throw new BadRequestException('El turno ya está cerrado');
+        if (!['OWNER', 'ADMIN'].includes(user?.role) && shift.cashierId !== user?.userId) {
+            throw new ForbiddenException('Este turno es de otro cajero');
+        }
+        return shift;
+    }
+
     // Cerrar turno
-    async closeShift(shiftId: string, data: { endAmount: number; note?: string }) {
+    async closeShift(shiftId: string, data: { endAmount: number; note?: string }, actorId?: string) {
+        const endAmount = Number(data?.endAmount);
+        if (!Number.isFinite(endAmount) || endAmount < 0) throw new BadRequestException('Monto contado inválido');
         const shift = await (this.prisma as any).cashShift.findUnique({
             where: { id: shiftId },
             include: {
@@ -72,19 +123,16 @@ export class ShiftsService {
         });
 
         if (!shift) {
-            throw new Error('Turno no encontrado');
+            throw new NotFoundException('Turno no encontrado');
         }
 
         if (shift.status === 'CLOSED') {
-            throw new Error('El turno ya está cerrado');
+            throw new BadRequestException('El turno ya está cerrado');
         }
 
-        // Calcular monto del sistema
-        const systemAmount = shift.transactions.reduce((sum: number, tx: any) => {
-            if (tx.type === 'SALE_INCOME') return sum + Number(tx.amount);
-            if (tx.type === 'EXPENSE' || tx.type === 'WITHDRAWAL') return sum - Number(tx.amount);
-            return sum;
-        }, Number(shift.startAmount));
+        const summary = await this.cashSummary(shift);
+        const systemAmount = summary.expectedCash;
+        data = { ...data, endAmount };
 
         // Actualizar turno
         const updatedShift = await (this.prisma as any).cashShift.update({
@@ -120,12 +168,20 @@ export class ShiftsService {
             }
         });
 
-        return updatedShift;
+        await this.audit.log({
+            action: 'SHIFT_CLOSE',
+            actorId,
+            amount: data.endAmount - systemAmount,
+            reason: data.note || null,
+            details: { shiftId, cashierId: shift.cashierId, counted: data.endAmount, ...summary },
+        });
+
+        return { ...updatedShift, cashSummary: summary };
     }
 
     // Obtener turno activo de un cajero
     async getActiveShift(cashierId: string) {
-        return (this.prisma as any).cashShift.findFirst({
+        const shift = await (this.prisma as any).cashShift.findFirst({
             where: {
                 cashierId,
                 status: 'OPEN'
@@ -143,6 +199,7 @@ export class ShiftsService {
                 }
             }
         });
+        return shift ? { ...shift, cashSummary: await this.cashSummary(shift) } : null;
     }
 
     // Listar todos los turnos
@@ -298,14 +355,22 @@ export class ShiftsService {
     }
 
     // Registrar gasto/retiro
-    async registerExpense(shiftId: string, data: { amount: number; description: string; type: 'EXPENSE' | 'WITHDRAWAL' }) {
-        return (this.prisma as any).cashTransaction.create({
-            data: {
-                shiftId,
-                type: data.type,
-                amount: data.amount,
-                description: data.description
-            }
+    async registerExpense(shiftId: string, data: { amount: number; description: string; type: 'EXPENSE' | 'WITHDRAWAL' }, actorId?: string) {
+        const amount = Number(data?.amount);
+        const description = String(data?.description || '').trim().slice(0, 200);
+        if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('Monto inválido');
+        if (data?.type !== 'EXPENSE' && data?.type !== 'WITHDRAWAL') throw new BadRequestException('Tipo inválido');
+        if (description.length < 3) throw new BadRequestException('Indica el motivo');
+        const tx = await (this.prisma as any).cashTransaction.create({
+            data: { shiftId, type: data.type, amount, description }
         });
+        await this.audit.log({
+            action: data.type === 'EXPENSE' ? 'CASH_EXPENSE' : 'CASH_WITHDRAWAL',
+            actorId,
+            amount,
+            reason: description,
+            details: { shiftId },
+        });
+        return tx;
     }
 }

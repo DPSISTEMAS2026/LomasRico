@@ -59,7 +59,7 @@ export function ManualContent() {
             <H3>1.1 URLs del Sistema</H3>
             <Table headers={['Plataforma', 'URL', 'Para quién']} rows={[
                 ['Web Tienda', '<a href="https://lomasrico.cl" target="_blank" class="text-orange-600 underline">lomasrico.cl</a>', 'Clientes'],
-                ['Panel de Gestión', '<a href="https://lomasrico-panels.netlify.app" target="_blank" class="text-orange-600 underline break-all">lomasrico-panels.netlify.app</a>', 'Dueño, Admin, Cajeros, Cocina'],
+                ['Panel de Gestión', '<a href="https://paneles.lomasrico.cl" target="_blank" class="text-orange-600 underline break-all">paneles.lomasrico.cl</a>', 'Dueño, Admin, Cajeros, Cocina'],
             ]} />
             <H3>1.2 Roles de Usuario</H3>
             <Table headers={['Rol', 'Acceso', 'Para quién']} rows={[
@@ -67,11 +67,12 @@ export function ManualContent() {
                 ['ADMIN', 'Todo el sistema', 'Encargado de turno'],
                 ['CASHIER', 'POS + Cocina', 'Personal de caja'],
                 ['KITCHEN', 'Solo panel de cocina', 'Personal de preparación'],
+                ['WAITER', 'Salón + Cocina', 'Garzones'],
             ]} />
             <P>Cada usuario puede tener <strong>módulos individuales</strong> asignados para controlar qué secciones puede ver.</P>
             <H3>1.3 Cómo Ingresar</H3>
             <ol className="list-decimal pl-6 space-y-1 text-sm text-slate-600 mb-4">
-                <li>Ir a <Go href="https://lomasrico-panels.netlify.app/login">lomasrico-panels.netlify.app</Go></li>
+                <li>Ir a <Go href="https://paneles.lomasrico.cl/login">paneles.lomasrico.cl</Go></li>
                 <li>Ingresar <strong>usuario</strong> y <strong>contraseña</strong></li>
                 <li>El sistema redirige al panel según su rol</li>
             </ol>

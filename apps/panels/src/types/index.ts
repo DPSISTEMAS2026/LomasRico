@@ -7,6 +7,7 @@ export interface ModifierOption {
     priceAdjustment: number;
     isDefault?: boolean;
     sortOrder?: number;
+    available?: boolean;
 }
 
 export interface ModifierGroup {

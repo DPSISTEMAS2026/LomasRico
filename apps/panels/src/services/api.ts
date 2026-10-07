@@ -39,7 +39,7 @@ export const API_URL = new ApiUrlBox() as unknown as string;
 export const WEB_URL = (
     process.env.NEXT_PUBLIC_WEB_URL ||
     (process.env.NODE_ENV === 'production'
-        ? 'https://lomasricov8.netlify.app'
+        ? 'https://lomasrico.cl'
         : 'http://localhost:3000')
 ).replace(/\/$/, '');
 
@@ -196,9 +196,8 @@ export async function createSale(items: any[], options: {
         ...options
     };
 
-    const res = await fetch(`${API_URL}/sales`, {
+    const res = await authFetch(`${API_URL}/sales`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
 
@@ -253,13 +252,13 @@ export async function fetchPeakHours() {
 }
 
 export async function fetchStrategicInventory() {
-    const res = await fetch(`${API_URL}/inventory`, { cache: 'no-store' });
+    const res = await authFetch(`${API_URL}/inventory`, { cache: 'no-store' });
     if (!res.ok) return [];
     return res.json();
 }
 
 export async function fetchCustomers() {
-    const res = await fetch(`${API_URL}/users/customers/list`, { cache: 'no-store' });
+    const res = await authFetch(`${API_URL}/users/customers/list`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch customers');
     return res.json();
 }

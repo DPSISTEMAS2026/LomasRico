@@ -229,6 +229,17 @@ export class BrevoService {
         return { ok: true, messageId: res.messageId || null };
     }
 
+    async sendTransactional(to: string, name: string, subject: string, htmlContent: string) {
+        this.assertKey();
+        const email = (to || '').trim().toLowerCase();
+        if (!isEmail(email)) throw new BadRequestException('Correo inválido');
+        const sender = await this.resolveSender();
+        await this.brevo('/smtp/email', {
+            method: 'POST',
+            body: JSON.stringify({ sender, to: [{ email, name: name || email }], subject, htmlContent }),
+        });
+    }
+
     async sendAnnounce(opts: { confirm: string; subject?: string; html?: string }) {
         this.assertKey();
         if ((opts.confirm || '').trim().toUpperCase() !== 'ENVIAR') {
@@ -329,7 +340,31 @@ export class BrevoService {
                 };
             })
             .filter((c: LocalRecipient) => isEmail(c.email));
-        return { total: users.length, recipients };
+
+        const known = new Set(recipients.map((r) => r.email));
+        const guestSales = await (this.prisma as any).sale.findMany({
+            where: { channel: 'WEB', userId: null, shippingData: { path: ['contact', 'marketing'], equals: true } },
+            select: { shippingData: true },
+            orderBy: { createdAt: 'desc' },
+        });
+        for (const sale of guestSales) {
+            const contact = (sale.shippingData as any)?.contact || {};
+            const email = String(contact.email || '').trim().toLowerCase();
+            if (!isEmail(email) || known.has(email)) continue;
+            known.add(email);
+            const parts = String(contact.name || '').trim().split(/\s+/);
+            const sms = String(contact.phone || '').replace(/[^\d]/g, '');
+            recipients.push({
+                email,
+                name: contact.name || email,
+                firstName: parts[0] || 'Hola',
+                lastName: parts.slice(1).join(' '),
+                sms: sms.length >= 8 ? sms : '',
+                points: 0,
+                tag: 'Invitado web',
+            });
+        }
+        return { total: users.length + guestSales.length, recipients };
     }
 
     private assertKey() {

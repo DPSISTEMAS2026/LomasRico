@@ -67,7 +67,10 @@ export abstract class BaseScraper {
                 try {
                     const res = await fetch(`${this.apiUrl}/external-orders/ingest`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-integration-key': process.env.INTEGRATION_API_KEY || '',
+                        },
                         body: JSON.stringify(order),
                     });
 

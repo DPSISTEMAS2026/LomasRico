@@ -14,6 +14,7 @@ import { ComandaPrinter } from '../../../../components/printer/ComandaPrinter';
 import { BoletaPrinter, type BoletaGuest } from '../../../../components/printer/BoletaPrinter';
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
+import { ApprovalModal, type Approval } from '../../../../components/common/ApprovalModal';
 import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
@@ -53,6 +54,7 @@ export default function SalonTablePage() {
     const [showBill, setShowBill] = useState(false);
     const [accountOpen, setAccountOpen] = useState(false);
     const [bill, setBill] = useState<any>(null);
+    const [voidItem, setVoidItem] = useState<{ saleId: string; guestName: string; item: any } | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
     const [printSale, setPrintSale] = useState<{
         code: string;
@@ -430,6 +432,23 @@ export default function SalonTablePage() {
         }
     };
 
+    const confirmVoidItem = async (body: Approval, quantity: number) => {
+        if (!voidItem) return;
+        const res = await authFetch(`${API_URL}/sales/${voidItem.saleId}/void-items`, {
+            method: 'POST',
+            body: JSON.stringify({ items: [{ saleItemId: voidItem.item.id, quantity }], ...body }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+            const msg = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
+            throw new Error(msg || 'No se pudo quitar');
+        }
+        setVoidItem(null);
+        const billRes = await authFetch(`${API_URL}/tables/${id}/bill`);
+        if (billRes.ok) setBill(await billRes.json());
+        await loadTable(guestId);
+    };
+
     const openBill = async () => {
         const res = await authFetch(`${API_URL}/tables/${id}/bill`);
         if (res.ok) setBill(await res.json());
@@ -729,9 +748,22 @@ export default function SalonTablePage() {
                                     <span>${Number(g.total).toLocaleString()}</span>
                                 </div>
                                 {g.items.map((item: any) => (
-                                    <p key={item.id} className="text-xs font-bold text-slate-900">
-                                        {item.quantity}x {item.name}
-                                    </p>
+                                    <div key={item.id} className="flex items-center justify-between gap-2">
+                                        <p className="text-xs font-bold text-slate-900">
+                                            {item.quantity}x {item.name} · ${(item.price * item.quantity).toLocaleString()}
+                                        </p>
+                                        {g.saleId && (
+                                            <button
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() => setVoidItem({ saleId: g.saleId, guestName: g.name, item })}
+                                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 shrink-0"
+                                                title="Quitar de la cuenta"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     <button
@@ -778,6 +810,17 @@ export default function SalonTablePage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {voidItem && (
+                <ApprovalModal
+                    title="Quitar de la cuenta"
+                    summary={`${voidItem.item.name} · ${voidItem.guestName}`}
+                    confirmLabel="Quitar"
+                    maxQuantity={voidItem.item.quantity}
+                    onConfirm={confirmVoidItem}
+                    onClose={() => setVoidItem(null)}
+                />
             )}
 
             {nameModal && (

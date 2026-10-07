@@ -46,9 +46,20 @@ export class ShippingService {
 
         this.logger.log(`[QUOTE] Address: "${address}" | Channel: ${channel} | Coords: ${coordinates ? `${coordinates.lat},${coordinates.lng}` : 'NONE'}`);
 
+        const hasCoords = !!coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng));
+        if (!hasCoords && channel === 'WEB') {
+            return {
+                valid: false,
+                distanceKm: 0,
+                cost: 0,
+                deliveryTimeEstimate: 'N/A',
+                reason: 'Elige tu dirección desde la lista de sugerencias para calcular el despacho.',
+            };
+        }
+
         // 1. Calculate Distance
         let distanceKm = 0;
-        if (coordinates) {
+        if (hasCoords && coordinates) {
             distanceKm = this.calculateDistance(this.ORIGIN_COORDS.lat, this.ORIGIN_COORDS.lng, coordinates.lat, coordinates.lng);
         } else {
             distanceKm = await this.mockDistanceCalculation(address);
@@ -129,7 +140,7 @@ export class ShippingService {
         if (!this.PEDIDOSYA_TOKEN) {
             // Mock Response if no token
             return {
-                price: Math.round(1500 + (Math.random() * 1000)),
+                price: 2500,
                 eta: '30-45 min',
                 id: `mock-py-${Date.now()}`
             };
@@ -142,7 +153,8 @@ export class ShippingService {
         // PedidosYa Payload with Origin and Destination Waypoints
         const realPayload = {
             referenceId: `quote-${Date.now()}`,
-            isTest: true,
+            // Mientras no esté en true, PedidosYa trata los envíos como prueba y no manda repartidor.
+            isTest: process.env.PEDIDOSYA_LIVE !== 'true',
             preparationTime: this.PREPARATION_TIME_MINS, // Avisar los 20 min de preparación
             notificationUrl: null,
             waypoints: [

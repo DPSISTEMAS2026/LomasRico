@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { TablesService } from './tables.service';
+import { Public } from '../auth/access';
 
 @Controller('public/tables')
+@Public()
 export class TablesPublicController {
     constructor(private readonly tablesService: TablesService) {}
 

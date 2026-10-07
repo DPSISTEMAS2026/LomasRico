@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    ChefHat, AlertCircle, Package, Truck, Flame, RefreshCw, Zap, History, Search, Printer, Receipt
+    ChefHat, AlertCircle, Package, Truck, Flame, RefreshCw, Zap, History, Search, Printer, Receipt, ShieldAlert, X
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
 import { TicketCard } from '../../../components/kitchen/TicketCard';
+import { ApprovalModal, type Approval } from '../../../components/common/ApprovalModal';
 import type { KitchenTicket, KitchenStatus } from '@lomasrico/shared-types';
 
 // ─── Tab configuration ──────────────────────────────
@@ -59,6 +60,12 @@ export default function KitchenPage() {
     const [historyQ, setHistoryQ] = useState('');
     const [historyLoading, setHistoryLoading] = useState(false);
     const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
+    const [approval, setApproval] = useState<
+        | { kind: 'cancel'; ticketId: string; summary: string }
+        | { kind: 'item'; saleId: string; item: any; summary: string }
+        | null
+    >(null);
+    const [fixTicket, setFixTicket] = useState<any | null>(null);
     const prevTicketIds = useRef<Set<string>>(new Set());
     const tabBarRef = useRef<HTMLDivElement>(null);
 
@@ -94,8 +101,10 @@ export default function KitchenPage() {
     const inFlight = useRef(false);
     const [offline, setOffline] = useState(false);
 
-    const loadTickets = useCallback(async () => {
-        if (inFlight.current) return;
+    const lastVersion = useRef<string | null>(null);
+
+    const loadTickets = useCallback(async (): Promise<boolean> => {
+        if (inFlight.current) return false;
         inFlight.current = true;
         try {
             const res = await authFetch(`${API_URL}/kitchen/active`, { cache: 'no-store' });
@@ -110,22 +119,51 @@ export default function KitchenPage() {
             setTickets(data);
             setError('');
             setOffline(false);
+            return true;
         } catch (e: unknown) {
             if (hasLoaded.current) setOffline(true);
             else setError(e instanceof Error ? e.message : 'Error de conexión');
+            return false;
         } finally {
             inFlight.current = false;
             setLoading(false);
         }
     }, [playNotificationSound]);
 
-    useEffect(() => {
-        loadTickets();
-        const i = setInterval(() => { if (!document.hidden) loadTickets(); }, 8000);
-        const onVisible = () => { if (!document.hidden) loadTickets(); };
-        document.addEventListener('visibilitychange', onVisible);
-        return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVisible); };
+    const loadIfChanged = useCallback(async () => {
+        try {
+            const res = await authFetch(`${API_URL}/kitchen/version`, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const { v } = await res.json();
+            if (v === lastVersion.current) {
+                setOffline(false);
+                return;
+            }
+            if (await loadTickets()) lastVersion.current = v;
+        } catch {
+            lastVersion.current = null;
+            await loadTickets();
+        }
     }, [loadTickets]);
+
+    const [, setClock] = useState(0);
+    useEffect(() => {
+        const tick = setInterval(() => setClock(Date.now()), 30_000);
+        return () => clearInterval(tick);
+    }, []);
+
+    useEffect(() => {
+        loadIfChanged();
+        const check = setInterval(() => { if (!document.hidden) loadIfChanged(); }, 5000);
+        const full = setInterval(() => { if (!document.hidden) loadTickets(); }, 120_000);
+        const onVisible = () => { if (!document.hidden) loadIfChanged(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(check);
+            clearInterval(full);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [loadIfChanged, loadTickets]);
 
     const updateStatus = async (id: string, status: string) => {
         try {
@@ -134,7 +172,36 @@ export default function KitchenPage() {
         } catch { alert('Error al actualizar'); }
     };
 
-    const cancelTicket = async (id: string) => { if (confirm('¿Cancelar este pedido?')) await updateStatus(id, 'CANCELLED'); };
+    const cancelTicket = (ticket: any) => {
+        const sale = ticket.sale || {};
+        setApproval({
+            kind: 'cancel',
+            ticketId: ticket.id,
+            summary: `${ticket.label || sale.channel || 'Pedido'} ${sale.code || ''}: se anula y queda registrado.`,
+        });
+    };
+
+    const confirmApproval = async (body: Approval, quantity: number) => {
+        if (!approval) return;
+        const res = approval.kind === 'cancel'
+            ? await authFetch(`${API_URL}/kitchen/${approval.ticketId}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'CANCELLED', ...body }),
+            })
+            : await authFetch(`${API_URL}/sales/${approval.saleId}/void-items`, {
+                method: 'POST',
+                body: JSON.stringify({ items: [{ saleItemId: approval.item.id, quantity }], ...body }),
+            });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+            const msg = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
+            throw new Error(msg || 'No se pudo completar');
+        }
+        setApproval(null);
+        setFixTicket(null);
+        await loadTickets();
+        if (activeTab === 'HISTORY') await loadHistory(historyQ);
+    };
     const openPrintHtml = async (path: string) => {
         const res = await authFetch(`${API_URL}${path}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -145,17 +212,7 @@ export default function KitchenPage() {
         w.document.close();
     };
     const printTicket = (id: string) => { void openPrintHtml(`/kitchen/${id}/print`); };
-    const printAccount = async (ticket: any) => {
-        if (ticket.dteTipo && ticket.dteFolio) {
-            const res = await fetch(`${API_URL}/billing/pdf/${ticket.dteTipo}/${ticket.dteFolio}`);
-            const data = await res.json().catch(() => null);
-            if (data?.url) {
-                window.open(data.url, '_blank');
-                return;
-            }
-        }
-        await openPrintHtml(`/kitchen/${ticket.id}/print-account`);
-    };
+    const printAccount = (ticket: any) => { void openPrintHtml(`/kitchen/${ticket.id}/print-account`); };
     const toggleRecipe = (key: string) => setExpandedRecipes(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
     const loadHistory = useCallback(async (q = '') => {
@@ -293,7 +350,7 @@ export default function KitchenPage() {
                             </button>
                         </form>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-800">
-                            Pedidos entregados de las últimas 48 horas · reimprimir comanda o boleta
+                            Pedidos entregados de las últimas 48 horas · reimprimir comanda o cuenta
                         </p>
                         {historyLoading ? (
                             <p className="text-center py-16 font-black uppercase italic text-slate-800">Cargando historial...</p>
@@ -314,9 +371,7 @@ export default function KitchenPage() {
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <h3 className="text-xl font-black italic uppercase text-slate-900">{sale.code || ticket.id.slice(0, 6)}</h3>
                                                     <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-800">{ticket.label || sale.channel}</span>
-                                                    {sale.status === 'CANCELLED' && <span className="px-2 py-0.5 rounded-full bg-red-50 text-[9px] font-black uppercase text-red-500">Cancelado</span>}
-                                                    {ticket.dteFolio && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[9px] font-black uppercase text-emerald-700">DTE {ticket.dteFolio}</span>}
-                                                </div>
+                                                    {sale.status === 'CANCELLED' && <span className="px-2 py-0.5 rounded-full bg-red-50 text-[9px] font-black uppercase text-red-500">Cancelado</span>}                                                </div>
                                                 <p className="text-[11px] font-bold text-slate-800 mt-1">{when} · {items.length} ítem{items.length === 1 ? '' : 's'}{sale.total != null ? ` · $${Number(sale.total).toLocaleString('es-CL')}` : ''}</p>
                                                 <p className="text-[11px] font-bold text-slate-800 truncate mt-1">
                                                     {items.map((item: any) => `${item.quantity}x ${item.sellingProduct?.name || 'Producto'}`).join(' · ')}
@@ -332,11 +387,20 @@ export default function KitchenPage() {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => void printAccount(ticket)}
+                                                    onClick={() => printAccount(ticket)}
                                                     className="h-12 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
                                                 >
-                                                    <Receipt size={15} /> Boleta
+                                                    <Receipt size={15} /> Cuenta
                                                 </button>
+                                                {sale.status !== 'CANCELLED' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFixTicket(ticket)}
+                                                        className="h-12 px-4 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
+                                                    >
+                                                        <ShieldAlert size={15} /> Corregir
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -354,11 +418,63 @@ export default function KitchenPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 auto-rows-min">
                         {current.map(ticket => (
                             <TicketCard key={ticket.id} ticket={ticket} cfg={cfg!} expandedRecipes={expandedRecipes} toggleRecipe={toggleRecipe}
-                                onAction={() => updateStatus(ticket.id, cfg!.nextStatus)} onCancel={() => cancelTicket(ticket.id)} onPrint={() => printTicket(ticket.id)} />
+                                onAction={() => updateStatus(ticket.id, cfg!.nextStatus)} onCancel={() => cancelTicket(ticket)} onPrint={() => printTicket(ticket.id)} />
                         ))}
                     </div>
                 )}
             </div>
+
+            {fixTicket && !approval && (
+                <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4" onClick={() => setFixTicket(null)}>
+                    <div className="w-full max-w-md bg-white rounded-[2rem] p-6 space-y-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">{fixTicket.label || fixTicket.sale?.channel}</p>
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900">Corregir {fixTicket.sale?.code}</h2>
+                            </div>
+                            <button type="button" onClick={() => setFixTicket(null)} className="p-2 rounded-full bg-slate-50" title="Cerrar"><X size={18} /></button>
+                        </div>
+                        {(fixTicket.sale?.items || []).map((item: any) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-black uppercase italic text-slate-900 truncate">{item.quantity}x {item.sellingProduct?.name || 'Producto'}</p>
+                                    <p className="text-xs font-bold text-slate-900">${(Number(item.priceUnit || 0) * item.quantity).toLocaleString('es-CL')}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setApproval({
+                                        kind: 'item',
+                                        saleId: fixTicket.sale.id,
+                                        item,
+                                        summary: `Quitar ${item.sellingProduct?.name || 'producto'} de ${fixTicket.sale?.code}. Si ya estaba pagado, queda como devolución en caja.`,
+                                    })}
+                                    className="px-3 py-2 rounded-xl bg-red-50 text-red-600 font-black uppercase text-[10px] shrink-0"
+                                >
+                                    Quitar
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => cancelTicket(fixTicket)}
+                            className="w-full py-3 rounded-2xl bg-red-500 text-white font-black uppercase italic text-xs"
+                        >
+                            Anular pedido completo
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {approval && (
+                <ApprovalModal
+                    title={approval.kind === 'cancel' ? 'Anular pedido' : 'Quitar producto'}
+                    summary={approval.summary}
+                    confirmLabel={approval.kind === 'cancel' ? 'Anular' : 'Quitar'}
+                    maxQuantity={approval.kind === 'item' ? approval.item.quantity : undefined}
+                    onConfirm={confirmApproval}
+                    onClose={() => setApproval(null)}
+                />
+            )}
         </div>
     );
 }

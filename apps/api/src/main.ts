@@ -24,30 +24,29 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // CORS: Whitelist basada en variable de entorno
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:3002'];
+  // CORS: solo dominios propios. Se compara el origen exacto (no prefijos).
+  const allowedOrigins = new Set(
+    (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/$/, '')).filter(Boolean),
+  );
+  const isProduction = process.env.NODE_ENV === 'production';
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Permitir requests sin origin (server-to-server, mobile apps, curl)
+      // Sin origin: server-to-server, webhooks, curl
       if (!origin) return callback(null, true);
-      if (allowedOrigins.some(allowed => origin.startsWith(allowed.trim()))) {
-        return callback(null, true);
-      }
-      // En producción también permitir Render/Vercel/Netlify domains genéricos
-      if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
-        return callback(null, true);
-      }
       try {
-        const host = new URL(origin).hostname;
-        const lan = /^192\.168\.\d+\.\d+$/.test(host) || /^10\.\d+\.\d+\.\d+$/.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host);
-        if (lan || host === '127.0.0.1' || host === 'localhost' || host === 'lomasrico.cl' || host.endsWith('.lomasrico.cl')) {
+        const url = new URL(origin);
+        const host = url.hostname;
+        if (allowedOrigins.has(url.origin)) return callback(null, true);
+        if (url.protocol === 'https:' && (host === 'lomasrico.cl' || host.endsWith('.lomasrico.cl'))) {
           return callback(null, true);
         }
-      } catch { /* ignore bad origin */ }
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
+        if (!isProduction) {
+          const lan = /^192\.168\.\d+\.\d+$/.test(host) || /^10\.\d+\.\d+\.\d+$/.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host);
+          if (lan || host === '127.0.0.1' || host === 'localhost') return callback(null, true);
+        }
+      } catch { /* origen inválido */ }
+      callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
@@ -59,7 +58,7 @@ async function bootstrap() {
   console.log('#################################################');
   console.log('## API VERSION: PRODUCTION READY               ##');
   console.log(`## PORT: ${String(port).padEnd(39, ' ')}##`);
-  console.log(`## CORS Origins: ${allowedOrigins.length} configured${' '.repeat(20)}##`);
+  console.log(`## CORS Origins: ${allowedOrigins.size} configured${' '.repeat(20)}##`);
   console.log('#################################################');
 
   await app.listen(port, '0.0.0.0');

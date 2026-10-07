@@ -18,9 +18,12 @@ import { CreateExternalOrderDto, BulkExternalOrderDto, ExternalPlatform } from '
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UberEatsScraper } from './scrapers/uber-eats.scraper';
 import { PedidosYaScraper } from './scrapers/pedidosya.scraper';
+import { Integration, MANAGER_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 import { UberScraperCronService } from './uber-scraper-cron.service';
 
 @Controller('external-orders')
+@Roles(...MANAGER_ROLES)
 export class ExternalOrdersController {
     private readonly logger = new Logger(ExternalOrdersController.name);
 
@@ -42,6 +45,7 @@ export class ExternalOrdersController {
      * 3. Creates a Sale + KitchenTicket
      * 4. Records the ExternalOrder for audit
      */
+    @Integration()
     @Post('ingest')
     @HttpCode(HttpStatus.OK)
     async ingestOrder(@Body() dto: CreateExternalOrderDto) {
@@ -53,6 +57,7 @@ export class ExternalOrdersController {
      * POST /external-orders/ingest/bulk
      * Ingest multiple orders at once (batch scraping result).
      */
+    @Integration()
     @Post('ingest/bulk')
     @HttpCode(HttpStatus.OK)
     async ingestBulk(@Body() dto: BulkExternalOrderDto) {

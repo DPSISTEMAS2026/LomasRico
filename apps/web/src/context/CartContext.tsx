@@ -1,7 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { CartItem } from '../types';
+
+export const CART_STORAGE = 'lr_cart';
+const CART_TTL_MS = 6 * 60 * 60_000;
 
 interface CartContextType {
     items: CartItem[];
@@ -16,6 +19,27 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [items, setItems] = useState<CartItem[]>([]);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(CART_STORAGE) || 'null');
+            if (saved && Array.isArray(saved.items) && Date.now() - Number(saved.at) < CART_TTL_MS) {
+                setItems(saved.items);
+            } else {
+                localStorage.removeItem(CART_STORAGE);
+            }
+        } catch {
+            localStorage.removeItem(CART_STORAGE);
+        }
+        setLoaded(true);
+    }, []);
+
+    useEffect(() => {
+        if (!loaded) return;
+        if (items.length) localStorage.setItem(CART_STORAGE, JSON.stringify({ at: Date.now(), items }));
+        else localStorage.removeItem(CART_STORAGE);
+    }, [items, loaded]);
 
     const addToCart = (newItem: Omit<CartItem, 'tempId'>) => {
         const tempId = Math.random().toString(36).substring(7);

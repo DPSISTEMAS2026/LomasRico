@@ -12,30 +12,54 @@ export default function SalonPage() {
     const [tables, setTables] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const inFlight = useRef(false);
+    const lastVersion = useRef<string | null>(null);
 
-    const load = async () => {
-        if (inFlight.current) return;
+    const load = async (): Promise<boolean> => {
+        if (inFlight.current) return false;
         inFlight.current = true;
         try {
             const res = await authFetch(`${API_URL}/tables`);
-            if (res.ok) {
-                const data = await res.json();
-                setTables(data);
-            }
+            if (!res.ok) return false;
+            setTables(await res.json());
+            return true;
         } catch {
-            /* se reintenta en el siguiente ciclo */
+            return false;
         } finally {
             inFlight.current = false;
             setLoading(false);
         }
     };
 
+    const loadIfChanged = async () => {
+        try {
+            const res = await authFetch(`${API_URL}/tables/version`, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const { v } = await res.json();
+            if (v === lastVersion.current) return;
+            if (await load()) lastVersion.current = v;
+        } catch {
+            lastVersion.current = null;
+            await load();
+        }
+    };
+
+    const [, setClock] = useState(0);
     useEffect(() => {
-        load();
-        const id = setInterval(() => { if (!document.hidden) load(); }, 8000);
-        const onVisible = () => { if (!document.hidden) load(); };
+        const tick = setInterval(() => setClock(Date.now()), 30_000);
+        return () => clearInterval(tick);
+    }, []);
+
+    useEffect(() => {
+        loadIfChanged();
+        const check = setInterval(() => { if (!document.hidden) loadIfChanged(); }, 5000);
+        const full = setInterval(() => { if (!document.hidden) load(); }, 120_000);
+        const onVisible = () => { if (!document.hidden) loadIfChanged(); };
         document.addEventListener('visibilitychange', onVisible);
-        return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+        return () => {
+            clearInterval(check);
+            clearInterval(full);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, []);
 
     return (

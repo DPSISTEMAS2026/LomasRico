@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.render.com' },
       // Supabase Storage (banners, product images, etc.)
       { protocol: 'https', hostname: '**.supabase.co' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
     unoptimized: true,
   }

@@ -93,14 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const register = async (data: any) => {
         try {
             const response = await apiRegisterUser(data);
-            if (response.requiresVerification) {
-                return { requiresVerification: true, email: data.email };
-            }
             const { user: dbUser, accessToken } = response;
             setUser(dbUser);
             localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(dbUser));
             localStorage.setItem(STORAGE_KEY_TOKEN, accessToken);
-            return { requiresVerification: false };
+            return { requiresVerification: !!response.requiresVerification, email: data.email };
         } catch (error) {
             throw error;
         }

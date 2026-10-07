@@ -26,9 +26,7 @@ Versión 2.3.0 | Mayo 2026
 | Plataforma | URL | Para quién |
 |------------|-----|-----------|
 | **Web Tienda** | https://lomasrico.cl | Clientes |
-| **Panel de Gestión** | https://lomasrico-panels.netlify.app | Dueño, Admin, Cajeros, Cocina |
-| **API (Backend)** | https://pro-lomasrico-api-69je.onrender.com | Automático (no acceder manualmente) |
-
+| **Panel de Gestión** | https://paneles.lomasrico.cl | Dueño, Admin, Cajeros, Cocina |
 ### 1.2 Roles de Usuario
 
 El sistema maneja **4 roles** con permisos diferenciados:
@@ -44,7 +42,7 @@ Además, cada usuario puede tener **módulos individuales** asignados, lo que pe
 
 ### 1.3 Cómo Ingresar
 
-1. Ir a **lomasrico-panels.netlify.app**
+1. Ir a **paneles.lomasrico.cl**
 2. Ingresar **usuario** y **contraseña** proporcionados
 3. El sistema redirige automáticamente al panel correspondiente según su rol
 
@@ -98,7 +96,7 @@ Usted. Todo el contenido visible en la web (productos, precios, fotos, banners) 
 
 ## 3. Panel de Administración
 
-Se accede desde **lomasrico-panels.netlify.app** con rol OWNER o ADMIN. La barra lateral izquierda muestra todos los módulos disponibles.
+Se accede desde **paneles.lomasrico.cl** con rol OWNER o ADMIN. La barra lateral izquierda muestra todos los módulos disponibles.
 
 ### Módulos del Menú Lateral
 
@@ -591,8 +589,7 @@ Las solicitudes fuera de horario se atienden al día hábil siguiente.
 | Dato | Valor |
 |------|-------|
 | **URL Web** | https://lomasrico.cl |
-| **URL Panel** | https://lomasrico-panels.netlify.app |
-| **URL API** | https://pro-lomasrico-api-69je.onrender.com |
+| **URL Panel** | https://paneles.lomasrico.cl |
 | **Versión** | 2.3.0 |
 | **Soporte** | WhatsApp con Daniel |
 | **Horario Soporte** | Lun-Sáb 10:00 - 20:30 |
@@ -605,7 +602,7 @@ Las solicitudes fuera de horario se atienden al día hábil siguiente.
 | Componente | Plataforma | Plan |
 |------------|-----------|------|
 | **API Backend** (NestJS + Prisma) | Render.com | Starter (always-on) |
-| **Web Storefront** (Next.js) | Render.com / Netlify | Free |
+| **Web Storefront** (Next.js) | Netlify | Free |
 | **Panel Admin/POS/Cocina** (Next.js) | Netlify | Free |
 | **Base de Datos** (PostgreSQL) | Supabase | Cloud |
 | **Storage de Imágenes** | Supabase Storage | Cloud |

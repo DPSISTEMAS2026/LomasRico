@@ -32,8 +32,8 @@ import {
 
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
-import { supabase } from '../../../../lib/supabase';
-import { groupProductsByWebSection, webSectionKey, displayCategoryName, isAgrandarModifier, isEspecialRole, isSuggestionRole, resolveModifierRole, suggestModifierRole, MODIFIER_ROLE_LABEL } from '@lomasrico/shared-types';
+import { listMedia, uploadMedia, MediaAsset } from '../../../../services/media';
+import { CLOUDINARY_IMAGE, CLOUDINARY_THUMB, cloudinaryTransform, groupProductsByWebSection, webSectionKey, displayCategoryName, isAgrandarModifier, isEspecialRole, isSuggestionRole, resolveModifierRole, suggestModifierRole, MODIFIER_ROLE_LABEL } from '@lomasrico/shared-types';
 
 function catalogLayer(group?: { role?: string | null; name?: string; displayName?: string } | null) {
     if (!group) return 'option' as const;
@@ -55,7 +55,7 @@ export default function CatalogManagementPage() {
     const [catalogTab, setCatalogTab] = useState<'active' | 'hidden'>('active');
     const [showAssetSelector, setShowAssetSelector] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [supabaseAssets, setSupabaseAssets] = useState<string[]>([]);
+    const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
     const [loadingAssets, setLoadingAssets] = useState(false);
     const [allModifierGroups, setAllModifierGroups] = useState<any[]>([]);
     const [productModifiers, setProductModifiers] = useState<{groupId: string, sortOrder: number}[]>([]);
@@ -221,26 +221,10 @@ export default function CatalogManagementPage() {
                 return x.group.displayName.toLowerCase().includes(q) || String(x.group.name || '').toLowerCase().includes(q);
             });
 
-    const loadSupabaseAssets = async () => {
+    const loadMediaAssets = async () => {
         setLoadingAssets(true);
         try {
-            const { data, error } = await supabase.storage
-                .from('assets')
-                .list('', {
-                    limit: 1000,
-                    sortBy: { column: 'name', order: 'asc' }
-                });
-
-            if (error) throw error;
-
-            const imageFiles = data
-                .filter(file => {
-                    const ext = file.name.split('.').pop()?.toLowerCase();
-                    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext || '');
-                })
-                .map(file => file.name);
-
-            setSupabaseAssets(imageFiles);
+            setMediaAssets(await listMedia('productos'));
         } catch (error: any) {
             console.error('Error loading assets:', error.message);
         } finally {
@@ -252,30 +236,17 @@ export default function CatalogManagementPage() {
         if (!e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${fileName}`;
-
         setUploading(true);
         try {
-            const { error: uploadError } = await supabase.storage
-                .from('assets')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data } = supabase.storage
-                .from('assets')
-                .getPublicUrl(filePath);
-
+            const media = await uploadMedia(file, 'productos');
             if (editingProduct) {
                 setEditingProduct({
                     ...editingProduct,
-                    imageUrl: data.publicUrl,
-                    imageKey: filePath
+                    imageUrl: media.url,
+                    imageKey: media.publicId
                 });
             }
-            await loadSupabaseAssets();
+            await loadMediaAssets();
         } catch (error: any) {
             alert('Error al subir imagen: ' + error.message);
         } finally {
@@ -287,27 +258,14 @@ export default function CatalogManagementPage() {
         if (!e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${fileName}`;
-
         setUploading(true);
         try {
-            const { error: uploadError } = await supabase.storage
-                .from('assets')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data } = supabase.storage
-                .from('assets')
-                .getPublicUrl(filePath);
-
+            const media = await uploadMedia(file, 'productos');
             if (editingProduct) {
                 setEditingProduct({
                     ...editingProduct,
-                    hoverVideoUrl: data.publicUrl,
-                    hoverVideoKey: filePath
+                    hoverVideoUrl: media.url,
+                    hoverVideoKey: media.publicId
                 });
             }
         } catch (error: any) {
@@ -416,7 +374,7 @@ export default function CatalogManagementPage() {
 
     const handleDeleteProduct = async (id: string, name: string) => {
         const confirmed = window.confirm(
-            `⚠️ ELIMINAR PERMANENTEMENTE "${name}"?\n\nEsto borrará el producto, sus variantes, recetas, modificadores asignados y su historial de ventas asociado.\n\nEsta acción NO se puede deshacer.`
+            `⚠️ ELIMINAR "${name}"?\n\nSi ya tiene ventas, queda desactivado y se conserva su historial. Si no tiene ventas, se borra por completo.`
         );
         if (!confirmed) return;
 
@@ -425,7 +383,12 @@ export default function CatalogManagementPage() {
             const res = await authFetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
-                setProducts(prev => prev.filter(p => p.id !== id));
+                if (data?.archived) {
+                    setProducts(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
+                    alert(`"${name}" tiene ventas registradas: quedó desactivado y su historial se conserva.`);
+                } else {
+                    setProducts(prev => prev.filter(p => p.id !== id));
+                }
                 if (editingProduct?.id === id) setEditingProduct(null);
             } else {
                 alert(`Error al eliminar: ${data.message || res.statusText}`);
@@ -440,7 +403,7 @@ export default function CatalogManagementPage() {
     const handleDeleteCategory = async (category: string) => {
         const productCount = products.filter(p => p.category === category).length;
         const confirmed = window.confirm(
-            `⚠️ ELIMINAR CATEGORÍA "${category}"?\n\nEsto eliminará PERMANENTEMENTE los ${productCount} productos de esta categoría, incluyendo sus recetas, variantes e historial.\n\nEsta acción NO se puede deshacer.`
+            `⚠️ ELIMINAR CATEGORÍA "${category}"?\n\nLos ${productCount} productos se borran; los que ya tienen ventas quedan desactivados y conservan su historial.`
         );
         if (!confirmed) return;
 
@@ -455,7 +418,7 @@ export default function CatalogManagementPage() {
             const data = await res.json().catch(() => ({}));
             const failed = Array.isArray(data?.results) ? data.results.filter((r: any) => r.status !== 'deleted') : [];
             if (res.ok && failed.length === 0) {
-                setProducts(prev => prev.filter(p => p.category !== category));
+                await loadData();
                 if (selectedCategory === category) setSelectedCategory('');
             } else {
                 await loadData();
@@ -468,13 +431,12 @@ export default function CatalogManagementPage() {
         }
     };
 
-    const selectAsset = (asset: string) => {
+    const selectAsset = (asset: MediaAsset) => {
         if (!editingProduct) return;
-        const { data } = supabase.storage.from('assets').getPublicUrl(asset);
         setEditingProduct({
             ...editingProduct,
-            imageUrl: data.publicUrl,
-            imageKey: asset
+            imageUrl: cloudinaryTransform(asset.url, CLOUDINARY_IMAGE),
+            imageKey: asset.publicId
         });
         setShowAssetSelector(false);
     };
@@ -902,7 +864,7 @@ export default function CatalogManagementPage() {
                                     </h4>
                                     <button
                                         onClick={() => {
-                                            loadSupabaseAssets();
+                                            loadMediaAssets();
                                             setShowAssetSelector(true);
                                         }}
                                         className="text-[9px] md:text-[10px] font-black uppercase text-orange-500 hover:underline tracking-widest"
@@ -1200,19 +1162,19 @@ export default function CatalogManagementPage() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
-                                    {supabaseAssets
-                                        .filter(a => a.toLowerCase().includes(filterAsset.toLowerCase()))
+                                    {mediaAssets
+                                        .filter(a => a.publicId.toLowerCase().includes(filterAsset.toLowerCase()))
                                         .map((asset) => {
-                                            const { data } = supabase.storage.from('assets').getPublicUrl(asset);
+                                            const name = asset.publicId.split('/').pop();
                                             return (
                                                 <button
-                                                    key={asset}
+                                                    key={asset.publicId}
                                                     onClick={() => selectAsset(asset)}
                                                     className="group relative aspect-square rounded-xl md:rounded-[2rem] overflow-hidden border-2 md:border-4 border-white shadow-sm hover:border-orange-500 transition-all bg-slate-50"
                                                 >
-                                                    <img src={data.publicUrl} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="" />
+                                                    <img src={cloudinaryTransform(asset.url, CLOUDINARY_THUMB)} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="" />
                                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <p className="text-white text-[7px] md:text-[9px] font-black uppercase tracking-tight truncate italic">{asset}</p>
+                                                        <p className="text-white text-[7px] md:text-[9px] font-black uppercase tracking-tight truncate italic">{name}</p>
                                                     </div>
                                                 </button>
                                             );

@@ -2,16 +2,21 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { MANAGER_ROLES, Public } from './auth/access';
+import { Roles } from './auth/roles.decorator';
+import { isWebOrdersEnabled, storeStatus } from './config/flags';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) { }
 
+  @Public()
   @Get()
   getHello(): string {
     return this.appService.getHello();
   }
 
+  @Public()
   @Get('api/health')
   healthCheck() {
     return {
@@ -23,7 +28,14 @@ export class AppController {
     };
   }
 
+  @Public()
+  @Get('store/status')
+  store() {
+    return { ...storeStatus(), ordersEnabled: isWebOrdersEnabled() };
+  }
+
   // Helper for assets (Approved to keep valid image selector)
+  @Roles(...MANAGER_ROLES)
   @Get('assets/list')
   getAssets() {
     try {

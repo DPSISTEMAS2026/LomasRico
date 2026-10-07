@@ -4,6 +4,7 @@ export * from './constants';
 export * from './domain';
 export * from './menuRoles';
 export * from './paymentMethods';
+export * from './media';
 
 export interface ProductVariant {
     id: string;

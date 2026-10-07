@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { Approver, AuditService } from '../audit/audit.service';
+
+export type VoidApproval = { actorId?: string; approver: Approver; reason: string };
 
 // USAMOS CONSTANTES PARA ESTADOS PARA EVITAR ERRORES DE REGENERACION
 const TicketStatus = {
@@ -19,7 +22,7 @@ const OrderStatus = {
 
 @Injectable()
 export class KitchenService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private audit: AuditService) { }
 
     /**
      * Retorna tickets activos: WAITING + PREPARING + READY
@@ -44,6 +47,7 @@ export class KitchenService {
                         channel: true,
                         fulfillmentType: true,
                         status: true,
+                        note: true,
                         table: { select: { id: true, number: true } },
                         guest: { select: { id: true, name: true } },
                         externalOrder: { select: { id: true, platform: true } },
@@ -113,19 +117,7 @@ export class KitchenService {
             },
         });
 
-        const mapped = tickets.map((ticket: any) => {
-            const withItems = this.withTicketItems(ticket);
-            const dte = this.parseDte(withItems.sale?.note);
-            return { ...withItems, dteTipo: dte?.tipo || null, dteFolio: dte?.folio || null };
-        });
-
-        return mapped;
-    }
-
-    private parseDte(note?: string | null) {
-        const match = (note || '').match(/\[DTE (\d+) #(\d+)/i);
-        if (!match) return null;
-        return { tipo: Number(match[1]), folio: Number(match[2]) };
+        return tickets.map((ticket: any) => this.withTicketItems(ticket));
     }
 
     private kitchenLabel(ticket: any) {
@@ -156,7 +148,7 @@ export class KitchenService {
         };
     }
 
-    async updateStatus(id: string, status: string) {
+    async updateStatus(id: string, status: string, approval?: VoidApproval) {
         const allowed = [TicketStatus.WAITING, TicketStatus.PREPARING, TicketStatus.READY, TicketStatus.DELIVERED, 'CANCELLED'];
         if (!allowed.includes(status)) throw new BadRequestException(`Estado inválido: ${status}`);
 
@@ -169,7 +161,10 @@ export class KitchenService {
             throw new NotFoundException(`KitchenTicket ${id} not found`);
         }
 
-        if (status === 'CANCELLED') return this.cancelTicket(ticket);
+        if (status === 'CANCELLED') {
+            if (!approval) throw new BadRequestException('Anular requiere autorización');
+            return this.cancelTicket(ticket, approval);
+        }
 
         const updateData: any = { status };
         const saleUpdateData: any = {};
@@ -198,8 +193,9 @@ export class KitchenService {
      * Una tanda de mesa sin pagar solo saca sus platos de la cuenta del comensal;
      * cualquier otro ticket anula la venta completa.
      */
-    private async cancelTicket(ticket: any) {
+    private async cancelTicket(ticket: any, approval: VoidApproval) {
         const sale = ticket.sale;
+        if (sale?.status === OrderStatus.CANCELLED) throw new BadRequestException('El pedido ya está anulado');
         const batchIds: string[] = ticket.itemIds || [];
         const isOpenTableBatch = sale?.fulfillmentType === 'DINE_IN' && sale?.paymentStatus === 'PENDING' && batchIds.length > 0;
 
@@ -209,25 +205,52 @@ export class KitchenService {
                 data: { status: TicketStatus.DELIVERED, endTime: new Date() },
             });
 
+            const lines = await tx.saleItem.findMany({
+                where: { saleId: sale.id, ...(isOpenTableBatch ? { id: { in: batchIds } } : {}) },
+                select: { id: true, quantity: true, priceUnit: true, sellingProduct: { select: { name: true } } },
+            });
+            const detailItems = lines.map((i: any) => ({ name: i.sellingProduct?.name || 'Producto', quantity: i.quantity, priceUnit: Number(i.priceUnit) }));
+
             if (isOpenTableBatch) {
                 const remaining = await tx.saleItem.count({ where: { saleId: sale.id, id: { notIn: batchIds } } });
                 if (remaining > 0) {
-                    const items = await tx.saleItem.findMany({
-                        where: { id: { in: batchIds }, saleId: sale.id },
-                        select: { id: true, quantity: true, priceUnit: true },
-                    });
-                    const removed = items.reduce((sum: number, i: any) => sum + Number(i.priceUnit) * i.quantity, 0);
+                    const removed = lines.reduce((sum: number, i: any) => sum + Number(i.priceUnit) * i.quantity, 0);
                     await tx.recipeSnapshot.deleteMany({ where: { saleItemId: { in: batchIds } } });
                     await tx.saleItem.deleteMany({ where: { id: { in: batchIds }, saleId: sale.id } });
                     await tx.sale.update({
                         where: { id: sale.id },
                         data: { total: { decrement: removed } },
                     });
+                    await this.audit.log({
+                        action: 'BATCH_CANCEL',
+                        actorId: approval.actorId,
+                        approver: approval.approver,
+                        saleId: sale.id,
+                        saleCode: sale.code,
+                        amount: removed,
+                        reason: approval.reason,
+                        details: { label: this.kitchenLabel(ticket), batchNumber: ticket.batchNumber ?? null, items: detailItems },
+                    }, tx);
                     return updatedTicket;
                 }
             }
 
             await tx.sale.update({ where: { id: sale.id }, data: { status: OrderStatus.CANCELLED } });
+            await this.audit.log({
+                action: 'ORDER_CANCEL',
+                actorId: approval.actorId,
+                approver: approval.approver,
+                saleId: sale.id,
+                saleCode: sale.code,
+                amount: Number(sale.total || 0),
+                reason: approval.reason,
+                details: {
+                    label: this.kitchenLabel(ticket),
+                    paid: sale.paymentStatus === 'APPROVED',
+                    paymentMethod: sale.paymentMethod || null,
+                    items: detailItems,
+                },
+            }, tx);
 
             const alreadyReverted = await tx.stockMovement.count({
                 where: { referenceId: sale.id, reason: 'CANCELLATION' },
@@ -346,7 +369,6 @@ export class KitchenService {
                 </div>`;
         }).join('');
         const saleTotal = Number(sale.total || 0);
-        const dte = this.parseDte(sale.note);
 
         return `<!DOCTYPE html>
 <html>
@@ -383,7 +405,7 @@ export class KitchenService {
         <span>🕐 ${time}</span>
     </div>
     ${itemsHtml}
-    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div>${dte ? `<div style="text-align:center;margin-top:8px;font-size:11px;">DTE ${dte.tipo} folio ${dte.folio}</div>` : `<div style="text-align:center;margin-top:8px;font-size:11px;">Documento interno · reimpresión</div>`}` : ''}
+    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div><div style="text-align:center;margin-top:8px;font-size:11px;">Documento interno · reimpresión</div>` : ''}
     ${sale.note && !isAccount ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${sale.note}</div>` : ''}
     <div class="footer">
         <div>Reimpresión: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>

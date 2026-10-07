@@ -52,7 +52,7 @@ function PendingContent() {
                         </div>
                         <div className="pt-2 border-t border-amber-100">
                             <p className="text-xs font-medium text-slate-900">
-                                Esto puede ocurrir con pagos en efectivo (Rapipago, Pago Fácil) o transferencias bancarias que requieren procesamiento adicional.
+                                MercadoPago todavía no confirma el pago. Cuando lo haga, tu pedido entra a cocina automáticamente.
                             </p>
                         </div>
                     </div>

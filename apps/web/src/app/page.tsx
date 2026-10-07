@@ -4,8 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ProductGrid } from '../components/catalog/ProductGrid';
 import { BannerSection } from '../components/BannerSection';
-import { useCart, CartProvider } from '../context/CartContext';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useTableSession } from '../context/TableSessionContext';
 import CheckoutModal from '../components/modals/CheckoutModal';
 import OrdersModal from '../components/modals/OrdersModal';
@@ -153,6 +153,12 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const { session, ready, sessionEnd } = useTableSession();
   const mesa = searchParams.get('mesa');
+  const wantsRegister = searchParams.get('registro') === '1';
+  const { isLoggedIn, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (wantsRegister && !authLoading && !isLoggedIn) setIsAuthOpen(true);
+  }, [wantsRegister, authLoading, isLoggedIn]);
 
   useEffect(() => {
     if (!ready) return;
@@ -229,6 +235,7 @@ function HomeContent() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        initialMode={wantsRegister ? 'REGISTER' : 'LOGIN'}
       />
     </div>
   );
@@ -236,12 +243,8 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
-          <HomeContent />
-        </Suspense>
-      </CartProvider>
-    </AuthProvider>
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <HomeContent />
+    </Suspense>
   );
 }

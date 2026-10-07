@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "../context/AuthContext";
+import { CartProvider } from "../context/CartContext";
 import { TableSessionProvider } from "../context/TableSessionContext";
 import CookieBanner from "../components/common/CookieBanner";
 import ComingSoonGate from "../components/common/ComingSoonGate";
@@ -34,14 +35,16 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${outfit.variable} font-sans antialiased bg-white overflow-x-hidden`}>
         <AuthProvider>
-          <TableSessionProvider>
-            <OverflowLock>
-              <ComingSoonGate>
-                {children}
-                <CookieBanner />
-              </ComingSoonGate>
-            </OverflowLock>
-          </TableSessionProvider>
+          <CartProvider>
+            <TableSessionProvider>
+              <OverflowLock>
+                <ComingSoonGate>
+                  {children}
+                  <CookieBanner />
+                </ComingSoonGate>
+              </OverflowLock>
+            </TableSessionProvider>
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

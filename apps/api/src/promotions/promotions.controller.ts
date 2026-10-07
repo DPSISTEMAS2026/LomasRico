@@ -4,8 +4,11 @@ import {
 } from '@nestjs/common';
 import { PromotionsService } from './promotions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MANAGER_ROLES, Public } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('promotions')
+@Roles(...MANAGER_ROLES)
 export class PromotionsController {
     private readonly logger = new Logger(PromotionsController.name);
 
@@ -22,6 +25,7 @@ export class PromotionsController {
      * Public — Retorna solo banners activos para el carousel de la web.
      * Filtrado por fecha, día y horario chileno.
      */
+    @Public()
     @Get('active-banners')
     getActiveBanners() {
         return this.service.findActiveBanners();
@@ -33,7 +37,7 @@ export class PromotionsController {
         return this.service.findOne(id);
     }
 
-    /** Public endpoint - validate a promo code (used by checkout) */
+    @Public()
     @Get('validate/:code')
     validateCode(@Param('code') code: string) {
         return this.service.findByCode(code);
@@ -58,7 +62,7 @@ export class PromotionsController {
         return this.service.remove(id);
     }
 
-    /** Public endpoint - redeem a code at checkout */
+    /** El canje lo registra caja/servidor; no se expone para que nadie agote los usos de un código. */
     @Post('redeem/:code')
     redeem(@Param('code') code: string) {
         return this.service.redeemCode(code);

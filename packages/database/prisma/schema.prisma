@@ -412,6 +412,7 @@ enum UserRole {
   ADMIN
   CASHIER
   KITCHEN
+  WAITER
   DRIVER
   CUSTOMER
 }
@@ -441,6 +442,27 @@ enum TransactionType {
   EXPENSE
   WITHDRAWAL
   CANCELLED_SALE
+  REFUND
+}
+
+/// Registro interno de acciones sensibles (anulaciones, devoluciones, descuentos, retiros).
+/// Guarda nombres además de IDs para que el historial sobreviva si se elimina al usuario.
+model AuditLog {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  action       String
+  actorId      String?
+  actorName    String?
+  approverId   String?
+  approverName String?
+  saleId       String?
+  saleCode     String?
+  amount       Decimal?
+  reason       String?
+  details      Json?
+
+  @@index([createdAt])
+  @@index([saleId])
 }
 
 model User {

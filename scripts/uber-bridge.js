@@ -95,7 +95,10 @@ async function ingestToApi(dto) {
   try {
     const res = await fetch(`${API_URL}/external-orders/ingest`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-integration-key': process.env.INTEGRATION_API_KEY || '',
+      },
       body: JSON.stringify(dto),
     });
     const result = await res.json();

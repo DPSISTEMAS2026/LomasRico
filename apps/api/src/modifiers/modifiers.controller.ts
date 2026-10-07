@@ -1,18 +1,21 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ModifiersService } from './modifiers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MANAGER_ROLES, Public, STAFF_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('modifiers')
+@Roles(...MANAGER_ROLES)
 export class ModifiersController {
     constructor(private readonly modifiersService: ModifiersService) {}
 
-    // ============ GROUPS (Lectura pública, escritura protegida) ============
-
+    @Roles(...STAFF_ROLES)
     @Get('groups')
     findAllGroups() {
         return this.modifiersService.findAllGroups();
     }
 
+    @Roles(...STAFF_ROLES)
     @Get('groups/:id')
     findOneGroup(@Param('id') id: string) {
         return this.modifiersService.findOneGroup(id);
@@ -174,7 +177,7 @@ export class ModifiersController {
 
     // ============ PRODUCT ASSIGNMENTS ============
 
-    // GET público — la web del cliente necesita leer los modificadores de un producto
+    @Public()
     @Get('product/:productId')
     getProductModifiers(@Param('productId') productId: string) {
         return this.modifiersService.getProductModifiers(productId);

@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateAddressDto } from './dto/create-address.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { ANY_USER_ROLES, CASH_ROLES } from '../auth/access';
 
 @Controller('users')
 export class UsersController {
@@ -14,8 +13,7 @@ export class UsersController {
      * Protected: only OWNER and ADMIN can list all customers
      * IMPORTANT: This must be BEFORE :userId routes to avoid parameter collision
      */
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('OWNER', 'ADMIN')
+    @Roles(...CASH_ROLES)
     @Get('customers/list')
     async findAllCustomers(@Query('search') search?: string) {
         return this.usersService.findAllCustomers(search);
@@ -25,7 +23,7 @@ export class UsersController {
      * GET /users/:userId/addresses
      * Protected: user can only see their own addresses, unless OWNER/ADMIN
      */
-    @UseGuards(JwtAuthGuard)
+    @Roles(...ANY_USER_ROLES)
     @Get(':userId/addresses')
     async getAddresses(@Param('userId') userId: string, @Request() req: any) {
         this.assertOwnershipOrAdmin(req.user, userId);
@@ -36,7 +34,7 @@ export class UsersController {
      * POST /users/:userId/addresses
      * Protected: user can only add to their own addresses, unless OWNER/ADMIN
      */
-    @UseGuards(JwtAuthGuard)
+    @Roles(...ANY_USER_ROLES)
     @Post(':userId/addresses')
     async addAddress(
         @Param('userId') userId: string,
@@ -51,7 +49,7 @@ export class UsersController {
      * GET /users/:userId/orders
      * Protected: user can only see their own orders, unless OWNER/ADMIN
      */
-    @UseGuards(JwtAuthGuard)
+    @Roles(...ANY_USER_ROLES)
     @Get(':userId/orders')
     async getOrders(@Param('userId') userId: string, @Request() req: any) {
         this.assertOwnershipOrAdmin(req.user, userId);

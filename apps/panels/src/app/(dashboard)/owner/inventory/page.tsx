@@ -428,7 +428,7 @@ export default function InventoryManagementPage() {
                                 <div className="flex justify-between items-end mt-3">
                                     <p className="text-xl font-black text-red-500 italic leading-none">{item.currentStock} <span className="text-[10px] uppercase text-slate-800">{item.unit}</span></p>
                                     <button
-                                        onClick={() => { setRestockItem(item); setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' }); }}
+                                        onClick={() => { setRestockItem(item); setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '', yieldPercent: '100' }); }}
                                         className="text-[9px] font-black text-red-600 underline hover:text-red-800"
                                     >
                                         COMPRAR →
@@ -763,7 +763,7 @@ export default function InventoryManagementPage() {
                             <button
                                 onClick={() => {
                                     setRestockItem(item);
-                                    setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '' });
+                                    setRestockData({ quantity: '', unitCost: item.costPerUnit?.toString() || '', yieldPercent: '100' });
                                 }}
                                 className="bg-slate-900 text-white py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-1 shadow-lg active:scale-95"
                             >

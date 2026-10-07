@@ -36,6 +36,12 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        value: w2k7kwva
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: MERCADOPAGO_ACCESS_TOKEN
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -43,16 +49,25 @@ services:
       - key: PEDIDOSYA_TOKEN
         sync: false
       - key: FRONTEND_URL
-        value: "https://pro-lomasrico-web-vtyt.onrender.com"
+        value: "https://lomasrico.cl"
       - key: API_URL
         value: "https://pro-lomasrico-api-69je.onrender.com"
       - key: ALLOWED_ORIGINS
-        value: "https://lomasrico.cl,https://www.lomasrico.cl,https://paneles.lomasrico.cl,https://lomasricov8.netlify.app,https://lomasricov7.netlify.app,https://lomasrico.netlify.app,https://lomasrico-panels.netlify.app,https://pro-lomasrico-web-vtyt.onrender.com,https://pro-lomasrico-panels-33rx.onrender.com"
+        value: "https://lomasrico.cl,https://www.lomasrico.cl,https://paneles.lomasrico.cl"
       - key: SKIP_SEED
         value: "true"
+      # --- Pedidos web con pago online (cerrado hasta abrir el delivery) ---
+      - key: WEB_ORDERS_ENABLED
+        value: "false"
+      - key: WEB_HOURS
+        value: "11:00-22:00"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
       # --- Uber Eats Scraper (auto-poll cada 30s) ---
       - key: UBER_EATS_ENABLED
-        value: "true"
+        value: "false"
       - key: UBER_EATS_COOKIE
         sync: false
       - key: UBER_EATS_CSRF_TOKEN
@@ -80,7 +95,7 @@ services:
       - key: NEXT_PUBLIC_COMING_SOON
         value: "true"
       - key: NEXT_PUBLIC_WEB_URL
-        value: "https://pro-lomasrico-web-vtyt.onrender.com"
+        value: "https://lomasrico.cl"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -91,6 +106,5 @@ services:
         sync: false
 
   # --------------------------------------------------------
-  # NOTA: Panels (Admin/POS/Kitchen) migrado a Netlify
-  # URL: https://lomasrico-panels.netlify.app
+  # Web: https://lomasrico.cl · Panel: https://paneles.lomasrico.cl
   # --------------------------------------------------------

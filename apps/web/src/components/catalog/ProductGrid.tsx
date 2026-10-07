@@ -142,8 +142,8 @@ export const ProductGrid = () => {
         };
         fetchData();
 
-        // Polling cada 30 segundos para refrescar disponibilidad
         const interval = setInterval(async () => {
+            if (document.hidden) return;
             try {
                 const res = await fetch(`${API_URL}/products/active`);
                 if (res.ok) {
@@ -153,7 +153,7 @@ export const ProductGrid = () => {
                     }
                 }
             } catch { /* silently ignore polling errors */ }
-        }, 30_000);
+        }, 5 * 60_000);
 
         return () => clearInterval(interval);
     }, []);

@@ -93,7 +93,7 @@ export default function OrdersModal({ isOpen, onClose }: Props) {
                                 <div className="space-y-2 border-t border-gray-50 pt-4">
                                     {order.items.map((item: any, idx: number) => (
                                         <div key={idx} className="flex justify-between text-xs">
-                                            <span className="text-gray-500"><b className="text-gray-900">{item.quantity}x</b> {item.productVariant.sellingProduct.name} ({item.productVariant.name})</span>
+                                            <span className="text-gray-500"><b className="text-gray-900">{item.quantity}x</b> {item.sellingProduct?.name || item.productVariant?.sellingProduct?.name || 'Producto'}{item.productVariant?.name ? ` (${item.productVariant.name})` : ''}</span>
                                             <span className="font-bold text-gray-400">${Number(item.priceUnit).toLocaleString()}</span>
                                         </div>
                                     ))}

@@ -295,7 +295,6 @@ type DrinkModifierOption = {
     name: string;
     priceAdjustment?: number;
     isDefault?: boolean;
-    [key: string]: unknown;
 };
 
 type DrinkModifierGroup = {
@@ -307,7 +306,6 @@ type DrinkModifierGroup = {
     minSelections?: number;
     maxSelections?: number;
     options?: DrinkModifierOption[];
-    [key: string]: unknown;
 };
 
 function groupLabel(group: DrinkModifierGroup) {

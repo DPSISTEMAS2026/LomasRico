@@ -5,13 +5,17 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BannersService } from './banners.service';
 import { memoryStorage } from 'multer';
+import { MANAGER_ROLES, Public } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('banners')
+@Roles(...MANAGER_ROLES)
 export class BannersController {
     private readonly logger = new Logger(BannersController.name);
 
     constructor(private readonly bannersService: BannersService) { }
 
+    @Public()
     @Get()
     findAll() {
         return this.bannersService.findAll();

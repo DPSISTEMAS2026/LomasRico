@@ -26,25 +26,30 @@ import {
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 import { isModulePaused } from '../../../../config/features';
+import { useAuth } from '../../../../context/AuthContext';
 
 // ------------------------------------------------------------------
 // Definición de TODOS los módulos disponibles en el panel
 // ------------------------------------------------------------------
+const ADMIN_ONLY = ['ADMIN'];
 const ALL_MODULES = [
-    { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.' },
-    { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.' },
-    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.' },
-    { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.' },
-    { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.' },
-    { id: 'recipes', label: 'Recetas', desc: 'Crear y editar recetas de producción.' },
-    { id: 'reports', label: 'Reportes', desc: 'Ver reportes de ventas y estadísticas.' },
-    { id: 'banners', label: 'Marketing', desc: 'Gestionar banners, promociones y códigos de descuento.' },
-    { id: 'whatsapp', label: 'WhatsApp Bot', desc: 'Gestionar conversaciones de WhatsApp.' },
-    { id: 'cashiers', label: 'Personal (Equipo)', desc: 'Crear y gestionar usuarios del equipo.' },
+    { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.', roles: ['ADMIN', 'CASHIER', 'WAITER'] },
+    { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.', roles: ['ADMIN', 'CASHIER'] },
+    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.', roles: ADMIN_ONLY },
+    { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.', roles: ADMIN_ONLY },
+    { id: 'recipes', label: 'Recetas', desc: 'Crear y editar recetas de producción.', roles: ADMIN_ONLY },
+    { id: 'reports', label: 'Reportes', desc: 'Ver reportes de ventas y estadísticas.', roles: ADMIN_ONLY },
+    { id: 'banners', label: 'Marketing', desc: 'Gestionar banners, promociones y códigos de descuento.', roles: ADMIN_ONLY },
+    { id: 'whatsapp', label: 'WhatsApp Bot', desc: 'Gestionar conversaciones de WhatsApp.', roles: ADMIN_ONLY },
+    { id: 'cashiers', label: 'Personal (Equipo)', desc: 'Crear y gestionar usuarios del equipo.', roles: ADMIN_ONLY },
 ].filter((m) => !isModulePaused(m.id));
+
+const modulesForRole = (role: string) => ALL_MODULES.filter((m) => m.roles.includes(role));
 
 const ROLES = [
     { value: 'CASHIER', label: 'Cajero/a', color: 'bg-blue-500' },
+    { value: 'WAITER', label: 'Garzón', color: 'bg-emerald-600' },
     { value: 'KITCHEN', label: 'Cocina', color: 'bg-orange-500' },
     { value: 'ADMIN', label: 'Administrador/a', color: 'bg-purple-500' },
 ];
@@ -63,22 +68,31 @@ function parseModules(raw: any): string[] {
 // Sub-componente tarjeta de miembro del equipo
 // ------------------------------------------------------------------
 function TeamMemberCard({
-    member, onDelete, onSaveModules, onSaveRole,
+    member, roleOptions, onDelete, onSaveModules, onSaveRole, onSavePin,
 }: {
-    member: any; onDelete: (id: string) => void; onSaveModules: (id: string, modules: string[]) => void; onSaveRole: (id: string, role: string) => void;
+    member: any;
+    roleOptions: typeof ROLES;
+    onDelete: (id: string) => void;
+    onSaveModules: (id: string, modules: string[]) => Promise<void>;
+    onSaveRole: (id: string, role: string) => Promise<void>;
+    onSavePin: (id: string, pin: string) => Promise<boolean>;
 }) {
     const [expanded, setExpanded] = useState(false);
     const [modules, setModules] = useState<string[]>(() => parseModules(member.modules));
     const [role, setRole] = useState(member.role);
+    const [pin, setPin] = useState('');
     const [saving, setSaving] = useState(false);
     const roleInfo = getRoleInfo(role);
+    const roleModules = modulesForRole(role);
 
     const toggleModule = (id: string) => setModules(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
 
     const handleSave = async () => {
+        if (pin && !/^\d{4}$/.test(pin)) return alert('El PIN debe ser numérico de 4 dígitos');
         setSaving(true);
-        await onSaveModules(member.id, modules);
         if (role !== member.role) await onSaveRole(member.id, role);
+        await onSaveModules(member.id, modules.filter(m => roleModules.some(rm => rm.id === m)));
+        if (pin && await onSavePin(member.id, pin)) setPin('');
         setSaving(false);
         setExpanded(false);
     };
@@ -124,7 +138,7 @@ function TeamMemberCard({
                     <div>
                         <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mb-3 ml-1">Rol base</p>
                         <div className="flex flex-wrap gap-2 md:gap-3">
-                            {ROLES.map(r => (
+                            {roleOptions.map(r => (
                                 <button key={r.value} onClick={() => setRole(r.value)} className={`flex-1 sm:flex-none px-4 md:px-5 py-2 rounded-full text-[10px] md:text-xs font-black uppercase italic transition-all border-2 ${role === r.value ? `${r.color} text-white border-transparent shadow-lg` : 'border-slate-200 text-slate-800 hover:border-slate-900 hover:text-slate-900'}`}>
                                     {r.label}
                                 </button>
@@ -136,13 +150,13 @@ function TeamMemberCard({
                         <div className="flex items-center justify-between mb-3 ml-1">
                             <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-[0.2em]">Acceso a módulos</p>
                             <div className="flex gap-2">
-                                <button onClick={() => setModules(ALL_MODULES.map(m => m.id))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-500 hover:text-orange-700">Todo</button>
+                                <button onClick={() => setModules(roleModules.map(m => m.id))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-500 hover:text-orange-700">Todo</button>
                                 <span className="text-slate-300">·</span>
                                 <button onClick={() => setModules([])} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:text-slate-600">Ninguno</button>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-                            {ALL_MODULES.map(mod => {
+                            {roleModules.map(mod => {
                                 const checked = modules.includes(mod.id);
                                 return (
                                     <button key={mod.id} onClick={() => toggleModule(mod.id)} className={`flex items-start gap-3 p-3 md:p-4 rounded-xl md:rounded-2xl text-left transition-all border-2 ${checked ? 'border-orange-300 bg-orange-50' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
@@ -157,6 +171,11 @@ function TeamMemberCard({
                                 );
                             })}
                         </div>
+                    </div>
+
+                    <div>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mb-3 ml-1">Nuevo PIN</p>
+                        <input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} className="w-40 bg-white border-2 border-slate-200 rounded-2xl px-5 py-3 font-black text-lg outline-none focus:border-orange-500 tracking-[0.8em] text-center" placeholder="••••" />
                     </div>
 
                     <div className="bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white">
@@ -202,12 +221,15 @@ function TeamMemberCard({
 // Página principal
 // ------------------------------------------------------------------
 export default function CashiersManagementPage() {
+    const { user } = useAuth();
+    const roleOptions = user?.role === 'OWNER' ? ROLES : ROLES.filter(r => r.value !== 'ADMIN');
     const [tab, setTab] = useState<'TEAM' | 'SHIFTS'>('TEAM');
     const [members, setMembers] = useState<any[]>([]);
     const [shifts, setShifts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNewForm, setShowNewForm] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
+    const [myPin, setMyPin] = useState('');
 
     const [newMember, setNewMember] = useState({
         name: '', email: '', pin: '', role: 'CASHIER', modules: [] as string[]
@@ -256,28 +278,34 @@ export default function CashiersManagementPage() {
         finally { setCreating(false); }
     };
 
+    const send = async (path: string, method: string, body: unknown | undefined, okMsg: string) => {
+        const res = await authFetch(`${API_URL}/cashiers/${path}`, {
+            method, body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            alert(err?.message || 'No se pudo guardar');
+            return false;
+        }
+        showSuccess(okMsg);
+        loadData();
+        return true;
+    };
+
     const handleDelete = async (id: string) => {
         if (!confirm('¿Eliminar este usuario del equipo?')) return;
-        await authFetch(`${API_URL}/cashiers/${id}`, { method: 'DELETE' });
-        showSuccess('Usuario eliminado');
-        loadData();
+        await send(id, 'DELETE', undefined, 'Usuario eliminado');
     };
 
     const handleSaveModules = async (id: string, modules: string[]) => {
-        await authFetch(`${API_URL}/cashiers/${id}/modules`, {
-            method: 'PATCH', body: JSON.stringify({ modules })
-        });
-        showSuccess('Permisos actualizados');
-        loadData();
+        await send(`${id}/modules`, 'PATCH', { modules }, 'Permisos actualizados');
     };
 
     const handleSaveRole = async (id: string, role: string) => {
-        await authFetch(`${API_URL}/cashiers/${id}/role`, {
-            method: 'PATCH', body: JSON.stringify({ role })
-        });
-        showSuccess('Rol actualizado');
-        loadData();
+        await send(`${id}/role`, 'PATCH', { role }, 'Rol actualizado');
     };
+
+    const handleSavePin = (id: string, pin: string) => send(`${id}/pin`, 'PATCH', { pin }, 'PIN actualizado');
 
     const showSuccess = (msg: string) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
     const toggleNewModule = (id: string) => setNewMember(p => ({ ...p, modules: p.modules.includes(id) ? p.modules.filter(m => m !== id) : [...p.modules, id] }));
@@ -342,6 +370,30 @@ export default function CashiersManagementPage() {
                         </button>
                     </div>
 
+                    {user?.id && (
+                        <form
+                            className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-4 md:px-6 rounded-[2rem] border border-slate-100"
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!/^\d{4}$/.test(myPin)) return alert('El PIN debe ser numérico de 4 dígitos');
+                                if (await handleSavePin(user.id, myPin)) setMyPin('');
+                            }}
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Mi PIN · {user.name}</span>
+                            <input
+                                type="password"
+                                inputMode="numeric"
+                                value={myPin}
+                                onChange={(e) => setMyPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                placeholder="Nuevo PIN"
+                                className="flex-1 bg-slate-50 rounded-2xl px-4 py-3 font-black text-center tracking-[0.5em] outline-none focus:ring-2 focus:ring-orange-500"
+                            />
+                            <button type="submit" className="px-6 py-3 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest">
+                                Cambiar
+                            </button>
+                        </form>
+                    )}
+
                     {showNewForm && (
                         <div className="bg-white rounded-[2.5rem] md:rounded-[4rem] border-2 border-orange-400 shadow-2xl p-6 md:p-12 space-y-8 md:space-y-10 animate-in slide-in-from-top-6 flex flex-col relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -371,8 +423,8 @@ export default function CashiersManagementPage() {
                             <div className="relative z-10">
                                 <label className="block text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest mb-3 ml-1 italic">Asignar Perfil de Usuario</label>
                                 <div className="flex flex-wrap gap-2 md:gap-4">
-                                    {ROLES.map(r => (
-                                        <button key={r.value} onClick={() => setNewMember(p => ({ ...p, role: r.value }))} className={`px-6 py-3 md:py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase italic transition-all border-2 flex-1 md:flex-none ${newMember.role === r.value ? `${r.color} text-white border-transparent shadow-xl scale-105` : 'border-slate-100 bg-slate-50 text-slate-800 hover:border-slate-900 shadow-sm'}`}>{r.label}</button>
+                                    {roleOptions.map(r => (
+                                        <button key={r.value} onClick={() => setNewMember(p => ({ ...p, role: r.value, modules: p.modules.filter(m => modulesForRole(r.value).some(rm => rm.id === m)) }))} className={`px-6 py-3 md:py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase italic transition-all border-2 flex-1 md:flex-none ${newMember.role === r.value ? `${r.color} text-white border-transparent shadow-xl scale-105` : 'border-slate-100 bg-slate-50 text-slate-800 hover:border-slate-900 shadow-sm'}`}>{r.label}</button>
                                     ))}
                                 </div>
                             </div>
@@ -381,12 +433,12 @@ export default function CashiersManagementPage() {
                                 <div className="flex items-center justify-between mb-4 ml-1">
                                     <label className="block text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest italic">Privilegios de Sistema</label>
                                     <div className="flex gap-4">
-                                        <button onClick={() => setNewMember(p => ({ ...p, modules: ALL_MODULES.map(m => m.id) }))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-600 hover:underline tracking-tighter">HABILITAR TODO</button>
+                                        <button onClick={() => setNewMember(p => ({ ...p, modules: modulesForRole(p.role).map(m => m.id) }))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-600 hover:underline tracking-tighter">HABILITAR TODO</button>
                                         <button onClick={() => setNewMember(p => ({ ...p, modules: [] }))} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:underline tracking-tighter">REINICIAR</button>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {ALL_MODULES.map(mod => {
+                                    {modulesForRole(newMember.role).map(mod => {
                                         const checked = newMember.modules.includes(mod.id);
                                         return (
                                             <button key={mod.id} onClick={() => toggleNewModule(mod.id)} className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all text-left ${checked ? 'border-orange-400 bg-orange-50' : 'border-slate-50 bg-slate-50 hover:border-slate-200'}`}>
@@ -415,7 +467,7 @@ export default function CashiersManagementPage() {
                         ) : (
                             <div className="grid grid-cols-1 gap-4">
                                 {members.map(member => (
-                                    <TeamMemberCard key={member.id} member={member} onDelete={handleDelete} onSaveModules={handleSaveModules} onSaveRole={handleSaveRole} />
+                                    <TeamMemberCard key={member.id} member={member} roleOptions={roleOptions} onDelete={handleDelete} onSaveModules={handleSaveModules} onSaveRole={handleSaveRole} onSavePin={handleSavePin} />
                                 ))}
                             </div>
                         )}

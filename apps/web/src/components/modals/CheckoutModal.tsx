@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale } from '../../services/api';
+import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, getStoreStatus, type StoreStatus } from '../../services/api';
+import { CHECKOUT_CONTACT } from './AuthModal';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
@@ -44,6 +45,23 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [tableBill, setTableBill] = useState<any>(null);
     const [billMode, setBillMode] = useState<'ALL' | 'MINE'>('ALL');
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+    const [contact, setContact] = useState({ name: '', phone: '', email: '', marketing: false });
+    const [store, setStore] = useState<StoreStatus | null>(null);
+    const closed = !dineIn && !!store && (!store.open || !store.ordersEnabled);
+
+    useEffect(() => {
+        if (isOpen && !dineIn) getStoreStatus().then(setStore);
+    }, [isOpen, dineIn]);
+
+    useEffect(() => {
+        if (!user) return;
+        setContact((c) => ({
+            ...c,
+            name: c.name || user.name || '',
+            phone: c.phone || (user as any).phone || '',
+            email: c.email || user.email || '',
+        }));
+    }, [user]);
 
     const loadTableBill = async () => {
         if (!tableSession) return null;
@@ -237,6 +255,10 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             setErrorMsg('Ingresa una dirección válida');
             return;
         }
+        if (contact.name.trim().length < 2 || contact.phone.replace(/\D/g, '').length < 8 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact.email.trim())) {
+            setErrorMsg('Completa tu nombre, teléfono y correo');
+            return;
+        }
 
         setLoading(true);
         setStatus('paying');
@@ -244,49 +266,22 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         setPreferenceId(null);
 
         try {
+            if (!isLoggedIn) {
+                localStorage.setItem(CHECKOUT_CONTACT, JSON.stringify({ name: contact.name, phone: contact.phone, email: contact.email }));
+            }
             // Create sale first
             const sale = await createSale(items, {
-                status: 'PENDING',
-                userId: user?.id,
+                contact,
                 shippingData: deliveryType === 'delivery' ? {
                     address: address,
-                    cost: shippingQuote?.cost || 0,
-                    estimateId: shippingQuote?.estimateId,
                     coordinates: coordinates
                 } : undefined
             });
 
-            const orderId = sale.id;
-
-            // Create MP preference
             const prefRes = await fetch(`${API_URL}/payments/create-preference`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    orderId,
-                    channel: 'WEB',
-                    amount: finalTotal,
-                    items: items.map(i => ({
-                        id: i.productId,
-                        title: i.name,
-                        quantity: i.quantity,
-                        unit_price: Number(i.price),
-                    })),
-                    payer: { email: user?.email || 'cliente@lomasrico.cl' },
-                    shippingCost: deliveryType === 'delivery' ? (shippingQuote?.cost || 0) : 0,
-                    metadata: {
-                        userId: user?.id,
-                        deliveryType,
-                        address: deliveryType === 'delivery' ? address : null,
-                        cartItems: items.map(i => ({
-                            productId: i.productId,
-                            name: i.name,
-                            quantity: i.quantity,
-                            price: i.price,
-                            modifiers: i.modifiers,
-                        }))
-                    }
-                })
+                body: JSON.stringify({ orderId: sale.id })
             });
 
             if (!prefRes.ok) {
@@ -677,6 +672,19 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         </div>
                     )}
 
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
+                        <p className="font-black text-xs uppercase text-slate-900">Tus datos</p>
+                        <input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} placeholder="Nombre" autoComplete="name" className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#f2642e]" />
+                        <input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} placeholder="Teléfono" type="tel" autoComplete="tel" className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#f2642e]" />
+                        <input value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} placeholder="Correo" type="email" autoComplete="email" className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#f2642e]" />
+                        {!isLoggedIn && (
+                            <label className="flex items-center gap-2 pt-1 text-xs font-bold text-slate-900 cursor-pointer">
+                                <input type="checkbox" checked={contact.marketing} onChange={e => setContact(c => ({ ...c, marketing: e.target.checked }))} className="w-4 h-4 accent-[#f2642e]" />
+                                Quiero recibir promociones
+                            </label>
+                        )}
+                    </div>
+
                     {/* › Error de pago - SIEMPRE VISIBLE independiente del tipo de entrega */}
                     {errorMsg && (
                         <div className="bg-red-50 border-2 border-red-200 p-4 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
@@ -709,13 +717,17 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         {!preferenceId ? (
                             <button
                                 onClick={handlePreparePayment}
-                                disabled={!canPay || loading || items.length === 0}
-                                className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${canPay && items.length > 0
+                                disabled={closed || !canPay || loading || items.length === 0}
+                                className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${!closed && canPay && items.length > 0
                                     ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.02] shadow-blue-200'
-                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-slate-200 text-slate-900 cursor-not-allowed'
                                     }`}
                             >
-                                {loading ? (
+                                {closed ? (
+                                    <span className="italic">
+                                        {store?.ordersEnabled ? `Pedidos de ${store.opensAt} a ${store.closesAt}` : 'Pedidos web pronto'}
+                                    </span>
+                                ) : loading ? (
                                     <Loader2 className="animate-spin" size={20} />
                                 ) : (
                                     <>
@@ -738,7 +750,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     </div>
                                     <Wallet
                                         initialization={{ preferenceId, redirectMode: 'self' }}
-                                        customization={{ texts: { action: 'pay', valueProp: 'security_safety' } }}
+                                        customization={{ valueProp: 'security_safety' }}
                                     />
                                 </div>
                             </div>

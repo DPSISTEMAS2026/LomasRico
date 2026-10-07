@@ -66,9 +66,8 @@ function FailureContent() {
                     </div>
                 </div>
 
-                {/* Support */}
                 <p className="text-center text-[10px] font-bold text-slate-900 uppercase tracking-widest mt-6">
-                    ¿Problemas? Contáctanos por Whatsapp
+                    Tu carrito sigue guardado
                 </p>
             </div>
         </div>

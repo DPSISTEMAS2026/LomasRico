@@ -3,8 +3,11 @@ import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { seedSellingRecipes } from '../recipe-engineering/selling-recipes.seed';
 import { PrismaService } from '../database/prisma.service';
+import { MANAGER_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('recipes')
+@Roles(...MANAGER_ROLES)
 export class RecipesController {
     private readonly logger = new Logger(RecipesController.name);
 

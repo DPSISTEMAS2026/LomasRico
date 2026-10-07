@@ -115,8 +115,22 @@ export async function registerUser(data: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Error al registrar');
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Error al registrar');
+    }
     return res.json();
+}
+
+export type StoreStatus = { open: boolean; opensAt: string; closesAt: string; ordersEnabled: boolean };
+
+export async function getStoreStatus(): Promise<StoreStatus | null> {
+    try {
+        const res = await fetch(`${API_URL}/store/status`, { cache: 'no-store' });
+        return res.ok ? res.json() : null;
+    } catch {
+        return null;
+    }
 }
 
 export async function verifyEmail(email: string, code: string) {
@@ -158,8 +172,16 @@ export async function changeUserPassword(token: string, data: any) {
     return res.json();
 }
 
+function customerHeaders(json = false): Record<string, string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('web_customer_token') : null;
+    return {
+        ...(json ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
+
 export async function getUserAddresses(userId: string) {
-    const res = await fetch(`${API_URL}/users/${userId}/addresses`);
+    const res = await fetch(`${API_URL}/users/${userId}/addresses`, { headers: customerHeaders() });
     if (!res.ok) throw new Error('Failed to fetch addresses');
     return res.json();
 }
@@ -167,7 +189,7 @@ export async function getUserAddresses(userId: string) {
 export async function addUserAddress(userId: string, data: { addressText: string, isDefault?: boolean, latitude?: number, longitude?: number }) {
     const res = await fetch(`${API_URL}/users/${userId}/addresses`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: customerHeaders(true),
         body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Failed to add address');
@@ -175,12 +197,12 @@ export async function addUserAddress(userId: string, data: { addressText: string
 }
 
 export async function getUserOrders(userId: string) {
-    const res = await fetch(`${API_URL}/users/${userId}/orders`);
+    const res = await fetch(`${API_URL}/users/${userId}/orders`, { headers: customerHeaders() });
     if (!res.ok) throw new Error('Failed to fetch orders');
     return res.json();
 }
 
-export async function createSale(items: any[], options: { channel?: string, status?: string, userId?: string, shippingData?: any } = {}) {
+export async function createSale(items: any[], options: { channel?: string, status?: string, userId?: string, shippingData?: any, contact?: { name: string, phone: string, email: string, marketing?: boolean } } = {}) {
     const payload = {
         channel: options.channel || 'WEB',
         items: items.map(i => ({
@@ -194,7 +216,7 @@ export async function createSale(items: any[], options: { channel?: string, stat
 
     const res = await fetch(`${API_URL}/sales`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: customerHeaders(true),
         body: JSON.stringify(payload)
     });
 

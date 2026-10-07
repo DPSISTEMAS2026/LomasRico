@@ -19,7 +19,7 @@ export default function LoginPage() {
         if (!user) return;
         if (user.role === 'KITCHEN') {
             router.push('/kitchen');
-        } else if (user.role === 'CASHIER') {
+        } else if (user.role === 'CASHIER' || user.role === 'WAITER') {
             router.push('/salon');
         } else {
             router.push('/owner');

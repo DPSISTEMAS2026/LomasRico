@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessGuard } from './auth/access.guard';
 
 // Core Modules
 import { DatabaseModule } from './database/database.module';
@@ -20,13 +22,14 @@ import { CashiersModule } from './cashiers/cashiers.module';           // 9. Cas
 import { ShiftsModule } from './shifts/shifts.module';                 // 10. Cash Shifts
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { BannersModule } from './banners/banners.module';
-import { BillingModule } from './billing/billing.module';
 import { ModifiersModule } from './modifiers/modifiers.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { ExternalOrdersModule } from './external-orders/external-orders.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { TablesModule } from './tables/tables.module';
 import { MailModule } from './mail/mail.module';
+import { MediaModule } from './media/media.module';
+import { AuditModule } from './audit/audit.module';
 
 // App Root
 import { AppController } from './app.controller';
@@ -51,15 +54,16 @@ import { AppService } from './app.service';
     ShiftsModule,
     WhatsAppModule,
     BannersModule,
-    BillingModule,
     ModifiersModule,
     PromotionsModule,
     ExternalOrdersModule,
     AvailabilityModule,
     TablesModule,
     MailModule,
+    MediaModule,
+    AuditModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: AccessGuard }],
 })
 export class AppModule { }

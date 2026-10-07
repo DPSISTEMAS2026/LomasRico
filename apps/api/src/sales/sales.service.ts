@@ -1,4 +1,6 @@
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
+import type { VoidApproval } from '../kitchen/kitchen.service';
 import { isInventoryEnforced } from '../config/flags';
 import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
@@ -7,6 +9,7 @@ import { ShippingService } from '../shipping/shipping.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { ValidateSaleItemDto } from './dto/validate-item.dto';
+import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
 
 // USAMOS ENUMS COMO STRINGS PARA EVITAR ERRORES DE REGENERACION
 const OrderStatus = {
@@ -35,6 +38,7 @@ export class SalesService {
         private inventoryService: InventoryService,
         private shippingService: ShippingService, // Injected for server-side validation
         private availabilityService: AvailabilityService,
+        private audit: AuditService,
     ) { }
 
     async validateItem(dto: ValidateSaleItemDto) {
@@ -126,7 +130,11 @@ export class SalesService {
         const itemsWithProductId: any[] = [];
         const itemsWithVariantId: any[] = [];
 
+        if (!Array.isArray(items) || items.length === 0) {
+            throw new BadRequestException('El pedido no tiene productos');
+        }
         for (const item of items) {
+            item.quantity = validQuantity(item.quantity);
             if (item.sellingProductId) {
                 itemsWithProductId.push(item);
             } else if (item.productVariantId) {
@@ -171,6 +179,7 @@ export class SalesService {
 
         const productMap = new Map(products.map((p: any) => [p.id, p]));
         const variantMap = new Map(variants.map((v: any) => [v.id, v]));
+        const extrasByItem = await modifierExtrasByItem(this.prisma, items);
 
         const totalRequirements = new Map<string, number>();
         const processedItems: any[] = [];
@@ -292,6 +301,8 @@ export class SalesService {
                 totalRequirements.set(bomItem.inventoryItemId, currentReq + qty);
             }
 
+            price += extrasByItem[items.indexOf(itemDto)];
+
             processedItems.push({
                 productId,
                 variantId,
@@ -320,7 +331,7 @@ export class SalesService {
                 }); // Need to inject ShippingService if not present
 
                 if (!quote.valid) {
-                    throw new BadRequestException(`Dirección fuera de rango: ${quote.reason}`);
+                    throw new BadRequestException(quote.reason || 'Dirección fuera de rango');
                 }
 
                 // Use the cost from Server, ignore client 'cost'
@@ -332,12 +343,13 @@ export class SalesService {
                 shippingData.estimateId = confirmedEstimationId;
 
             } catch (error) {
+                if (error instanceof BadRequestException) throw error;
                 // Allow POS to override freely, but WEB must be strict
                 if (channel === 'WEB') {
                     throw new BadRequestException('Error calculando despacho. Verifique su dirección.');
                 }
             }
-        } else if (shippingData?.cost) {
+        } else if (shippingData?.cost && channel !== 'WEB') {
             // For POS or simple manual entry, we trust the input for now
             computedShippingCost = Number(shippingData.cost);
         }
@@ -358,8 +370,12 @@ export class SalesService {
         const subtotalBeforePoints = totalAmount; // Guardamos para calcular puntos ganados
         const { pointsToRedeem } = createSaleDto as any;
         let pointsRedeemed = 0;
-        if (pointsToRedeem && pointsToRedeem > 0 && userId) {
-            const customer = await this.prisma.user.findUnique({ where: { id: userId } });
+        // En POS el userId puede ser el cajero: los puntos son solo de clientes.
+        const customer = userId
+            ? await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true, loyaltyPoints: true } })
+            : null;
+        const loyaltyUserId = customer?.role === 'CUSTOMER' ? userId : undefined;
+        if (pointsToRedeem && pointsToRedeem > 0 && loyaltyUserId) {
             if (customer && (customer as any).loyaltyPoints >= pointsToRedeem) {
                 pointsRedeemed = Math.min(pointsToRedeem, totalAmount); // No puede exceder el total
                 totalAmount = Math.max(0, totalAmount - pointsRedeemed);
@@ -438,7 +454,9 @@ export class SalesService {
                     channel: channel,
                     status: initialStatus || 'CONFIRMED',
                     userId: userId || undefined,
-                    shippingData: shippingData || undefined,
+                    shippingData: loyaltyUserId && (initialStatus || 'CONFIRMED') === 'PENDING'
+                        ? { ...(shippingData || {}), loyalty: { redeem: pointsRedeemed, earn: Math.floor(subtotalBeforePoints * 0.04), spent: subtotalBeforePoints } }
+                        : shippingData || undefined,
                     code: uniqueCode,
                     paymentMethod: (paymentMethod === 'MP' ? 'MERCADO_PAGO' : paymentMethod) as any,
                     paymentStatus: initialStatus === 'CONFIRMED' ? 'APPROVED' : 'PENDING',
@@ -586,12 +604,12 @@ export class SalesService {
             }
 
             // === LOYALTY POINTS ENGINE ===
-            // Solo procesar puntos si hay un usuario identificado
-            if (userId) {
+            // Pendientes de pago: los puntos se aplican al aprobarse (PaymentsService) según shippingData.loyalty.
+            if (loyaltyUserId && !isPending) {
                 // 1) Descontar puntos redimidos
                 if (pointsRedeemed > 0) {
                     await tx.user.update({
-                        where: { id: userId },
+                        where: { id: loyaltyUserId },
                         data: {
                             loyaltyPoints: { decrement: pointsRedeemed },
                             pointsUsed: { increment: pointsRedeemed }
@@ -599,20 +617,18 @@ export class SalesService {
                     });
                 }
 
-                // 2) Acreditar 4% de puntos sobre subtotal de productos (solo ventas confirmadas)
-                if (!isPending) {
-                    const pointsToCredit = Math.floor(subtotalBeforePoints * 0.04);
-                    if (pointsToCredit > 0) {
-                        await tx.user.update({
-                            where: { id: userId },
-                            data: {
-                                loyaltyPoints: { increment: pointsToCredit },
-                                pointsEarned: { increment: pointsToCredit },
-                                historicalOrders: { increment: 1 },
-                                historicalSpent: { increment: subtotalBeforePoints }
-                            }
-                        });
-                    }
+                // 2) Acreditar 4% de puntos sobre subtotal de productos
+                const pointsToCredit = Math.floor(subtotalBeforePoints * 0.04);
+                if (pointsToCredit > 0) {
+                    await tx.user.update({
+                        where: { id: loyaltyUserId },
+                        data: {
+                            loyaltyPoints: { increment: pointsToCredit },
+                            pointsEarned: { increment: pointsToCredit },
+                            historicalOrders: { increment: 1 },
+                            historicalSpent: { increment: subtotalBeforePoints }
+                        }
+                    });
                 }
             }
 
@@ -641,9 +657,105 @@ export class SalesService {
     }
 
     async updateStatus(id: string, status: string) {
+        if (status === OrderStatus.CANCELLED) {
+            throw new BadRequestException('Para anular usa "Anular pedido" (pide PIN y queda registrado)');
+        }
+        if (!Object.values(OrderStatus).includes(status)) throw new BadRequestException('Estado inválido');
         return (this.prisma as any).sale.update({
             where: { id },
             data: { status }
         });
+    }
+
+    /**
+     * Quita productos (o parte de su cantidad) de una cuenta abierta o de una venta ya cobrada.
+     * Si ya estaba cobrada, deja la devolución en la caja. Quitar todo se hace con "Anular pedido".
+     */
+    async voidItems(saleId: string, lines: { saleItemId: string; quantity: number }[], approval: VoidApproval) {
+        if (!Array.isArray(lines) || !lines.length) throw new BadRequestException('Indica qué productos quitar');
+        const sale = await (this.prisma as any).sale.findUnique({
+            where: { id: saleId },
+            include: { items: { include: { sellingProduct: { select: { name: true } } } } },
+        });
+        if (!sale) throw new NotFoundException('Venta no encontrada');
+        if (sale.status === OrderStatus.CANCELLED) throw new BadRequestException('La venta está anulada');
+
+        const seen = new Set<string>();
+        const removals = lines.map((line) => {
+            const item = sale.items.find((i: any) => i.id === line?.saleItemId);
+            if (!item || seen.has(item.id)) throw new BadRequestException('Producto inválido');
+            seen.add(item.id);
+            const quantity = validQuantity(line.quantity);
+            if (quantity > item.quantity) throw new BadRequestException(`Solo hay ${item.quantity} de ${item.sellingProduct?.name || 'ese producto'}`);
+            return { item, quantity, amount: Number(item.priceUnit) * quantity };
+        });
+
+        const paid = sale.paymentStatus === 'APPROVED';
+        const totalUnits = sale.items.reduce((s: number, i: any) => s + i.quantity, 0);
+        const removedUnits = removals.reduce((s, r) => s + r.quantity, 0);
+        if (paid && removedUnits >= totalUnits) throw new BadRequestException('Para quitar todo usa "Anular pedido"');
+
+        const previousTotal = Number(sale.total);
+        const amount = removedUnits >= totalUnits
+            ? previousTotal
+            : Math.min(removals.reduce((s, r) => s + r.amount, 0), previousTotal);
+        const newTotal = previousTotal - amount;
+
+        await (this.prisma as any).$transaction(async (tx: any) => {
+            const fresh = await tx.sale.updateMany({
+                where: { id: sale.id, total: sale.total, status: { not: OrderStatus.CANCELLED } },
+                data: { total: newTotal },
+            });
+            if (fresh.count !== 1) throw new ConflictException('La cuenta cambió mientras tanto. Vuelve a abrirla.');
+
+            for (const { item, quantity } of removals) {
+                if (quantity === item.quantity) {
+                    await tx.recipeSnapshot.deleteMany({ where: { saleItemId: item.id } });
+                    await tx.saleItem.delete({ where: { id: item.id } });
+                } else {
+                    await tx.saleItem.update({ where: { id: item.id }, data: { quantity: { decrement: quantity } } });
+                }
+            }
+
+            if (paid && amount > 0) {
+                const shiftId = sale.shiftId || (await tx.cashShift.findFirst({
+                    where: { status: 'OPEN' }, orderBy: { openingTime: 'desc' }, select: { id: true },
+                }))?.id;
+                if (shiftId) {
+                    await tx.cashTransaction.create({
+                        data: {
+                            shiftId,
+                            type: 'REFUND',
+                            amount,
+                            description: `Devolución ${sale.code || ''} (${sale.paymentMethod || 'CASH'})`,
+                            relatedSaleId: sale.id,
+                        },
+                    });
+                }
+            }
+
+            await this.audit.log({
+                action: 'ITEM_VOID',
+                actorId: approval.actorId,
+                approver: approval.approver,
+                saleId: sale.id,
+                saleCode: sale.code,
+                amount,
+                reason: approval.reason,
+                details: {
+                    paid,
+                    paymentMethod: sale.paymentMethod || null,
+                    previousTotal,
+                    newTotal,
+                    items: removals.map((r) => ({
+                        name: r.item.sellingProduct?.name || 'Producto',
+                        quantity: r.quantity,
+                        priceUnit: Number(r.item.priceUnit),
+                    })),
+                },
+            }, tx);
+        });
+
+        return { saleId: sale.id, total: newTotal, refund: paid ? amount : 0 };
     }
 }

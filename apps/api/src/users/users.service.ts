@@ -43,15 +43,17 @@ export class UsersService {
             include: {
                 items: {
                     include: {
+                        sellingProduct: { select: { id: true, name: true } },
                         productVariant: {
                             include: {
-                                sellingProduct: true
+                                sellingProduct: { select: { id: true, name: true } }
                             }
                         }
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 50,
         });
     }
 
@@ -74,7 +76,7 @@ export class UsersService {
         });
 
         // Map addresses to match POS expectations (addressText -> address)
-        return dbUsers.map((u: any) => ({
+        return dbUsers.map(({ password, pin, confirmationCode, ...u }: any) => ({
             ...u,
             addresses: (u.addresses || []).map((a: any) => ({
                 ...a,

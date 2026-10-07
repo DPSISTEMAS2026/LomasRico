@@ -6,7 +6,7 @@ import {
     ExternalLink, Tag, Percent, DollarSign, Truck, Package, Calendar, Hash, ToggleLeft,
     ToggleRight, Edit, X, Save, Megaphone, Monitor, Smartphone
 } from 'lucide-react';
-import { supabase } from '../../../../lib/supabase';
+import { uploadMedia } from '../../../../services/media';
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
 
@@ -59,9 +59,6 @@ interface SimpleProduct {
     id: string;
     name: string;
 }
-
-const BUCKET = 'assets';
-const BANNER_PREFIX = 'banner-';
 
 const DISCOUNT_TYPES = [
     { value: 'PERCENT', label: '% Descuento', icon: Percent, color: 'text-blue-500' },
@@ -132,13 +129,9 @@ export default function MarketingPage() {
         const setUploading = type === 'desktop' ? setUploadingDesktop : setUploadingMobile;
         setUploading(true);
         try {
-            const ext = file.name.split('.').pop();
-            const fileName = `${BANNER_PREFIX}${type}-${Date.now()}.${ext}`;
-            const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, file);
-            if (uploadError) throw uploadError;
-            const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+            const { url } = await uploadMedia(file, 'banners');
             const fieldKey = type === 'desktop' ? 'bannerDesktopUrl' : 'bannerMobileUrl';
-            setForm((prev: PromotionForm) => ({ ...prev, [fieldKey]: urlData.publicUrl, bannerImageUrl: prev.bannerImageUrl || urlData.publicUrl }));
+            setForm((prev: PromotionForm) => ({ ...prev, [fieldKey]: url, bannerImageUrl: prev.bannerImageUrl || url }));
             showSuccess(`Banner ${type === 'desktop' ? 'PC' : 'Móvil'} subido ✓`);
         } catch(e: unknown) {
             alert('Error al subir: ' + (e instanceof Error ? e.message : 'Error desconocido'));

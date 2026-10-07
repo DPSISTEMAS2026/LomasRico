@@ -1,15 +1,27 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TablesService } from './tables.service';
+import { PrismaService } from '../database/prisma.service';
+import { FLOOR_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('tables')
 @UseGuards(JwtAuthGuard)
+@Roles(...FLOOR_ROLES)
 export class TablesController {
-    constructor(private readonly tablesService: TablesService) {}
+    constructor(
+        private readonly tablesService: TablesService,
+        private readonly prisma: PrismaService,
+    ) {}
 
     @Get()
     list() {
         return this.tablesService.list();
+    }
+
+    @Get('version')
+    version() {
+        return { v: this.prisma.liveVersion };
     }
 
     @Get(':id')

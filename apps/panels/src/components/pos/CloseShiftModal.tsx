@@ -6,6 +6,19 @@ import { authFetch } from '../../services/authFetch';
 import { API_URL } from '../../services/api';
 import type { CashierShift, ShiftTransaction } from '@lomasrico/shared-types';
 
+const METHOD_LABEL: Record<string, string> = {
+    CASH: 'Efectivo',
+    DEBIT: 'Débito',
+    CREDIT: 'Crédito',
+    TRANSFER: 'Transferencia',
+    MERCADO_PAGO: 'MercadoPago',
+    EDENRED: 'Edenred',
+    PLUXEE: 'Pluxee',
+    JUNAEB: 'Junaeb',
+    FOOD_CARD: 'Tarjeta alimentación',
+    OTHER: 'Otro',
+};
+
 interface Props {
     shift: CashierShift;
     onSuccess: () => void;
@@ -18,13 +31,11 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Calcular sistema
-    const systemAmount = (shift?.transactions || []).reduce((sum: number, tx: ShiftTransaction) => {
-        if (tx.type === 'SALE_INCOME') return sum + Number(tx.amount);
-        if (tx.type === 'EXPENSE' || tx.type === 'WITHDRAWAL') return sum - Number(tx.amount);
-        if (tx.type === 'OPENING') return sum;
-        return sum;
-    }, Number(shift?.startAmount || 0));
+    const summary = (shift as any)?.cashSummary as
+        | { expectedCash: number; byMethod: Record<string, number>; expenses: number; withdrawals: number; refunds: number }
+        | undefined;
+    const systemAmount = Number(summary?.expectedCash ?? shift?.startAmount ?? 0);
+    const methodRows = Object.entries(summary?.byMethod || {}).filter(([, v]) => v !== 0);
 
     const countedAmount = parseFloat(endAmount) || 0;
     const diff = countedAmount - systemAmount;
@@ -71,10 +82,36 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                         <p className="text-lg font-black italic text-orange-500 mt-1">{salesCount}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
-                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Sistema</p>
+                        <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Efectivo esperado</p>
                         <p className="text-lg font-black italic text-green-600 mt-1">${systemAmount.toLocaleString()}</p>
                     </div>
                 </div>
+
+                {(methodRows.length > 0 || summary?.withdrawals || summary?.expenses || summary?.refunds) ? (
+                    <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-1">
+                        {methodRows.map(([method, total]) => (
+                            <div key={method} className="flex justify-between text-xs font-black uppercase text-slate-900">
+                                <span>{METHOD_LABEL[method] || method}</span>
+                                <span>${total.toLocaleString()}</span>
+                            </div>
+                        ))}
+                        {!!summary?.withdrawals && (
+                            <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                <span>Retiros</span><span>-${summary.withdrawals.toLocaleString()}</span>
+                            </div>
+                        )}
+                        {!!summary?.expenses && (
+                            <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                <span>Gastos</span><span>-${summary.expenses.toLocaleString()}</span>
+                            </div>
+                        )}
+                        {!!summary?.refunds && (
+                            <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                <span>Devoluciones</span><span>-${summary.refunds.toLocaleString()}</span>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
 
                 {/* Efectivo contado */}
                 <div className="mb-4">

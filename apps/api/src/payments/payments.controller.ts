@@ -1,7 +1,9 @@
-import { Controller, Post, Body, Get, Query, Param, HttpCode, Headers, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Query, HttpCode, Headers, ForbiddenException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreatePaymentDto } from './dto/payment.dto';
+import { MANAGER_ROLES, Public } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
+import { isWebOrdersEnabled } from '../config/flags';
 
 @Controller('payments')
 export class PaymentsController {
@@ -11,8 +13,10 @@ export class PaymentsController {
      * Crea una preferencia de pago en MercadoPago y retorna el init_point.
      * El frontend redirige al usuario a esa URL.
      */
+    @Public()
     @Post('create-preference')
     async createPreference(@Body() dto: CreatePaymentDto) {
+        if (!isWebOrdersEnabled()) throw new ForbiddenException('Los pedidos web aún no están disponibles');
         return this.paymentsService.createPreference(dto);
     }
 
@@ -21,6 +25,7 @@ export class PaymentsController {
      * IMPORTANTE: Esta URL debe ser PÚBLICA (HTTPS). Para desarrollo local usa ngrok.
      * En producción (Render): https://api.lomasrico.com/payments/webhook
      */
+    @Public()
     @Post('webhook')
     @HttpCode(200) // MP espera 200 OK de vuelta
     async mercadoPagoWebhook(
@@ -35,9 +40,12 @@ export class PaymentsController {
      * Endpoint de simulación para pruebas locales (sin necesidad de redirigir a MP).
      * Body: { orderId: string, status: 'APPROVED' | 'REJECTED' }
      */
+    @Roles(...MANAGER_ROLES)
     @Post('simulate-callback')
-    @UseGuards(JwtAuthGuard)
     async simulateCallback(@Body() body: { orderId: string, status: 'APPROVED' | 'REJECTED' }) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new ForbiddenException('Simulación deshabilitada en producción');
+        }
         return this.paymentsService.processSimulation(body.orderId, body.status);
     }
 }

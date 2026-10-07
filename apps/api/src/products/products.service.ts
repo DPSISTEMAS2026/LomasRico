@@ -10,9 +10,9 @@ import { seedMasterRecipes } from '../recipe-engineering/master-recipes.seed';
 @Injectable()
 export class ProductsService implements OnModuleInit {
     private readonly logger = new Logger(ProductsService.name);
-    private activeCache: { data: any[]; ts: number } | null = null;
+    private activeCache: { data: any[]; ts: number; version: string } | null = null;
     private activeInflight: Promise<any[]> | null = null;
-    private readonly ACTIVE_TTL_MS = 20_000;
+    private readonly ACTIVE_TTL_MS = 10 * 60_000;
 
     private invalidateActiveCache() {
         this.activeCache = null;
@@ -196,7 +196,11 @@ export class ProductsService implements OnModuleInit {
     }
 
     async findActive() {
-        if (this.activeCache && (Date.now() - this.activeCache.ts) < this.ACTIVE_TTL_MS) {
+        if (
+            this.activeCache
+            && this.activeCache.version === this.prisma.catalogVersion
+            && (Date.now() - this.activeCache.ts) < this.ACTIVE_TTL_MS
+        ) {
             return this.activeCache.data;
         }
         if (this.activeInflight) {
@@ -207,6 +211,7 @@ export class ProductsService implements OnModuleInit {
     }
 
     private async loadActiveCatalog() {
+        const version = this.prisma.catalogVersion;
         const t0 = Date.now();
         const products = await this.prisma.sellingProduct.findMany({
             where: { isActive: true },
@@ -309,7 +314,7 @@ export class ProductsService implements OnModuleInit {
         });
 
         const sorted = this.sortProducts(enriched);
-        this.activeCache = { data: sorted, ts: Date.now() };
+        this.activeCache = { data: sorted, ts: Date.now(), version };
         return sorted;
     }
 
@@ -399,8 +404,8 @@ export class ProductsService implements OnModuleInit {
     }
 
     /**
-     * Elimina permanentemente un producto y todas sus dependencias.
-     * Cascada: RecipeSnapshots → SaleItems → Recipes → RecipeItems → Variants → ProductModifiers → Product
+     * Elimina permanentemente un producto sin ventas y sus dependencias
+     * (Recipes → RecipeItems → Variants → ProductModifiers → Product). Si tiene ventas, solo lo archiva.
      */
     async hardDelete(id: string) {
         this.logger.warn(`HARD DELETE product ${id} — this is irreversible!`);
@@ -426,20 +431,10 @@ export class ProductsService implements OnModuleInit {
                 ...product.variants.flatMap((v: any) => v.saleItems.map((si: any) => si.id))
             ];
 
+            // Con ventas no se borra: se archiva para no alterar boletas, cierres ni reportes.
             if (allSaleItemIds.length > 0) {
-                await tx.recipeSnapshot.deleteMany({
-                    where: { saleItemId: { in: allSaleItemIds } }
-                });
-            }
-
-            await tx.saleItem.deleteMany({
-                where: { sellingProductId: id }
-            });
-
-            for (const variant of product.variants) {
-                await tx.saleItem.deleteMany({
-                    where: { productVariantId: variant.id }
-                });
+                await tx.sellingProduct.update({ where: { id }, data: { isActive: false } });
+                return { success: true, archived: true, deleted: product.name, saleItems: allSaleItemIds.length };
             }
 
             await tx.productVariant.deleteMany({

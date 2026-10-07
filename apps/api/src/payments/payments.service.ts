@@ -1,13 +1,49 @@
 
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, NotFoundException, BadRequestException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { CreatePaymentDto } from './dto/payment.dto';
 import { KitchenService } from '../kitchen/kitchen.service';
 import { PrismaService } from '../database/prisma.service';
 import { ShippingService } from '../shipping/shipping.service';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { BrevoService } from '../mail/brevo.service';
+import { orderConfirmationHtml } from '../mail/order-email';
+import { isInventoryEnforced } from '../config/flags';
+import { AuditService } from '../audit/audit.service';
+
+const PENDING_TTL_MS = 24 * 60 * 60_000;
 
 @Injectable()
-export class PaymentsService {
+export class PaymentsService implements OnModuleInit, OnModuleDestroy {
+    private expiryTimer?: NodeJS.Timeout;
+
+    onModuleInit() {
+        this.expiryTimer = setInterval(() => void this.expireUnpaidWebOrders(), 30 * 60_000);
+    }
+
+    onModuleDestroy() {
+        if (this.expiryTimer) clearInterval(this.expiryTimer);
+    }
+
+    /** Pedidos web que nunca se pagaron: se anulan para no ensuciar reportes ni la lista de pedidos. */
+    async expireUnpaidWebOrders() {
+        try {
+            const res = await this.prisma.sale.updateMany({
+                where: {
+                    channel: 'WEB',
+                    status: 'PENDING',
+                    paymentStatus: 'PENDING',
+                    createdAt: { lt: new Date(Date.now() - PENDING_TTL_MS) },
+                },
+                data: { status: 'CANCELLED', paymentStatus: 'EXPIRED' },
+            });
+            if (res.count) this.logger.log(`${res.count} pedidos web sin pagar anulados`);
+            return res.count;
+        } catch (err: any) {
+            this.logger.error(`No se pudieron anular pedidos web vencidos: ${err?.message}`);
+            return 0;
+        }
+    }
+
     private readonly logger = new Logger(PaymentsService.name);
     private client: MercadoPagoConfig;
     private preference: Preference;
@@ -15,7 +51,9 @@ export class PaymentsService {
     constructor(
         private readonly kitchenService: KitchenService,
         private readonly prisma: PrismaService,
-        private readonly shippingService: ShippingService
+        private readonly shippingService: ShippingService,
+        private readonly brevo: BrevoService,
+        private readonly audit: AuditService,
     ) {
         const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
         if (accessToken) {
@@ -40,8 +78,26 @@ export class PaymentsService {
         return `https://${url}`;
     }
 
+    /** La preferencia se arma con la venta guardada: el navegador no decide montos. */
     async createPreference(dto: CreatePaymentDto) {
-        const { orderId, amount, items, payer, shippingCost, metadata: extraMetadata } = dto as any;
+        const orderId = String((dto as any)?.orderId || '');
+        const sale = orderId
+            ? await this.prisma.sale.findUnique({
+                  where: { id: orderId },
+                  select: { id: true, code: true, channel: true, status: true, paymentStatus: true, total: true, shippingData: true },
+              })
+            : null;
+        if (!sale || sale.channel !== 'WEB') throw new NotFoundException('Pedido no encontrado');
+        if (sale.status !== 'PENDING' || sale.paymentStatus === 'APPROVED') {
+            throw new BadRequestException('Este pedido ya no está pendiente de pago');
+        }
+        const amount = Math.round(Number(sale.total));
+        if (!(amount > 0)) throw new BadRequestException('El pedido no tiene monto a pagar');
+        const contact = (sale.shippingData as any)?.contact;
+        const items = [{ id: sale.id, title: `Pedido Lo Más Rico ${sale.code}`, quantity: 1, unit_price: amount }];
+        const payer = contact?.email ? { email: contact.email } : undefined;
+        const shippingCost = 0;
+        const extraMetadata = { sale_code: sale.code };
 
         this.logger.log(`Creating preference for Order ${orderId} - Total: ${amount}`);
 
@@ -127,29 +183,45 @@ export class PaymentsService {
         this.logger.debug(`Query params: ${JSON.stringify(query)}`);
         this.logger.debug(`Body: ${JSON.stringify(body)}`);
 
-        if ((topic === 'payment' || topic === 'merchant_order') && paymentId && this.client) {
+        if (topic === 'payment' && paymentId && this.client) {
             try {
                 const paymentClient = new Payment(this.client);
                 const payment = await paymentClient.get({ id: paymentId });
 
                 this.logger.log(`Payment ${paymentId} status: ${payment.status}`);
 
-                if (payment.status === 'approved') {
-                    const orderId = payment.external_reference;
-                    this.logger.log(`Payment ${paymentId} APPROVED for Order ${orderId}`);
-                    if (orderId) {
-                        await this.handleApprovedOrder(orderId);
-                    }
+                if (payment.status === 'approved' && payment.external_reference) {
+                    await this.handleApprovedPayment(payment.external_reference, Number(payment.transaction_amount), String(paymentId));
                 } else {
                     this.logger.warn(`Payment ${paymentId} status is: ${payment.status}. No action taken.`);
                 }
             } catch (error) {
+                // Un 5xx hace que MercadoPago reintente; con 200 el pedido pagado se perdería.
                 this.logger.error(`Error processing webhook for payment ${paymentId}`, error);
-                // No lanzamos excepción - MP necesita el 200 OK de todas formas
+                throw new InternalServerErrorException('No se pudo procesar el pago');
             }
         }
 
-        return { status: 'OK' }; // MP espera 200 OK siempre
+        return { status: 'OK' };
+    }
+
+    /** Solo confirma si lo pagado cubre el total guardado; si no, deja el pedido marcado para revisión. */
+    private async handleApprovedPayment(orderId: string, paid: number, paymentId: string) {
+        const sale = await this.prisma.sale.findUnique({ where: { id: orderId }, select: { total: true, status: true } });
+        if (!sale) {
+            this.logger.warn(`Approved payment ${paymentId} for unknown order ${orderId}`);
+            return;
+        }
+        const expected = Math.round(Number(sale.total));
+        if (!(Math.round(paid) >= expected)) {
+            this.logger.error(`Payment ${paymentId} amount ${paid} < order total ${expected} (${orderId})`);
+            await this.prisma.sale.updateMany({
+                where: { id: orderId, status: 'PENDING' },
+                data: { paymentStatus: 'AMOUNT_MISMATCH' },
+            });
+            return;
+        }
+        await this.handleApprovedOrder(orderId);
     }
 
     // Simulación para pruebas locales
@@ -169,21 +241,57 @@ export class PaymentsService {
             where: { id: orderId }
         });
 
-        if (!sale || sale.status === 'CONFIRMED') {
-            this.logger.warn(`Sale ${orderId} not found or already confirmed.`);
+        if (sale?.status === 'CONFIRMED' && sale.paymentStatus === 'APPROVED') {
+            await this.kitchenService.createTicket(orderId);
+            return;
+        }
+        if (sale?.status === 'CANCELLED' && sale.paymentStatus !== 'PAID_AFTER_CANCEL') {
+            await this.prisma.sale.update({ where: { id: orderId }, data: { paymentStatus: 'PAID_AFTER_CANCEL' } });
+            await this.audit.log({
+                action: 'PAID_AFTER_CANCEL',
+                saleId: sale.id,
+                saleCode: sale.code,
+                amount: Number(sale.total),
+                reason: 'MercadoPago aprobó un pedido ya anulado: hay que devolver el pago',
+            });
+            this.logger.error(`Sale ${orderId} was cancelled but MercadoPago approved the payment.`);
+            return;
+        }
+        if (!sale || sale.status !== 'PENDING') {
+            this.logger.warn(`Sale ${orderId} not found or not pending.`);
             return;
         }
 
         // 2. Transacción de base de datos para asegurar consistencia
-        await this.prisma.$transaction(async (tx: any) => {
-            // Actualizar estado de la venta
-            await tx.sale.update({
-                where: { id: orderId },
+        const confirmed = await this.prisma.$transaction(async (tx: any) => {
+            // Reclamo atómico: si llegan dos webhooks a la vez, solo uno confirma.
+            const claim = await tx.sale.updateMany({
+                where: { id: orderId, status: 'PENDING' },
                 data: {
                     status: 'CONFIRMED',
                     paymentStatus: 'APPROVED'
                 }
             });
+            if (claim.count === 0) return false;
+
+            const loyalty = (sale.shippingData as any)?.loyalty;
+            if (sale.userId && loyalty) {
+                const customer = await tx.user.findUnique({ where: { id: sale.userId }, select: { role: true, loyaltyPoints: true } });
+                if (customer?.role === 'CUSTOMER') {
+                    const redeem = Math.min(Math.max(0, Number(loyalty.redeem) || 0), Number(customer.loyaltyPoints) || 0);
+                    const earn = Math.max(0, Math.floor(Number(loyalty.earn) || 0));
+                    await tx.user.update({
+                        where: { id: sale.userId },
+                        data: {
+                            loyaltyPoints: { increment: earn - redeem },
+                            pointsUsed: { increment: redeem },
+                            pointsEarned: { increment: earn },
+                            historicalOrders: { increment: 1 },
+                            historicalSpent: { increment: Math.max(0, Number(loyalty.spent) || 0) },
+                        },
+                    });
+                }
+            }
 
             // Registrar en el turno de caja
             // ✅ FIX: Si la venta no tiene shiftId (WEB, etc.), buscar turno activo
@@ -246,7 +354,7 @@ export class PaymentsService {
                 }
             }
 
-            if (requirements.size > 0) {
+            if (requirements.size > 0 && isInventoryEnforced()) {
                 const itemIds = [...requirements.keys()];
                 // Lock rows para prevenir race conditions con POS
                 const lockedItems: any[] = await tx.$queryRawUnsafe(
@@ -280,20 +388,48 @@ export class PaymentsService {
                 }
             }
 
-            // 3. Confirmar despacho si hay envío
-            if (sale.shippingData && (sale.shippingData as any).estimateId) {
-                try {
-                    const estimateId = (sale.shippingData as any).estimateId;
-                    await this.shippingService.confirmDelivery(estimateId);
-                } catch (e) {
-                    this.logger.error(`Failed to confirm shipping for ${sale.id}`, e);
-                }
-            }
-
-            // 4. Enviar a cocina
-            await this.kitchenService.createTicket(orderId);
+            return true;
         });
 
-        this.logger.log(`Order ${orderId} fully confirmed, inventory deducted and sent to kitchen.`);
+        if (!confirmed) {
+            await this.kitchenService.createTicket(orderId);
+            return;
+        }
+
+        // 3. Enviar a cocina
+        await this.kitchenService.createTicket(orderId);
+
+        // 4. Confirmar despacho fuera de la transacción (llamada HTTP externa)
+        if (sale.shippingData && (sale.shippingData as any).estimateId) {
+            try {
+                await this.shippingService.confirmDelivery((sale.shippingData as any).estimateId);
+            } catch (e) {
+                this.logger.error(`Failed to confirm shipping for ${sale.id}`, e);
+            }
+        }
+
+        await this.sendConfirmation(orderId);
+        this.logger.log(`Order ${orderId} fully confirmed and sent to kitchen.`);
+    }
+
+    /** El correo nunca bloquea el pedido: si Brevo falla, solo queda en el log. */
+    private async sendConfirmation(orderId: string) {
+        try {
+            if (!this.brevo.isConfigured()) return;
+            const sale = await this.prisma.sale.findUnique({
+                where: { id: orderId },
+                include: { items: { include: { sellingProduct: { select: { name: true } } } } },
+            });
+            const contact = (sale?.shippingData as any)?.contact;
+            if (!sale || !contact?.email) return;
+            await this.brevo.sendTransactional(
+                contact.email,
+                contact.name || contact.email,
+                `Recibimos tu pedido ${sale.code}`,
+                orderConfirmationHtml(sale, contact.name),
+            );
+        } catch (err: any) {
+            this.logger.error(`No se pudo enviar la confirmación de ${orderId}: ${err?.message}`);
+        }
     }
 }

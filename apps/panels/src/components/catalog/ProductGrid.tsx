@@ -6,6 +6,7 @@ import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { API_URL } from '../../services/api';
+import { authFetch } from '../../services/authFetch';
 
 import { LayoutGrid, Gift, Fish, ChefHat, Wheat, Plus, CupSoda } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export const ProductGrid = () => {
         const fetchData = async () => {
             try {
                 // Fetch Products
-                const prodResponse = await fetch(`${API_URL}/products`);
+                const prodResponse = await authFetch(`${API_URL}/products`);
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
                     setProducts(Array.isArray(data) ? data : []);
@@ -42,7 +43,7 @@ export const ProductGrid = () => {
                 }
 
                 // Fetch Proteins for Modal
-                const invResponse = await fetch(`${API_URL}/inventory`);
+                const invResponse = await authFetch(`${API_URL}/inventory`);
                 if (invResponse.ok) {
                     const invData = await invResponse.json();
                     const proteins = invData.filter((i: any) => i.category === 'PROTEINAS' && i.isActive);

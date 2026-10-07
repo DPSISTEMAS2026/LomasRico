@@ -6,15 +6,29 @@ import { LoginDto } from './dto/login.dto';
 import { OAuth2Client } from 'google-auth-library';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { BrevoService, logoSrc } from '../mail/brevo.service';
+
+function verificationEmailHtml(name: string, code: string) {
+    const safeName = String(name || '').replace(/[<>&"]/g, '');
+    return `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:32px 12px;background:#fff6ea;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;border:1px solid #f3e7d7;">
+<tr><td style="padding:32px;text-align:center;color:#0f172a;">
+<img src="${logoSrc()}" width="72" alt="Lo Más Rico" style="display:block;margin:0 auto 16px auto;" />
+<p style="margin:0 0 8px 0;font-size:15px;">Hola${safeName ? `, ${safeName}` : ''}:</p>
+<p style="margin:0 0 20px 0;font-size:15px;">Tu código para confirmar tu cuenta es</p>
+<p style="margin:0 0 20px 0;font-size:34px;font-weight:900;letter-spacing:0.3em;">${code}</p>
+<p style="margin:0;font-size:13px;color:#334155;">Si no creaste una cuenta, ignora este correo.</p>
+</td></tr></table></td></tr></table></body></html>`;
+}
 
 export function passwordFromPhone(phone?: string | null) {
     const digits = String(phone || '').replace(/\D/g, '');
     return digits.slice(-4);
 }
 
-const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN'] as const;
+const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] as const;
 const DEFAULT_STAFF_PIN = '2026';
-const ROLE_PRIORITY: Record<string, number> = { OWNER: 0, ADMIN: 1, CASHIER: 2, KITCHEN: 3 };
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -23,6 +37,7 @@ export class AuthService implements OnModuleInit {
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
+        private brevo: BrevoService,
     ) {
         const clientId = process.env.GOOGLE_CLIENT_ID;
         if (!clientId) {
@@ -40,24 +55,13 @@ export class AuthService implements OnModuleInit {
         }
     }
 
+    /** Solo en una base vacía: crea el dueño inicial para poder entrar la primera vez. */
     private async ensureStaffPins() {
-        const staff = await this.prisma.user.findMany({
-            where: { role: { in: [...STAFF_ROLES] } },
-            select: { id: true, email: true, role: true, pin: true },
+        const staff = await this.prisma.user.count({
+            where: { role: { in: [...STAFF_ROLES] as any } },
         });
 
-        let updated = 0;
-        for (const u of staff) {
-            if (!u.pin || !/^\d{4}$/.test(u.pin)) {
-                await this.prisma.user.update({
-                    where: { id: u.id },
-                    data: { pin: DEFAULT_STAFF_PIN },
-                });
-                updated += 1;
-            }
-        }
-
-        if (staff.length === 0) {
+        if (staff === 0) {
             await this.prisma.user.create({
                 data: {
                     name: 'Dueño',
@@ -66,7 +70,6 @@ export class AuthService implements OnModuleInit {
                     pin: DEFAULT_STAFF_PIN,
                 },
             });
-            updated = 1;
         }
 
     }
@@ -110,15 +113,39 @@ export class AuthService implements OnModuleInit {
             },
         });
 
-        // TODO: Integrate real email service
-        console.log(`[EMAIL MOCK] Verification Code for ${dto.email}: ${verificationCode}`);
+        await this.linkGuestSales(user.id, user.email);
+
+        let codeSent = false;
+        try {
+            await this.brevo.sendTransactional(
+                user.email,
+                user.name,
+                `Tu código Lo Más Rico: ${verificationCode}`,
+                verificationEmailHtml(user.name, verificationCode),
+            );
+            codeSent = true;
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(`No se pudo enviar el código de verificación a ${user.email}: ${message}`);
+        }
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
         return {
             accessToken: this.jwtService.sign(jwtPayload),
-            user: { ...user, password: undefined },
-            requiresVerification: true
+            user: this.sanitizeUser(user),
+            requiresVerification: codeSent
         };
+    }
+
+    private async linkGuestSales(userId: string, email: string) {
+        try {
+            await (this.prisma as any).sale.updateMany({
+                where: { channel: 'WEB', userId: null, shippingData: { path: ['contact', 'email'], equals: String(email).trim().toLowerCase() } },
+                data: { userId },
+            });
+        } catch (err: unknown) {
+            console.warn(`No se pudieron asociar pedidos previos de ${email}: ${err instanceof Error ? err.message : err}`);
+        }
     }
 
     async verifyEmail(email: string, code: string) {
@@ -140,7 +167,7 @@ export class AuthService implements OnModuleInit {
             }
         });
 
-        return { success: true, user: updated };
+        return { success: true, user: this.sanitizeUser(updated) };
     }
 
     async login(dto: LoginDto) {
@@ -151,7 +178,7 @@ export class AuthService implements OnModuleInit {
 
         const pin = passwordFromPhone(user?.phone);
         const typed = String(dto.password || '').replace(/\D/g, '');
-        const pinOk = !!user && pin.length === 4 && typed === pin;
+        const pinOk = !!user && user.role === 'CUSTOMER' && pin.length === 4 && typed === pin;
         const hashOk = user?.password ? await bcrypt.compare(dto.password, user.password) : false;
 
         if (!user || (!hashOk && !pinOk)) {
@@ -169,19 +196,20 @@ export class AuthService implements OnModuleInit {
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
         return {
             accessToken: this.jwtService.sign(jwtPayload),
-            user: { ...user, password: undefined },
+            user: this.sanitizeUser(user),
         };
     }
 
     async updateProfile(userId: string, data: { phone?: string; name?: string }) {
+        const allowed: { phone?: string; name?: string } = {};
+        if (typeof data?.phone === 'string') allowed.phone = data.phone.trim().slice(0, 30);
+        if (typeof data?.name === 'string') allowed.name = data.name.trim().slice(0, 80);
         // @ts-ignore
-        return (this.prisma as any).user.update({
+        const user = await (this.prisma as any).user.update({
             where: { id: userId },
-            data: {
-                ...data,
-                updatedAt: new Date()
-            }
+            data: { ...allowed, updatedAt: new Date() }
         });
+        return this.sanitizeUser(user);
     }
 
     async googleLogin(dto: GoogleLoginDto) {
@@ -211,13 +239,16 @@ export class AuthService implements OnModuleInit {
                     googleId: googleId || '',
                     name: name || '',
                     avatarUrl,
+                    isVerified: true,
                 },
             });
 
-            const jwtPayload = { sub: user.id, email: user.email };
+            if (user.role === 'CUSTOMER') await this.linkGuestSales(user.id, user.email);
+
+            const jwtPayload = { sub: user.id, email: user.email, role: user.role };
             return {
                 accessToken: this.jwtService.sign(jwtPayload),
-                user,
+                user: this.sanitizeUser(user),
             };
         } catch (error) {
             console.error('Google Auth Error:', error);
@@ -245,11 +276,13 @@ export class AuthService implements OnModuleInit {
             },
         });
 
-        matches.sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99));
         const user = matches[0];
 
         if (!user) {
             throw new UnauthorizedException('PIN inválido');
+        }
+        if (matches.some((m) => m.role !== user.role)) {
+            throw new UnauthorizedException('PIN compartido entre roles distintos. Pide al administrador que lo cambie.');
         }
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
@@ -261,12 +294,13 @@ export class AuthService implements OnModuleInit {
 
     async getMe(userId: string) {
         // @ts-ignore: Prisma Client must be regenerated to see 'user' model
-        return (this.prisma as any).user.findUnique({
+        const user = await (this.prisma as any).user.findUnique({
             where: { id: userId },
             include: {
                 addresses: true,
             }
         });
+        return this.sanitizeUser(user);
     }
 
     async updatePassword(userId: string, currentPass: string, newPass: string) {

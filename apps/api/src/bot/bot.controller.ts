@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Body, Param, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { BotService } from './bot.service';
+import { Integration } from '../auth/access';
 
 @Controller('api/bot')
+@Integration()
 export class BotController {
     constructor(private readonly botService: BotService) { }
 

@@ -1,10 +1,14 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { WhatsAppService } from './whatsapp.service';
+import { Integration, MANAGER_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('api/whatsapp/conversations')
+@Roles(...MANAGER_ROLES)
 export class WhatsAppController {
     constructor(private readonly whatsappService: WhatsAppService) { }
 
+    @Integration()
     @Get('by-phone')
     async getByPhone(@Query('phone') phone: string) {
         return this.whatsappService.getConversationMode(phone);
@@ -46,12 +50,14 @@ export class WhatsAppController {
     }
 
     // Webhook para recibir mensajes (N8N o Meta lo llamarán aquí)
+    @Integration()
     @Post('webhook/inbound')
     async inbound(@Body() body: any) {
         // Formato esperado de N8N: { contactId: "569...", body: "hola", ... }
         return this.whatsappService.handleInboundMessage(body);
     }
 
+    @Integration()
     @Get('check-mode/:contactId')
     async checkMode(@Param('contactId') contactId: string) {
         return this.whatsappService.getConversationMode(contactId);

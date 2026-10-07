@@ -3,19 +3,21 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MANAGER_ROLES, Public, STAFF_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('products')
+@Roles(...MANAGER_ROLES)
 export class ProductsController {
     constructor(private readonly productsService: ProductsService) { }
 
-    // Público — Usado por el panel admin para ver todos los productos
-    @UseGuards(JwtAuthGuard)
+    @Roles(...STAFF_ROLES)
     @Get()
     findAll() {
         return this.productsService.findAll();
     }
 
-    // Público — Usado por la web de clientes para ver solo los activos
+    @Public()
     @Get('active')
     findActive() {
         return this.productsService.findActive();
@@ -28,6 +30,7 @@ export class ProductsController {
         return this.productsService.reorder(data.items);
     }
 
+    @Public()
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.productsService.findOne(id);

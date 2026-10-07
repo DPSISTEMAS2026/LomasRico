@@ -2,9 +2,12 @@ import { Controller, Get, Post, Body, Param, Patch, Delete, Query, Logger, UseGu
 import { InventoryService } from './inventory.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MANAGER_ROLES, STAFF_ROLES } from '../auth/access';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('inventory')
-@UseGuards(JwtAuthGuard) // Todo el inventario requiere autenticación
+@UseGuards(JwtAuthGuard)
+@Roles(...MANAGER_ROLES)
 export class InventoryController {
     private readonly logger = new Logger(InventoryController.name);
 
@@ -18,6 +21,7 @@ export class InventoryController {
         return this.service.fixRecipes();
     }
 
+    @Roles(...STAFF_ROLES)
     @Get()
     findAll() {
         this.logger.log('GET /inventory hit');

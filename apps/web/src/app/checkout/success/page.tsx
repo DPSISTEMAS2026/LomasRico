@@ -4,6 +4,8 @@ import { useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle2, ArrowLeft, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
+import { CART_STORAGE, useCart } from '../../../context/CartContext';
+import { useAuth } from '../../../context/AuthContext';
 
 function SuccessContent() {
     const searchParams = useSearchParams();
@@ -12,11 +14,12 @@ function SuccessContent() {
     const paymentId = searchParams.get('payment_id');
     const status = searchParams.get('status');
 
+    const { clearCart } = useCart();
+    const { isLoggedIn } = useAuth();
+
     useEffect(() => {
-        // Limpiar el carrito del localStorage al retornar con pago aprobado
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('cart');
-        }
+        localStorage.removeItem(CART_STORAGE);
+        clearCart();
     }, []);
 
     return (
@@ -79,12 +82,21 @@ function SuccessContent() {
                             <ShoppingBag size={18} />
                             Seguir Comprando
                         </Link>
-                        <Link
-                            href="/profile"
-                            className="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
-                        >
-                            Ver Mis Pedidos
-                        </Link>
+                        {isLoggedIn ? (
+                            <Link
+                                href="/profile"
+                                className="w-full bg-slate-100 text-slate-900 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                            >
+                                Ver Mis Pedidos
+                            </Link>
+                        ) : (
+                            <Link
+                                href="/?registro=1"
+                                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-black transition-all flex items-center justify-center gap-2"
+                            >
+                                Crear cuenta y sumar puntos
+                            </Link>
+                        )}
                     </div>
                 </div>
 

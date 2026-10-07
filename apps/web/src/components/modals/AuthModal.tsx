@@ -7,9 +7,12 @@ import { X, Mail, Lock, User, Phone, LogIn, ArrowRight, Loader2 } from 'lucide-r
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    initialMode?: 'LOGIN' | 'REGISTER';
 }
 
-export default function AuthModal({ isOpen, onClose }: Props) {
+export const CHECKOUT_CONTACT = 'lr_checkout_contact';
+
+export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Props) {
     const { loginWithEmail, register, loginWithGoogle, verifyEmail } = useAuth();
     const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY'>('LOGIN');
     const [loading, setLoading] = useState(false);
@@ -21,6 +24,19 @@ export default function AuthModal({ isOpen, onClose }: Props) {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setMode(initialMode);
+        try {
+            const saved = JSON.parse(localStorage.getItem(CHECKOUT_CONTACT) || 'null');
+            if (saved) {
+                setName((v) => v || saved.name || '');
+                setPhone((v) => v || saved.phone || '');
+                setEmail((v) => v || saved.email || '');
+            }
+        } catch { /* sin datos previos */ }
+    }, [isOpen, initialMode]);
 
     useEffect(() => {
         if (isOpen && (window as any).google) {
