@@ -117,11 +117,8 @@ export class SalesService {
         // Determine initial status based on payment method
         let initialStatus = manualStatus;
         if (channel === 'POS') {
-            if (paymentMethod === 'MERCADO_PAGO' || paymentMethod === 'MP') {
-                initialStatus = OrderStatus.PENDING;
-            } else {
-                initialStatus = OrderStatus.CONFIRMED; // CASH, TRANSFER, alimentación
-            }
+            // La caja registra la venta después de cobrar (Point, efectivo, transferencia o alimentación).
+            initialStatus = OrderStatus.CONFIRMED;
         } else if (channel === 'WEB' && !initialStatus) {
             initialStatus = OrderStatus.PENDING;
         }

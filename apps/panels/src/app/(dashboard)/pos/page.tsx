@@ -28,7 +28,7 @@ import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { PROTEINS, VEGGIES, filterModifiersForChannel } from '@lomasrico/shared-types';
 import type { CashierShift, AppUser, ShiftTransaction } from '@lomasrico/shared-types';
-import { createSale, getShippingQuote, simulateMPCallback, fetchCatalog, API_URL } from '../../../services/api';
+import { createSale, getShippingQuote, fetchCatalog, API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
 import { useAuth } from '../../../context/AuthContext';
 import { CevicheBuilderModal } from '../../../components/modals/CevicheBuilderModal';
@@ -233,6 +233,7 @@ export default function POSPage() {
 
     const handleCheckout = async () => {
         if (isSubmitting || cart.length === 0) return;
+        if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(total).toLocaleString('es-CL')} en el Point?`)) return;
         setIsSubmitting(true);
         const contactName = (selectedCustomer?.name || guestName).trim();
         const contactPhone = (selectedCustomer?.phone || guestPhone).trim();
@@ -253,19 +254,8 @@ export default function POSPage() {
                 fulfillmentType: 'TAKEAWAY',
             } as any);
 
-            if (paymentMethod === 'MP') {
-                const shouldApprove = confirm(`Simular cobro MercadoPago por $${(total + shippingCost).toLocaleString('es-CL')}?`);
-                if (shouldApprove) {
-                    await simulateMPCallback(saleRes.id, 'APPROVED');
-                    alert('Venta aprobada y enviada a cocina.');
-                    setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'POS_MP', customerInfo });
-                } else {
-                    alert('Venta pendiente de pago.');
-                }
-            } else {
-                alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
-                setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO', customerInfo });
-            }
+            alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
+            setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO', customerInfo });
             setCart([]);
             setShippingCost(0);
             setCashReceived(0);
