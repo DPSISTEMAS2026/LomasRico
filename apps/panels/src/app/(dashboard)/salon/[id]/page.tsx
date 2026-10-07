@@ -594,7 +594,7 @@ export default function SalonTablePage() {
                                     <p className="text-sm font-black italic uppercase truncate">{g.name}</p>
                                     <p className={`text-[10px] font-bold ${guestId === g.id ? 'text-orange-300' : 'text-slate-800'}`}>
                                         {table.billRequest?.guestId === g.id ? 'Pidió cuenta · ' : ''}
-                                        {g.openSale ? `$${Number(g.openSale.total).toLocaleString()}` : 'Sin pedido'}
+                                        {g.openSale ? `$${Number(g.openSale.total).toLocaleString('es-CL')}` : 'Sin pedido'}
                                     </p>
                                 </button>
                             ))}
@@ -645,7 +645,7 @@ export default function SalonTablePage() {
                         className="bg-white rounded-2xl p-3 text-left border border-slate-100 active:scale-95 disabled:opacity-50"
                     >
                         <p className="font-black uppercase italic text-xs truncate">{product.name}</p>
-                        <p className="text-orange-500 font-black text-sm">${Number(product.price).toLocaleString()}</p>
+                        <p className="text-orange-500 font-black text-sm">${Number(product.price).toLocaleString('es-CL')}</p>
                     </button>
                 ))}
             </div>
@@ -660,7 +660,7 @@ export default function SalonTablePage() {
                 >
                     <div className="min-w-0 text-left">
                         <p className="text-[10px] font-black uppercase text-slate-800 truncate">{guest?.name || 'Cuenta'}</p>
-                        <p className="font-black italic text-lg leading-none">${accountTotal.toLocaleString()}</p>
+                        <p className="font-black italic text-lg leading-none">${accountTotal.toLocaleString('es-CL')}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] font-black uppercase text-orange-500">
@@ -682,7 +682,7 @@ export default function SalonTablePage() {
                                             {item.quantity}x {item.name}
                                             <span className="ml-2 text-orange-500">{(item as any).sentToKitchen ? 'Cocina' : 'Nuevo'}</span>
                                         </span>
-                                        <span className="font-black shrink-0">${(item.price * item.quantity).toLocaleString()}</span>
+                                        <span className="font-black shrink-0">${(item.price * item.quantity).toLocaleString('es-CL')}</span>
                                     </div>
                                 ))}
                             </div>
@@ -745,12 +745,12 @@ export default function SalonTablePage() {
                             <div key={g.id} className="border-b border-slate-100 pb-3">
                                 <div className="flex justify-between font-black italic uppercase">
                                     <span>{g.name}{bill.billRequest?.guestId === g.id ? ' · pidió cuenta' : ''}</span>
-                                    <span>${Number(g.total).toLocaleString()}</span>
+                                    <span>${Number(g.total).toLocaleString('es-CL')}</span>
                                 </div>
                                 {g.items.map((item: any) => (
                                     <div key={item.id} className="flex items-center justify-between gap-2">
                                         <p className="text-xs font-bold text-slate-900">
-                                            {item.quantity}x {item.name} · ${(item.price * item.quantity).toLocaleString()}
+                                            {item.quantity}x {item.name} · ${(item.price * item.quantity).toLocaleString('es-CL')}
                                         </p>
                                         {g.saleId && (
                                             <button
@@ -787,7 +787,7 @@ export default function SalonTablePage() {
                         ))}
                         <div className="flex justify-between text-xl font-black italic">
                             <span>Total mesa</span>
-                            <span>${Number(bill.grandTotal).toLocaleString()}</span>
+                            <span>${Number(bill.grandTotal).toLocaleString('es-CL')}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 pt-2">
                             <button

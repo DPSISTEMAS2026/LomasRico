@@ -32,6 +32,13 @@ export class SalesController {
     async create(@Body() createSaleDto: CreateSaleDto, @Req() req: any) {
         const user = req.user;
         if (user && CASH_ROLES.includes(user.role)) {
+            const shipping = (createSaleDto as any).shippingData;
+            if (shipping?.contact) {
+                const name = String(shipping.contact.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+                const phone = String(shipping.contact.phone || '').replace(/[^\d+]/g, '').slice(0, 16);
+                if (name || phone) shipping.contact = { name, phone };
+                else delete shipping.contact;
+            }
             const sale: any = await this.salesService.create(createSaleDto);
             if (Number(sale?.discount) > 0) {
                 await this.audit.log({

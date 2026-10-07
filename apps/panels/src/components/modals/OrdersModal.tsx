@@ -80,7 +80,7 @@ export default function OrdersModal({ isOpen, onClose }: Props) {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-black text-lg text-gray-900">${Number(order.total).toLocaleString()}</div>
+                                        <div className="font-black text-lg text-gray-900">${Number(order.total).toLocaleString('es-CL')}</div>
                                         <div className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full inline-block ${order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                                                 order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
                                                     'bg-orange-100 text-orange-700'
@@ -94,7 +94,7 @@ export default function OrdersModal({ isOpen, onClose }: Props) {
                                     {order.items.map((item: any, idx: number) => (
                                         <div key={idx} className="flex justify-between text-xs">
                                             <span className="text-gray-500"><b className="text-gray-900">{item.quantity}x</b> {item.productVariant.sellingProduct.name} ({item.productVariant.name})</span>
-                                            <span className="font-bold text-gray-400">${Number(item.priceUnit).toLocaleString()}</span>
+                                            <span className="font-bold text-gray-400">${Number(item.priceUnit).toLocaleString('es-CL')}</span>
                                         </div>
                                     ))}
                                 </div>

@@ -152,7 +152,7 @@ export default function CustomersPage() {
                 <div className="bg-white p-3 md:p-5 rounded-2xl border border-slate-100 min-w-0">
                     <p className="text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest">Puntos</p>
                     <p className="text-lg md:text-3xl font-black italic tracking-tighter text-slate-900 truncate">
-                        {customers.reduce((acc, c) => acc + (c.loyaltyPoints || 0), 0).toLocaleString()}
+                        {customers.reduce((acc, c) => acc + (c.loyaltyPoints || 0), 0).toLocaleString('es-CL')}
                     </p>
                 </div>
                 <div className="bg-white p-3 md:p-5 rounded-2xl border border-slate-100 min-w-0">
@@ -281,7 +281,7 @@ export default function CustomersPage() {
                             <p className="text-[10px] font-bold text-slate-800 truncate">{customer.email || customer.phone || '—'}</p>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="text-sm font-black italic text-slate-900">${Number(customer.historicalSpent || 0).toLocaleString()}</p>
+                            <p className="text-sm font-black italic text-slate-900">${Number(customer.historicalSpent || 0).toLocaleString('es-CL')}</p>
                             <p className="text-[9px] font-black uppercase text-slate-800">{customer.historicalOrders || 0} ped.</p>
                         </div>
                     </div>

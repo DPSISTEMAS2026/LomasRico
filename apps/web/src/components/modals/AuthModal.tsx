@@ -14,7 +14,7 @@ export const CHECKOUT_CONTACT = 'lr_checkout_contact';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Props) {
     const { loginWithEmail, register, loginWithGoogle, verifyEmail } = useAuth();
-    const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY'>('LOGIN');
+    const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY' | 'WELCOME'>('LOGIN');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -67,18 +67,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                 onClose();
             } else if (mode === 'REGISTER') {
                 const res = await register({ email, password, name, phone });
-                if (res?.requiresVerification) {
-                    setMode('VERIFY');
-                } else {
-                    onClose();
-                }
+                setMode(res?.requiresVerification ? 'VERIFY' : 'WELCOME');
             } else if (mode === 'VERIFY') {
                 await verifyEmail(email, verificationCode);
-                // Assume verifyEmail logs in or we just ask user to login
-                // For better UX, let's just assume success means Verified. 
-                // We might need to auto-login.
-                await loginWithEmail({ email, password }); // Auto-login after verify
-                onClose();
+                await loginWithEmail({ email, password });
+                setMode('WELCOME');
             }
         } catch (err: any) {
             setError(err.message || 'Ocurrió un error. Intenta nuevamente.');
@@ -96,6 +89,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                     <X size={20} className="text-slate-900" />
                 </button>
 
+                {mode === 'WELCOME' ? (
+                    <div className="text-center space-y-6 py-4">
+                        <img src="/assets/Logo Restaurante.png" alt="Lo Más Rico" className="h-20 w-20 object-contain mx-auto" />
+                        <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
+                            ¡Bienvenido al Club!
+                        </h2>
+                        <p className="text-sm font-bold text-slate-900">
+                            Tu cuenta está lista. Desde ahora acumulas puntos con tus compras y accedes a descuentos y promociones exclusivas.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-full bg-[#f2642e] text-white p-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-[#d9501d] transition-colors shadow-lg flex items-center justify-center gap-2"
+                        >
+                            Empezar <ArrowRight size={16} />
+                        </button>
+                    </div>
+                ) : (<>
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
                         {mode === 'LOGIN' ? 'Bienvenido' : mode === 'REGISTER' ? 'Únete al Club' : 'Verificación'}
@@ -138,11 +149,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                             <Lock className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
                             <input
                                 type="text"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
                                 placeholder="Código de 6 dígitos"
                                 required
+                                minLength={6}
                                 maxLength={6}
                                 value={verificationCode}
-                                onChange={e => setVerificationCode(e.target.value)}
+                                onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                                 className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-center text-xl tracking-[0.5em] outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
                             />
                         </div>
@@ -214,6 +228,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                         </div>
                     </div>
                 )}
+                </>)}
             </div>
         </div>
     );

@@ -152,8 +152,9 @@ export const CevicheBuilderModal = ({
         setSelections(prev => {
             const current = prev[groupId] || [];
             if (type === 'SINGLE_SELECT') {
-                // For optional single-select, allow toggling off
                 if (current.includes(optionId)) {
+                    const group = modifiers.find(g => g.groupId === groupId);
+                    if (group && group.minSelections > 0) return prev;
                     return { ...prev, [groupId]: [] };
                 }
                 return { ...prev, [groupId]: [optionId] };
@@ -415,7 +416,7 @@ export const CevicheBuilderModal = ({
                                                                 isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                             }`}>
                                                                 {option.priceAdjustment > 0 ? '+' : ''}
-                                                                ${Number(option.priceAdjustment).toLocaleString()}
+                                                                ${Number(option.priceAdjustment).toLocaleString('es-CL')}
                                                             </span>
                                                         )}
                                                     </button>
@@ -470,7 +471,7 @@ export const CevicheBuilderModal = ({
                                                                     {opt?.name}
                                                                     {opt && opt.priceAdjustment !== 0 && (
                                                                         <span className="ml-1 text-orange-500 text-[10px]">
-                                                                            +${Number(opt.priceAdjustment).toLocaleString()}
+                                                                            +${Number(opt.priceAdjustment).toLocaleString('es-CL')}
                                                                         </span>
                                                                     )}
                                                                 </span>
@@ -502,7 +503,7 @@ export const CevicheBuilderModal = ({
                                                             Agrandar a {upgrade.next.name}
                                                         </span>
                                                         <span className="text-xs font-black text-orange-600">
-                                                            +${upgrade.extra.toLocaleString()}
+                                                            +${upgrade.extra.toLocaleString('es-CL')}
                                                         </span>
                                                     </button>
                                                 )}
@@ -556,7 +557,7 @@ export const CevicheBuilderModal = ({
                                                             </div>
                                                             {opt.priceAdjustment !== 0 && (
                                                                 <span className="text-[10px] font-black text-orange-500">
-                                                                    +${Number(opt.priceAdjustment).toLocaleString()}
+                                                                    +${Number(opt.priceAdjustment).toLocaleString('es-CL')}
                                                                 </span>
                                                             )}
                                                         </button>
@@ -617,7 +618,7 @@ export const CevicheBuilderModal = ({
                                     <div className="flex justify-between items-center">
                                         <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Total Personalizado</span>
                                         <span className="text-2xl font-black italic text-[#f2642e] tracking-tighter">
-                                            ${(finalPrice * quantity).toLocaleString()}
+                                            ${(finalPrice * quantity).toLocaleString('es-CL')}
                                         </span>
                                     </div>
                                     

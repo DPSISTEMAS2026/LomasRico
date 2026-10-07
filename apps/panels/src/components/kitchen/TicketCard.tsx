@@ -105,7 +105,9 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
     const isPedidosYa = sale.channel === 'PEDIDOS_YA';
     const isExternal = isUber || isPedidosYa;
     const guestName = (sale as any).guest?.name;
+    const customer = (sale as any).customer as { name: string; phone: string } | null | undefined;
     const isTable = !!(sale.table?.number || ticket.label?.startsWith('MESA'));
+    const noteLines = (sale.note || '').split('\n').filter((line: string) => line && !(customer && line.startsWith('Cliente:')));
     const platformLabel = ticket.label
         || (sale.table?.number ? `MESA ${sale.table.number}` : null)
         || (sale.fulfillmentType === 'TAKEAWAY' ? 'RETIRO' : null)
@@ -146,15 +148,21 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                 </p>
             )}
 
+            {!isTable && customer && (
+                <p className="mb-3 pl-2 text-sm font-black italic uppercase text-slate-900">
+                    {[customer.name, customer.phone].filter(Boolean).join(' · ')}
+                </p>
+            )}
+
             {/* External notes */}
-            {sale.note && (
+            {noteLines.length > 0 && (
                 <div className={`mb-4 pl-2 rounded-2xl overflow-hidden shadow-sm border ${isUber ? 'border-green-300' : isPedidosYa ? 'border-red-300' : 'border-amber-400'}`}>
                     <div className={`px-3 py-1.5 flex items-center gap-2 ${isUber ? 'bg-green-600' : isPedidosYa ? 'bg-red-600' : 'bg-amber-500'}`}>
                         <MessageSquare size={12} className="text-white shrink-0" />
                         <p className="text-[9px] font-black uppercase tracking-widest text-white">{isExternal ? 'PEDIDO EXTERNO' : 'NOTA'}</p>
                     </div>
                     <div className={`p-2.5 space-y-1 ${isUber ? 'bg-green-50' : isPedidosYa ? 'bg-red-50' : 'bg-amber-50'}`}>
-                        {sale.note.split('\n').filter(Boolean).slice(0, 3).map((line: string, i: number) => {
+                        {noteLines.slice(0, 3).map((line: string, i: number) => {
                             if (i === 0) { const m = line.match(/👤\s*(.+)/); return m ? <p key={i} className="text-[10px] font-black text-slate-700 uppercase">👤 {m[1]}</p> : <p key={i} className="text-[10px] font-bold text-slate-600">{line}</p>; }
                             if (line.startsWith('•')) { const [n, ...mp] = line.replace('•', '').trim().split('→'); return <div key={i} className="text-[10px]"><span className="font-black text-slate-800 uppercase">{n}</span>{mp.length > 0 && <span className="text-slate-800 italic"> → {mp.join('→')}</span>}</div>; }
                             return <p key={i} className="text-[9px] text-slate-800 italic">{line}</p>;
@@ -196,7 +204,7 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                                         <div key={i} className="flex justify-between items-center text-[11px] font-black text-white py-1 border-b border-white/5 last:border-0">
                                             <span className="uppercase italic tracking-tight flex items-center gap-1.5"><ChevronRight size={9} className="text-orange-500" />{bom.name}</span>
                                             <span className="text-orange-400 bg-black/30 px-2 py-0.5 rounded-md border border-white/10">
-                                                {bom.quantity >= 1 ? `${Number(bom.quantity * (item.quantity || 1)).toLocaleString()} ${bom.unit || 'g'}` : `${Math.round(bom.quantity * 1000 * (item.quantity || 1))} gr`}
+                                                {bom.quantity >= 1 ? `${Number(bom.quantity * (item.quantity || 1)).toLocaleString('es-CL')} ${bom.unit || 'g'}` : `${Math.round(bom.quantity * 1000 * (item.quantity || 1))} gr`}
                                             </span>
                                         </div>
                                     ))}

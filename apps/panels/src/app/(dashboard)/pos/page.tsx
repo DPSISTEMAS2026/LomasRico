@@ -88,6 +88,8 @@ export default function POSPage() {
     const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
     const [customers, setCustomers] = useState<AppUser[]>([]);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const [guestName, setGuestName] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
 
     // Debounced Customer Search
     useEffect(() => {
@@ -105,7 +107,7 @@ export default function POSPage() {
     }, [customerSearchTerm]);
 
     // Printer
-    const [lastSaleForPrint, setLastSaleForPrint] = useState<{ code: string, items: CartItem[], channel: string } | null>(null);
+    const [lastSaleForPrint, setLastSaleForPrint] = useState<{ code: string, items: CartItem[], channel: string, customerInfo?: string } | null>(null);
     const printerRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useReactToPrint({
@@ -232,13 +234,19 @@ export default function POSPage() {
     const handleCheckout = async () => {
         if (isSubmitting || cart.length === 0) return;
         setIsSubmitting(true);
+        const contactName = (selectedCustomer?.name || guestName).trim();
+        const contactPhone = (selectedCustomer?.phone || guestPhone).trim();
+        const contact = contactName || contactPhone ? { name: contactName, phone: contactPhone } : undefined;
+        const customerInfo = [contactName, contactPhone].filter(Boolean).join(' · ') || undefined;
         try {
             const saleRes = await createSale(cart, {
                 channel: 'POS',
                 paymentMethod,
                 shiftId: activeShift?.id || undefined,
                 userId: selectedCustomer?.id || user?.id,
-                shippingData: shippingCost > 0 ? { cost: shippingCost, address: shippingAddress || 'POS_Manual' } : undefined,
+                shippingData: shippingCost > 0 || contact
+                    ? { ...(shippingCost > 0 ? { cost: shippingCost, address: shippingAddress || 'POS_Manual' } : {}), ...(contact ? { contact } : {}) }
+                    : undefined,
                 discount: discount > 0 ? discount : undefined,
                 discountType: discount > 0 ? discountType : undefined,
                 note: orderNote || undefined,
@@ -246,17 +254,17 @@ export default function POSPage() {
             } as any);
 
             if (paymentMethod === 'MP') {
-                const shouldApprove = confirm(`Simular cobro MercadoPago por $${(total + shippingCost).toLocaleString()}?`);
+                const shouldApprove = confirm(`Simular cobro MercadoPago por $${(total + shippingCost).toLocaleString('es-CL')}?`);
                 if (shouldApprove) {
                     await simulateMPCallback(saleRes.id, 'APPROVED');
                     alert('Venta aprobada y enviada a cocina.');
-                    setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'POS_MP' });
+                    setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'POS_MP', customerInfo });
                 } else {
                     alert('Venta pendiente de pago.');
                 }
             } else {
                 alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
-                setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO' });
+                setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO', customerInfo });
             }
             setCart([]);
             setShippingCost(0);
@@ -266,6 +274,8 @@ export default function POSPage() {
             setDiscount(0);
             setDiscountType('FIXED');
             setSelectedCustomer(null);
+            setGuestName('');
+            setGuestPhone('');
             setOrderNote('');
             // Refrescar catálogo para actualizar disponibilidad después de venta
             loadProducts();
@@ -351,7 +361,7 @@ export default function POSPage() {
                             <>
                                 <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest text-slate-800 pr-1 max-w-[5.5rem] sm:max-w-none truncate">
                                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 align-middle" />
-                                    {shiftOpenTime} · ${shiftSalesTotal.toLocaleString()}
+                                    {shiftOpenTime} · ${shiftSalesTotal.toLocaleString('es-CL')}
                                 </span>
                                 <button
                                     type="button"
@@ -433,10 +443,15 @@ export default function POSPage() {
                                 >
                                     <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 relative shrink-0">
                                         <img
-                                            src={product.imageUrl || '/placeholder.png'}
+                                            src={product.imageUrl || '/assets/Logo Restaurante.png'}
                                             alt={product.name}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                            onError={e => (e.currentTarget.src = 'https://via.placeholder.com/300?text=Sin+Imagen')}
+                                            onError={e => {
+                                                const img = e.currentTarget;
+                                                if (img.src.includes('Logo')) return;
+                                                img.src = '/assets/Logo Restaurante.png';
+                                                img.className = 'w-full h-full object-contain p-6 opacity-30';
+                                            }}
                                         />
                                         <div className="absolute top-3 right-3">
                                             <span className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase text-slate-900 shadow-sm border border-slate-100">
@@ -459,7 +474,7 @@ export default function POSPage() {
                                             </span>
                                         )}
                                         <div className="mt-auto flex justify-between items-center">
-                                            <span className={`font-black text-base md:text-xl italic tracking-tighter ${product.available === false ? 'text-slate-300' : 'text-orange-500'}`}>${product.price.toLocaleString()}</span>
+                                            <span className={`font-black text-base md:text-xl italic tracking-tighter ${product.available === false ? 'text-slate-300' : 'text-orange-500'}`}>${product.price.toLocaleString('es-CL')}</span>
                                             {product.available === false ? (
                                                 <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-100 text-red-400 flex items-center justify-center">
                                                     <AlertTriangle size={14} />
@@ -546,7 +561,7 @@ export default function POSPage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-2 shrink-0">
-                                        <div className="font-black text-slate-900 text-sm md:text-base italic tracking-tighter">${(item.price * item.quantity).toLocaleString()}</div>
+                                        <div className="font-black text-slate-900 text-sm md:text-base italic tracking-tighter">${(item.price * item.quantity).toLocaleString('es-CL')}</div>
                                         <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-2 py-1 border border-slate-100 shadow-inner">
                                             <button onClick={() => updateQuantity(item.tempId, -1)} className="p-1 text-slate-800 hover:text-slate-900 active:scale-90 transition-all"><Minus size={14} /></button>
                                             <span className="text-[11px] md:text-xs font-black text-slate-900 w-5 text-center">{item.quantity}</span>
@@ -564,19 +579,19 @@ export default function POSPage() {
                         {/* Totales */}
                         <div className="space-y-1">
                             <div className="flex justify-between text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest px-1">
-                                <span className="italic">SUBTOTAL ÓRDEN</span><span>${subtotal.toLocaleString()}</span>
+                                <span className="italic">SUBTOTAL ÓRDEN</span><span>${subtotal.toLocaleString('es-CL')}</span>
                             </div>
                             {shippingCost > 0 && (
                                 <div className="flex justify-between text-[10px] md:text-[11px] font-black text-green-600 uppercase tracking-widest px-1">
                                     <span className="flex items-center gap-1.5 italic"><Truck size={12} /> SERVICIO DESPACHO</span>
-                                    <span className="animate-pulse">+ ${shippingCost.toLocaleString()}</span>
+                                    <span className="animate-pulse">+ ${shippingCost.toLocaleString('es-CL')}</span>
                                 </div>
                             )}
                             <div className="flex justify-between items-end pt-3 border-t-2 border-slate-200 mt-2">
                                 <span className="text-base md:text-lg font-black text-slate-900 uppercase italic tracking-tighter">Total a Cobrar</span>
                                 <div className="flex flex-col items-end">
-                                    {discount > 0 && <span className="text-sm font-bold text-slate-300 line-through decoration-red-400/50 decoration-2 italic mb-1">${initialTotal.toLocaleString()}</span>}
-                                    <span className="text-3xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none shadow-orange-100 drop-shadow-sm">${total.toLocaleString()}</span>
+                                    {discount > 0 && <span className="text-sm font-bold text-slate-300 line-through decoration-red-400/50 decoration-2 italic mb-1">${initialTotal.toLocaleString('es-CL')}</span>}
+                                    <span className="text-3xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none shadow-orange-100 drop-shadow-sm">${total.toLocaleString('es-CL')}</span>
                                 </div>
                             </div>
                         </div>
@@ -589,8 +604,8 @@ export default function POSPage() {
                                         <TrendingDown size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase text-red-600 italic leading-none">Descuento {discountType === 'PERCENT' ? `${discount}%` : `$${discount.toLocaleString()}`}</p>
-                                        <p className="text-[8px] font-bold text-red-400 uppercase tracking-widest mt-1">Ahorro: -${Math.round(discountValue).toLocaleString()}</p>
+                                        <p className="text-[10px] font-black uppercase text-red-600 italic leading-none">Descuento {discountType === 'PERCENT' ? `${discount}%` : `$${discount.toLocaleString('es-CL')}`}</p>
+                                        <p className="text-[8px] font-bold text-red-400 uppercase tracking-widest mt-1">Ahorro: -${Math.round(discountValue).toLocaleString('es-CL')}</p>
                                     </div>
                                 </div>
                                 <button onClick={() => { setDiscount(0); setDiscountType('FIXED'); }} className="text-red-300 hover:text-red-600 p-2">
@@ -619,11 +634,12 @@ export default function POSPage() {
                                     )}
                                 </div>
                                 {!selectedCustomer ? (
-                                    <div className="relative">
+                                    <div>
+                                        <div className="relative">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                                         <input
                                             type="text"
-                                            placeholder="Nombre / Telefono..."
+                                            placeholder="Buscar cliente registrado..."
                                             className="w-full pl-11 pr-4 py-2 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl text-[11px] font-bold font-black outline-none transition-all uppercase italic"
                                             value={customerSearchTerm}
                                             onChange={(e) => setCustomerSearchTerm(e.target.value)}
@@ -655,6 +671,26 @@ export default function POSPage() {
                                                 )}
                                             </div>
                                         )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre"
+                                                maxLength={80}
+                                                className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl text-[11px] font-black text-slate-900 outline-none transition-all"
+                                                value={guestName}
+                                                onChange={(e) => setGuestName(e.target.value)}
+                                            />
+                                            <input
+                                                type="tel"
+                                                inputMode="tel"
+                                                placeholder="Celular"
+                                                maxLength={16}
+                                                className="w-full px-3 py-2 bg-slate-50 border-2 border-transparent focus:border-orange-500 rounded-xl text-[11px] font-black text-slate-900 outline-none transition-all"
+                                                value={guestPhone}
+                                                onChange={(e) => setGuestPhone(e.target.value.replace(/[^\d+\s]/g, ''))}
+                                            />
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-xl text-white">
@@ -734,7 +770,7 @@ export default function POSPage() {
                             <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex justify-between items-center px-1">
                                     <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Total a Cobrar</span>
-                                    <span className="text-sm font-black text-slate-800">${total.toLocaleString()}</span>
+                                    <span className="text-sm font-black text-slate-800">${total.toLocaleString('es-CL')}</span>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="block text-[9px] font-black uppercase text-slate-800 tracking-widest px-1">Efectivo Recibido</label>
@@ -742,7 +778,7 @@ export default function POSPage() {
                                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-800">$</span>
                                         <input
                                             type="text"
-                                            value={cashReceived === 0 ? '' : cashReceived.toLocaleString()}
+                                            value={cashReceived === 0 ? '' : cashReceived.toLocaleString('es-CL')}
                                             onChange={(e) => {
                                                 const val = parseInt(e.target.value.replace(/\D/g, '')) || 0;
                                                 setCashReceived(val);
@@ -783,7 +819,7 @@ export default function POSPage() {
                                                             ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-100 scale-105'
                                                             : 'bg-white border-slate-100 text-slate-800 hover:bg-slate-50'}`}
                                                 >
-                                                    ${val.toLocaleString()}
+                                                    ${val.toLocaleString('es-CL')}
                                                 </button>
                                             ))}
                                     </div>
@@ -791,7 +827,7 @@ export default function POSPage() {
                                 {cashReceived >= total && (
                                     <div className="flex justify-between items-center pt-3 border-t border-slate-100/50 px-1 animate-in zoom-in-95">
                                         <span className="text-[10px] font-black uppercase text-green-600 tracking-wider">Vuelto a entregar</span>
-                                        <span className="text-base font-black text-green-600 animate-pulse">${(cashReceived - total).toLocaleString()}</span>
+                                        <span className="text-base font-black text-green-600 animate-pulse">${(cashReceived - total).toLocaleString('es-CL')}</span>
                                     </div>
                                 )}
                             </div>
@@ -839,7 +875,7 @@ export default function POSPage() {
                     {mobileTab === 'CATALOG' ? (
                         <>
                             <ShoppingBag size={20} />
-                            <span>VER TICKET (${total.toLocaleString()})</span>
+                            <span>VER TICKET (${total.toLocaleString('es-CL')})</span>
                             <span className="bg-white text-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-[10px]">{cart.length}</span>
                         </>
                     ) : (
@@ -902,6 +938,7 @@ export default function POSPage() {
                         saleCode={lastSaleForPrint.code}
                         items={lastSaleForPrint.items}
                         channel={lastSaleForPrint.channel}
+                        customerInfo={lastSaleForPrint.customerInfo}
                     />
                 )}
             </div>

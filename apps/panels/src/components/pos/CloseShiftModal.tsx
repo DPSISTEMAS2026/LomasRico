@@ -75,7 +75,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                 <div className="grid grid-cols-3 gap-4 mb-8">
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
                         <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Efectivo Inicial</p>
-                        <p className="text-lg font-black italic text-slate-900 mt-1">${Number(shift?.startAmount || 0).toLocaleString()}</p>
+                        <p className="text-lg font-black italic text-slate-900 mt-1">${Number(shift?.startAmount || 0).toLocaleString('es-CL')}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
                         <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Ventas</p>
@@ -83,7 +83,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-4 text-center">
                         <p className="text-[9px] font-black uppercase text-slate-800 tracking-widest">Efectivo esperado</p>
-                        <p className="text-lg font-black italic text-green-600 mt-1">${systemAmount.toLocaleString()}</p>
+                        <p className="text-lg font-black italic text-green-600 mt-1">${systemAmount.toLocaleString('es-CL')}</p>
                     </div>
                 </div>
 
@@ -92,22 +92,22 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                         {methodRows.map(([method, total]) => (
                             <div key={method} className="flex justify-between text-xs font-black uppercase text-slate-900">
                                 <span>{METHOD_LABEL[method] || method}</span>
-                                <span>${total.toLocaleString()}</span>
+                                <span>${total.toLocaleString('es-CL')}</span>
                             </div>
                         ))}
                         {!!summary?.withdrawals && (
                             <div className="flex justify-between text-xs font-black uppercase text-red-600">
-                                <span>Retiros</span><span>-${summary.withdrawals.toLocaleString()}</span>
+                                <span>Retiros</span><span>-${summary.withdrawals.toLocaleString('es-CL')}</span>
                             </div>
                         )}
                         {!!summary?.expenses && (
                             <div className="flex justify-between text-xs font-black uppercase text-red-600">
-                                <span>Gastos</span><span>-${summary.expenses.toLocaleString()}</span>
+                                <span>Gastos</span><span>-${summary.expenses.toLocaleString('es-CL')}</span>
                             </div>
                         )}
                         {!!summary?.refunds && (
                             <div className="flex justify-between text-xs font-black uppercase text-red-600">
-                                <span>Devoluciones</span><span>-${summary.refunds.toLocaleString()}</span>
+                                <span>Devoluciones</span><span>-${summary.refunds.toLocaleString('es-CL')}</span>
                             </div>
                         )}
                     </div>
@@ -135,7 +135,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     <div className={`rounded-2xl p-4 mb-4 flex items-center justify-between ${Math.abs(diff) < 100 ? 'bg-green-50' : diff > 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
                         <span className="text-xs font-black uppercase text-slate-500">Diferencia</span>
                         <span className={`text-xl font-black italic ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {diff > 0 ? '+' : ''}{diff.toLocaleString()}
+                            {diff > 0 ? '+' : ''}{diff.toLocaleString('es-CL')}
                         </span>
                     </div>
                 )}

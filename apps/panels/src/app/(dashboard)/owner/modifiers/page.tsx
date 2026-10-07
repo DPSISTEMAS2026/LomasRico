@@ -161,14 +161,10 @@ export default function ModifiersPage() {
         let groupsNext = groupsData;
         let productsNext = overlayProductRoles(productsData, groupsData);
         const unclassified = groupsData.filter((g: ModifierGroup) => (g.role || 'OTHER') === 'OTHER').length;
-        let applyOk = false;
-        let applyUpdated = 0;
         if (unclassified > 0) {
             const classified = await authFetch(`${API_URL}/modifiers/apply-suggestions`, { method: 'POST' });
-            applyOk = classified.ok;
-            if (classified.ok) {
-                const payload = await classified.json().catch(() => ({}));
-                applyUpdated = Number(payload?.updated || 0);
+            const payload = classified.ok ? await classified.json().catch(() => ({})) : {};
+            if (Number(payload?.updated || 0) > 0) {
                 const [g2, p2] = await Promise.all([
                     authFetch(`${API_URL}/modifiers/groups`),
                     authFetch(`${API_URL}/products`),
@@ -182,10 +178,6 @@ export default function ModifiersPage() {
         }
         setGroups(groupsNext);
         setProducts(productsNext);
-        const leftoverStored = groupsNext.filter((g: ModifierGroup) => (g.role || 'OTHER') === 'OTHER').length;
-        const leftoverShown = groupsNext.filter((g: ModifierGroup) => groupRole(g) === 'OTHER').map((g) => g.displayName);
-        const leftoverProd = productsNext.flatMap((p) => (p.modifiers || []).filter((m) => groupRole(m) === 'OTHER').map((m) => m.displayName));
-        const withMods = productsNext.filter((p: ProductRow) => (p.modifiers || []).some(isOptionOfProduct));
         setLoading(false);
     };
 

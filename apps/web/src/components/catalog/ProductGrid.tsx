@@ -115,18 +115,7 @@ export const ProductGrid = () => {
                 const prodResponse = await fetch(`${API_URL}/products/active`);
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
-                    const list = Array.isArray(data) ? data : [];
-                    const names = list.slice(0, 8).map((p: any) => p.name);
-                    const cats = [...new Set(list.map((p: any) => p.category))];
-                    const hasLegacy = list.some((p: any) => /^PROMO [123]$/i.test(p.name || ''));
-                    const leftover = groupProductsByWebSection(list).filter((s) => String(s.id).startsWith('other-')).map((s) => ({ id: s.id, names: s.products.map((p) => p.name) }));
-                    const missing = list.filter((p: any) => !p.name || p.price == null || Number.isNaN(Number(p.price))).map((p: any) => p.name);
-                    const emptyAfterFilter = (channel: 'web' | 'salon') => list.filter((p: any) => {
-                        const raw = (p.modifiers || []).some((m: any) => m.options?.length);
-                        const vis = filterModifiersForChannel(p.modifiers, channel).some((m: any) => m.options?.length);
-                        return raw && !vis;
-                    }).map((p: any) => p.name);
-                    setProducts(list);
+                    setProducts(Array.isArray(data) ? data : []);
                 } else {
                     setProducts([]);
                 }

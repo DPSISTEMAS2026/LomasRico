@@ -154,7 +154,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
                                                 </span>
                                                 {!!option.priceAdjustment && (
                                                     <span className={`block text-[10px] font-bold mt-1 ${selected ? 'text-orange-300' : 'text-orange-500'}`}>
-                                                        {option.priceAdjustment > 0 ? '+' : ''}${Number(option.priceAdjustment).toLocaleString()}
+                                                        {option.priceAdjustment > 0 ? '+' : ''}${Number(option.priceAdjustment).toLocaleString('es-CL')}
                                                     </span>
                                                 )}
                                             </button>

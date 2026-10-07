@@ -282,7 +282,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
                                             <h4 className="font-black text-sm uppercase text-slate-900 leading-tight">{item.name}</h4>
-                                            <span className="font-black text-sm text-slate-900 ml-2">${(item.price * item.quantity).toLocaleString()}</span>
+                                            <span className="font-black text-sm text-slate-900 ml-2">${(item.price * item.quantity).toLocaleString('es-CL')}</span>
                                         </div>
                                         {item.modifiers?.selectedProteins?.length > 0 && (
                                             <p className="text-[10px] text-slate-500 font-bold mt-1 line-clamp-1">
@@ -326,7 +326,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     </div>
                                     <div className="text-left">
                                         <p className="font-black text-[10px] uppercase text-slate-800 leading-tight group-hover:text-[#f2642e] transition-colors">{u.name}</p>
-                                        <p className="font-bold text-[10px] text-slate-800">+ ${u.price.toLocaleString()}</p>
+                                        <p className="font-bold text-[10px] text-slate-800">+ ${u.price.toLocaleString('es-CL')}</p>
                                     </div>
                                     <div className="ml-auto bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center text-slate-800 group-hover:bg-[#f2642e] group-hover:text-white transition-all">
                                         <Plus size={12} strokeWidth={3} />
@@ -413,7 +413,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                     <span className="font-bold text-xs text-green-700">Envío disponible</span>
                                 </div>
-                                <span className="font-black text-sm text-slate-900">${shippingQuote.cost.toLocaleString()}</span>
+                                <span className="font-black text-sm text-slate-900">${shippingQuote.cost.toLocaleString('es-CL')}</span>
                             </div>
                         )}
                         {status === 'out-of-range' && (
@@ -449,17 +449,17 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         <div className="space-y-2">
                             <div className="flex justify-between text-xs font-bold uppercase text-slate-800">
                                 <span>Subtotal</span>
-                                <span>${total.toLocaleString()}</span>
+                                <span>${total.toLocaleString('es-CL')}</span>
                             </div>
                             <div className="flex justify-between text-xs font-bold uppercase text-slate-800">
                                 <span>Envío</span>
-                                <span>{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString()}` : '--'}</span>
+                                <span>{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString('es-CL')}` : '--'}</span>
                             </div>
                         </div>
 
                         <div className="flex justify-between items-end border-t border-slate-200 pt-4">
                             <span className="text-sm font-black uppercase text-slate-900 tracking-tight">Total a Pagar</span>
-                            <span className="text-4xl font-[900] text-slate-900 tracking-tighter leading-none">${finalTotal.toLocaleString()}</span>
+                            <span className="text-4xl font-[900] text-slate-900 tracking-tighter leading-none">${finalTotal.toLocaleString('es-CL')}</span>
                         </div>
 
                         <button

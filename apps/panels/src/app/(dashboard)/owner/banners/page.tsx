@@ -510,7 +510,7 @@ export default function MarketingPage() {
                                         <div className="flex flex-wrap gap-2 mt-4">
                                             {promo.discountValue > 0 && (
                                                 <span className="px-2.5 py-1 bg-orange-100 text-orange-600 rounded-md text-[9px] font-black uppercase">
-                                                    Dcto: {promo.discountType === 'PERCENT' ? `${Number(promo.discountValue)}%` : `$${Number(promo.discountValue).toLocaleString()}`}
+                                                    Dcto: {promo.discountType === 'PERCENT' ? `${Number(promo.discountValue)}%` : `$${Number(promo.discountValue).toLocaleString('es-CL')}`}
                                                 </span>
                                             )}
                                             {parsedDays.length > 0 && (

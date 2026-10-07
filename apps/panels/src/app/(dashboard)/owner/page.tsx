@@ -29,8 +29,6 @@ const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
 const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
-const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: false });
-
 export default function OwnerDashboardPage() {
     const [data, setData] = useState<any>(null);
     const [topProducts, setTopProducts] = useState<any[]>([]);
@@ -100,14 +98,14 @@ export default function OwnerDashboardPage() {
             <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <StatCard
                     title="Hoy"
-                    value={`$${Number(data?.sales?.today || 0).toLocaleString()}`}
+                    value={`$${Number(data?.sales?.today || 0).toLocaleString('es-CL')}`}
                     trend={`${data?.sales?.trend || 0}%`}
                     isUp={Number(data?.sales?.trend || 0) >= 0}
                     icon={<TrendingUp size={16} />}
                 />
                 <StatCard
                     title="Mes"
-                    value={`$${Number(data?.sales?.month || 0).toLocaleString()}`}
+                    value={`$${Number(data?.sales?.month || 0).toLocaleString('es-CL')}`}
                     trend="Vs ant."
                     isUp={true}
                     icon={<ShoppingBag size={16} />}
@@ -149,18 +147,14 @@ export default function OwnerDashboardPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={data?.orders?.byChannel || []}
+                                    data={(data?.orders?.byChannel || []).map((entry: any, index: number) => ({ ...entry, fill: COLORS[index % COLORS.length] }))}
                                     innerRadius={60}
                                     outerRadius={85}
                                     paddingAngle={8}
                                     dataKey="_count.id"
                                     nameKey="channel"
                                     stroke="none"
-                                >
-                                    {(data?.orders?.byChannel || []).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
+                                />
                                 <Tooltip
                                     contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
                                 />

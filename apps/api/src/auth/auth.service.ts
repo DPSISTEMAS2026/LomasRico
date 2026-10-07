@@ -10,9 +10,9 @@ import { BrevoService, logoSrc } from '../mail/brevo.service';
 
 function verificationEmailHtml(name: string, code: string) {
     const safeName = String(name || '').replace(/[<>&"]/g, '');
-    return `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:32px 12px;background:#fff6ea;font-family:Arial,Helvetica,sans-serif;">
+    return `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:32px 12px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;border:1px solid #f3e7d7;">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;border:1px solid #e5e7eb;">
 <tr><td style="padding:32px;text-align:center;color:#0f172a;">
 <img src="${logoSrc()}" width="72" alt="Lo Más Rico" style="display:block;margin:0 auto 16px auto;" />
 <p style="margin:0 0 8px 0;font-size:15px;">Hola${safeName ? `, ${safeName}` : ''}:</p>

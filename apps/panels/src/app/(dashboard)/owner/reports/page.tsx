@@ -69,8 +69,8 @@ export default function ReportsPage() {
     };
 
     // Calculations
-    const totalRevenue = sales.reduce((a, s) => a + Number(s.total), 0);
-    const completedSales = sales.filter(s => s.status === 'COMPLETED' || s.status === 'DELIVERED');
+    const completedSales = sales.filter(s => s.status !== 'CANCELLED');
+    const totalRevenue = completedSales.reduce((a, s) => a + Number(s.total), 0);
     const avgTicket = completedSales.length > 0 ? completedSales.reduce((a, s) => a + Number(s.total), 0) / completedSales.length : 0;
 
     // Daily chart data (last 7 days)
@@ -101,7 +101,7 @@ export default function ReportsPage() {
         const map: Record<string, { method: string; total: number; count: number }> = {};
         sales.forEach((s) => {
             if (s.status === 'CANCELLED') return;
-            const method = s.paymentMethod || 'SIN_MÉTODO';
+            const method = s.paymentMethod || 'Sin pagar';
             if (!map[method]) map[method] = { method, total: 0, count: 0 };
             map[method].total += Number(s.total);
             map[method].count += 1;
@@ -148,13 +148,13 @@ export default function ReportsPage() {
             </header>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
-                <KpiCard title="Ventas Hoy" value={`$${(dashboard?.sales?.today || 0).toLocaleString()}`} icon={<DollarSign />}
+                <KpiCard title="Ventas Hoy" value={`$${Number(dashboard?.sales?.today || 0).toLocaleString('es-CL')}`} icon={<DollarSign />}
                     trend={dashboard?.sales?.trend} highlight />
-                <KpiCard title="Ventas Mes" value={`$${(dashboard?.sales?.month || 0).toLocaleString()}`} icon={<BarChart3 />} />
+                <KpiCard title="Ventas Mes" value={`$${Number(dashboard?.sales?.month || 0).toLocaleString('es-CL')}`} icon={<BarChart3 />} />
                 <KpiCard title="Tickets" value={completedSales.length.toString()} icon={<CreditCard />} />
-                <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString()}`} icon={<TrendingUp />} />
+                <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString('es-CL')}`} icon={<TrendingUp />} />
                 {!isModulePaused('inventory') && (
-                <KpiCard title="Stock Valorizado" value={`$${Math.round(totalStockValue).toLocaleString()}`} icon={<Package />} />
+                <KpiCard title="Stock Valorizado" value={`$${Math.round(totalStockValue).toLocaleString('es-CL')}`} icon={<Package />} />
                 )}
             </div>
 
@@ -194,7 +194,7 @@ export default function ReportsPage() {
                                     tickFormatter={(v) => v >= 1000 ? `$${v / 1000}k` : `$${v}`} />
                                 <Tooltip cursor={{ fill: '#f8fafc' }}
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                                    formatter={(v: any) => [`$${Number(v).toLocaleString()}`, 'Venta']} />
+                                    formatter={(v: any) => [`$${Number(v).toLocaleString('es-CL')}`, 'Venta']} />
                                 <Bar dataKey="total" fill="#f97316" radius={[8, 8, 4, 4]} barSize={28} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -207,23 +207,24 @@ export default function ReportsPage() {
                     <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border-b-4 border-b-orange-500 flex flex-col">
                         <h3 className="text-lg font-black italic tracking-tighter uppercase mb-6">Ventas por <span className="text-orange-400">Canal</span></h3>
                         <div className="space-y-3 flex-1">
-                            {channelData.length === 0 && <p className="text-slate-900 text-xs italic">Sin datos de canales</p>}
+                            {channelData.length === 0 && <p className="text-white text-xs italic">Sin datos de canales</p>}
                             {channelData.map((ch: any) => {
                                 const cfg = CHANNEL_COLORS[ch.channel] || { bg: 'bg-slate-500', text: 'text-slate-800', fill: '#64748b', label: ch.channel };
-                                const pct = totalRevenue > 0 ? ((ch._sum?.total || 0) / totalRevenue * 100) : 0;
+                                const chTotal = Number(ch._sum?.total || 0);
+                                const pct = totalRevenue > 0 ? (chTotal / totalRevenue * 100) : 0;
                                 return (
                                     <div key={ch.channel} className="bg-white/5 rounded-2xl p-4 border border-white/5">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="text-xs font-black uppercase italic">{cfg.label}</span>
-                                            <span className="text-orange-400 font-black text-sm italic">${(ch._sum?.total || 0).toLocaleString()}</span>
+                                            <span className="text-orange-400 font-black text-sm italic">${chTotal.toLocaleString('es-CL')}</span>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${cfg.bg}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-800 w-10 text-right">{pct.toFixed(0)}%</span>
+                                            <span className="text-[10px] font-black text-white w-10 text-right">{pct.toFixed(0)}%</span>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-900 mt-1">{ch._count?.id || 0} pedidos</p>
+                                        <p className="text-[9px] font-bold text-white mt-1">{ch._count?.id || 0} pedidos</p>
                                     </div>
                                 );
                             })}
@@ -251,7 +252,7 @@ export default function ReportsPage() {
                                                     {paymentMethodLabel(pm.method)}
                                                 </span>
                                             </div>
-                                            <span className="text-orange-500 font-black text-sm italic shrink-0">${pm.total.toLocaleString()}</span>
+                                            <span className="text-orange-500 font-black text-sm italic shrink-0">${pm.total.toLocaleString('es-CL')}</span>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -416,7 +417,7 @@ export default function ReportsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <p className="text-base font-black italic tracking-tighter text-slate-900 group-hover:text-orange-500 transition-colors">
-                                                ${Number(sale.total).toLocaleString()}
+                                                ${Number(sale.total).toLocaleString('es-CL')}
                                             </p>
                                         </td>
                                     </tr>

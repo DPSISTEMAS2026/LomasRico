@@ -121,7 +121,6 @@ export default function CatalogManagementPage() {
 
             const productsData = await prodRes.json();
             setProducts(productsData);
-            const cats = Array.from(new Set((productsData || []).map((p: any) => p.category).filter(Boolean)));
         } catch (e: any) {
             console.error(e);
             setError(`Error de Conexión: ${e.message}`);
@@ -141,7 +140,6 @@ export default function CatalogManagementPage() {
 
     const loadProductModifiers = async (productId: string) => {
         try {
-            await authFetch(`${API_URL}/modifiers/apply-suggestions`, { method: 'POST' });
             await loadModifierGroups();
             const res = await authFetch(`${API_URL}/modifiers/product/${productId}`);
             if (res.ok) {

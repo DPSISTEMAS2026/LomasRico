@@ -48,10 +48,10 @@ const ALL_MODULES = [
 const modulesForRole = (role: string) => ALL_MODULES.filter((m) => m.roles.includes(role));
 
 const ROLES = [
-    { value: 'CASHIER', label: 'Cajero/a', color: 'bg-blue-500' },
-    { value: 'WAITER', label: 'Garzón', color: 'bg-emerald-600' },
-    { value: 'KITCHEN', label: 'Cocina', color: 'bg-orange-500' },
-    { value: 'ADMIN', label: 'Administrador/a', color: 'bg-purple-500' },
+    { value: 'CASHIER', label: 'Cajero/a', plural: 'Cajeros', color: 'bg-blue-500' },
+    { value: 'WAITER', label: 'Garzón', plural: 'Garzones', color: 'bg-emerald-600' },
+    { value: 'KITCHEN', label: 'Cocina', plural: 'Cocina', color: 'bg-orange-500' },
+    { value: 'ADMIN', label: 'Administrador/a', plural: 'Administradores', color: 'bg-purple-500' },
 ];
 
 function getRoleInfo(role: string) {
@@ -357,7 +357,7 @@ export default function CashiersManagementPage() {
                         <div className="grid grid-cols-3 md:flex justify-around md:justify-start gap-4 md:gap-10 px-2">
                             {ROLES.map(r => (
                                 <div key={r.value} className="text-center md:text-left">
-                                    <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-900 tracking-[0.2em] mb-1">{r.label}s</p>
+                                    <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-900 tracking-[0.2em] mb-1">{r.plural}</p>
                                     <p className="text-xl md:text-3xl font-black italic tracking-tighter text-slate-900 leading-none">{members.filter(m => m.role === r.value).length}</p>
                                 </div>
                             ))}
@@ -541,7 +541,7 @@ export default function CashiersManagementPage() {
                                         <div className="space-y-3 py-6 border-y border-slate-50">
                                             <div className="flex justify-between items-center text-[10px] md:text-xs">
                                                 <span className="font-black text-slate-800 uppercase tracking-widest italic">Capital Inicial</span>
-                                                <span className="font-black text-slate-900">${Number(shift.startAmount).toLocaleString()}</span>
+                                                <span className="font-black text-slate-900">${Number(shift.startAmount).toLocaleString('es-CL')}</span>
                                             </div>
 
                                             {/* === DESGLOSE POR CANAL === */}
@@ -585,13 +585,13 @@ export default function CashiersManagementPage() {
                                                                     <span className="font-black text-slate-800 uppercase tracking-widest italic">
                                                                         {cfg.icon} {cfg.label} ({data.count})
                                                                     </span>
-                                                                    <span className={`font-black ${cfg.color}`}>+${data.total.toLocaleString()}</span>
+                                                                    <span className={`font-black ${cfg.color}`}>+${data.total.toLocaleString('es-CL')}</span>
                                                                 </div>
                                                             );
                                                         })}
                                                         <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-100">
                                                             <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Bruto</span>
-                                                            <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">${totalAllChannels.toLocaleString()}</span>
+                                                            <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">${totalAllChannels.toLocaleString('es-CL')}</span>
                                                         </div>
 
                                                         {/* === COMISIONES PLATAFORMAS === */}
@@ -628,17 +628,17 @@ export default function CashiersManagementPage() {
                                                                         <div key={c.label} className="space-y-1">
                                                                             <div className="flex justify-between items-center text-[10px]">
                                                                                 <span className="font-bold text-slate-500 italic">{c.icon} {c.label} ({(c.rate * 100).toFixed(0)}%)</span>
-                                                                                <span className="font-black text-red-500 italic">-${c.commission.toLocaleString()}</span>
+                                                                                <span className="font-black text-red-500 italic">-${c.commission.toLocaleString('es-CL')}</span>
                                                                             </div>
                                                                             <div className="flex justify-between items-center text-[9px] pl-4">
                                                                                 <span className="text-slate-800 italic">Neto {c.label}</span>
-                                                                                <span className="font-bold text-green-600 italic">${c.net.toLocaleString()}</span>
+                                                                                <span className="font-bold text-green-600 italic">${c.net.toLocaleString('es-CL')}</span>
                                                                             </div>
                                                                         </div>
                                                                     ))}
                                                                     <div className="flex justify-between items-center text-[10px] md:text-xs pt-2 mt-1 border-t border-red-200/50">
                                                                         <span className="font-black text-red-500 uppercase tracking-widest italic">Total Comisiones</span>
-                                                                        <span className="font-black text-red-600 italic">-${totalComm.toLocaleString()}</span>
+                                                                        <span className="font-black text-red-600 italic">-${totalComm.toLocaleString('es-CL')}</span>
                                                                     </div>
                                                                 </div>
                                                             );
@@ -656,7 +656,7 @@ export default function CashiersManagementPage() {
                                                             return (
                                                                 <div className="flex justify-between items-center text-[11px] md:text-sm pt-2 mt-1">
                                                                     <span className="font-black text-green-700 uppercase tracking-widest italic">💰 Ingreso Neto</span>
-                                                                    <span className="font-black text-green-700 text-lg md:text-xl italic tracking-tighter">${(totalAllChannels - totalComm).toLocaleString()}</span>
+                                                                    <span className="font-black text-green-700 text-lg md:text-xl italic tracking-tighter">${(totalAllChannels - totalComm).toLocaleString('es-CL')}</span>
                                                                 </div>
                                                             );
                                                         })()}
@@ -666,13 +666,13 @@ export default function CashiersManagementPage() {
 
                                             <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-50">
                                                 <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Esperado</span>
-                                                <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">$ {systemValue.toLocaleString()}</span>
+                                                <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">$ {systemValue.toLocaleString('es-CL')}</span>
                                             </div>
 
                                             {!isOpen && (
                                                 <div className="flex justify-between items-center text-[10px] md:text-xs pt-3 bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200">
                                                     <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Contado</span>
-                                                    <span className="font-black text-slate-900 italic">$ {Number(shift.endAmount || 0).toLocaleString()}</span>
+                                                    <span className="font-black text-slate-900 italic">$ {Number(shift.endAmount || 0).toLocaleString('es-CL')}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -682,7 +682,7 @@ export default function CashiersManagementPage() {
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-900 italic">Balance Final</span>
                                                 <div className={`flex items-center gap-2 font-black italic text-lg md:text-2xl tracking-tighter ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-500' : 'text-green-500'}`}>
                                                     {diff > 0 ? <TrendingUp size={24} /> : diff < 0 ? <TrendingDown size={24} /> : <ShieldCheck size={24} />}
-                                                    {diff > 0 ? '+' : ''}{diff.toLocaleString()}
+                                                    {diff > 0 ? '+' : ''}{diff.toLocaleString('es-CL')}
                                                 </div>
                                             </div>
                                         )}

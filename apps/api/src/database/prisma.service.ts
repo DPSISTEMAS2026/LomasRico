@@ -41,7 +41,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         });
         this.$use(async (params, next) => {
             const result = await next(params);
-            if (WRITE_ACTIONS.has(params.action) && params.model) {
+            const noRowsTouched = (params.action === 'updateMany' || params.action === 'deleteMany') && result?.count === 0;
+            if (WRITE_ACTIONS.has(params.action) && params.model && !noRowsTouched) {
                 if (LIVE_MODELS.has(params.model)) this.liveCounter++;
                 if (CATALOG_MODELS.has(params.model)) this.catalogCounter++;
             } else if (RAW_ACTIONS.has(params.action) && isRawWrite(params.args)) {

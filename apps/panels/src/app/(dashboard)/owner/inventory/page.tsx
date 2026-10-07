@@ -398,7 +398,7 @@ export default function InventoryManagementPage() {
                 <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center hover:border-orange-500 transition-all duration-500">
                     <div>
                         <p className="text-[9px] font-black uppercase text-slate-800 tracking-[0.2em] mb-1 italic">Valor Total Stock</p>
-                        <p className="text-3xl md:text-4xl font-black italic text-orange-500 tracking-tighter">${inventoryValue.toLocaleString()}</p>
+                        <p className="text-3xl md:text-4xl font-black italic text-orange-500 tracking-tighter">${inventoryValue.toLocaleString('es-CL')}</p>
                     </div>
                     <div className="p-4 bg-orange-50 rounded-2xl text-orange-500">
                         <DollarSign size={24} />
@@ -649,7 +649,7 @@ export default function InventoryManagementPage() {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 text-right">
-                                        <p className="font-black text-xl italic text-slate-900 tracking-tighter">${item.costPerUnit?.toLocaleString() || 0}</p>
+                                        <p className="font-black text-xl italic text-slate-900 tracking-tighter">${item.costPerUnit?.toLocaleString('es-CL') || 0}</p>
                                         <p className="text-[8px] font-black text-slate-300 uppercase italic">ÚLTIMO COSTO</p>
                                     </td>
                                     <td className="px-8 py-6">
@@ -926,7 +926,7 @@ export default function InventoryManagementPage() {
                                 <div className="md:col-span-2 bg-orange-50 p-4 rounded-2xl border border-orange-100 text-center">
                                     <p className="text-[10px] font-black uppercase text-orange-400 tracking-widest italic">Costo Neto Unitario</p>
                                     <p className="text-3xl font-black italic text-orange-600 tracking-tighter">
-                                        ${Math.round(Number(newItem.purchasePrice) / ((Number(newItem.yield) || 100) / 100)).toLocaleString()}
+                                        ${Math.round(Number(newItem.purchasePrice) / ((Number(newItem.yield) || 100) / 100)).toLocaleString('es-CL')}
                                         <span className="text-sm text-orange-400"> /{newItem.unit}</span>
                                     </p>
                                 </div>

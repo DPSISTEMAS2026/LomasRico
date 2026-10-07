@@ -81,7 +81,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
                 {/* Loyalty Info - Hidden on mobile, shown on md+ */}
                 <div className="hidden sm:flex flex-col items-end px-3 md:px-4 py-1.5 bg-orange-50 rounded-2xl border border-orange-100">
                   <p className="text-[8px] md:text-[9px] font-black uppercase text-orange-400 tracking-widest leading-none">Club Puntos</p>
-                  <p className="text-xs md:text-sm font-black text-orange-900 leading-tight">{(user as any)?.loyaltyPoints?.toLocaleString() || 0} pts</p>
+                  <p className="text-xs md:text-sm font-black text-orange-900 leading-tight">{(user as any)?.loyaltyPoints?.toLocaleString('es-CL') || 0} pts</p>
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-3">
@@ -97,7 +97,7 @@ const Header = ({ onCartOpen, onOrdersOpen, onAuthOpen }: { onCartOpen: () => vo
 
                   {/* Mobile Loyalty Badge - Tiny pill for mobile */}
                   <div className="sm:hidden flex items-center px-2 py-1 bg-orange-100 rounded-full border border-orange-200">
-                    <span className="text-[9px] font-black text-orange-900">{(user as any)?.loyaltyPoints?.toLocaleString() || 0}</span>
+                    <span className="text-[9px] font-black text-orange-900">{(user as any)?.loyaltyPoints?.toLocaleString('es-CL') || 0}</span>
                   </div>
 
                   <div className="hidden md:flex gap-2">

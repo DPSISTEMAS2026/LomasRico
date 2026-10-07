@@ -48,6 +48,7 @@ export class KitchenService {
                         fulfillmentType: true,
                         status: true,
                         note: true,
+                        shippingData: true,
                         table: { select: { id: true, number: true } },
                         guest: { select: { id: true, name: true } },
                         externalOrder: { select: { id: true, platform: true } },
@@ -99,6 +100,7 @@ export class KitchenService {
                         status: true,
                         total: true,
                         note: true,
+                        shippingData: true,
                         table: { select: { id: true, number: true } },
                         guest: { select: { id: true, name: true } },
                         externalOrder: { select: { id: true, platform: true } },
@@ -141,10 +143,15 @@ export class KitchenService {
         const items = ids.length
             ? ticket.sale.items.filter((item: any) => ids.includes(item.id))
             : ticket.sale.items;
+        const { shippingData, ...sale } = ticket.sale;
+        const contact = shippingData?.contact;
+        const customer = contact?.name || contact?.phone
+            ? { name: String(contact.name || ''), phone: String(contact.phone || '') }
+            : null;
         return {
             ...ticket,
             label: this.kitchenLabel(ticket),
-            sale: { ...ticket.sale, items },
+            sale: { ...sale, items, customer },
         };
     }
 
@@ -327,7 +334,8 @@ export class KitchenService {
 
         const sale = labeled.sale;
         const channel = labeled.label || (sale.externalOrder ? sale.channel : 'POS');
-        const guestName = sale.guest?.name;
+        const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+        const guestName = escapeHtml(sale.guest?.name || [sale.customer?.name, sale.customer?.phone].filter(Boolean).join(' · '));
         const orderCode = sale.code || sale.id.substring(0, 6).toUpperCase();
         const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
         const date = new Date(ticket.createdAt).toLocaleDateString('es-CL');

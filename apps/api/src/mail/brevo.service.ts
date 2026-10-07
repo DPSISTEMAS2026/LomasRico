@@ -36,10 +36,10 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>Lo Más Rico</title>
 </head>
-<body style="margin:0;padding:0;background:#fff6ea;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff6ea;padding:32px 12px;">
+<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:32px 12px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid #f3e7d7;">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid #e5e7eb;">
         <tr><td style="padding:36px 36px 20px 36px;text-align:center;">
           ${logo}
           <p style="margin:0 0 10px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.35em;text-transform:uppercase;">Premium Cevichería</p>

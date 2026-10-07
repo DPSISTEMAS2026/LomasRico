@@ -316,7 +316,7 @@ export const CevicheBuilderModal = ({
                                                             isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                         }`}>
                                                             {option.priceAdjustment > 0 ? '+' : ''}
-                                                            ${Number(option.priceAdjustment).toLocaleString()}
+                                                            ${Number(option.priceAdjustment).toLocaleString('es-CL')}
                                                         </span>
                                                     )}
                                                 </button>
@@ -378,7 +378,7 @@ export const CevicheBuilderModal = ({
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
                                         <span className="font-black italic uppercase text-xs text-slate-800 tracking-tighter">Total Personalizado</span>
                                         <span className="text-xl font-black italic text-slate-900 tracking-tighter">
-                                            ${finalPrice.toLocaleString()}
+                                            ${finalPrice.toLocaleString('es-CL')}
                                         </span>
                                     </div>
                                 </div>
@@ -399,7 +399,7 @@ export const CevicheBuilderModal = ({
                                                     className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-orange-50 flex items-center justify-between"
                                                 >
                                                     <span className="font-black italic uppercase text-sm text-orange-700">Agrandar a {upgrade.next.name}</span>
-                                                    <span className="text-xs font-black text-orange-600">+${upgrade.extra.toLocaleString()}</span>
+                                                    <span className="text-xs font-black text-orange-600">+${upgrade.extra.toLocaleString('es-CL')}</span>
                                                 </button>
                                             )}
                                             {isUpsold && originalSizeId && (

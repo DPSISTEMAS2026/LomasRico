@@ -141,8 +141,8 @@ export function nextSizeUpgrade<T extends { options?: { id: string; name: string
     selectedId?: string | null,
 ) {
     if (!group || !selectedId) return null;
-    const pairs = sizeUpgradePairs(group);
-    return pairs.find((pair) => pair.current.id === selectedId) || null;
+    const pair = sizeUpgradePairs(group).find((p) => p.current.id === selectedId);
+    return pair && pair.extra > 0 ? pair : null;
 }
 
 export function cleanModifierLabel(label?: string | null): string {
