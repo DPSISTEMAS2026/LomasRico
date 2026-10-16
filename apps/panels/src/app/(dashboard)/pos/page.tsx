@@ -296,14 +296,22 @@ export default function POSPage() {
         if (!address) { setShippingCost(0); setShippingStatus('idle'); return; }
         setShippingStatus('loading');
         try {
-            const quote = await getShippingQuote(address, lat && lng ? { lat, lng } : undefined);
-            setShippingCost(quote.cost || 0);
+            const cartSubtotal = cart.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+            const quote = await getShippingQuote(address, lat && lng ? { lat, lng } : undefined, cartSubtotal);
+            setShippingCost(quote.valid ? (quote.cost || 0) : 0);
             setShippingStatus(quote.valid ? 'ok' : 'error');
         } catch {
-            setShippingCost(3000);
+            setShippingCost(0);
             setShippingStatus('error');
         }
     };
+
+    // Recalcular despacho si cambia el carrito (umbrales de gratis 20k/25k)
+    useEffect(() => {
+        if (!SHOW_POS_DELIVERY || !shippingAddress) return;
+        void handleShippingQuote({ address: shippingAddress });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cart]);
 
     const categories = useMemo(() => {
         const unique = Array.from(new Set(products.map(p => p.category))).filter((c): c is string => !!c);

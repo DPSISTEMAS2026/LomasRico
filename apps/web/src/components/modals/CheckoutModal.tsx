@@ -41,6 +41,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | undefined>(undefined);
 
     const [shippingQuote, setShippingQuote] = useState<any>(null);
+    const [shippingHint, setShippingHint] = useState('');
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'checking' | 'ready' | 'error' | 'out-of-range' | 'paying' | 'success'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
@@ -188,21 +189,25 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         setStatus('checking');
         setErrorMsg('');
         setShippingQuote(null);
+        setShippingHint('');
 
         try {
             const quote = await getShippingQuote(addrText, coords, total);
             if (deliveryTypeRef.current !== 'delivery') return;
             if (!quote.valid) {
                 setStatus('out-of-range');
-                setErrorMsg('');
+                setShippingQuote(null);
+                setShippingHint(quote.reason || 'Elige la dirección desde las sugerencias (con calle y número).');
             } else {
                 setShippingQuote(quote);
+                setShippingHint(quote.reason || '');
                 setStatus('ready');
             }
         } catch (e) {
             if (deliveryTypeRef.current !== 'delivery') return;
             setStatus('error');
-            setErrorMsg('Servicio de despacho no disponible.');
+            setShippingQuote(null);
+            setShippingHint('Servicio de despacho no disponible.');
         } finally {
             setLoading(false);
         }
@@ -248,6 +253,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         deliveryTypeRef.current = type;
         if (type === 'pickup') {
             setShippingQuote(null);
+            setShippingHint('');
             setErrorMsg('');
             setStatus('ready');
         } else if (address) {
@@ -664,14 +670,14 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         )}
 
                         {/* Quote Status */}
-                        {status === 'ready' && shippingQuote && (
+                        {status === 'ready' && shippingQuote && Number.isFinite(Number(shippingQuote.cost)) && (
                             <div className="bg-white p-4 rounded-2xl border border-green-100 flex justify-between items-center shadow-sm">
                                 <div className="flex items-start gap-2 min-w-0">
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse mt-1.5 shrink-0" />
                                     <div className="min-w-0">
                                         <span className="font-bold text-xs text-green-700 block">Envío disponible</span>
-                                        {shippingQuote.reason && (
-                                            <span className="text-[10px] font-bold text-slate-800 block mt-0.5">{shippingQuote.reason}</span>
+                                        {shippingHint && (
+                                            <span className="text-[10px] font-bold text-slate-800 block mt-0.5">{shippingHint}</span>
                                         )}
                                     </div>
                                 </div>
@@ -680,9 +686,9 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                 </span>
                             </div>
                         )}
-                        {status === 'out-of-range' && (
+                        {(status === 'out-of-range' || status === 'error') && shippingHint && (
                             <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 text-xs font-bold text-orange-600">
-                                No llegamos a esa dirección. Elige otra o usa Retiro en tienda.
+                                {shippingHint}
                             </div>
                         )}
                     </div>}
@@ -730,7 +736,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             </div>
                             <div className="flex justify-between text-xs font-bold uppercase text-slate-900">
                                 <span>Envío</span>
-                                <span className="text-[#f2642e]">{deliveryType === 'pickup' ? 'Gratis (Retiro)' : shippingQuote ? `$${shippingQuote.cost.toLocaleString('es-CL')}` : '--'}</span>
+                                <span className="text-[#f2642e]">{deliveryType === 'pickup' ? 'Gratis (Retiro)' : (shippingQuote && Number.isFinite(Number(shippingQuote.cost)) ? (Number(shippingQuote.cost) === 0 ? 'Gratis' : `$${Number(shippingQuote.cost).toLocaleString('es-CL')}`) : '--')}</span>
                             </div>
                         </div>
 

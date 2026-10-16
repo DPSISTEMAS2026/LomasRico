@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 import { useLoadScript } from '@react-google-maps/api';
 import { MapPin, Loader2 } from 'lucide-react';
+import { LOCATION } from '@lomasrico/shared-types';
 
 interface Props {
     onSelect: (data: { address: string; lat?: number; lng?: number }) => void;
@@ -13,6 +14,13 @@ interface Props {
 }
 
 const libraries: ("places")[] = ["places"];
+
+function biasToLocal(address: string) {
+    const raw = String(address || '').trim();
+    if (!raw) return raw;
+    if (/concepci[oó]n/i.test(raw)) return raw;
+    return `${raw}, Concepción, Chile`;
+}
 
 export default function AddressAutocomplete({ onSelect, placeholder = "Buscar dirección...", defaultValue = "" }: Props) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
@@ -39,8 +47,9 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
         clearSuggestions,
     } = usePlacesAutocomplete({
         requestOptions: {
-            componentRestrictions: { country: "cl" }, // Chile only
-            locationBias: "IP_BIAS",
+            componentRestrictions: { country: 'cl' },
+            location: { lat: LOCATION.lat, lng: LOCATION.lng },
+            radius: 25000,
         },
         defaultValue,
         debounce: 300,
@@ -53,15 +62,18 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
     const handleSelect = async (address: string) => {
         setValue(address, false);
         clearSuggestions();
+        const query = biasToLocal(address);
 
         try {
-            const results = await getGeocode({ address });
+            const results = await getGeocode({
+                address: query,
+                componentRestrictions: { country: 'cl' },
+            });
             const { lat, lng } = await getLatLng(results[0]);
-            onSelect({ address, lat, lng });
+            onSelect({ address: results[0]?.formatted_address || query, lat, lng });
         } catch (error) {
-            console.error("Error geocoding: ", error);
-            // Fallback to text only
-            onSelect({ address });
+            console.error('Error geocoding: ', error);
+            onSelect({ address: query });
         }
     };
 
