@@ -1,14 +1,48 @@
 
-import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
-// Location constants (inlined to avoid cross-package build issues on Render)
+
 const LOCATION = {
     address: 'Cruz 92, Concepción, Chile',
     city: 'Concepción',
     lat: -36.8211,
     lng: -73.0603,
-    maxDeliveryRadiusKm: 8,
+    maxDeliveryRadiusKm: 45,
 } as const;
+
+const COST_CONCEPCION = 2500;
+const COST_OUTSIDE = 4000;
+const FREE_IN_CONCEPCION_FROM = 20000;
+const FREE_ANYWHERE_FROM = 25000;
+
+/** Comunas del Gran Concepción que NO son la comuna Concepción → tarifa "fuera". */
+const OUTSIDE_COMUNA_HINTS = [
+    'talcahuano',
+    'san pedro de la paz',
+    'san pedro',
+    'chiguayante',
+    'hualpen',
+    'hualpén',
+    'penco',
+    'tome',
+    'tomé',
+    'lota',
+    'coronel',
+    'hualqui',
+    'florida',
+    'santa juana',
+    'arauco',
+    'cabrero',
+    'los angeles',
+    'los ángeles',
+];
+
+function normalizeText(raw: string) {
+    return String(raw || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '');
+}
 
 @Injectable()
 export class ShippingService {
@@ -19,11 +53,9 @@ export class ShippingService {
 
     private readonly PEDIDOSYA_API_URL = process.env.PEDIDOSYA_API_URL || 'https://api.pedidosya.com/v1';
     private readonly PEDIDOSYA_TOKEN = process.env.PEDIDOSYA_TOKEN;
-
-    // Tiempo de preparación por defecto: 20 minutos (Pedido por el usuario)
     private readonly PREPARATION_TIME_MINS = 20;
 
-    private deliveryMode: 'EXTERNAL' | 'INTERNAL' = 'EXTERNAL';
+    private deliveryMode: 'EXTERNAL' | 'INTERNAL' = 'INTERNAL';
 
     setDeliveryMode(mode: 'EXTERNAL' | 'INTERNAL') {
         this.deliveryMode = mode;
@@ -36,15 +68,42 @@ export class ShippingService {
     }
 
     setMaxDistance(km: number) {
-        this.maxDistanceKm = Math.max(1, Math.min(km, 50)); // 1-50km
+        this.maxDistanceKm = Math.max(1, Math.min(km, 80));
         this.logger.log(`[SHIPPING] Radio de delivery cambiado a: ${this.maxDistanceKm}km`);
         return { maxDistanceKm: this.maxDistanceKm };
     }
 
+    /** Comuna Concepción (no Gran Concepción completo). */
+    isInConcepcion(address: string, city?: string, distanceKm?: number): boolean {
+        const text = normalizeText(`${address} ${city || ''}`);
+        if (OUTSIDE_COMUNA_HINTS.some((hint) => text.includes(normalizeText(hint)))) {
+            return false;
+        }
+        if (text.includes('concepcion')) return true;
+        // Sin comuna clara: cerca del local (~6 km) se trata como Concepción
+        if (typeof distanceKm === 'number' && distanceKm > 0 && distanceKm <= 6) return true;
+        return false;
+    }
+
+    private priceFor(inConcepcion: boolean, cartSubtotal: number): { cost: number; label: string } {
+        const sub = Math.max(0, Math.round(Number(cartSubtotal) || 0));
+        if (sub >= FREE_ANYWHERE_FROM) {
+            return { cost: 0, label: 'Despacho gratis (compra sobre $25.000)' };
+        }
+        if (inConcepcion && sub >= FREE_IN_CONCEPCION_FROM) {
+            return { cost: 0, label: 'Despacho gratis en Concepción (compra sobre $20.000)' };
+        }
+        if (inConcepcion) {
+            return { cost: COST_CONCEPCION, label: 'Despacho Concepción' };
+        }
+        return { cost: COST_OUTSIDE, label: 'Despacho fuera de Concepción' };
+    }
+
     async calculateQuote(dto: ShippingQuoteDto): Promise<ShippingQuoteResponse> {
         const { address, channel, coordinates } = dto;
+        const cartSubtotal = Number((dto as any).cartSubtotal ?? (dto as any).subtotal ?? 0);
 
-        this.logger.log(`[QUOTE] Address: "${address}" | Channel: ${channel} | Coords: ${coordinates ? `${coordinates.lat},${coordinates.lng}` : 'NONE'}`);
+        this.logger.log(`[QUOTE] Address: "${address}" | Channel: ${channel} | Coords: ${coordinates ? `${coordinates.lat},${coordinates.lng}` : 'NONE'} | Subtotal: ${cartSubtotal}`);
 
         const hasCoords = !!coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng));
         if (!hasCoords && channel === 'WEB') {
@@ -57,7 +116,6 @@ export class ShippingService {
             };
         }
 
-        // 1. Calculate Distance
         let distanceKm = 0;
         if (hasCoords && coordinates) {
             distanceKm = this.calculateDistance(this.ORIGIN_COORDS.lat, this.ORIGIN_COORDS.lng, coordinates.lat, coordinates.lng);
@@ -65,57 +123,33 @@ export class ShippingService {
             distanceKm = await this.mockDistanceCalculation(address);
         }
 
-        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Max: ${this.maxDistanceKm}km | Mode: ${this.deliveryMode}`);
-
-        // 2. Validate Radius
         if (distanceKm > this.maxDistanceKm && channel !== 'POS') {
             return {
                 valid: false,
                 distanceKm,
                 cost: 0,
                 deliveryTimeEstimate: 'N/A',
-                reason: `¡Uf! Lo sentimos, estás fuera de nuestro radio de entrega actual (${this.maxDistanceKm}km). Tu distancia aproximada es de ${distanceKm.toFixed(1)}km.`,
+                reason: `Estás muy lejos de nuestro local (${distanceKm.toFixed(1)} km). Prueba con retiro en tienda o una dirección más cercana.`,
             };
         }
 
-        // 3. INTERNAL DELIVERY Logic
-        if (this.deliveryMode === 'INTERNAL') {
-            return {
-                valid: true,
-                cost: 2000, // Precio fijo local o basado en zona
-                deliveryTimeEstimate: '30-45 min (Repartidor del Local)',
-                estimateId: `internal-${Date.now()}`,
-                distanceKm
-            };
-        }
+        const inConcepcion = this.isInConcepcion(address, (dto as any).city, distanceKm);
+        const priced = this.priceFor(inConcepcion, cartSubtotal);
 
-        // 4. EXTERNAL API (PedidosYa)
-        try {
-            const quote = await this.getPedidosYaQuote(address, coordinates);
-            return {
-                valid: true,
-                cost: quote.price,
-                deliveryTimeEstimate: quote.eta || '35-45 min',
-                estimateId: quote.id,
-                distanceKm
-            };
-        } catch (error) {
-            this.logger.error('PedidosYa Quote Failed', error);
-            // Fallback: use distance-based pricing when API fails
-            const fallbackCost = distanceKm > 5 ? 3500 : 2500;
-            return {
-                valid: true,
-                cost: fallbackCost,
-                deliveryTimeEstimate: '35-50 min (Estimado)',
-                reason: channel === 'WEB' ? undefined : 'API Failure: Fallback applied.',
-                estimateId: `fallback-${Date.now()}`,
-                distanceKm,
-            };
-        }
+        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Zone: ${inConcepcion ? 'Concepción' : 'Fuera'} | Cost: ${priced.cost}`);
+
+        return {
+            valid: true,
+            cost: priced.cost,
+            deliveryTimeEstimate: inConcepcion ? '30-45 min' : '40-60 min',
+            estimateId: `zone-${inConcepcion ? 'cco' : 'out'}-${Date.now()}`,
+            distanceKm,
+            reason: priced.label,
+        };
     }
 
     private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-        const R = 6371; // Radius of the earth in km
+        const R = 6371;
         const dLat = this.deg2rad(lat2 - lat1);
         const dLon = this.deg2rad(lon2 - lon1);
         const a =
@@ -123,8 +157,7 @@ export class ShippingService {
             Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const d = R * c; // Distance in km
-        return parseFloat(d.toFixed(2));
+        return parseFloat((R * c).toFixed(2));
     }
 
     private deg2rad(deg: number): number {
@@ -132,81 +165,15 @@ export class ShippingService {
     }
 
     private async mockDistanceCalculation(address: string): Promise<number> {
-        if (address.toLowerCase().includes('talcahuano')) return 12;
-        return 3.5;
-    }
-
-    private async getPedidosYaQuote(address: string, coordinates?: { lat: number, lng: number }) {
-        if (!this.PEDIDOSYA_TOKEN) {
-            // Mock Response if no token
-            return {
-                price: 2500,
-                eta: '30-45 min',
-                id: `mock-py-${Date.now()}`
-            };
-        }
-
-        const destination = coordinates
-            ? { latitude: coordinates.lat, longitude: coordinates.lng, addressStreet: address }
-            : { addressStreet: address, city: 'Concepción' };
-
-        // PedidosYa Payload with Origin and Destination Waypoints
-        const realPayload = {
-            referenceId: `quote-${Date.now()}`,
-            // Mientras no esté en true, PedidosYa trata los envíos como prueba y no manda repartidor.
-            isTest: process.env.PEDIDOSYA_LIVE !== 'true',
-            preparationTime: this.PREPARATION_TIME_MINS, // Avisar los 20 min de preparación
-            notificationUrl: null,
-            waypoints: [
-                {
-                    type: 'PICK_UP',
-                    addressStreet: this.ORIGIN_ADDRESS,
-                    city: 'Concepción',
-                    latitude: this.ORIGIN_COORDS.lat,
-                    longitude: this.ORIGIN_COORDS.lng,
-                    phone: '+56900000000',
-                    name: 'Lo Mas Rico'
-                },
-                {
-                    type: 'DROP_OFF',
-                    ...destination,
-                    phone: '+56900000000',
-                    name: 'Cliente'
-                }
-            ],
-            items: [{ type: 'Standard', value: 10000, description: 'Comida', quantity: 1, volume: 0.1, weight: 1 }]
-        };
-
-        const response = await fetch(`${this.PEDIDOSYA_API_URL}/shippings/estimates`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.PEDIDOSYA_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(realPayload)
-        });
-
-        if (!response.ok) {
-            const err = await response.text();
-            this.logger.error(`PedidosYa API Error: ${err}`);
-            throw new Error(`PedidosYa API Error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const offer = data.estimate?.deliveryOffers?.find((o: any) => o.type === 'INSTANT') || data.estimate?.deliveryOffers?.[0];
-
-        if (!offer) throw new Error('No delivery offers available');
-
-        return {
-            price: offer.pricing.total,
-            eta: `${offer.confirmationTime || 45} min`,
-            id: data.estimate.estimateId
-        };
+        const text = normalizeText(address);
+        if (OUTSIDE_COMUNA_HINTS.some((h) => text.includes(normalizeText(h)))) return 12;
+        if (text.includes('concepcion')) return 3.5;
+        return 8;
     }
 
     async confirmDelivery(estimateId: string) {
-        if (estimateId.startsWith('internal-') || estimateId.startsWith('mock-')) {
-            this.logger.log(`[SHIPPING] Confirmando despacho Local/Simulado: ${estimateId}`);
+        if (estimateId.startsWith('internal-') || estimateId.startsWith('mock-') || estimateId.startsWith('zone-')) {
+            this.logger.log(`[SHIPPING] Confirmando despacho Local/Zona: ${estimateId}`);
             return { success: true, trackingId: `TRACK-MOCK-${Date.now()}` };
         }
 
@@ -215,20 +182,19 @@ export class ShippingService {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.PEDIDOSYA_TOKEN}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     estimateId,
                     notificationUrl: null,
-                    preparationTime: this.PREPARATION_TIME_MINS
-                })
+                    preparationTime: this.PREPARATION_TIME_MINS,
+                }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error('Failed to confirm delivery');
             return { success: true, trackingId: data.trackingId };
         }
 
-        // Sin token de PedidosYa configurado
         this.logger.warn(`[SHIPPING] No PEDIDOSYA_TOKEN configured. Cannot confirm delivery for ${estimateId}`);
         return { success: false, trackingId: null, reason: 'No delivery provider configured' };
     }

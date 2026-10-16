@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, getStoreStatus, type StoreStatus } from '../../services/api';
 import { CHECKOUT_CONTACT } from './AuthModal';
 import { useAuth } from '../../context/AuthContext';
@@ -34,6 +34,8 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [showNewAddressInput, setShowNewAddressInput] = useState(false);
     const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
+    const deliveryTypeRef = useRef(deliveryType);
+    deliveryTypeRef.current = deliveryType;
 
     // Coordenadas para envío preciso
     const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -175,27 +177,30 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         setAddress(addr.addressText);
         setCoordinates(addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : undefined);
         setShowNewAddressInput(false);
-        // Si tiene coordenadas guardadas, usarlas
+        if (deliveryTypeRef.current !== 'delivery') return;
         calculateShipping(addr.addressText, addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : undefined);
     };
 
     const calculateShipping = async (addrText: string, coords?: { lat: number; lng: number }) => {
         if (!addrText) return;
+        if (deliveryTypeRef.current !== 'delivery') return;
         setLoading(true);
         setStatus('checking');
         setErrorMsg('');
         setShippingQuote(null);
 
         try {
-            const quote = await getShippingQuote(addrText, coords);
+            const quote = await getShippingQuote(addrText, coords, total);
+            if (deliveryTypeRef.current !== 'delivery') return;
             if (!quote.valid) {
                 setStatus('out-of-range');
-                setErrorMsg(quote.reason || 'Fuera de radio (8km).');
+                setErrorMsg('');
             } else {
                 setShippingQuote(quote);
                 setStatus('ready');
             }
         } catch (e) {
+            if (deliveryTypeRef.current !== 'delivery') return;
             setStatus('error');
             setErrorMsg('Servicio de despacho no disponible.');
         } finally {
@@ -240,15 +245,24 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
     const handleDeliveryTypeChange = (type: 'delivery' | 'pickup') => {
         setDeliveryType(type);
+        deliveryTypeRef.current = type;
         if (type === 'pickup') {
             setShippingQuote(null);
             setErrorMsg('');
-            setStatus('ready'); // pickup siempre habilitado
+            setStatus('ready');
+        } else if (address) {
+            calculateShipping(address, coordinates);
         } else {
-            // Volver al estado idle para que elija dirección
-            if (!address) setStatus('idle');
+            setStatus('idle');
         }
     };
+
+    // Recalcular despacho si cambia el subtotal (umbrales de gratis)
+    useEffect(() => {
+        if (!isOpen || deliveryType !== 'delivery' || !address) return;
+        void calculateShipping(address, coordinates);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [total, isOpen]);
 
     // Create preference and show Wallet Brick
     const handlePreparePayment = async () => {
@@ -652,16 +666,23 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         {/* Quote Status */}
                         {status === 'ready' && shippingQuote && (
                             <div className="bg-white p-4 rounded-2xl border border-green-100 flex justify-between items-center shadow-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="font-bold text-xs text-green-700">Envío disponible</span>
+                                <div className="flex items-start gap-2 min-w-0">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse mt-1.5 shrink-0" />
+                                    <div className="min-w-0">
+                                        <span className="font-bold text-xs text-green-700 block">Envío disponible</span>
+                                        {shippingQuote.reason && (
+                                            <span className="text-[10px] font-bold text-slate-800 block mt-0.5">{shippingQuote.reason}</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <span className="font-black text-sm text-slate-900">${shippingQuote.cost.toLocaleString('es-CL')}</span>
+                                <span className="font-black text-sm text-slate-900 shrink-0 ml-2">
+                                    {Number(shippingQuote.cost) === 0 ? 'Gratis' : `$${Number(shippingQuote.cost).toLocaleString('es-CL')}`}
+                                </span>
                             </div>
                         )}
                         {status === 'out-of-range' && (
                             <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 text-xs font-bold text-orange-600">
-                                📍 Fuera de radio. Elige "Retiro" o intenta con otra dirección.
+                                No llegamos a esa dirección. Elige otra o usa Retiro en tienda.
                             </div>
                         )}
                     </div>}

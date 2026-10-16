@@ -7,6 +7,9 @@ export class ShippingQuoteDto {
     };
     channel: 'WEB' | 'POS' | 'WHATSAPP';
     coordinates?: { lat: number; lng: number };
+    /** Subtotal del carrito (CLP) para envío gratis por umbral */
+    cartSubtotal?: number;
+    subtotal?: number;
 }
 
 export class ShippingQuoteResponse {

@@ -69,7 +69,7 @@ export async function validateRecipe(
     return res.json();
 }
 
-export async function getShippingQuote(address: string, coordinates?: { lat: number; lng: number }) {
+export async function getShippingQuote(address: string, coordinates?: { lat: number; lng: number }, cartSubtotal?: number) {
     const res = await fetch(`${API_URL}/shipping/quote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,7 +77,8 @@ export async function getShippingQuote(address: string, coordinates?: { lat: num
             address,
             city: 'Concepción',
             channel: 'WEB',
-            coordinates
+            coordinates,
+            cartSubtotal: Math.round(Number(cartSubtotal) || 0),
         })
     });
 

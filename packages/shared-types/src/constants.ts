@@ -22,21 +22,26 @@ export const LOCATION = {
     comuna: 'Concepción',
     lat: -36.8211,
     lng: -73.0603,
-    /** Maximum delivery radius in kilometers */
-    maxDeliveryRadiusKm: 8,
+    /** Soft max for absurd addresses (km). Zone pricing decides cost inside this. */
+    maxDeliveryRadiusKm: 45,
 } as const;
 
 // ─── Shipping ──────────────────────────────────────────────
 
 export const SHIPPING = {
-    /** Base delivery cost in CLP */
-    baseCost: 2000,
-    /** Cost per km beyond base distance */
-    perKmCost: 500,
-    /** Base distance included in baseCost (km) */
-    baseDistanceKm: 3,
-    /** Free delivery threshold in CLP */
+    /** Despacho dentro de la comuna Concepción (CLP) */
+    concepcionCost: 2500,
+    /** Despacho fuera de Concepción (CLP) */
+    outsideCost: 4000,
+    /** Envío gratis en Concepción desde este subtotal (CLP) */
+    freeInConcepcionFrom: 20000,
+    /** Envío gratis a cualquier destino desde este subtotal (CLP) */
+    freeAnywhereFrom: 25000,
+    /** @deprecated use freeAnywhereFrom */
     freeDeliveryThreshold: 25000,
+    baseCost: 2500,
+    perKmCost: 0,
+    baseDistanceKm: 0,
 } as const;
 
 // ─── Loyalty ───────────────────────────────────────────────
