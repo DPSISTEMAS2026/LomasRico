@@ -3,6 +3,7 @@ export type PaymentMethodCode =
     | 'MP'
     | 'TRANSFER'
     | 'MERCADO_PAGO'
+    | 'TUU'
     | 'EDENRED'
     | 'PLUXEE'
     | 'JUNAEB'
@@ -21,6 +22,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
     CASH: 'Efectivo',
     MP: 'Mercado Pago',
     MERCADO_PAGO: 'Mercado Pago',
+    TUU: 'Web TUU',
     TRANSFER: 'Transferencia',
     EDENRED: 'Edenred',
     PLUXEE: 'Pluxee',

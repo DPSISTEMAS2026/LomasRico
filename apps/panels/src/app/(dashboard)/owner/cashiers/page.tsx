@@ -502,7 +502,9 @@ export default function CashiersManagementPage() {
 
                             const salesInPos = (shift.transactions || []).filter((t: any) => t.type === 'SALE_INCOME');
                             const totalSalesValue = salesInPos.reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-                            const systemValue = shift.systemAmount ? Number(shift.systemAmount) : (Number(shift.startAmount) + totalSalesValue);
+                            const systemValue = shift.systemAmount != null
+                                ? Number(shift.systemAmount)
+                                : Number(shift.cashSummary?.expectedCash ?? shift.startAmount ?? 0);
                             let diff = 0;
                             if (!isOpen && shift.endAmount !== null) {
                                 diff = Number(shift.endAmount) - systemValue;

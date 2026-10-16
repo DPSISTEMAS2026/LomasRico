@@ -35,6 +35,7 @@ export class KitchenService {
                 status: {
                     notIn: [TicketStatus.DELIVERED],
                 },
+                sale: { status: { not: OrderStatus.CANCELLED } },
             },
             orderBy: {
                 createdAt: 'asc',
@@ -173,6 +174,10 @@ export class KitchenService {
             return this.cancelTicket(ticket, approval);
         }
 
+        if (ticket.sale?.status === OrderStatus.CANCELLED) throw new BadRequestException('Este pedido fue anulado');
+        const rank: Record<string, number> = { WAITING: 0, PREPARING: 1, READY: 2, DELIVERED: 3 };
+        if (rank[status] <= rank[ticket.status]) return ticket;
+
         const updateData: any = { status };
         const saleUpdateData: any = {};
 
@@ -190,7 +195,10 @@ export class KitchenService {
 
         const ops: any[] = [(this.prisma as any).kitchenTicket.update({ where: { id }, data: updateData })];
         if (Object.keys(saleUpdateData).length > 0) {
-            ops.push((this.prisma as any).sale.update({ where: { id: ticket.saleId }, data: saleUpdateData }));
+            ops.push((this.prisma as any).sale.updateMany({
+                where: { id: ticket.saleId, status: { notIn: [OrderStatus.CANCELLED, OrderStatus.COMPLETED] } },
+                data: saleUpdateData,
+            }));
         }
         const [updatedTicket] = await this.prisma.$transaction(ops);
         return updatedTicket;
@@ -333,12 +341,13 @@ export class KitchenService {
         const labeled = this.withTicketItems(ticket);
 
         const sale = labeled.sale;
-        const channel = labeled.label || (sale.externalOrder ? sale.channel : 'POS');
-        const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+        const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+        const channel = escapeHtml(labeled.label || (sale.externalOrder ? sale.channel : 'POS'));
         const guestName = escapeHtml(sale.guest?.name || [sale.customer?.name, sale.customer?.phone].filter(Boolean).join(' · '));
-        const orderCode = sale.code || sale.id.substring(0, 6).toUpperCase();
-        const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-        const date = new Date(ticket.createdAt).toLocaleDateString('es-CL');
+        const orderCode = escapeHtml(sale.code || sale.id.substring(0, 6).toUpperCase());
+        const timeZone = 'America/Santiago';
+        const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone });
+        const date = new Date(ticket.createdAt).toLocaleDateString('es-CL', { timeZone });
 
         const formatMods = (raw: any) => {
             const mods = raw
@@ -346,7 +355,7 @@ export class KitchenService {
                 : {};
             const lines: string[] = [];
             if (Array.isArray(mods)) {
-                return mods.map((m: any) => `<div style="padding-left:12px;font-size:11px;color:#666;">+ ${m.name || m.optionName || m}</div>`).join('');
+                return mods.map((m: any) => `<div style="padding-left:12px;font-size:11px;color:#666;">+ ${escapeHtml(m.name || m.optionName || m)}</div>`).join('');
             }
             (mods.selectedProteinNames || []).forEach((n: string) => lines.push(`+ ${n}`));
             (mods.selectedProteins || []).forEach((n: string) => lines.push(`+ ${n}`));
@@ -355,17 +364,17 @@ export class KitchenService {
             (mods.dynamicSelections || []).forEach((g: any) => {
                 (g.selectedOptions || []).forEach((o: any) => lines.push(`+ ${o.name || o}`));
             });
-            return lines.map((line) => `<div style="padding-left:12px;font-size:11px;color:#666;">${line}</div>`).join('');
+            return lines.map((line) => `<div style="padding-left:12px;font-size:11px;color:#666;">${escapeHtml(line)}</div>`).join('');
         };
 
         const isAccount = kind === 'account';
         const itemsHtml = sale.items.map((item: any) => {
-            const name = item.sellingProduct?.name || item.productName || 'Producto';
+            const name = escapeHtml(item.sellingProduct?.name || item.productName || 'Producto');
             const qty = item.quantity || 1;
             const unit = Number(item.priceUnit || 0);
             const lineTotal = unit * qty;
             const modsHtml = formatMods(item.modifiers);
-            const notes = item.note ? `<div style="padding-left:12px;font-size:11px;color:#c00;font-weight:bold;">⚠ ${item.note}</div>` : '';
+            const notes = item.note ? `<div style="padding-left:12px;font-size:11px;color:#c00;font-weight:bold;">⚠ ${escapeHtml(item.note)}</div>` : '';
             return `
                 <div style="border-bottom:1px dashed #ccc;padding:6px 0;">
                     <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;">
@@ -414,9 +423,9 @@ export class KitchenService {
     </div>
     ${itemsHtml}
     ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div><div style="text-align:center;margin-top:8px;font-size:11px;">Documento interno · reimpresión</div>` : ''}
-    ${sale.note && !isAccount ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${sale.note}</div>` : ''}
+    ${sale.note && !isAccount ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${escapeHtml(sale.note).replace(/\n/g, '<br>')}</div>` : ''}
     <div class="footer">
-        <div>Reimpresión: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+        <div>Reimpresión: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone })}</div>
     </div>
 </body>
 </html>`;

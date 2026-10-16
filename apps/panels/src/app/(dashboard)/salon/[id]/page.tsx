@@ -15,6 +15,8 @@ import { BoletaPrinter, type BoletaGuest } from '../../../../components/printer/
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
 import { ApprovalModal, type Approval } from '../../../../components/common/ApprovalModal';
+import { PaymentMethodPicker, isTerminalCardMethod, useCardTerminal, type PosPaymentMethod, type TerminalCardMethod } from '../../../../components/pos/PaymentMethodPicker';
+import { TerminalChargeModal } from '../../../../components/pos/TerminalChargeModal';
 import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
@@ -55,6 +57,12 @@ export default function SalonTablePage() {
     const [accountOpen, setAccountOpen] = useState(false);
     const [bill, setBill] = useState<any>(null);
     const [voidItem, setVoidItem] = useState<{ saleId: string; guestName: string; item: any } | null>(null);
+    const [payPrompt, setPayPrompt] = useState<{ guestId?: string; label: string; amount: number } | null>(null);
+    const [payMethod, setPayMethod] = useState<PosPaymentMethod>('CASH');
+    const [tipPercent, setTipPercent] = useState(0);
+    const cardTerminal = useCardTerminal();
+    const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalCardMethod } | null>(null);
+    const [paidTerminal, setPaidTerminal] = useState<{ guestId?: string; amount: number; key: string } | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
     const [printSale, setPrintSale] = useState<{
         code: string;
@@ -65,6 +73,7 @@ export default function SalonTablePage() {
         total?: number;
         mode?: 'guest' | 'table';
         guests?: BoletaGuest[];
+        tipPercent?: number;
     } | null>(null);
     const printerRef = useRef<HTMLDivElement>(null);
     const handlePrint = useReactToPrint({
@@ -331,7 +340,42 @@ export default function SalonTablePage() {
         }
     };
 
-    const payGuest = async (targetGuestId?: string) => {
+    const askPayGuest = (targetGuestId?: string) => {
+        const payId = targetGuestId || guestId;
+        const row = table?.guests?.find((g: any) => g.id === payId);
+        if (!payId || !row?.openSale?.items?.length) return;
+        setPayMethod('CASH');
+        setTipPercent(0);
+        setPayPrompt({ guestId: payId, label: `Cobrar a ${row.name}`, amount: Number(row.openSale.total || 0) });
+    };
+
+    const askPayAll = () => {
+        const amount = Number(bill?.grandTotal ?? table?.openTotal ?? 0);
+        if (!amount) return;
+        setPayMethod('CASH');
+        setTipPercent(0);
+        setPayPrompt({ label: 'Cobrar toda la mesa', amount });
+    };
+
+    const confirmPay = () => {
+        if (!payPrompt) return;
+        const prompt = payPrompt;
+        const tip = Math.round(prompt.amount * tipPercent / 100);
+        setPayPrompt(null);
+        let key: string | undefined;
+        if (cardTerminal && isTerminalCardMethod(payMethod)) {
+            const amount = Math.round(prompt.amount + tip);
+            if (paidTerminal?.guestId === prompt.guestId && paidTerminal?.amount === amount) key = paidTerminal.key;
+            else { setTerminalCharge({ guestId: prompt.guestId, amount, method: payMethod }); return; }
+        }
+        if (prompt.guestId) void payGuest(prompt.guestId, payMethod, key, tipPercent);
+        else void payAll(payMethod, key, tipPercent);
+    };
+
+    const terminalFailMessage = (e: any) =>
+        `El pago en la máquina quedó aprobado, pero no se registró: ${e.message}. Vuelve a cobrar sin pasar la tarjeta de nuevo.`;
+
+    const payGuest = async (targetGuestId: string | undefined, method: PosPaymentMethod, terminalPaymentKey?: string, tipPct = 0) => {
         const payId = targetGuestId || guestId;
         const payGuestRow = table?.guests?.find((g: any) => g.id === payId);
         const payItems: CartItem[] = (payGuestRow?.openSale?.items || []).map((item: any) => ({
@@ -345,15 +389,15 @@ export default function SalonTablePage() {
             sentToKitchen: !!item.sentToKitchenAt,
         }));
         if (!payId || payItems.length === 0) return;
-        if (!confirm(`¿Cobrar a ${payGuestRow?.name}?`)) return;
         setBusy(true);
         try {
             const res = await authFetch(`${API_URL}/tables/${id}/guests/${payId}/pay`, {
                 method: 'POST',
-                body: JSON.stringify({ paymentMethod: 'CASH', userId: user?.id }),
+                body: JSON.stringify({ paymentMethod: method, userId: user?.id, terminalPaymentKey, tipPercent: tipPct }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'No se pudo cobrar');
+            if (terminalPaymentKey) setPaidTerminal(null);
             setPrintSale({
                 code: data.sale?.code || '',
                 items: payItems,
@@ -361,6 +405,7 @@ export default function SalonTablePage() {
                 guestName: payGuestRow?.name,
                 kind: 'account',
                 mode: 'guest',
+                tipPercent: tipPct,
                 guests: [{
                     name: payGuestRow?.name || 'Comensal',
                     items: payItems,
@@ -375,7 +420,7 @@ export default function SalonTablePage() {
                 router.push('/salon');
             }
         } catch (e: any) {
-            alert(e.message);
+            alert(terminalPaymentKey ? terminalFailMessage(e) : e.message);
         } finally {
             setBusy(false);
         }
@@ -402,6 +447,7 @@ export default function SalonTablePage() {
                 guestName: g.name,
                 kind: 'account',
                 mode: 'guest',
+                tipPercent: 10,
                 guests: [{ name: g.name, items, total: Number(g.total || 0) }],
                 total: Number(g.total || 0),
             });
@@ -426,6 +472,7 @@ export default function SalonTablePage() {
                 channel: `MESA ${bill.number}`,
                 kind: 'account',
                 mode: 'table',
+                tipPercent: 10,
                 guests: tableGuests,
                 total: Number(bill.grandTotal || 0),
             });
@@ -455,16 +502,16 @@ export default function SalonTablePage() {
         setShowBill(true);
     };
 
-    const payAll = async () => {
-        if (!confirm('¿Cobrar toda la mesa en un solo pago?')) return;
+    const payAll = async (method: PosPaymentMethod, terminalPaymentKey?: string, tipPct = 0) => {
         setBusy(true);
         try {
             const res = await authFetch(`${API_URL}/tables/${id}/pay-all`, {
                 method: 'POST',
-                body: JSON.stringify({ paymentMethod: 'CASH', userId: user?.id }),
+                body: JSON.stringify({ paymentMethod: method, userId: user?.id, terminalPaymentKey, tipPercent: tipPct }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'No se pudo cobrar la mesa');
+            if (terminalPaymentKey) setPaidTerminal(null);
 
             const tableGuests: BoletaGuest[] = (table?.guests || []).map((g: any) => ({
                 name: g.name,
@@ -489,6 +536,7 @@ export default function SalonTablePage() {
                     kind: 'account',
                     mode: 'table',
                     guests: tableGuests,
+                    tipPercent: tipPct,
                     total: tableGuests.reduce((s, g) => s + (g.total || 0), 0),
                 });
             }
@@ -497,7 +545,7 @@ export default function SalonTablePage() {
             setShowBill(false);
             setGuestId(null);
         } catch (e: any) {
-            alert(e.message);
+            alert(terminalPaymentKey ? terminalFailMessage(e) : e.message);
         } finally {
             setBusy(false);
         }
@@ -698,7 +746,7 @@ export default function SalonTablePage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => void payGuest()}
+                                onClick={() => askPayGuest()}
                                 disabled={busy || !guestId || accountItems.length === 0}
                                 className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic disabled:opacity-40 flex items-center justify-center gap-2"
                             >
@@ -777,7 +825,7 @@ export default function SalonTablePage() {
                                     <button
                                         type="button"
                                         disabled={busy || !g.total}
-                                        onClick={() => { setGuestId(g.id); void payGuest(g.id); }}
+                                        onClick={() => { setGuestId(g.id); askPayGuest(g.id); }}
                                         className="py-3 rounded-xl bg-slate-900 text-white font-black uppercase italic text-[11px] disabled:opacity-40"
                                     >
                                         Cobrar {g.name}
@@ -800,7 +848,7 @@ export default function SalonTablePage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={payAll}
+                                onClick={askPayAll}
                                 disabled={busy || !bill.grandTotal}
                                 className="py-4 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs"
                             >
@@ -810,6 +858,67 @@ export default function SalonTablePage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {payPrompt && (
+                <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-3" onClick={() => setPayPrompt(null)}>
+                    <div className="w-full max-w-md bg-white rounded-[2rem] p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Mesa {table?.number}</p>
+                                <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">{payPrompt.label}</h2>
+                            </div>
+                            <span className="text-2xl font-black italic text-slate-900">${Math.round(payPrompt.amount).toLocaleString('es-CL')}</span>
+                        </div>
+                        <PaymentMethodPicker value={payMethod} onChange={setPayMethod} cardTerminal={cardTerminal} />
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2">Propina</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[0, 10, 15, 20].map((p) => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => setTipPercent(p)}
+                                        className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-900 border-transparent'}`}
+                                    >
+                                        {p === 0 ? 'No' : `${p}%`}
+                                    </button>
+                                ))}
+                            </div>
+                            {tipPercent > 0 && (
+                                <p className="mt-2 text-xs font-bold text-slate-800">
+                                    Propina ${Math.round(payPrompt.amount * tipPercent / 100).toLocaleString('es-CL')}
+                                    {' · '}Total ${Math.round(payPrompt.amount * (1 + tipPercent / 100)).toLocaleString('es-CL')}
+                                </p>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button type="button" onClick={() => setPayPrompt(null)} className="py-3 rounded-2xl bg-slate-100 font-black uppercase italic text-xs text-slate-900">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={confirmPay} disabled={busy} className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs disabled:opacity-40">
+                                {payMethod === 'MP' ? 'Cobrado en el Point' : 'Cobrar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {terminalCharge && (
+                <TerminalChargeModal
+                    amount={terminalCharge.amount}
+                    method={terminalCharge.method}
+                    reference={`Mesa ${table?.number ?? ''}`.trim()}
+                    onClose={() => setTerminalCharge(null)}
+                    onPaid={(key) => {
+                        const charged = terminalCharge;
+                        const tipPct = tipPercent;
+                        setPaidTerminal({ guestId: charged.guestId, amount: charged.amount, key });
+                        setTerminalCharge(null);
+                        if (charged.guestId) void payGuest(charged.guestId, charged.method, key, tipPct);
+                        else void payAll(charged.method, key, tipPct);
+                    }}
+                />
             )}
 
             {voidItem && (
@@ -880,6 +989,7 @@ export default function SalonTablePage() {
                                 total: printSale.total,
                             }]}
                             waiter={user?.name || undefined}
+                            tipPercent={printSale.tipPercent ?? 0}
                         />
                     ) : (
                         <ComandaPrinter

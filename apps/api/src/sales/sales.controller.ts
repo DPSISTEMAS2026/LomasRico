@@ -32,6 +32,7 @@ export class SalesController {
     async create(@Body() createSaleDto: CreateSaleDto, @Req() req: any) {
         const user = req.user;
         if (user && CASH_ROLES.includes(user.role)) {
+            (createSaleDto as any).operator = { id: user.userId, role: user.role };
             const shipping = (createSaleDto as any).shippingData;
             if (shipping?.contact) {
                 const name = String(shipping.contact.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
@@ -67,7 +68,6 @@ export class SalesController {
         return this.salesService.create({
             channel: 'WEB',
             items: body.items,
-            pointsToRedeem: user?.role === 'CUSTOMER' ? body.pointsToRedeem : undefined,
             userId: user?.role === 'CUSTOMER' ? user.userId : undefined,
             fulfillmentType: address ? 'DELIVERY' : 'TAKEAWAY',
             shippingData: address

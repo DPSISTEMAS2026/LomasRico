@@ -41,7 +41,8 @@ import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
 import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
 import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
 import { DiscountModal } from '../../../components/pos/DiscountModal';
-import { PaymentMethodPicker, checkoutButtonLabel, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
+import { PaymentMethodPicker, checkoutButtonLabel, isTerminalCardMethod, useCardTerminal, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
+import { TerminalChargeModal } from '../../../components/pos/TerminalChargeModal';
 import { SHOW_POS_DELIVERY } from '../../../config/features';
 
 // ─────────────────────────────────────────────
@@ -60,6 +61,9 @@ export default function POSPage() {
     const [shippingAddress, setShippingAddress] = useState('');
     const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
     const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('CASH');
+    const cardTerminal = useCardTerminal();
+    const [terminalCharge, setTerminalCharge] = useState<number | null>(null);
+    const [paidTerminal, setPaidTerminal] = useState<{ key: string; amount: number } | null>(null);
     const [cashReceived, setCashReceived] = useState<number>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeShift, setActiveShift] = useState<CashierShift | null>(null);
@@ -231,9 +235,14 @@ export default function POSPage() {
         }
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (chargedKey?: string) => {
         if (isSubmitting || cart.length === 0) return;
         if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(total).toLocaleString('es-CL')} en el Point?`)) return;
+        let terminalPaymentKey: string | undefined;
+        if (cardTerminal && isTerminalCardMethod(paymentMethod)) {
+            terminalPaymentKey = chargedKey ?? (paidTerminal?.amount === Math.round(total) ? paidTerminal.key : undefined);
+            if (!terminalPaymentKey) { setTerminalCharge(Math.round(total)); return; }
+        }
         setIsSubmitting(true);
         const contactName = (selectedCustomer?.name || guestName).trim();
         const contactPhone = (selectedCustomer?.phone || guestPhone).trim();
@@ -252,8 +261,10 @@ export default function POSPage() {
                 discountType: discount > 0 ? discountType : undefined,
                 note: orderNote || undefined,
                 fulfillmentType: 'TAKEAWAY',
+                terminalPaymentKey,
             } as any);
 
+            setPaidTerminal(null);
             alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
             setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO', customerInfo });
             setCart([]);
@@ -269,8 +280,11 @@ export default function POSPage() {
             setOrderNote('');
             // Refrescar catálogo para actualizar disponibilidad después de venta
             loadProducts();
+            loadActiveShift();
         } catch (e: any) {
-            alert(`Error en la venta: ${e.message}`);
+            alert(terminalPaymentKey
+                ? `El pago en la máquina quedó aprobado, pero la venta no se registró: ${e.message}. Vuelve a cobrar sin pasar la tarjeta de nuevo.`
+                : `Error en la venta: ${e.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -301,7 +315,7 @@ export default function POSPage() {
 
     const subtotal = cart.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
     const initialTotal = subtotal + shippingCost;
-    const discountValue = discountType === 'PERCENT' ? (initialTotal * (discount / 100)) : discount;
+    const discountValue = Math.min(subtotal, Math.round(discountType === 'PERCENT' ? subtotal * (Math.min(discount, 100) / 100) : discount));
     const total = Math.max(0, initialTotal - discountValue);
 
     const filteredProducts = products.filter(p => {
@@ -753,7 +767,7 @@ export default function POSPage() {
                             </div>
                         )}
 
-                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} cardTerminal={cardTerminal} />
 
                         {/* Ayuda Vuelto para Efectivo */}
                         {paymentMethod === 'CASH' && (
@@ -833,7 +847,7 @@ export default function POSPage() {
 
                         <div className="pt-0">
                             <button
-                                onClick={handleCheckout}
+                                onClick={() => handleCheckout()}
                                 id="checkout-button"
                                 disabled={cart.length === 0 || isSubmitting || !canSell}
                                 className={`w-full py-4 rounded-[1.5rem] font-black uppercase italic tracking-[0.2em] text-sm md:text-base transition-all flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] disabled:opacity-50
@@ -881,7 +895,7 @@ export default function POSPage() {
             {showOpenShift && user && (
                 <OpenShiftModal
                     userId={user.id}
-                    onSuccess={shift => { setActiveShift(shift); setShowOpenShift(false); }}
+                    onSuccess={() => { setShowOpenShift(false); loadActiveShift(); }}
                     onClose={() => setShowOpenShift(false)}
                 />
             )}
@@ -897,6 +911,20 @@ export default function POSPage() {
                     shiftId={activeShift.id}
                     onSuccess={() => { setShowWithdrawalModal(false); loadActiveShift(); alert('Retiro registrado correctamente.'); }}
                     onClose={() => setShowWithdrawalModal(false)}
+                />
+            )}
+
+            {terminalCharge !== null && isTerminalCardMethod(paymentMethod) && (
+                <TerminalChargeModal
+                    amount={terminalCharge}
+                    method={paymentMethod}
+                    reference="POS"
+                    onClose={() => setTerminalCharge(null)}
+                    onPaid={(key) => {
+                        setPaidTerminal({ key, amount: terminalCharge });
+                        setTerminalCharge(null);
+                        void handleCheckout(key);
+                    }}
                 />
             )}
 

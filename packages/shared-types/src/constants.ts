@@ -17,11 +17,11 @@ export const BUSINESS = {
 } as const;
 
 export const LOCATION = {
-    address: 'Obispo Hipólito Salas 1205, Concepción',
+    address: 'Cruz 92, Concepción, Chile',
     city: 'Concepción',
     comuna: 'Concepción',
-    lat: -36.8270,
-    lng: -73.0503,
+    lat: -36.8211,
+    lng: -73.0603,
     /** Maximum delivery radius in kilometers */
     maxDeliveryRadiusKm: 8,
 } as const;

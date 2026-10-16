@@ -423,6 +423,7 @@ enum PaymentMethod {
   CREDIT
   TRANSFER
   MERCADO_PAGO
+  TUU
   EDENRED
   PLUXEE
   JUNAEB

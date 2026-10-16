@@ -32,8 +32,8 @@ import {
 
 import { API_URL } from '../../../../services/api';
 import { authFetch } from '../../../../services/authFetch';
-import { listMedia, uploadMedia, MediaAsset } from '../../../../services/media';
-import { CLOUDINARY_IMAGE, CLOUDINARY_THUMB, cloudinaryTransform, groupProductsByWebSection, webSectionKey, displayCategoryName, isAgrandarModifier, isEspecialRole, isSuggestionRole, resolveModifierRole, suggestModifierRole, MODIFIER_ROLE_LABEL } from '@lomasrico/shared-types';
+import { uploadMedia } from '../../../../services/media';
+import { groupProductsByWebSection, webSectionKey, displayCategoryName, isAgrandarModifier, isEspecialRole, isSuggestionRole, resolveModifierRole, suggestModifierRole, MODIFIER_ROLE_LABEL } from '@lomasrico/shared-types';
 
 function catalogLayer(group?: { role?: string | null; name?: string; displayName?: string } | null) {
     if (!group) return 'option' as const;
@@ -50,13 +50,9 @@ export default function CatalogManagementPage() {
     const [error, setError] = useState<string | null>(null);
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
-    const [filterAsset, setFilterAsset] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [catalogTab, setCatalogTab] = useState<'active' | 'hidden'>('active');
-    const [showAssetSelector, setShowAssetSelector] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
-    const [loadingAssets, setLoadingAssets] = useState(false);
     const [allModifierGroups, setAllModifierGroups] = useState<any[]>([]);
     const [productModifiers, setProductModifiers] = useState<{groupId: string, sortOrder: number}[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -219,17 +215,6 @@ export default function CatalogManagementPage() {
                 return x.group.displayName.toLowerCase().includes(q) || String(x.group.name || '').toLowerCase().includes(q);
             });
 
-    const loadMediaAssets = async () => {
-        setLoadingAssets(true);
-        try {
-            setMediaAssets(await listMedia('productos'));
-        } catch (error: any) {
-            console.error('Error loading assets:', error.message);
-        } finally {
-            setLoadingAssets(false);
-        }
-    };
-
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
 
@@ -244,7 +229,6 @@ export default function CatalogManagementPage() {
                     imageKey: media.publicId
                 });
             }
-            await loadMediaAssets();
         } catch (error: any) {
             alert('Error al subir imagen: ' + error.message);
         } finally {
@@ -427,16 +411,6 @@ export default function CatalogManagementPage() {
         } finally {
             setDeletingCategory(null);
         }
-    };
-
-    const selectAsset = (asset: MediaAsset) => {
-        if (!editingProduct) return;
-        setEditingProduct({
-            ...editingProduct,
-            imageUrl: cloudinaryTransform(asset.url, CLOUDINARY_IMAGE),
-            imageKey: asset.publicId
-        });
-        setShowAssetSelector(false);
     };
 
     const openSortModal = () => {
@@ -860,15 +834,6 @@ export default function CatalogManagementPage() {
                                     <h4 className="font-black italic uppercase tracking-tighter text-lg md:text-xl flex items-center gap-3">
                                         <ImageIcon className="text-orange-500" size={20} /> Multimedia
                                     </h4>
-                                    <button
-                                        onClick={() => {
-                                            loadMediaAssets();
-                                            setShowAssetSelector(true);
-                                        }}
-                                        className="text-[9px] md:text-[10px] font-black uppercase text-orange-500 hover:underline tracking-widest"
-                                    >
-                                        Abrir Galería
-                                    </button>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                                     {/* Imagen Estática */}
@@ -886,7 +851,8 @@ export default function CatalogManagementPage() {
                                         <div className="w-full max-w-[200px]">
                                             <input type="file" id="img-upload" className="hidden" onChange={handleFileUpload} disabled={uploading}/>
                                             <label htmlFor="img-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-800' : 'bg-slate-900 text-white hover:bg-black shadow-lg shadow-slate-200'}`}>
-                                                {uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />} SUBIR IMAGEN
+                                                {uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />}
+                                                {editingProduct.imageUrl ? 'CAMBIAR IMAGEN' : 'SUBIR IMAGEN'}
                                             </label>
                                         </div>
                                     </div>
@@ -1123,62 +1089,6 @@ export default function CatalogManagementPage() {
                                 {saveStatus === 'saving' ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                                 {saveStatus === 'success' ? 'Guardado' : saveStatus === 'saving' ? 'Guardando...' : 'Guardar cambios'}
                             </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Asset Selector Overlay */}
-            {showAssetSelector && (
-                <div className="fixed inset-0 bg-white z-[60] flex flex-col animate-in slide-in-from-bottom duration-500 p-4 md:p-8 lg:p-16">
-                    <div className="w-full max-w-none flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-6 md:mb-12">
-                            <div>
-                                <h2 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase italic tracking-tighter leading-none shrink-0">BIBLIOTECA <span className="text-orange-500">ASSETS</span></h2>
-                                <p className="text-slate-800 font-bold text-[8px] md:text-[10px] lg:text-xs uppercase tracking-[0.3em] mt-2 md:mt-3">Supabase Cloud Storage</p>
-                            </div>
-                            <button onClick={() => setShowAssetSelector(false)} className="bg-slate-100 p-3 md:p-4 lg:p-6 rounded-full hover:bg-orange-500 hover:text-white transition-all shrink-0">
-                                <X size={20} className="md:w-6 md:h-6 lg:w-8 lg:h-8" />
-                            </button>
-                        </div>
-
-                        <div className="relative mb-6 md:mb-10 group">
-                            <Search className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors md:w-6 md:h-6" size={20} />
-                            <input
-                                placeholder="Filtrar por nombre..."
-                                className="w-full bg-slate-50 pl-12 md:pl-16 pr-6 md:pr-8 py-4 md:py-6 lg:py-8 rounded-xl md:rounded-[2rem] font-black text-sm md:text-lg lg:text-xl italic uppercase tracking-tighter outline-none border-2 md:border-4 border-transparent focus:border-slate-900 transition-all shadow-inner"
-                                value={filterAsset}
-                                onChange={e => setFilterAsset(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto pr-2 md:pr-4 no-scrollbar pb-10">
-                            {loadingAssets ? (
-                                <div className="flex flex-col items-center justify-center h-full gap-4">
-                                    <Loader2 className="animate-spin text-slate-200 w-12 h-12 md:w-16 md:h-16" size={48} />
-                                    <p className="font-black uppercase text-[10px] md:text-xs tracking-widest text-slate-200 italic">Cargando...</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
-                                    {mediaAssets
-                                        .filter(a => a.publicId.toLowerCase().includes(filterAsset.toLowerCase()))
-                                        .map((asset) => {
-                                            const name = asset.publicId.split('/').pop();
-                                            return (
-                                                <button
-                                                    key={asset.publicId}
-                                                    onClick={() => selectAsset(asset)}
-                                                    className="group relative aspect-square rounded-xl md:rounded-[2rem] overflow-hidden border-2 md:border-4 border-white shadow-sm hover:border-orange-500 transition-all bg-slate-50"
-                                                >
-                                                    <img src={cloudinaryTransform(asset.url, CLOUDINARY_THUMB)} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="" />
-                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 md:p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <p className="text-white text-[7px] md:text-[9px] font-black uppercase tracking-tight truncate italic">{name}</p>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

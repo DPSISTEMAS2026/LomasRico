@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { ArrowDown, Instagram } from 'lucide-react';
+import { Instagram } from 'lucide-react';
+import { LOCATION } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import FloatingDishes from './FloatingDishes';
+import AuthModal from '../modals/AuthModal';
 
 const ENABLED = process.env.NEXT_PUBLIC_COMING_SOON === 'true';
 const PREVIEW_KEY = 'lr_coming_soon_preview';
+const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION.address)}`;
+const WAZE_URL = `https://waze.com/ul?q=${encodeURIComponent(LOCATION.address)}&navigate=true`;
 
 export default function ComingSoonGate({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -15,6 +19,7 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
     const [preview, setPreview] = useState(false);
     const [mesaQuery, setMesaQuery] = useState(false);
     const [checked, setChecked] = useState(false);
+    const [authOpen, setAuthOpen] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -74,20 +79,67 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                         className="h-20 w-20 mx-auto object-contain mb-5"
                     />
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-[#f2642e] mb-3">
-                        Pronto
+                        Abrimos mañana
                     </p>
                     <h1 className="text-3xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-none">
-                        Atento a nuestra<br />reapertura
+                        Gran<br />reapertura
                     </h1>
                     <p className="mt-4 text-sm font-bold text-slate-900 leading-relaxed">
-                        Nueva dirección. Síguenos y enterate primero.
+                        Delivery y retiro en nuestra nueva dirección. Regístrate hoy y suma puntos desde tu primer pedido.
                     </p>
-                    <ArrowDown className="mx-auto mt-5 mb-2 text-[#f2642e] animate-bounce" size={28} strokeWidth={2.5} />
+
+                    <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#f2642e]">Horario</p>
+                        <p className="text-xs font-bold text-slate-900">Lun–Mié · 14:30 a 21:00</p>
+                        <p className="text-xs font-bold text-slate-900">Jue–Dom · 11:30 a 22:00</p>
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border-2 border-[#f2642e]/25 bg-orange-50/60 px-4 py-3 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#f2642e]">Nueva dirección</p>
+                        <p className="text-sm font-black text-slate-900 leading-snug">{LOCATION.address}</p>
+                        <div className="flex items-center justify-center gap-4 pt-1">
+                            <a
+                                href={MAPS_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
+                                aria-label="Abrir en Google Maps"
+                            >
+                                <img src="/assets/maps/google-maps.svg" alt="" className="h-9 w-9" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-900">Maps</span>
+                            </a>
+                            <a
+                                href={WAZE_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
+                                aria-label="Abrir en Waze"
+                            >
+                                <img src="/assets/maps/waze.svg" alt="" className="h-9 w-9" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-900">Waze</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setAuthOpen(true)}
+                        className="mt-6 w-full inline-flex items-center justify-center bg-[#f2642e] text-white px-6 py-3.5 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-[#d9551f] transition-colors"
+                    >
+                        Crear cuenta
+                    </button>
+                    <p className="mt-2 text-[11px] font-bold text-slate-900 leading-snug">
+                        En pocos pasos: guarda preferencias y acumula puntos.
+                    </p>
+                    <p className="mt-3 text-[10px] font-bold text-slate-900 leading-snug">
+                        Si ya estás registrado, podrás ingresar con los 4 últimos dígitos del celular registrado en tu cuenta. Después puedes cambiar la contraseña.
+                    </p>
+
                     <a
                         href="https://www.instagram.com/cevichelomasrico/"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-[#f2642e] transition-colors"
+                        className="mt-5 inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3.5 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-slate-800 transition-colors"
                     >
                         <Instagram size={16} />
                         @cevichelomasrico
@@ -97,6 +149,8 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                     </p>
                 </div>
             </div>
+
+            <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} initialMode="REGISTER" />
         </div>
     );
 }

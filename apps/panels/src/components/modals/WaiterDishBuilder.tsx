@@ -37,9 +37,12 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
         setSearch('');
         const initial: Record<string, string[]> = {};
         groups.forEach((group) => {
+            const max = Number(group.maxSelections) || 0;
+            const limit = group.type === 'SINGLE_SELECT' ? 1 : max > 0 ? max : Infinity;
             initial[group.groupId] = group.options
                 .filter((opt) => opt.isDefault && (opt as any).available !== false)
-                .map((opt) => opt.id);
+                .map((opt) => opt.id)
+                .slice(0, limit);
         });
         setSelections(initial);
     }, [isOpen, product.id, groups]);

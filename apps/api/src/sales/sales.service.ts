@@ -10,6 +10,7 @@ import { AvailabilityService } from '../availability/availability.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { ValidateSaleItemDto } from './dto/validate-item.dto';
 import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
+import { TuuTerminalService, cardTerminalEnabled } from '../payments/tuu-terminal.service';
 
 // USAMOS ENUMS COMO STRINGS PARA EVITAR ERRORES DE REGENERACION
 const OrderStatus = {
@@ -39,6 +40,7 @@ export class SalesService {
         private shippingService: ShippingService, // Injected for server-side validation
         private availabilityService: AvailabilityService,
         private audit: AuditService,
+        private terminal: TuuTerminalService,
     ) { }
 
     async validateItem(dto: ValidateSaleItemDto) {
@@ -172,6 +174,11 @@ export class SalesService {
             if (variants.length !== uniqueVariantIds.length) {
                 throw new BadRequestException('One or more ProductVariant IDs are invalid');
             }
+        }
+
+        if (channel === 'WEB') {
+            const unavailable = products.find((p: any) => !p.isActive) || variants.find((v: any) => !v.isActive);
+            if (unavailable) throw new BadRequestException(`${unavailable.name} ya no está disponible. Quítalo del carrito.`);
         }
 
         const productMap = new Map(products.map((p: any) => [p.id, p]));
@@ -356,9 +363,9 @@ export class SalesService {
         let discountValue = 0;
         if (discount && discount > 0) {
             if (discountType === 'PERCENT') {
-                discountValue = totalAmount * (discount / 100);
+                discountValue = Math.round(totalAmount * (Math.min(discount, 100) / 100));
             } else {
-                discountValue = discount;
+                discountValue = Math.round(discount);
             }
             totalAmount = Math.max(0, totalAmount - discountValue);
         }
@@ -382,17 +389,34 @@ export class SalesService {
         // Sumar envío DESPUÉS del descuento y puntos para no descontar sobre el despacho
         totalAmount += computedShippingCost;
 
+        const terminalPayment = channel === 'POS' && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT') && cardTerminalEnabled()
+            ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount)
+            : null;
+        const saleShipping = terminalPayment ? { ...(shippingData || {}), terminalPayment } : shippingData;
+
         // Transaction (timeout extendido para pedidos con modificadores dinámicos)
         return this.prisma.$transaction(async (tx: any) => {
             let finalShiftId = shiftId;
+            const operator = (createSaleDto as any).operator as { id: string; role: string } | undefined;
+            const operatorIsManager = operator && (operator.role === 'OWNER' || operator.role === 'ADMIN');
+            if (channel === 'POS' && operator) {
+                if (finalShiftId) {
+                    const shift = await tx.cashShift.findUnique({ where: { id: finalShiftId }, select: { status: true, cashierId: true } });
+                    if (!shift || shift.status !== 'OPEN') throw new BadRequestException('El turno de caja está cerrado. Recarga la página.');
+                    if (!operatorIsManager && shift.cashierId !== operator.id) throw new BadRequestException('Este turno es de otro cajero');
+                } else if (!operatorIsManager) {
+                    throw new BadRequestException('Abre la caja antes de cobrar');
+                }
+            }
+            const shiftOwnerId = operator?.id || userId;
 
             // Si es POS y no hay shiftId, verificar si es DUEÑO para auto-gestionar el turno
-            if (channel === 'POS' && !finalShiftId && userId) {
-                const user = await tx.user.findUnique({ where: { id: userId } });
+            if (channel === 'POS' && !finalShiftId && shiftOwnerId) {
+                const user = await tx.user.findUnique({ where: { id: shiftOwnerId } });
                 if (user && (user.role === 'OWNER' || user.role === 'ADMIN')) {
                     // Buscar turno abierto del dueño o crear uno permanente
                     let ownerShift = await tx.cashShift.findFirst({
-                        where: { cashierId: userId, status: 'OPEN' }
+                        where: { cashierId: shiftOwnerId, status: 'OPEN' }
                     });
 
                     if (!ownerShift) {
@@ -400,7 +424,7 @@ export class SalesService {
                         const cashRegister = await tx.cashRegister.findFirst({ where: { name: 'Caja Principal' } });
                         ownerShift = await tx.cashShift.create({
                             data: {
-                                cashierId: userId,
+                                cashierId: shiftOwnerId,
                                 cashRegisterId: cashRegister?.id || 'default',
                                 status: 'OPEN',
                                 startAmount: 0,
@@ -415,7 +439,7 @@ export class SalesService {
 
             // ✅ FIX: Para canales sin shiftId (WEB, UBER_EATS, PEDIDOS_YA, WHATSAPP),
             // vincular al turno de caja abierto más reciente para que registre en reportes
-            if (!finalShiftId) {
+            if (!finalShiftId && channel !== 'POS') {
                 const activeShift = await tx.cashShift.findFirst({
                     where: { status: 'OPEN' },
                     orderBy: { openingTime: 'desc' },
@@ -452,8 +476,8 @@ export class SalesService {
                     status: initialStatus || 'CONFIRMED',
                     userId: userId || undefined,
                     shippingData: loyaltyUserId && (initialStatus || 'CONFIRMED') === 'PENDING'
-                        ? { ...(shippingData || {}), loyalty: { redeem: pointsRedeemed, earn: Math.floor(subtotalBeforePoints * 0.04), spent: subtotalBeforePoints } }
-                        : shippingData || undefined,
+                        ? { ...(saleShipping || {}), loyalty: { redeem: pointsRedeemed, earn: Math.floor(subtotalBeforePoints * 0.04), spent: subtotalBeforePoints } }
+                        : saleShipping || undefined,
                     code: uniqueCode,
                     paymentMethod: (paymentMethod === 'MP' ? 'MERCADO_PAGO' : paymentMethod) as any,
                     paymentStatus: initialStatus === 'CONFIRMED' ? 'APPROVED' : 'PENDING',

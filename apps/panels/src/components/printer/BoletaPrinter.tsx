@@ -41,12 +41,13 @@ const rule = (style: 'solid' | 'dashed' = 'dashed', weight = 1): React.CSSProper
 });
 
 export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
-    mode, tableNumber, saleCode, guests, waiter, tipPercent = 10, date = new Date(),
+    mode, tableNumber, saleCode, guests, waiter, tipPercent = 0, date = new Date(),
 }, ref) => {
+    const pct = Number(tipPercent) || 0;
     const time = date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     const day = date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const subtotal = guests.reduce((s, g) => s + guestTotal(g), 0);
-    const tip = Math.round((subtotal * tipPercent) / 100);
+    const tip = pct > 0 ? Math.round((subtotal * pct) / 100) : 0;
     const showGuestHeaders = mode === 'table' && guests.length > 1;
     const title = mode === 'table'
         ? `Mesa ${tableNumber ?? ''}`
@@ -131,10 +132,12 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                 <span>Consumo</span>
                 <span>{clp(subtotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Propina sugerida ({tipPercent}%)</span>
-                <span>{clp(tip)}</span>
-            </div>
+            {pct > 0 && tip > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Propina ({pct}%)</span>
+                    <span>{clp(tip)}</span>
+                </div>
+            )}
 
             <div style={rule('solid', 2)} />
 
@@ -142,10 +145,12 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                 <span>TOTAL</span>
                 <span>{clp(subtotal + tip)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2 }}>
-                <span>Sin propina</span>
-                <span>{clp(subtotal)}</span>
-            </div>
+            {pct > 0 && tip > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2 }}>
+                    <span>Sin propina</span>
+                    <span>{clp(subtotal)}</span>
+                </div>
+            )}
 
             <div style={rule('solid', 2)} />
 

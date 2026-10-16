@@ -51,6 +51,13 @@ export class AuthController {
         return this.throttle.run(req, () => this.authService.login(dto));
     }
 
+    @Public()
+    @Post('forgot-password')
+    forgotPassword(@Body() body: { emailOrPhone?: string; identifier?: string }, @Req() req: any) {
+        const id = body?.emailOrPhone ?? body?.identifier ?? '';
+        return this.throttle.run(req, () => this.authService.forgotPassword(id));
+    }
+
     @Roles(...ANY_USER_ROLES)
     @Post('profile')
     updateProfile(@Req() req: any, @Body() body: any) {

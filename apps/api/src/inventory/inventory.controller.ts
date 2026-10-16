@@ -16,11 +16,6 @@ export class InventoryController {
         private readonly availabilityService: AvailabilityService,
     ) { }
 
-    @Get('fix-recipes')
-    fixRecipes() {
-        return this.service.fixRecipes();
-    }
-
     @Roles(...STAFF_ROLES)
     @Get()
     findAll() {

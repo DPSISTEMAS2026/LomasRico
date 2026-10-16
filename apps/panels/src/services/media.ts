@@ -35,9 +35,3 @@ export async function uploadMedia(file: File, folder: MediaFolder): Promise<Medi
         url: cloudinaryTransform(data.secure_url, isVideo ? CLOUDINARY_VIDEO : CLOUDINARY_IMAGE),
     };
 }
-
-export async function listMedia(folder: MediaFolder = 'productos'): Promise<MediaAsset[]> {
-    const res = await authFetch(`${API_URL}/media?folder=${folder}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-}

@@ -97,7 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(dbUser);
             localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(dbUser));
             localStorage.setItem(STORAGE_KEY_TOKEN, accessToken);
-            return { requiresVerification: !!response.requiresVerification, email: data.email };
+            return {
+                requiresVerification: response.requiresVerification !== false,
+                codeSent: !!response.codeSent,
+                warning: response.warning,
+                email: data.email,
+            };
         } catch (error) {
             throw error;
         }

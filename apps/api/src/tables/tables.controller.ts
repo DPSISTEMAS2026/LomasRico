@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TablesService } from './tables.service';
 import { PrismaService } from '../database/prisma.service';
@@ -46,17 +46,20 @@ export class TablesController {
 
     @Post(':id/guests/:guestId/items')
     addItems(@Param('id') id: string, @Param('guestId') guestId: string, @Body() body: any) {
-        return this.tablesService.addItemsToGuest(id, guestId, body);
+        const { discount, discountType, ...rest } = body || {};
+        return this.tablesService.addItemsToGuest(id, guestId, rest);
     }
 
     @Post(':id/guests/:guestId/send-kitchen')
     sendToKitchen(@Param('id') id: string, @Param('guestId') guestId: string, @Body() body: any) {
-        return this.tablesService.sendGuestToKitchen(id, guestId, body);
+        const { discount, discountType, ...rest } = body || {};
+        return this.tablesService.sendGuestToKitchen(id, guestId, rest);
     }
 
     @Post(':id/guests/:guestId/pay')
-    pay(@Param('id') id: string, @Param('guestId') guestId: string, @Body() body: any) {
-        return this.tablesService.payGuest(id, guestId, body);
+    pay(@Param('id') id: string, @Param('guestId') guestId: string, @Body() body: any, @Req() req: any) {
+        const { discount, discountType, shiftId, ...rest } = body || {};
+        return this.tablesService.payGuest(id, guestId, { ...rest, operatorId: req.user?.userId });
     }
 
     @Get(':id/bill')
@@ -65,7 +68,8 @@ export class TablesController {
     }
 
     @Post(':id/pay-all')
-    payAll(@Param('id') id: string, @Body() body: any) {
-        return this.tablesService.payAll(id, body);
+    payAll(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+        const { shiftId, ...rest } = body || {};
+        return this.tablesService.payAll(id, { ...rest, operatorId: req.user?.userId });
     }
 }

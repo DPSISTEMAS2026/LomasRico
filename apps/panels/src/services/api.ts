@@ -208,6 +208,31 @@ export async function createSale(items: any[], options: {
     return res.json();
 }
 
+async function jsonOrThrow(res: Response, fallback: string) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || fallback);
+    return data;
+}
+
+export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal: 'tuu' | null }> {
+    try {
+        return await jsonOrThrow(await authFetch(`${API_URL}/payments/config`, { cache: 'no-store' }), 'config');
+    } catch {
+        return { web: 'mercadopago', cardTerminal: null };
+    }
+}
+
+export async function startTerminalCharge(amount: number, method: 'CREDIT' | 'DEBIT', reference: string): Promise<{ key: string }> {
+    return jsonOrThrow(await authFetch(`${API_URL}/payments/terminal/charge`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, method, reference }),
+    }), 'No se pudo enviar el cobro a la máquina');
+}
+
+export async function getTerminalCharge(key: string): Promise<{ status: string; amount: number | null }> {
+    return jsonOrThrow(await authFetch(`${API_URL}/payments/terminal/${encodeURIComponent(key)}`, { cache: 'no-store' }), 'No se pudo consultar la máquina');
+}
+
 export async function simulateMPCallback(orderId: string, status: 'APPROVED' | 'REJECTED') {
     const res = await authFetch(`${API_URL}/payments/simulate-callback`, {
         method: 'POST',

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, Mail, Lock, User, Phone, LogIn, ArrowRight, Loader2 } from 'lucide-react';
+import { forgotPassword } from '../../services/api';
+import { X, Mail, Lock, User, Phone, ArrowRight, Loader2 } from 'lucide-react';
 
 interface Props {
     isOpen: boolean;
@@ -14,26 +15,30 @@ export const CHECKOUT_CONTACT = 'lr_checkout_contact';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Props) {
     const { loginWithEmail, register, loginWithGoogle, verifyEmail } = useAuth();
-    const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY' | 'WELCOME'>('LOGIN');
+    const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY' | 'WELCOME' | 'FORGOT' | 'FORGOT_OK'>('LOGIN');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
 
-    // Form States
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
+    const [recoverId, setRecoverId] = useState('');
 
     useEffect(() => {
         if (!isOpen) return;
         setMode(initialMode);
+        setError('');
+        setInfo('');
         try {
             const saved = JSON.parse(localStorage.getItem(CHECKOUT_CONTACT) || 'null');
             if (saved) {
                 setName((v) => v || saved.name || '');
                 setPhone((v) => v || saved.phone || '');
                 setEmail((v) => v || saved.email || '');
+                setRecoverId((v) => v || saved.email || saved.phone || '');
             }
         } catch { /* sin datos previos */ }
     }, [isOpen, initialMode]);
@@ -49,16 +54,17 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                     },
                 });
                 (window as any).google.accounts.id.renderButton(
-                    document.getElementById("google-login-modal-btn"),
-                    { theme: "outline", size: "large", shape: "pill", text: "continue_with" } // 'signin' or 'continue_with'
+                    document.getElementById('google-login-modal-btn'),
+                    { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with' },
                 );
             }
         }
-    }, [isOpen]);
+    }, [isOpen, mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setInfo('');
         setLoading(true);
 
         try {
@@ -67,11 +73,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                 onClose();
             } else if (mode === 'REGISTER') {
                 const res = await register({ email, password, name, phone });
-                setMode(res?.requiresVerification ? 'VERIFY' : 'WELCOME');
+                if (res?.warning) setError(res.warning);
+                setMode(res?.requiresVerification !== false ? 'VERIFY' : 'WELCOME');
             } else if (mode === 'VERIFY') {
                 await verifyEmail(email, verificationCode);
                 await loginWithEmail({ email, password });
                 setMode('WELCOME');
+            } else if (mode === 'FORGOT') {
+                const res = await forgotPassword(recoverId.trim());
+                setInfo(res?.message || 'Si la cuenta existe, enviamos una contraseña temporal a tu correo.');
+                setMode('FORGOT_OK');
             }
         } catch (err: any) {
             setError(err.message || 'Ocurrió un error. Intenta nuevamente.');
@@ -81,6 +92,21 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
     };
 
     if (!isOpen) return null;
+
+    const title =
+        mode === 'LOGIN' ? 'Bienvenido'
+            : mode === 'REGISTER' ? 'Únete al Club'
+                : mode === 'VERIFY' ? 'Verificación'
+                    : mode === 'FORGOT' || mode === 'FORGOT_OK' ? 'Recuperar acceso'
+                        : 'Bienvenido';
+
+    const subtitle =
+        mode === 'LOGIN' ? 'Ingresa para gestionar tus pedidos'
+            : mode === 'REGISTER' ? 'Crea tu cuenta en segundos'
+                : mode === 'VERIFY' ? 'Ingresa el código enviado a tu correo'
+                    : mode === 'FORGOT' ? 'Correo o celular de tu cuenta'
+                        : mode === 'FORGOT_OK' ? 'Revisa tu correo'
+                            : '';
 
     return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -106,129 +132,182 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                             Empezar <ArrowRight size={16} />
                         </button>
                     </div>
-                ) : (<>
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
-                        {mode === 'LOGIN' ? 'Bienvenido' : mode === 'REGISTER' ? 'Únete al Club' : 'Verificación'}
-                    </h2>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 mt-2">
-                        {mode === 'LOGIN' ? 'Ingresa para gestionar tus pedidos' : mode === 'REGISTER' ? 'Crea tu cuenta en segundos' : 'Ingresa el código enviado a tu correo'}
-                    </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {mode === 'REGISTER' && (
-                        <>
-                            <div className="relative group">
-                                <User className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Nombre Completo"
-                                    required
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
-                                />
-                            </div>
-                            <div className="relative group">
-                                <Phone className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
-                                <input
-                                    type="tel"
-                                    placeholder="Teléfono (WhatsApp)"
-                                    required
-                                    value={phone}
-                                    onChange={e => setPhone(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    {mode === 'VERIFY' && (
-                        <div className="relative group">
-                            <Lock className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                placeholder="Código de 6 dígitos"
-                                required
-                                minLength={6}
-                                maxLength={6}
-                                value={verificationCode}
-                                onChange={e => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                                className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-center text-xl tracking-[0.5em] outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
-                            />
-                        </div>
-                    )}
-
-                    {(mode !== 'VERIFY') && (
-                        <>
-                            <div className="relative group">
-                                <Mail className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
-                                <input
-                                    type="email"
-                                    placeholder="Correo Electrónico"
-                                    required
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
-                                />
-                            </div>
-
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-3.5 text-slate-900 group-focus-within:text-slate-900 transition-colors" size={18} />
-                                <input
-                                    type="password"
-                                    placeholder="Contraseña"
-                                    required
-                                    minLength={4}
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    {error && (
-                        <p className="text-red-500 text-xs font-bold bg-red-50 p-3 rounded-lg text-center animate-pulse">
-                            {error}
+                ) : mode === 'FORGOT_OK' ? (
+                    <div className="text-center space-y-5 py-4">
+                        <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">Listo</h2>
+                        <p className="text-sm font-bold text-slate-900 leading-relaxed">
+                            {info || 'Si la cuenta existe, enviamos una contraseña temporal a tu correo.'}
                         </p>
-                    )}
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-black transition-colors shadow-lg flex items-center justify-center gap-2 group"
-                    >
-                        {loading ? <Loader2 className="animate-spin" /> : (
-                            <>
-                                {mode === 'LOGIN' ? 'Ingresar' : mode === 'REGISTER' ? 'Registrarme' : 'Verificar'}
-                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </>
-                        )}
-                    </button>
-                </form>
-
-                {mode !== 'VERIFY' && (
-                    <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                        <p className="text-slate-900 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
-                        {/* Google Button Container */}
-                        <div id="google-login-modal-btn" className="flex justify-center h-[40px]"></div>
-
-                        <div className="mt-6 flex justify-center gap-1 text-xs font-bold">
-                            <span className="text-slate-900">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
-                            <button
-                                onClick={() => { setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN'); setError(''); }}
-                                className="text-[#f2642e] uppercase hover:underline"
-                            >
-                                {mode === 'LOGIN' ? 'Regístrate' : 'Ingresa'}
-                            </button>
-                        </div>
+                        <p className="text-xs font-bold text-slate-900 leading-relaxed">
+                            Entra con tu correo y la clave del mail. Después cámbiala en tu perfil.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => { setMode('LOGIN'); setError(''); setInfo(''); }}
+                            className="w-full bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-xs"
+                        >
+                            Ir a ingresar
+                        </button>
                     </div>
+                ) : (
+                    <>
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-[900] italic tracking-tighter uppercase text-slate-900 leading-none">
+                                {title}
+                            </h2>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 mt-2">
+                                {subtitle}
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {mode === 'REGISTER' && (
+                                <>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre Completo"
+                                            required
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                        />
+                                    </div>
+                                    <div className="relative group">
+                                        <Phone className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                        <input
+                                            type="tel"
+                                            placeholder="Teléfono (WhatsApp)"
+                                            required
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                            className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {mode === 'VERIFY' && (
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        placeholder="Código de 6 dígitos"
+                                        required
+                                        minLength={6}
+                                        maxLength={6}
+                                        value={verificationCode}
+                                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-center text-xl tracking-[0.5em] outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                    />
+                                </div>
+                            )}
+
+                            {mode === 'FORGOT' && (
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Correo o celular"
+                                        required
+                                        value={recoverId}
+                                        onChange={(e) => setRecoverId(e.target.value)}
+                                        className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                    />
+                                </div>
+                            )}
+
+                            {(mode === 'LOGIN' || mode === 'REGISTER') && (
+                                <>
+                                    <div className="relative group">
+                                        <Mail className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                        <input
+                                            type="email"
+                                            placeholder="Correo Electrónico"
+                                            required
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                        />
+                                    </div>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-3.5 text-slate-900" size={18} />
+                                        <input
+                                            type="password"
+                                            placeholder="Contraseña"
+                                            required
+                                            minLength={4}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full bg-slate-50 border-2 border-transparent p-3 pl-12 rounded-xl font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-700 text-slate-900"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {mode === 'LOGIN' && (
+                                <div className="text-right -mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setMode('FORGOT'); setError(''); setRecoverId(email || phone || ''); }}
+                                        className="text-[10px] font-black uppercase tracking-widest text-[#f2642e] hover:underline"
+                                    >
+                                        Olvidé mi contraseña
+                                    </button>
+                                </div>
+                            )}
+
+                            {error && (
+                                <p className="text-red-500 text-xs font-bold bg-red-50 p-3 rounded-lg text-center">
+                                    {error}
+                                </p>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-black transition-colors shadow-lg flex items-center justify-center gap-2 group"
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : (
+                                    <>
+                                        {mode === 'LOGIN' ? 'Ingresar' : mode === 'REGISTER' ? 'Registrarme' : mode === 'FORGOT' ? 'Enviar clave temporal' : 'Verificar'}
+                                        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        </form>
+
+                        {mode === 'FORGOT' && (
+                            <button
+                                type="button"
+                                onClick={() => { setMode('LOGIN'); setError(''); }}
+                                className="mt-4 w-full text-xs font-bold text-slate-900 uppercase tracking-wide hover:underline"
+                            >
+                                Volver a ingresar
+                            </button>
+                        )}
+
+                        {(mode === 'LOGIN' || mode === 'REGISTER') && (
+                            <div className="mt-8 pt-8 border-t border-slate-100 text-center">
+                                <p className="text-slate-900 text-xs font-bold uppercase tracking-wide mb-4">O continúa con</p>
+                                <div id="google-login-modal-btn" className="flex justify-center h-[40px]" />
+                                <div className="mt-6 flex justify-center gap-1 text-xs font-bold">
+                                    <span className="text-slate-900">{mode === 'LOGIN' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN'); setError(''); }}
+                                        className="text-[#f2642e] uppercase hover:underline"
+                                    >
+                                        {mode === 'LOGIN' ? 'Regístrate' : 'Ingresa'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
-                </>)}
             </div>
         </div>
     );

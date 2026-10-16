@@ -344,7 +344,7 @@ export default function InventoryManagementPage() {
     });
 
     const inventoryValue = items.reduce((acc, curr) => acc + ((curr.currentStock || 0) * curr.costPerUnit), 0);
-    const lowStockItems = items.filter(i => (i.currentStock || 0) < 10);
+    const lowStockItems = items.filter(i => (i.currentStock || 0) < (i.minStockThreshold ?? 10));
 
     if (loading && items.length === 0) return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">

@@ -16,11 +16,6 @@ function parseFolder(folder?: string): MediaFolder {
 export class MediaController {
     constructor(private readonly cloudinary: CloudinaryService) {}
 
-    @Get()
-    list(@Query('folder') folder?: string) {
-        return this.cloudinary.listImages(parseFolder(folder));
-    }
-
     @Get('signature')
     signature(@Query('folder') folder?: string) {
         return this.cloudinary.uploadSignature(parseFolder(folder));

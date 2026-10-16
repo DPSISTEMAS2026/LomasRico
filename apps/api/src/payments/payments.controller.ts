@@ -1,17 +1,22 @@
-import { Controller, Post, Body, Query, HttpCode, Headers, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, HttpCode, Headers, ForbiddenException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/payment.dto';
-import { MANAGER_ROLES, Public } from '../auth/access';
+import { FLOOR_ROLES, MANAGER_ROLES, Public, STAFF_ROLES } from '../auth/access';
 import { Roles } from '../auth/roles.decorator';
 import { isWebOrdersEnabled } from '../config/flags';
+import { TuuTerminalService, cardTerminalEnabled } from './tuu-terminal.service';
+import { webPaymentProvider } from './tuu-online.service';
 
 @Controller('payments')
 export class PaymentsController {
-    constructor(private readonly paymentsService: PaymentsService) { }
+    constructor(
+        private readonly paymentsService: PaymentsService,
+        private readonly terminal: TuuTerminalService,
+    ) { }
 
     /**
-     * Crea una preferencia de pago en MercadoPago y retorna el init_point.
-     * El frontend redirige al usuario a esa URL.
+     * Crea el pago del pedido web en la pasarela configurada (Mercado Pago o TUU)
+     * y retorna el link al que el frontend redirige al cliente.
      */
     @Public()
     @Post('create-preference')
@@ -23,7 +28,6 @@ export class PaymentsController {
     /**
      * Webhook de MercadoPago. Recibe notificaciones IPN/Webhooks cuando un pago cambia de estado.
      * IMPORTANTE: Esta URL debe ser PÚBLICA (HTTPS). Para desarrollo local usa ngrok.
-     * En producción (Render): https://api.lomasrico.com/payments/webhook
      */
     @Public()
     @Post('webhook')
@@ -34,6 +38,33 @@ export class PaymentsController {
         @Headers('x-signature') signature: string,
     ) {
         return this.paymentsService.processWebhook(query, body);
+    }
+
+    /** Aviso del checkout TUU (x-www-form-urlencoded, firmado). */
+    @Public()
+    @Post('tuu/callback')
+    @HttpCode(200)
+    tuuCallback(@Body() body: any) {
+        return this.paymentsService.processTuuCallback(body || {});
+    }
+
+    @Roles(...STAFF_ROLES)
+    @Get('config')
+    config() {
+        return { web: webPaymentProvider(), cardTerminal: cardTerminalEnabled() ? 'tuu' : null };
+    }
+
+    /** Envía un cobro con tarjeta a la máquina TUU del local. */
+    @Roles(...FLOOR_ROLES)
+    @Post('terminal/charge')
+    terminalCharge(@Body() body: { amount: number; method: 'CREDIT' | 'DEBIT'; reference?: string }) {
+        return this.terminal.charge({ amount: body?.amount, method: body?.method, reference: body?.reference || '' });
+    }
+
+    @Roles(...FLOOR_ROLES)
+    @Get('terminal/:key')
+    terminalStatus(@Param('key') key: string) {
+        return this.terminal.status(key);
     }
 
     /**

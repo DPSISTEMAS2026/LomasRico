@@ -106,18 +106,23 @@ export default function OwnerDashboardPage() {
                 <StatCard
                     title="Mes"
                     value={`$${Number(data?.sales?.month || 0).toLocaleString('es-CL')}`}
-                    trend="Vs ant."
-                    isUp={true}
+                    trend={`${data?.sales?.monthTrend || 0}%`}
+                    isUp={Number(data?.sales?.monthTrend || 0) >= 0}
                     icon={<ShoppingBag size={16} />}
                 />
                 <StatCard
                     title="Cocina"
                     value={data?.orders?.active || 0}
-                    trend="Activas"
-                    isUp={true}
+                    trend="En cola"
+                    isUp={Number(data?.orders?.active || 0) > 0}
                     icon={<Users size={16} />}
                 />
             </div>
+            {Number(data?.inventory?.lowStock || 0) > 0 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-xs font-bold text-amber-900">
+                    {data.inventory.lowStock} ítem(s) de inventario bajo el umbral mínimo
+                </div>
+            )}
 
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl">
                 {tabs.map((t) => {

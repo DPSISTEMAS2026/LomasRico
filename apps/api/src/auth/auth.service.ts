@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -7,6 +8,11 @@ import { OAuth2Client } from 'google-auth-library';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { BrevoService, logoSrc } from '../mail/brevo.service';
+
+function phoneKey(raw?: string | null) {
+    const digits = String(raw || '').replace(/\D/g, '');
+    return digits.length >= 8 ? digits.slice(-9) : '';
+}
 
 function verificationEmailHtml(name: string, code: string) {
     const safeName = String(name || '').replace(/[<>&"]/g, '');
@@ -22,9 +28,28 @@ function verificationEmailHtml(name: string, code: string) {
 </td></tr></table></td></tr></table></body></html>`;
 }
 
-export function passwordFromPhone(phone?: string | null) {
-    const digits = String(phone || '').replace(/\D/g, '');
-    return digits.slice(-4);
+function tempPasswordEmailHtml(name: string, tempPassword: string) {
+    const safeName = String(name || '').replace(/[<>&"]/g, '');
+    const safePass = String(tempPassword || '').replace(/[<>&"]/g, '');
+    return `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:32px 12px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;border:1px solid #e5e7eb;">
+<tr><td style="padding:32px;text-align:center;color:#0f172a;">
+<img src="${logoSrc()}" width="72" alt="Lo Más Rico" style="display:block;margin:0 auto 16px auto;" />
+<p style="margin:0 0 8px 0;font-size:15px;">Hola${safeName ? `, ${safeName}` : ''}:</p>
+<p style="margin:0 0 16px 0;font-size:15px;">Tu contraseña temporal de Lo Más Rico es</p>
+<p style="margin:0 0 16px 0;font-size:28px;font-weight:900;letter-spacing:0.12em;">${safePass}</p>
+<p style="margin:0 0 12px 0;font-size:14px;color:#334155;">Ingresa con tu correo y esta clave. Después cámbiala en tu perfil.</p>
+<p style="margin:0;font-size:13px;color:#334155;">Si no pediste recuperar la contraseña, ignora este correo.</p>
+</td></tr></table></td></tr></table></body></html>`;
+}
+
+function makeTempPassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = randomBytes(8);
+    let out = '';
+    for (let i = 0; i < 8; i++) out += alphabet[bytes[i] % alphabet.length];
+    return out;
 }
 
 const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] as const;
@@ -88,13 +113,28 @@ export class AuthService implements OnModuleInit {
      */
 
     async register(dto: RegisterDto) {
+        const email = String(dto.email || '').trim().toLowerCase();
         // @ts-ignore
         const existing = await (this.prisma as any).user.findUnique({
-            where: { email: dto.email },
+            where: { email },
         });
 
         if (existing) {
             throw new UnauthorizedException('El correo ya está registrado');
+        }
+
+        const phone = String(dto.phone || '').trim();
+        const key = phoneKey(phone);
+        if (key) {
+            // @ts-ignore
+            const withPhone: { phone: string | null }[] = await (this.prisma as any).user.findMany({
+                where: { phone: { not: null } },
+                select: { phone: true },
+            });
+            const taken = withPhone.some((u) => phoneKey(u.phone) === key);
+            if (taken) {
+                throw new UnauthorizedException('El celular ya está registrado');
+            }
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -103,19 +143,18 @@ export class AuthService implements OnModuleInit {
         // @ts-ignore
         const user = await (this.prisma as any).user.create({
             data: {
-                email: dto.email,
+                email,
                 name: dto.name,
                 password: hashedPassword,
-                phone: dto.phone, // N8N Key field
+                phone: phone || null,
                 role: 'CUSTOMER',
                 confirmationCode: verificationCode,
                 isVerified: false
             },
         });
 
-        await this.linkGuestSales(user.id, user.email);
-
         let codeSent = false;
+        let codeError = '';
         try {
             await this.brevo.sendTransactional(
                 user.email,
@@ -125,15 +164,18 @@ export class AuthService implements OnModuleInit {
             );
             codeSent = true;
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            console.warn(`No se pudo enviar el código de verificación a ${user.email}: ${message}`);
+            codeError = err instanceof Error ? err.message : String(err);
+            console.warn(`No se pudo enviar el código de verificación a ${user.email}: ${codeError}`);
         }
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
         return {
             accessToken: this.jwtService.sign(jwtPayload),
             user: this.sanitizeUser(user),
-            requiresVerification: codeSent
+            // Siempre pedimos el código: la cuenta queda sin verificar hasta que llegue el correo.
+            requiresVerification: true,
+            codeSent,
+            ...(codeSent ? {} : { warning: 'No pudimos enviar el correo. Revisa el correo o intenta más tarde.' }),
         };
     }
 
@@ -166,6 +208,7 @@ export class AuthService implements OnModuleInit {
                 confirmationCode: null // Consume code
             }
         });
+        if (updated.role === 'CUSTOMER') await this.linkGuestSales(updated.id, updated.email);
 
         return { success: true, user: this.sanitizeUser(updated) };
     }
@@ -176,21 +219,10 @@ export class AuthService implements OnModuleInit {
             where: { email: dto.email },
         });
 
-        const pin = passwordFromPhone(user?.phone);
-        const typed = String(dto.password || '').replace(/\D/g, '');
-        const pinOk = !!user && user.role === 'CUSTOMER' && pin.length === 4 && typed === pin;
-        const hashOk = user?.password ? await bcrypt.compare(dto.password, user.password) : false;
+        const hashOk = user?.password ? await bcrypt.compare(String(dto.password || ''), user.password) : false;
 
-        if (!user || (!hashOk && !pinOk)) {
+        if (!user || !hashOk) {
             throw new UnauthorizedException('Credenciales inválidas');
-        }
-
-        if (pinOk && !hashOk) {
-            const hashedPassword = await bcrypt.hash(pin, 10);
-            await (this.prisma as any).user.update({
-                where: { id: user.id },
-                data: { password: hashedPassword },
-            });
         }
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
@@ -220,7 +252,7 @@ export class AuthService implements OnModuleInit {
             });
 
             const payload = ticket.getPayload();
-            if (!payload || !payload.email) {
+            if (!payload || !payload.email || payload.email_verified !== true) {
                 throw new UnauthorizedException('Invalid Google Token payload');
             }
 
@@ -319,5 +351,62 @@ export class AuthService implements OnModuleInit {
         });
 
         return { success: true };
+    }
+
+    /**
+     * Recupera acceso por correo o celular. Siempre responde igual (no revela si la cuenta existe).
+     * Si encuentra la cuenta, genera clave temporal y la envía al correo registrado.
+     */
+    async forgotPassword(identifier: string) {
+        const raw = String(identifier || '').trim();
+        if (!raw) throw new BadRequestException('Ingresa tu correo o celular');
+
+        const looksEmail = raw.includes('@');
+        let user: any = null;
+
+        if (looksEmail) {
+            const email = raw.toLowerCase();
+            // @ts-ignore
+            user = await (this.prisma as any).user.findUnique({ where: { email } });
+        } else {
+            const key = phoneKey(raw);
+            if (!key) throw new BadRequestException('Ingresa un correo o celular válido');
+            // @ts-ignore
+            const candidates: any[] = await (this.prisma as any).user.findMany({
+                where: { phone: { not: null }, role: 'CUSTOMER' },
+                select: { id: true, email: true, name: true, phone: true, password: true },
+            });
+            user = candidates.find((u) => phoneKey(u.phone) === key) || null;
+        }
+
+        const okMsg = {
+            ok: true,
+            message: 'Si la cuenta existe, enviamos una contraseña temporal a tu correo.',
+        };
+
+        if (!user?.email) return okMsg;
+
+        const temp = makeTempPassword();
+        const hashedPassword = await bcrypt.hash(temp, 10);
+        // @ts-ignore
+        await (this.prisma as any).user.update({
+            where: { id: user.id },
+            data: { password: hashedPassword },
+        });
+
+        try {
+            await this.brevo.sendTransactional(
+                user.email,
+                user.name || user.email,
+                'Tu contraseña temporal · Lo Más Rico',
+                tempPasswordEmailHtml(user.name, temp),
+            );
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(`forgotPassword: no se pudo enviar correo a ${user.email}: ${message}`);
+            throw new BadRequestException('No pudimos enviar el correo. Intenta más tarde.');
+        }
+
+        return okMsg;
     }
 }

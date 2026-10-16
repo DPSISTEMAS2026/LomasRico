@@ -96,16 +96,19 @@ export const CevicheBuilderModal = ({
             if (hasDynamicModifiers) {
                 setStep(0);
                 const initial: Record<string, string[]> = {};
-                product.modifiers!.forEach(group => {
+                modifiers.forEach(group => {
+                    const max = Number(group.maxSelections) || 0;
+                    const limit = group.type === 'SINGLE_SELECT' ? 1 : max > 0 ? max : Infinity;
                     const defaults = group.options
                         .filter(opt => opt.isDefault && opt.available !== false)
-                        .map(opt => opt.id);
+                        .map(opt => opt.id)
+                        .slice(0, limit);
                     initial[group.groupId] = defaults;
                 });
                 setSelections(initial);
             }
         }
-    }, [product, isOpen, hasDynamicModifiers, mainSteps, quickToggles, tableSession, startInSuccess]);
+    }, [product, isOpen, hasDynamicModifiers, modifiers, mainSteps, quickToggles, tableSession, startInSuccess]);
 
     // Reset search when step changes
     useEffect(() => {

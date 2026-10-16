@@ -5,9 +5,10 @@ import { RecipeEngineeringModule } from '../recipe-engineering/recipe-engineerin
 import { InventoryModule } from '../inventory/inventory.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { AvailabilityModule } from '../availability/availability.module';
+import { TuuModule } from '../payments/tuu.module';
 
 @Module({
-    imports: [RecipeEngineeringModule, InventoryModule, ShippingModule, AvailabilityModule],
+    imports: [RecipeEngineeringModule, InventoryModule, ShippingModule, AvailabilityModule, TuuModule],
     controllers: [SalesController],
     providers: [SalesService],
     exports: [SalesService],

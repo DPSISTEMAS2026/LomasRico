@@ -122,7 +122,13 @@ export async function registerUser(data: any) {
     return res.json();
 }
 
-export type StoreStatus = { open: boolean; opensAt: string; closesAt: string; ordersEnabled: boolean };
+export type StoreStatus = {
+    open: boolean;
+    opensAt: string;
+    closesAt: string;
+    ordersEnabled: boolean;
+    schedule?: { label: string; opensAt: string; closesAt: string }[];
+};
 
 export async function getStoreStatus(): Promise<StoreStatus | null> {
     try {
@@ -141,6 +147,17 @@ export async function verifyEmail(email: string, code: string) {
     });
     if (!res.ok) throw new Error('Código inválido');
     return res.json();
+}
+
+export async function forgotPassword(emailOrPhone: string) {
+    const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrPhone }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'No se pudo recuperar la contraseña');
+    return data;
 }
 
 export async function updateUserProfile(token: string, data: any) {

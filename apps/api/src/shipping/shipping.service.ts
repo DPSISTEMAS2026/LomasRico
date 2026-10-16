@@ -3,10 +3,10 @@ import { Injectable, BadRequestException, InternalServerErrorException, Logger }
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
 // Location constants (inlined to avoid cross-package build issues on Render)
 const LOCATION = {
-    address: 'Obispo Hipólito Salas 1205, Concepción',
+    address: 'Cruz 92, Concepción, Chile',
     city: 'Concepción',
-    lat: -36.8270,
-    lng: -73.0503,
+    lat: -36.8211,
+    lng: -73.0603,
     maxDeliveryRadiusKm: 8,
 } as const;
 

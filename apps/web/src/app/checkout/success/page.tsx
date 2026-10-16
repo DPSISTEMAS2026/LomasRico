@@ -12,15 +12,24 @@ function SuccessContent() {
     const router = useRouter();
     const orderId = searchParams.get('orderId');
     const paymentId = searchParams.get('payment_id');
-    const status = searchParams.get('status');
+    const tuuResult = searchParams.get('x_result');
+    const tuuCode = /^LMR(\d+)-/.exec(searchParams.get('x_reference') || '')?.[1];
+    const status = tuuResult === 'completed' ? 'approved' : searchParams.get('status');
+    const rejected = !!tuuResult && tuuResult !== 'completed';
 
     const { clearCart } = useCart();
     const { isLoggedIn } = useAuth();
 
     useEffect(() => {
+        if (rejected) {
+            router.replace(`/checkout/failure?${searchParams.toString()}`);
+            return;
+        }
         localStorage.removeItem(CART_STORAGE);
         clearCart();
     }, []);
+
+    if (rejected) return null;
 
     return (
         <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50 flex items-center justify-center p-6">
@@ -44,10 +53,10 @@ function SuccessContent() {
 
                     {/* Order Details */}
                     <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left space-y-3">
-                        {orderId && (
+                        {(orderId || tuuCode) && (
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Orden</span>
-                                <span className="font-black text-xs text-slate-700 font-mono">{orderId.slice(-8).toUpperCase()}</span>
+                                <span className="font-black text-xs text-slate-700 font-mono">{tuuCode ? `#${tuuCode}` : orderId!.slice(-8).toUpperCase()}</span>
                             </div>
                         )}
                         {paymentId && (

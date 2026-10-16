@@ -1,16 +1,45 @@
 'use client';
 
-import { Banknote, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Banknote, CreditCard, TrendingUp } from 'lucide-react';
 import { isFoodPaymentMethod, type PaymentMethodCode } from '@lomasrico/shared-types';
+import { fetchPaymentConfig } from '../../services/api';
 
 export type PosPaymentMethod = Extract<
     PaymentMethodCode,
-    'CASH' | 'MP' | 'TRANSFER' | 'EDENRED' | 'PLUXEE' | 'JUNAEB' | 'FOOD_CARD'
+    'CASH' | 'MP' | 'TRANSFER' | 'DEBIT' | 'CREDIT' | 'EDENRED' | 'PLUXEE' | 'JUNAEB' | 'FOOD_CARD'
 >;
 
-const MAIN_METHODS: { id: PosPaymentMethod; label: string }[] = [
+export type TerminalCardMethod = Extract<PosPaymentMethod, 'DEBIT' | 'CREDIT'>;
+
+export function isTerminalCardMethod(method: PosPaymentMethod): method is TerminalCardMethod {
+    return method === 'DEBIT' || method === 'CREDIT';
+}
+
+let terminalConfig: Promise<boolean> | null = null;
+
+/** true cuando las tarjetas se cobran en la máquina TUU integrada. */
+export function useCardTerminal(): boolean {
+    const [enabled, setEnabled] = useState(false);
+    useEffect(() => {
+        terminalConfig ??= fetchPaymentConfig().then((c) => c.cardTerminal === 'tuu');
+        let alive = true;
+        void terminalConfig.then((v) => { if (alive) setEnabled(v); });
+        return () => { alive = false; };
+    }, []);
+    return enabled;
+}
+
+const MP_METHODS: { id: PosPaymentMethod; label: string }[] = [
     { id: 'CASH', label: 'Efectivo' },
     { id: 'MP', label: 'Mercado Pago' },
+    { id: 'TRANSFER', label: 'Transferencia' },
+];
+
+const TERMINAL_METHODS: { id: PosPaymentMethod; label: string }[] = [
+    { id: 'CASH', label: 'Efectivo' },
+    { id: 'DEBIT', label: 'Débito' },
+    { id: 'CREDIT', label: 'Crédito' },
     { id: 'TRANSFER', label: 'Transferencia' },
 ];
 
@@ -23,13 +52,15 @@ const FOOD_METHODS: { id: PosPaymentMethod; label: string; logo: string }[] = [
 interface Props {
     value: PosPaymentMethod;
     onChange: (method: PosPaymentMethod) => void;
+    cardTerminal?: boolean;
 }
 
-export function PaymentMethodPicker({ value, onChange }: Props) {
+export function PaymentMethodPicker({ value, onChange, cardTerminal = false }: Props) {
+    const mainMethods = cardTerminal ? TERMINAL_METHODS : MP_METHODS;
     return (
         <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-                {MAIN_METHODS.map((m) => {
+            <div className={`grid gap-2 ${cardTerminal ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                {mainMethods.map((m) => {
                     const selected = value === m.id;
                     return (
                         <button
@@ -45,6 +76,7 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
                         >
                             {m.id === 'CASH' && <Banknote size={26} strokeWidth={2.2} />}
                             {m.id === 'TRANSFER' && <TrendingUp size={26} strokeWidth={2.2} />}
+                            {(m.id === 'DEBIT' || m.id === 'CREDIT') && <CreditCard size={26} strokeWidth={2.2} />}
                             {m.id === 'MP' && (
                                 <img
                                     src="/assets/mercadopago/icono.svg"
@@ -96,6 +128,8 @@ export function PaymentMethodPicker({ value, onChange }: Props) {
 
 export function checkoutButtonLabel(method: PosPaymentMethod): string {
     if (method === 'MP') return 'COBRAR CON MP';
+    if (method === 'DEBIT') return 'COBRAR DÉBITO';
+    if (method === 'CREDIT') return 'COBRAR CRÉDITO';
     if (method === 'EDENRED') return 'COBRAR EDENRED';
     if (method === 'PLUXEE') return 'COBRAR PLUXEE';
     if (method === 'JUNAEB') return 'COBRAR JUNAEB';

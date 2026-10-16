@@ -32,22 +32,4 @@ export class CloudinaryService {
         return { cloudName, apiKey, ...params, signature: this.sign(params) };
     }
 
-    async listImages(folder: MediaFolder) {
-        const { cloudName, apiKey, apiSecret } = this.config;
-        const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-        const out: { publicId: string; url: string }[] = [];
-        let cursor = '';
-        do {
-            const qs = new URLSearchParams({ prefix: `${MEDIA_FOLDERS[folder]}/`, max_results: '500' });
-            if (cursor) qs.set('next_cursor', cursor);
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload?${qs}`, {
-                headers: { Authorization: `Basic ${auth}` },
-            });
-            if (!res.ok) throw new ServiceUnavailableException(`Cloudinary respondió ${res.status}`);
-            const data: any = await res.json();
-            for (const r of data.resources ?? []) out.push({ publicId: r.public_id, url: r.secure_url });
-            cursor = data.next_cursor ?? '';
-        } while (cursor);
-        return out.sort((a, b) => a.publicId.localeCompare(b.publicId));
-    }
 }

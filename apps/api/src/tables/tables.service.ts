@@ -3,16 +3,23 @@ import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { isInventoryEnforced } from '../config/flags';
 import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
+import { TuuTerminalService, cardTerminalEnabled } from '../payments/tuu-terminal.service';
 
 const TABLE_COUNT = 5;
 const TABLE_CLOSED = 'Pídele al garzón que abra la mesa para pedir desde el celular.';
+const PAYMENT_METHODS = new Set(['CASH', 'MP', 'MERCADO_PAGO', 'TRANSFER', 'DEBIT', 'CREDIT', 'EDENRED', 'PLUXEE', 'JUNAEB', 'FOOD_CARD']);
 
 @Injectable()
 export class TablesService implements OnModuleInit {
     constructor(
         private prisma: PrismaService,
         private recipeResolver: RecipeResolverService,
+        private terminal: TuuTerminalService,
     ) {}
+
+    private paidOnTerminal(method: string) {
+        return (method === 'DEBIT' || method === 'CREDIT') && cardTerminalEnabled();
+    }
 
     async onModuleInit() {
         try {
@@ -280,8 +287,10 @@ export class TablesService implements OnModuleInit {
         if (!ids.length) throw new BadRequestException('Cada ítem necesita sellingProductId');
         const products = await this.prisma.sellingProduct.findMany({
             where: { id: { in: ids as string[] } },
-            select: { id: true, price: true },
+            select: { id: true, name: true, price: true, isActive: true },
         });
+        const unavailable = products.find((p) => !p.isActive);
+        if (unavailable) throw new BadRequestException(`${unavailable.name} ya no está disponible`);
         const byId = new Map(products.map((p) => [p.id, p]));
         const extrasByItem = await modifierExtrasByItem(this.prisma, rows);
         let added = 0;
@@ -420,7 +429,15 @@ export class TablesService implements OnModuleInit {
         };
     }
 
-    private async currentShiftId(): Promise<string | null> {
+    private async currentShiftId(operatorId?: string): Promise<string | null> {
+        const own = operatorId
+            ? await (this.prisma as any).cashShift.findFirst({
+                where: { status: 'OPEN', cashierId: operatorId },
+                orderBy: { openingTime: 'desc' },
+                select: { id: true },
+            })
+            : null;
+        if (own) return own.id;
         const shift = await (this.prisma as any).cashShift.findFirst({
             where: { status: 'OPEN' },
             orderBy: { openingTime: 'desc' },
@@ -429,7 +446,12 @@ export class TablesService implements OnModuleInit {
         return shift?.id || null;
     }
 
-    async payGuest(tableId: string, guestId: string, dto: any, settle = true) {
+    async payGuest(tableId: string, guestId: string, dto: any, settle = true, verifiedTerminal?: Record<string, unknown>) {
+        const method = String(dto.paymentMethod || '');
+        if (!PAYMENT_METHODS.has(method)) throw new BadRequestException('Elige el medio de pago');
+        const paymentMethod = method === 'MP' ? 'MERCADO_PAGO' : method;
+        const shiftId = await this.currentShiftId(dto.operatorId);
+        if (!shiftId) throw new BadRequestException('Abre la caja antes de cobrar');
         if (dto.items?.length) {
             await this.addItemsToGuest(tableId, guestId, dto, false);
         }
@@ -439,10 +461,49 @@ export class TablesService implements OnModuleInit {
             select: {
                 id: true,
                 shiftId: true,
+                total: true,
+                shippingData: true,
                 items: { where: { sentToKitchenAt: null }, select: { id: true }, take: 1 },
             },
         });
         if (!open) throw new BadRequestException('Este comensal no tiene cuenta abierta');
+
+        const tipPercent = Math.max(0, Math.min(30, Math.round(Number(dto.tipPercent) || 0)));
+        const tipAmount = tipPercent > 0
+            ? Math.round(Number(open.total) * tipPercent / 100)
+            : Math.max(0, Math.round(Number(dto.tipAmount) || 0));
+        const chargeTotal = Number(open.total) + tipAmount;
+
+        const terminalPayment = verifiedTerminal
+            ?? (this.paidOnTerminal(paymentMethod)
+                ? await this.terminal.assertPaid(dto.terminalPaymentKey, chargeTotal)
+                : null);
+
+        let tipMeta: Record<string, unknown> | undefined;
+        if (tipAmount > 0) {
+            let waiterName: string | null = null;
+            if (dto.operatorId) {
+                const waiter = await (this.prisma as any).user.findUnique({
+                    where: { id: dto.operatorId },
+                    select: { name: true },
+                });
+                waiterName = waiter?.name || null;
+            }
+            tipMeta = {
+                amount: tipAmount,
+                percent: tipPercent || Number(dto.tipPercentLabel) || null,
+                waiterId: dto.operatorId || null,
+                waiterName: waiterName || dto.waiterName || null,
+            };
+        }
+
+        const shippingData = (terminalPayment || tipMeta)
+            ? {
+                ...((open.shippingData as any) || {}),
+                ...(terminalPayment ? { terminalPayment } : {}),
+                ...(tipMeta ? { tip: tipMeta } : {}),
+            }
+            : undefined;
 
         if (open.items.length) {
             try {
@@ -452,12 +513,10 @@ export class TablesService implements OnModuleInit {
             }
         }
 
-        const shiftId = dto.shiftId || open.shiftId || await this.currentShiftId();
-        const paymentMethod = dto.paymentMethod === 'MP' ? 'MERCADO_PAGO' : (dto.paymentMethod || 'CASH');
         const paid = await (this.prisma as any).$transaction(async (tx: any) => {
             const res = await tx.sale.updateMany({
                 where: { id: open.id, paymentStatus: 'PENDING' },
-                data: { paymentMethod, paymentStatus: 'APPROVED', status: 'CONFIRMED', shiftId: shiftId || undefined },
+                data: { paymentMethod, paymentStatus: 'APPROVED', status: 'CONFIRMED', shiftId, ...(shippingData ? { shippingData } : {}) },
             });
             if (res.count !== 1) throw new BadRequestException('Esta cuenta ya fue cobrada');
             const sale = await tx.sale.findUnique({
@@ -497,13 +556,32 @@ export class TablesService implements OnModuleInit {
         const table = await this.getTable(tableId);
         const unpaid = table.guests.filter((g: any) => g.openSale);
         if (!unpaid.length) throw new BadRequestException('La mesa no tiene cuentas abiertas');
+        const method = String(payDto.paymentMethod || '');
+        const tableTotal = unpaid.reduce((sum: number, g: any) => sum + Number(g.openSale?.total || 0), 0);
+        const tipPercent = Math.max(0, Math.min(30, Math.round(Number(payDto.tipPercent) || 0)));
+        const tipAmount = tipPercent > 0
+            ? Math.round(tableTotal * tipPercent / 100)
+            : Math.max(0, Math.round(Number(payDto.tipAmount) || 0));
+        const terminalPayment = this.paidOnTerminal(method)
+            ? await this.terminal.assertPaid(payDto.terminalPaymentKey, tableTotal + tipAmount)
+            : undefined;
         const paid = [];
+        // Propina de mesa completa: monto fijo en la primera cuenta (no se recalcula por % de cada comensal).
+        let tipAssigned = false;
         for (const guest of unpaid) {
-            const result = await this.payGuest(tableId, guest.id, payDto, false);
+            const guestPay = tipAssigned
+                ? { ...payDto, tipPercent: 0, tipAmount: 0 }
+                : { ...payDto, tipPercent: 0, tipAmount, tipPercentLabel: tipPercent || null };
+            tipAssigned = true;
+            const result = await this.payGuest(tableId, guest.id, guestPay, false, terminalPayment);
             paid.push({ guestId: guest.id, name: guest.name, sale: result.sale });
         }
         await this.prisma.$executeRawUnsafe(
             `UPDATE "DiningTable" SET "billRequest" = NULL WHERE id = $1`,
+            tableId,
+        );
+        await this.prisma.$executeRawUnsafe(
+            `UPDATE "TableGuest" SET "isActive" = false, "claimToken" = NULL, "updatedAt" = now() WHERE "tableId" = $1 AND "isActive" = true`,
             tableId,
         );
         return { table: await this.getTable(tableId), paid, grandTotal: table.openTotal };

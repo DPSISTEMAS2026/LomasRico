@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { StatsService } from './stats.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MANAGER_ROLES } from '../auth/access';
@@ -15,6 +15,11 @@ export class StatsController {
         return this.statsService.getDashboardStats();
     }
 
+    @Get('report')
+    getReport() {
+        return this.statsService.getMonthReport();
+    }
+
     @Get('top-products')
     getTopProducts() {
         return this.statsService.getTopProducts();
@@ -23,5 +28,10 @@ export class StatsController {
     @Get('peak-hours')
     getPeakHours() {
         return this.statsService.getPeakHours();
+    }
+
+    @Get('tips')
+    getTips(@Query('days') days?: string) {
+        return this.statsService.getTipsReport(Number(days) || 30);
     }
 }

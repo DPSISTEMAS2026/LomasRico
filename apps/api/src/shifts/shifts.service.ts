@@ -73,7 +73,7 @@ export class ShiftsService {
         const sales = saleIds.length
             ? await (this.prisma as any).sale.findMany({ where: { id: { in: saleIds } }, select: { id: true, paymentMethod: true } })
             : [];
-        const methodOf = new Map<string, string>(sales.map((s: any) => [s.id, s.paymentMethod || 'CASH']));
+        const methodOf = new Map<string, string>(sales.map((s: any) => [s.id, s.paymentMethod || 'OTHER']));
         const byMethod: Record<string, number> = {};
         let expectedCash = Number(shift.startAmount || 0);
         let expenses = 0;
@@ -81,7 +81,7 @@ export class ShiftsService {
         let refunds = 0;
         for (const tx of txs) {
             const amount = Number(tx.amount);
-            const method = tx.relatedSaleId ? (methodOf.get(tx.relatedSaleId) || 'CASH') : 'CASH';
+            const method = tx.relatedSaleId ? (methodOf.get(tx.relatedSaleId) || 'OTHER') : 'CASH';
             if (tx.type === 'SALE_INCOME') {
                 byMethod[method] = (byMethod[method] || 0) + amount;
                 if (method === 'CASH') expectedCash += amount;
@@ -204,7 +204,7 @@ export class ShiftsService {
 
     // Listar todos los turnos
     async findAll(filters?: { cashierId?: string; status?: string }) {
-        return (this.prisma as any).cashShift.findMany({
+        const shifts = await (this.prisma as any).cashShift.findMany({
             where: {
                 cashierId: filters?.cashierId,
                 status: filters?.status as any
@@ -234,6 +234,9 @@ export class ShiftsService {
             },
             orderBy: { openingTime: 'desc' }
         });
+        return Promise.all(shifts.map(async (shift: any) =>
+            shift.status === 'OPEN' ? { ...shift, cashSummary: await this.cashSummary(shift) } : shift,
+        ));
     }
 
     /**

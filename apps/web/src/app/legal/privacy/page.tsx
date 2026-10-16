@@ -96,7 +96,7 @@ export default function PrivacyPage() {
                             </div>
                         </div>
                         <p className="mt-4 text-xs font-bold text-slate-900 italic">
-                            * Nota importante sobre pagos: Toda la información transaccional de tarjetas de crédito o débito es procesada directamente bajo estándares de seguridad PCI-DSS por MercadoPago. No almacenamos credenciales bancarias en nuestros servidores.
+                            * Nota importante sobre pagos: Toda la información transaccional de tarjetas de crédito o débito es procesada directamente bajo estándares de seguridad PCI-DSS por nuestro proveedor de pagos. No almacenamos credenciales bancarias en nuestros servidores.
                         </p>
                     </div>
 
@@ -173,7 +173,7 @@ export default function PrivacyPage() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#f2642e]"></div>
-                                <span><strong>Pagos (MercadoPago):</strong> Información del carro de compras y monto total para procesar la transacción segura de pago.</span>
+                                <span><strong>Proveedor de pagos:</strong> Información del carro de compras y monto total para procesar la transacción segura de pago.</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#f2642e]"></div>

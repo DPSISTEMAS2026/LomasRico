@@ -27,6 +27,7 @@ const Cell = dynamic(() => import('recharts').then(mod => mod.Cell), { ssr: fals
 
 const CHANNEL_COLORS: Record<string, { bg: string, text: string, fill: string, label: string }> = {
     POS: { bg: 'bg-blue-500', text: 'text-blue-600', fill: '#3b82f6', label: '🖥️ POS' },
+    SALON: { bg: 'bg-orange-500', text: 'text-orange-600', fill: '#f97316', label: '🍽️ Salón' },
     UBER_EATS: { bg: 'bg-green-500', text: 'text-green-600', fill: '#22c55e', label: '🟢 Uber Eats' },
     PEDIDOS_YA: { bg: 'bg-red-500', text: 'text-red-600', fill: '#ef4444', label: '🔴 PedidosYa' },
     WEB: { bg: 'bg-purple-500', text: 'text-purple-600', fill: '#a855f7', label: '🌐 Web' },
@@ -45,69 +46,62 @@ const PAYMENT_LOGOS: Record<string, string> = {
 export default function ReportsPage() {
     const [sales, setSales] = useState<any[]>([]);
     const [dashboard, setDashboard] = useState<any>(null);
+    const [report, setReport] = useState<any>(null);
     const [topProducts, setTopProducts] = useState<any[]>([]);
     const [inventory, setInventory] = useState<any[]>([]);
+    const [tips, setTips] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [tab, setTab] = useState<'week' | 'channels' | 'top' | 'sales'>('week');
+    const [tab, setTab] = useState<'week' | 'channels' | 'top' | 'sales' | 'tips'>('week');
 
     useEffect(() => { loadAll(); }, []);
 
     const loadAll = async () => {
         try {
-            const [salesRes, dashRes, topRes, invRes] = await Promise.all([
+            const [salesRes, dashRes, reportRes, topRes, invRes, tipsRes] = await Promise.all([
                 authFetch(`${API_URL}/sales`),
                 authFetch(`${API_URL}/stats/dashboard`),
+                authFetch(`${API_URL}/stats/report`),
                 authFetch(`${API_URL}/stats/top-products`),
                 isModulePaused('inventory') ? Promise.resolve({ ok: false } as Response) : authFetch(`${API_URL}/inventory`),
+                authFetch(`${API_URL}/stats/tips?days=30`),
             ]);
             if (salesRes.ok) setSales(await salesRes.json());
             if (dashRes.ok) setDashboard(await dashRes.json());
+            if (reportRes.ok) setReport(await reportRes.json());
             if (topRes.ok) setTopProducts(await topRes.json());
             if (invRes.ok) setInventory(await invRes.json());
+            if (tipsRes.ok) setTips(await tipsRes.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
 
-    // Calculations
-    const completedSales = sales.filter(s => s.status !== 'CANCELLED');
-    const totalRevenue = completedSales.reduce((a, s) => a + Number(s.total), 0);
-    const avgTicket = completedSales.length > 0 ? completedSales.reduce((a, s) => a + Number(s.total), 0) / completedSales.length : 0;
+    const exportCsv = () => {
+        const rows = [
+            ['codigo', 'canal', 'total', 'pago', 'fecha'],
+            ...sales.slice(0, 500).map((s: any) => [
+                s.code || '',
+                s.channel || '',
+                String(s.total ?? ''),
+                s.paymentMethod || '',
+                s.createdAt ? new Date(s.createdAt).toISOString() : '',
+            ]),
+        ];
+        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reportes-lomasrico-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
-    // Daily chart data (last 7 days)
-    const dailyData = (() => {
-        const days: Record<string, number> = {};
-        const now = new Date();
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(now); d.setDate(d.getDate() - i);
-            const key = d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric' });
-            days[key] = 0;
-        }
-        sales.forEach(s => {
-            if (s.status === 'CANCELLED') return;
-            const d = new Date(s.createdAt);
-            const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
-            if (diff <= 6) {
-                const key = d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric' });
-                if (days[key] !== undefined) days[key] += Number(s.total);
-            }
-        });
-        return Object.entries(days).map(([name, total]) => ({ name, total }));
-    })();
-
-    // Channel breakdown
-    const channelData = dashboard?.orders?.byChannel || [];
-
-    const paymentData = (() => {
-        const map: Record<string, { method: string; total: number; count: number }> = {};
-        sales.forEach((s) => {
-            if (s.status === 'CANCELLED') return;
-            const method = s.paymentMethod || 'Sin pagar';
-            if (!map[method]) map[method] = { method, total: 0, count: 0 };
-            map[method].total += Number(s.total);
-            map[method].count += 1;
-        });
-        return Object.values(map).sort((a, b) => b.total - a.total);
-    })();
+    const totalRevenue = Number(report?.monthTotal || 0);
+    const ticketCount = Number(report?.monthCount || 0);
+    const avgTicket = Number(report?.avgTicket || 0);
+    const dailyData: { name: string; total: number }[] = report?.days || [];
+    const channelData = report?.byChannel || [];
+    const paymentData: { method: string; total: number; count: number }[] = report?.byPayment || [];
 
     // Low stock items
     const lowStockItems = inventory.filter(i =>
@@ -131,6 +125,7 @@ export default function ReportsPage() {
         { key: 'channels' as const, short: 'Canal', full: 'Canales' },
         { key: 'top' as const, short: 'Top', full: 'Top' },
         { key: 'sales' as const, short: 'Ventas', full: 'Ventas' },
+        { key: 'tips' as const, short: 'Tips', full: 'Propinas' },
     ];
 
     return (
@@ -141,7 +136,7 @@ export default function ReportsPage() {
                         Reportes
                     </h1>
                 </div>
-                <button onClick={() => alert('Exportando reporte...')}
+                <button onClick={exportCsv}
                     className="shrink-0 px-3 py-2.5 md:px-6 md:py-3 bg-slate-900 text-white rounded-xl md:rounded-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
                     <Download size={14} /> <span className="hidden sm:inline">Exportar</span>
                 </button>
@@ -151,14 +146,14 @@ export default function ReportsPage() {
                 <KpiCard title="Ventas Hoy" value={`$${Number(dashboard?.sales?.today || 0).toLocaleString('es-CL')}`} icon={<DollarSign />}
                     trend={dashboard?.sales?.trend} highlight />
                 <KpiCard title="Ventas Mes" value={`$${Number(dashboard?.sales?.month || 0).toLocaleString('es-CL')}`} icon={<BarChart3 />} />
-                <KpiCard title="Tickets" value={completedSales.length.toString()} icon={<CreditCard />} />
+                <KpiCard title="Tickets Mes" value={ticketCount.toString()} icon={<CreditCard />} />
                 <KpiCard title="Ticket Promedio" value={`$${Math.round(avgTicket).toLocaleString('es-CL')}`} icon={<TrendingUp />} />
                 {!isModulePaused('inventory') && (
                 <KpiCard title="Stock Valorizado" value={`$${Math.round(totalStockValue).toLocaleString('es-CL')}`} icon={<Package />} />
                 )}
             </div>
 
-            <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl">
+            <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 rounded-2xl">
                 {reportTabs.map((t) => (
                     <button
                         key={t.key}
@@ -400,7 +395,7 @@ export default function ReportsPage() {
                                         <td className="px-4 py-4 text-center">
                                             <span className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-[8px] font-black uppercase italic tracking-wider ${
                                                 isFoodPaymentMethod(sale.paymentMethod) ? 'bg-orange-50 text-orange-700' :
-                                                sale.paymentMethod === 'MERCADO_PAGO' || sale.paymentMethod === 'MP' ? 'bg-indigo-50 text-indigo-700' :
+                                                ['MERCADO_PAGO', 'MP', 'TUU', 'DEBIT', 'CREDIT'].includes(sale.paymentMethod) ? 'bg-indigo-50 text-indigo-700' :
                                                 sale.paymentMethod === 'CASH' ? 'bg-emerald-50 text-emerald-700' :
                                                 'bg-slate-100 text-slate-600'
                                             }`}>
@@ -427,6 +422,40 @@ export default function ReportsPage() {
                     </table>
                 </div>
             </section>
+            )}
+
+            {tab === 'tips' && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Propinas 30d</p>
+                            <p className="text-3xl font-black italic tracking-tighter text-slate-900 mt-1">
+                                ${Number(tips?.tipsTotal || 0).toLocaleString('es-CL')}
+                            </p>
+                        </div>
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Cuentas con tip</p>
+                            <p className="text-3xl font-black italic tracking-tighter text-slate-900 mt-1">{tips?.tipCount || 0}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
+                        <h3 className="text-lg font-black italic tracking-tighter uppercase text-slate-900 mb-4">Por garzón</h3>
+                        <div className="space-y-2">
+                            {!(tips?.byWaiter || []).length && (
+                                <p className="text-xs font-bold text-slate-800 italic">Aún no hay propinas registradas. Se guardan al cobrar en salón.</p>
+                            )}
+                            {(tips?.byWaiter || []).map((w: any) => (
+                                <div key={w.waiterId || w.waiterName} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
+                                    <div>
+                                        <p className="font-black uppercase italic text-sm text-slate-900">{w.waiterName}</p>
+                                        <p className="text-[10px] font-bold text-slate-800">{w.count} propinas</p>
+                                    </div>
+                                    <p className="font-black italic text-emerald-600">${Number(w.tips).toLocaleString('es-CL')}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -48,9 +48,12 @@ export const CevicheBuilderModal = ({
             if (hasDynamicModifiers) {
                 const initial: Record<string, string[]> = {};
                 modifiers.forEach(group => {
+                    const max = Number(group.maxSelections) || 0;
+                    const limit = group.type === 'SINGLE_SELECT' ? 1 : max > 0 ? max : Infinity;
                     const defaults = group.options
                         .filter(opt => opt.isDefault && opt.available !== false)
-                        .map(opt => opt.id);
+                        .map(opt => opt.id)
+                        .slice(0, limit);
                     initial[group.groupId] = defaults;
                 });
                 setSelections(initial);

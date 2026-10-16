@@ -30,7 +30,7 @@ export class ProductsController {
         return this.productsService.reorder(data.items);
     }
 
-    @Public()
+    @Roles(...STAFF_ROLES)
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.productsService.findOne(id);

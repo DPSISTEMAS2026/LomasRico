@@ -9,6 +9,9 @@ import { BrevoService } from '../mail/brevo.service';
 import { orderConfirmationHtml } from '../mail/order-email';
 import { isInventoryEnforced } from '../config/flags';
 import { AuditService } from '../audit/audit.service';
+import { TuuOnlineService, webPaymentProvider } from './tuu-online.service';
+
+const PAYMENT_LABEL: Record<string, string> = { MERCADO_PAGO: 'Mercado Pago', TUU: 'TUU' };
 
 const PENDING_TTL_MS = 24 * 60 * 60_000;
 
@@ -54,6 +57,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         private readonly shippingService: ShippingService,
         private readonly brevo: BrevoService,
         private readonly audit: AuditService,
+        private readonly tuuOnline: TuuOnlineService,
     ) {
         const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
         if (accessToken) {
@@ -103,6 +107,14 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
 
         const frontendUrl = this.normalizeUrl(process.env.FRONTEND_URL);
         const apiUrl = this.normalizeUrl(process.env.API_URL);
+
+        if (webPaymentProvider() === 'tuu') {
+            const { url } = await this.tuuOnline.createPayment(
+                { id: sale.id, code: sale.code, total: amount, contact },
+                { frontend: frontendUrl, api: apiUrl },
+            );
+            return { preferenceId: null, initPoint: url, sandboxInitPoint: url };
+        }
 
         this.logger.log(`Using frontend: ${frontendUrl} | api: ${apiUrl}`);
 
@@ -205,8 +217,28 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         return { status: 'OK' };
     }
 
+    /** Aviso del checkout TUU: solo se procesa si la firma es válida. */
+    async processTuuCallback(body: Record<string, any>) {
+        const callback = this.tuuOnline.parseCallback(body);
+        if (!callback) {
+            this.logger.warn(`TUU callback con firma inválida (ref ${String(body?.x_reference || '').slice(0, 60)})`);
+            throw new BadRequestException('Firma inválida');
+        }
+        this.logger.log(`TUU callback ${callback.reference}: ${callback.result} $${callback.amount}`);
+        if (callback.result !== 'completed') return { status: 'OK' };
+        const sale = callback.saleCode
+            ? await this.prisma.sale.findUnique({ where: { code: callback.saleCode }, select: { id: true, channel: true } })
+            : null;
+        if (!sale || sale.channel !== 'WEB') {
+            this.logger.error(`TUU pagó ${callback.reference} pero no hay pedido web con ese código`);
+            return { status: 'OK' };
+        }
+        await this.handleApprovedPayment(sale.id, callback.amount, `tuu:${callback.reference}`, 'TUU');
+        return { status: 'OK' };
+    }
+
     /** Solo confirma si lo pagado cubre el total guardado; si no, deja el pedido marcado para revisión. */
-    private async handleApprovedPayment(orderId: string, paid: number, paymentId: string) {
+    private async handleApprovedPayment(orderId: string, paid: number, paymentId: string, method: 'MERCADO_PAGO' | 'TUU' = 'MERCADO_PAGO') {
         const sale = await this.prisma.sale.findUnique({ where: { id: orderId }, select: { total: true, status: true } });
         if (!sale) {
             this.logger.warn(`Approved payment ${paymentId} for unknown order ${orderId}`);
@@ -221,7 +253,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
             });
             return;
         }
-        await this.handleApprovedOrder(orderId);
+        await this.handleApprovedOrder(orderId, method);
     }
 
     // Simulación para pruebas locales
@@ -235,7 +267,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         return { success: false, message: 'Pago rechazado.' };
     }
 
-    async handleApprovedOrder(orderId: string) {
+    async handleApprovedOrder(orderId: string, method: 'MERCADO_PAGO' | 'TUU' = 'MERCADO_PAGO') {
         // 1. Verificar que la venta existe
         const sale = await (this.prisma as any).sale.findUnique({
             where: { id: orderId }
@@ -252,7 +284,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
                 saleId: sale.id,
                 saleCode: sale.code,
                 amount: Number(sale.total),
-                reason: 'MercadoPago aprobó un pedido ya anulado: hay que devolver el pago',
+                reason: `${PAYMENT_LABEL[method]} aprobó un pedido ya anulado: hay que devolver el pago`,
             });
             this.logger.error(`Sale ${orderId} was cancelled but MercadoPago approved the payment.`);
             return;
@@ -270,7 +302,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
                 data: {
                     status: 'CONFIRMED',
                     paymentStatus: 'APPROVED',
-                    paymentMethod: 'MERCADO_PAGO',
+                    paymentMethod: method,
                 }
             });
             if (claim.count === 0) return false;
@@ -317,7 +349,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
                         shiftId,
                         type: 'SALE_INCOME',
                         amount: sale.total,
-                        description: `Pago ${sale.channel === 'WEB' ? 'Web' : sale.channel} ${sale.code} (Mercado Pago)`,
+                        description: `Pago ${sale.channel === 'WEB' ? 'Web' : sale.channel} ${sale.code} (${PAYMENT_LABEL[method]})`,
                         relatedSaleId: sale.id
                     }
                 });

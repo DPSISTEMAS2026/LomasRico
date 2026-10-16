@@ -17,8 +17,9 @@ interface Props {
     total: number;
 }
 
-// Initialize MercadoPago SDK once
-if (typeof window !== 'undefined') {
+const USES_MERCADO_PAGO = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER !== 'tuu';
+
+if (typeof window !== 'undefined' && USES_MERCADO_PAGO) {
     initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '', { locale: 'es-CL' });
 }
 
@@ -263,6 +264,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
         setLoading(true);
         setStatus('paying');
         setErrorMsg('');
+        let redirecting = false;
         setPreferenceId(null);
 
         try {
@@ -292,8 +294,11 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             const pref = await prefRes.json();
             if (pref.preferenceId || pref.id) {
                 setPreferenceId(pref.preferenceId || pref.id);
+            } else if (pref.initPoint) {
+                redirecting = true;
+                window.location.assign(pref.initPoint);
             } else {
-                throw new Error('MercadoPago no devolvió un ID de preferencia.');
+                throw new Error('No se pudo iniciar el pago.');
             }
 
         } catch (e: any) {
@@ -303,7 +308,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             setErrorMsg(msg);
             setPreferenceId(null);
         } finally {
-            setLoading(false);
+            if (!redirecting) setLoading(false);
         }
     };
 
@@ -713,13 +718,14 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                             <span className="text-4xl font-[900] text-[#f2642e] tracking-tighter leading-none">${finalTotal.toLocaleString('es-CL')}</span>
                         </div>
 
-                        {/* MercadoPago Wallet Brick */}
                         {!preferenceId ? (
                             <button
                                 onClick={handlePreparePayment}
                                 disabled={closed || !canPay || loading || items.length === 0}
                                 className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${!closed && canPay && items.length > 0
-                                    ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.02] shadow-blue-200'
+                                    ? USES_MERCADO_PAGO
+                                        ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.02] shadow-blue-200'
+                                        : 'bg-[#f2642e] text-white hover:bg-[#d9551f] hover:scale-[1.02] shadow-orange-200'
                                     : 'bg-slate-200 text-slate-900 cursor-not-allowed'
                                     }`}
                             >
@@ -757,7 +763,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                         )}
 
                         <div className="flex flex-col items-center gap-2 mt-2">
-                            <img src="/assets/mercadopago/horizontal.svg" alt="Mercado Pago" className="h-5 object-contain" />
+                            {USES_MERCADO_PAGO && <img src="/assets/mercadopago/horizontal.svg" alt="Mercado Pago" className="h-5 object-contain" />}
                             <p className="text-[8px] font-black uppercase text-slate-900 tracking-[0.3em] italic">Transacción segura</p>
                         </div>
                     </div>

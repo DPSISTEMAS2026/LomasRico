@@ -12,6 +12,7 @@ const METHOD_LABEL: Record<string, string> = {
     CREDIT: 'Crédito',
     TRANSFER: 'Transferencia',
     MERCADO_PAGO: 'MercadoPago',
+    TUU: 'Web TUU',
     EDENRED: 'Edenred',
     PLUXEE: 'Pluxee',
     JUNAEB: 'Junaeb',
