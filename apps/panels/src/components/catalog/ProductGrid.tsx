@@ -182,12 +182,10 @@ export const ProductGrid = () => {
                     onClose={() => setIsModalOpen(false)}
                     product={selectedProduct}
                     availableProteins={availableProteins.length > 0 ? availableProteins : [
-                        // Fallback if API fails
+                        // Fallback if API fails (sin Reineta/Pulpo)
                         { id: '16', name: 'Salmón' },
                         { id: '19', name: 'Camarón' },
                         { id: '18', name: 'Atún' },
-                        { id: '17', name: 'Reineta' },
-                        { id: '20', name: 'Pulpo' },
                         { id: '21', name: 'Mix Mariscos' }
                     ]}
                     availableVeggies={[

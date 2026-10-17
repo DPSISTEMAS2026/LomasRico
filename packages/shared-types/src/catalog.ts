@@ -246,11 +246,10 @@ export const REAL_PRODUCT_CATALOG: Product[] = [
 
 export const PROTEINS = [
     { id: 'salmon', name: 'Salmón' },
-    { id: 'reineta', name: 'Reineta' },
     { id: 'atun', name: 'Atún' },
-    { id: 'pulpo', name: 'Pulpo' },
     { id: 'macha', name: 'Macha' },
-    { id: 'camaron', name: 'Camarón' }
+    { id: 'camaron', name: 'Camarón' },
+    // Reineta y Pulpo ocultos (ModifierOption.isActive=false en DB)
 ];
 
 export const VEGGIES = [
