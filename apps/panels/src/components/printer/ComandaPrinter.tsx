@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { type CartItem } from '../../types';
-import { cleanModifierLabel } from '@lomasrico/shared-types';
+import { formatModifierPrintLines } from '@lomasrico/shared-types';
 
 interface ComandaProps {
     saleCode: string;
@@ -12,16 +12,7 @@ interface ComandaProps {
 }
 
 function modifierLines(item: CartItem): string[] {
-    const lines: string[] = [];
-    const mods = item.modifiers || {};
-    mods.dynamicSelections?.forEach((g: any) => {
-        g.selectedOptions?.forEach((o: any) => lines.push(`${cleanModifierLabel(g.displayName || g.groupName)}: ${o.name}`));
-    });
-    mods.selectedProteinNames?.forEach((p: string) => lines.push(p));
-    mods.selectedProteins?.forEach((p: string) => lines.push(p));
-    mods.removedIngredients?.forEach((v: string) => lines.push(`Sin ${v}`));
-    mods.extras?.forEach((e: any) => lines.push(e.name || e));
-    return lines;
+    return formatModifierPrintLines(item.modifiers as any);
 }
 
 export const ComandaPrinter = forwardRef<HTMLDivElement, ComandaProps>(({

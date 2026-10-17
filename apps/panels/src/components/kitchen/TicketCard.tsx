@@ -4,7 +4,7 @@ import {
     ChefHat, ChevronRight, ChevronDown, MessageSquare, Timer,
     AlertCircle, XCircle, ArrowRight, CheckCircle2, Printer
 } from 'lucide-react';
-import { cleanModifierLabel, type KitchenTicket, type SaleItem } from '@lomasrico/shared-types';
+import { formatModifierPrintLines, type KitchenTicket, type SaleItem } from '@lomasrico/shared-types';
 
 // ─── Tab config type ────────────────────────────────
 interface TabConfig {
@@ -44,30 +44,48 @@ function calcGrams(item: SaleItem, name: string, arr: string[]): number {
 
 // ─── Modifier Badges ────────────────────────────────
 function ModBadges({ item }: { item: SaleItem }) {
-    const hasPN = (item.modifiers?.selectedProteinNames?.length ?? 0) > 0;
-    const hasP = (item.modifiers?.selectedProteins?.length ?? 0) > 0;
-    const hasR = (item.modifiers?.removedIngredients?.length ?? 0) > 0;
-    const dynamics = (item.modifiers?.dynamicSelections || []).filter((g: any) => g.selectedOptions?.length);
-    if (!hasPN && !hasP && !hasR && !dynamics.length) return null;
+    const lines = formatModifierPrintLines(item.modifiers as any);
+    const proteinNames = item.modifiers?.selectedProteinNames || [];
+    if (!lines.length && !proteinNames.length) return null;
+
+    // Si hay gramos por proteína, preferir chips con gramos; si no, líneas agrupadas.
+    if (proteinNames.length > 0) {
+        const hasR = (item.modifiers?.removedIngredients?.length ?? 0) > 0;
+        const dynamics = (item.modifiers?.dynamicSelections || []).filter((g: any) => g.selectedOptions?.length);
+        return (
+            <div className="flex flex-wrap gap-1 mt-1">
+                {dynamics.map((g: any) => {
+                    const label = formatModifierPrintLines({ dynamicSelections: [g] })[0];
+                    return label ? (
+                        <span key={g.groupId || label} className="bg-orange-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
+                            {label}
+                        </span>
+                    ) : null;
+                })}
+                {proteinNames.map((name: string, i: number, arr: string[]) => {
+                    const g = calcGrams(item, name, arr);
+                    return <span key={`pn${i}`} className="bg-slate-900 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">+ {name} <span className="text-orange-400">{g}G</span></span>;
+                })}
+                {hasR && item.modifiers?.removedIngredients?.map((n: string, i: number) => (
+                    <span key={`r${i}`} className="bg-red-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase line-through opacity-70">Sin {n}</span>
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-wrap gap-1 mt-1">
-            {dynamics.map((g: any) =>
-                g.selectedOptions.map((o: any, i: number) => (
-                    <span key={`${g.groupId}-${i}`} className="bg-orange-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
-                        {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}
-                    </span>
-                ))
-            )}
-            {item.modifiers?.selectedProteins?.map((n: string, i: number) => (
-                <span key={`p${i}`} className="bg-slate-900 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">+ {n}</span>
-            ))}
-            {item.modifiers?.selectedProteinNames?.map((name: string, i: number, arr: string[]) => {
-                const g = calcGrams(item, name, arr);
-                return <span key={`pn${i}`} className="bg-slate-900 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">+ {name} <span className="text-orange-400">{g}G</span></span>;
-            })}
-            {item.modifiers?.removedIngredients?.map((n: string, i: number) => (
-                <span key={`r${i}`} className="bg-red-500 text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase line-through opacity-70">Sin {n}</span>
+            {lines.map((line, i) => (
+                <span
+                    key={i}
+                    className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                        line.startsWith('Sin ')
+                            ? 'bg-red-500 text-white line-through opacity-70'
+                            : 'bg-orange-500 text-white'
+                    }`}
+                >
+                    {line}
+                </span>
             ))}
         </div>
     );

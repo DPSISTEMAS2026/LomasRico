@@ -150,9 +150,57 @@ export function cleanModifierLabel(label?: string | null): string {
     return String(label)
         .replace(/mer-?cat\s*:\s*/gi, '')
         .replace(/\bmer-?cat\b/gi, '')
-        .replace(/^[:\s\-]+/, '')
+        // Textos de UI del armado → etiquetas cortas para cocina/comanda
+        .replace(/elige\s+hasta\s+\d+\s+prote[ií]nas?!?/gi, 'Proteínas')
+        .replace(/elige\s+(tu\s+)?prote[ií]na(s)?/gi, 'Proteínas')
+        .replace(/formato\s+o\s+tama[ñn]o/gi, 'Formato')
+        .replace(/tama[ñn]o\s*(del\s*plato)?/gi, 'Formato')
+        .replace(/^[:\s\-!¡]+/, '')
+        .replace(/[!¡]+$/g, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
+}
+
+/** Agrupa opciones del mismo grupo: "Proteínas: Salmón, Camarón" (una línea). */
+export function formatModifierPrintLines(modifiers?: {
+    dynamicSelections?: { groupName?: string; displayName?: string; selectedOptions?: { name?: string }[] }[];
+    selectedProteinNames?: string[];
+    selectedProteins?: string[];
+    removedIngredients?: string[];
+    extras?: ({ name?: string } | string)[];
+} | null): string[] {
+    const lines: string[] = [];
+    const mods = modifiers || {};
+    const byGroup = new Map<string, string[]>();
+
+    for (const g of mods.dynamicSelections || []) {
+        const label = cleanModifierLabel(g.displayName || g.groupName) || 'Opción';
+        const names = (g.selectedOptions || []).map((o) => String(o?.name || '').trim()).filter(Boolean);
+        if (!names.length) continue;
+        const prev = byGroup.get(label) || [];
+        byGroup.set(label, [...prev, ...names]);
+    }
+    for (const [label, names] of byGroup) {
+        const uniq = [...new Set(names)];
+        lines.push(uniq.length === 1 && label.toLowerCase() === uniq[0].toLowerCase()
+            ? uniq[0]
+            : `${label}: ${uniq.join(', ')}`);
+    }
+
+    for (const n of mods.selectedProteinNames || []) {
+        if (n) lines.push(String(n));
+    }
+    for (const n of mods.selectedProteins || []) {
+        if (n) lines.push(String(n));
+    }
+    for (const n of mods.removedIngredients || []) {
+        if (n) lines.push(`Sin ${n}`);
+    }
+    for (const e of mods.extras || []) {
+        const name = typeof e === 'string' ? e : e?.name;
+        if (name) lines.push(String(name));
+    }
+    return lines;
 }
 
 export type ModifierRole = 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';

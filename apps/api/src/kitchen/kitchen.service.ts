@@ -373,22 +373,44 @@ export class KitchenService {
         const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone });
         const date = new Date(ticket.createdAt).toLocaleDateString('es-CL', { timeZone });
 
+        const cleanLabel = (label?: string) => String(label || '')
+            .replace(/elige\s+hasta\s+\d+\s+prote[ií]nas?!?/gi, 'Proteínas')
+            .replace(/elige\s+(tu\s+)?prote[ií]na(s)?/gi, 'Proteínas')
+            .replace(/formato\s+o\s+tama[ñn]o/gi, 'Formato')
+            .replace(/^[:\s\-!¡]+/, '')
+            .replace(/[!¡]+$/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
         const formatMods = (raw: any) => {
             const mods = raw
                 ? (typeof raw === 'string' ? JSON.parse(raw) : raw)
                 : {};
-            const lines: string[] = [];
+            // Negro sólido: el gris (#666) no se ve en impresoras térmicas.
+            const lineStyle = 'padding-left:12px;font-size:12px;font-weight:700;color:#000;';
             if (Array.isArray(mods)) {
-                return mods.map((m: any) => `<div style="padding-left:12px;font-size:11px;color:#666;">+ ${escapeHtml(m.name || m.optionName || m)}</div>`).join('');
+                return mods.map((m: any) => `<div style="${lineStyle}">+ ${escapeHtml(m.name || m.optionName || m)}</div>`).join('');
             }
-            (mods.selectedProteinNames || []).forEach((n: string) => lines.push(`+ ${n}`));
-            (mods.selectedProteins || []).forEach((n: string) => lines.push(`+ ${n}`));
-            (mods.removedIngredients || []).forEach((n: string) => lines.push(`- Sin ${n}`));
-            (mods.extras || []).forEach((e: any) => lines.push(`+ ${e.name || e}`));
-            (mods.dynamicSelections || []).forEach((g: any) => {
-                (g.selectedOptions || []).forEach((o: any) => lines.push(`+ ${o.name || o}`));
+            const lines: string[] = [];
+            const byGroup = new Map<string, string[]>();
+            for (const g of mods.dynamicSelections || []) {
+                const label = cleanLabel(g.displayName || g.groupName) || 'Opción';
+                const names = (g.selectedOptions || []).map((o: any) => String(o?.name || '').trim()).filter(Boolean);
+                if (!names.length) continue;
+                byGroup.set(label, [...(byGroup.get(label) || []), ...names]);
+            }
+            for (const [label, names] of byGroup) {
+                const uniq = [...new Set(names)];
+                lines.push(`${label}: ${uniq.join(', ')}`);
+            }
+            (mods.selectedProteinNames || []).forEach((n: string) => n && lines.push(String(n)));
+            (mods.selectedProteins || []).forEach((n: string) => n && lines.push(String(n)));
+            (mods.removedIngredients || []).forEach((n: string) => n && lines.push(`Sin ${n}`));
+            (mods.extras || []).forEach((e: any) => {
+                const name = typeof e === 'string' ? e : e?.name;
+                if (name) lines.push(String(name));
             });
-            return lines.map((line) => `<div style="padding-left:12px;font-size:11px;color:#666;">${escapeHtml(line)}</div>`).join('');
+            return lines.map((line) => `<div style="${lineStyle}">+ ${escapeHtml(line)}</div>`).join('');
         };
 
         const isAccount = kind === 'account';
@@ -424,15 +446,17 @@ export class KitchenService {
             font-size: 12px;
             color: #000;
         }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-        .header h1 { font-size: 18px; margin: 0; letter-spacing: 1px; font-weight: bold; }
-        .header .doc { font-size: 11px; margin-top: 4px; text-transform: uppercase; }
-        .header .order { font-size: 22px; font-weight: bold; margin: 6px 0 2px; }
-        .header .code { font-size: 13px; font-weight: bold; }
-        .meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; }
-        .note { margin-top: 8px; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 12px; font-weight: bold; }
-        .footer { text-align: center; margin-top: 12px; padding-top: 8px; border-top: 2px solid #000; font-size: 10px; }
-        @media print { body { -webkit-print-color-adjust: exact; } }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; color: #000; }
+        .header h1 { font-size: 18px; margin: 0; letter-spacing: 1px; font-weight: 900; color: #000; }
+        .header .doc { font-size: 12px; margin-top: 4px; text-transform: uppercase; font-weight: 700; color: #000; }
+        .header .order { font-size: 22px; font-weight: 900; margin: 6px 0 2px; color: #000; }
+        .header .code { font-size: 13px; font-weight: 900; color: #000; }
+        .meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; color: #000; }
+        .note { margin-top: 8px; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 12px; font-weight: 900; color: #000; }
+        .footer { text-align: center; margin-top: 12px; padding-top: 8px; border-top: 2px solid #000; font-size: 11px; font-weight: 700; color: #000; }
+        @media print {
+            body, body * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body onload="window.print()">
@@ -441,7 +465,7 @@ export class KitchenService {
         <div class="doc">${isAccount ? 'Cuenta interna' : 'Comanda cocina'}</div>
         <div class="order">${channel}</div>
         ${guestName ? `<div style="font-size:16px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
-        ${ticket.batchNumber ? `<div style="font-size:12px;margin-top:2px;">Tanda ${ticket.batchNumber}</div>` : ''}
+        ${ticket.batchNumber ? `<div style="font-size:12px;font-weight:700;margin-top:2px;color:#000;">Tanda ${ticket.batchNumber}</div>` : ''}
         <div class="code">#${orderCode}</div>
     </div>
     <div class="meta">
