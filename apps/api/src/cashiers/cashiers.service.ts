@@ -4,7 +4,7 @@ import { STAFF_ROLES } from '../auth/access';
 import { AuditService } from '../audit/audit.service';
 
 /** Roles que se pueden asignar desde el panel. OWNER nunca se crea ni se asigna por aquí. */
-const ASSIGNABLE_ROLES = ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'];
+const ASSIGNABLE_ROLES = ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER', 'DRIVER'];
 const DEFAULT_PIN = '2026';
 
 const SAFE_SELECT = {
@@ -42,7 +42,7 @@ export class CashiersService {
         if (!/^\d{4}$/.test(String(pin || ''))) throw new BadRequestException('El PIN debe ser numérico de 4 dígitos');
         if (pin === DEFAULT_PIN) throw new BadRequestException('Ese PIN no está permitido');
         const taken = await this.prisma.user.findFirst({
-            where: { pin, role: { in: STAFF_ROLES as any }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+            where: { pin, role: { in: [...STAFF_ROLES, 'DRIVER'] as any }, ...(exceptId ? { id: { not: exceptId } } : {}) },
             select: { id: true },
         });
         if (taken) throw new ConflictException('Ese PIN ya lo usa otra persona');

@@ -29,8 +29,8 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
     const logo = logoUrl
         ? `<img src="${logoUrl}" width="80" alt="Lo Más Rico" style="display:block;margin:0 auto 18px auto;border:0;width:80px;height:auto;" />`
         : '';
-    const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Cruz 92, Concepción, Chile');
-    const wazeUrl = 'https://waze.com/ul?q=' + encodeURIComponent('Cruz 92, Concepción, Chile') + '&navigate=true';
+    const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Obispo Hipólito Salas 1205, Concepción, Chile');
+    const wazeUrl = 'https://waze.com/ul?q=' + encodeURIComponent('Obispo Hipólito Salas 1205, Concepción, Chile') + '&navigate=true';
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -53,7 +53,7 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
             Mañana abrimos con delivery y retiro en Concepción.
           </p>
           <p style="margin:0 0 6px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Nueva dirección</p>
-          <p style="margin:0 0 10px 0;font-weight:800;text-align:center;">Cruz 92, Concepción, Chile</p>
+          <p style="margin:0 0 10px 0;font-weight:800;text-align:center;">Obispo Hipólito Salas 1205, Concepción, Chile</p>
           <p style="margin:0 0 18px 0;text-align:center;">
             <a href="${mapsUrl}" style="color:#0f172a;font-weight:800;font-size:12px;text-decoration:underline;">Google Maps</a>
             &nbsp;·&nbsp;

@@ -36,6 +36,7 @@ const ALL_MODULES = [
     { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.', roles: ['ADMIN', 'CASHIER', 'WAITER'] },
     { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.', roles: ['ADMIN', 'CASHIER'] },
     { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { id: 'driver', label: 'Reparto', desc: 'Cola de despachos, Maps/Waze y estados de entrega.', roles: ['ADMIN', 'DRIVER'] },
     { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.', roles: ADMIN_ONLY },
     { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.', roles: ADMIN_ONLY },
     { id: 'recipes', label: 'Recetas', desc: 'Crear y editar recetas de producción.', roles: ADMIN_ONLY },
@@ -51,7 +52,8 @@ const ROLES = [
     { value: 'CASHIER', label: 'Cajero/a', plural: 'Cajeros', color: 'bg-blue-500' },
     { value: 'WAITER', label: 'Garzón', plural: 'Garzones', color: 'bg-emerald-600' },
     { value: 'KITCHEN', label: 'Cocina', plural: 'Cocina', color: 'bg-orange-500' },
-    { value: 'ADMIN', label: 'Administrador/a', plural: 'Administradores', color: 'bg-purple-500' },
+    { value: 'DRIVER', label: 'Repartidor', plural: 'Repartidores', color: 'bg-orange-500' },
+    { value: 'ADMIN', label: 'Administrador/a', plural: 'Administradores', color: 'bg-slate-900' },
 ];
 
 function getRoleInfo(role: string) {

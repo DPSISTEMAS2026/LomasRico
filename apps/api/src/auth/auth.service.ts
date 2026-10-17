@@ -53,6 +53,7 @@ function makeTempPassword() {
 }
 
 const STAFF_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] as const;
+const PIN_ROLES = [...STAFF_ROLES, 'DRIVER'] as const;
 const DEFAULT_STAFF_PIN = '2026';
 
 @Injectable()
@@ -296,7 +297,7 @@ export class AuthService implements OnModuleInit {
         }
 
         const matches = await this.prisma.user.findMany({
-            where: { pin, role: { in: [...STAFF_ROLES] } },
+            where: { pin, role: { in: [...PIN_ROLES] } },
             select: {
                 id: true,
                 email: true,

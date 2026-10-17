@@ -2,20 +2,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
 
+/** Punto central = local (Obispo Hipólito Salas 1205, Concepción). */
 const LOCATION = {
-    address: 'Cruz 92, Concepción, Chile',
+    address: 'Obispo Hipólito Salas 1205, Concepción, Chile',
     city: 'Concepción',
-    lat: -36.8211,
-    lng: -73.0603,
-    maxDeliveryRadiusKm: 45,
+    lat: -36.821777,
+    lng: -73.06093,
+    maxDeliveryRadiusKm: 12,
 } as const;
 
-const COST_CONCEPCION = 2500;
-const COST_OUTSIDE = 4000;
+/** Tramos: distancia <= maxKm → cost. Fuera de 12 km = no despacha. */
+const SHIPPING_BANDS = [
+    { maxKm: 3.5, cost: 2000, label: 'Despacho 0–3,5 km' },
+    { maxKm: 7.5, cost: 3500, label: 'Despacho 3,5–7,5 km' },
+    { maxKm: 9.5, cost: 4000, label: 'Despacho 7,5–9,5 km' },
+    { maxKm: 12, cost: 5500, label: 'Despacho 9,5–12 km' },
+] as const;
+
 const FREE_IN_CONCEPCION_FROM = 20000;
 const FREE_ANYWHERE_FROM = 25000;
 
-/** Comunas del Gran Concepción que NO son la comuna Concepción → tarifa "fuera". */
+/** Comunas del Gran Concepción que no son la comuna Concepción. */
 const OUTSIDE_COMUNA_HINTS = [
     'talcahuano',
     'san pedro de la paz',
@@ -36,6 +43,37 @@ const OUTSIDE_COMUNA_HINTS = [
     'los angeles',
     'los ángeles',
 ];
+
+function priceForDistance(distanceKm: number): { cost: number; label: string } | null {
+    const d = Math.max(0, Number(distanceKm) || 0);
+    for (const band of SHIPPING_BANDS) {
+        if (d <= band.maxKm) return { cost: band.cost, label: band.label };
+    }
+    return null;
+}
+
+/** Gratis: ≥$25.000 cualquier dirección; ≥$20.000 solo comuna Concepción. */
+function applyFreeShipping(
+    band: { cost: number; label: string },
+    cartSubtotal: number,
+    inConcepcion: boolean,
+): { cost: number; label: string } {
+    const sub = Math.max(0, Math.round(Number(cartSubtotal) || 0));
+    if (sub >= FREE_ANYWHERE_FROM) {
+        return { cost: 0, label: 'Despacho gratis (compra sobre $25.000)' };
+    }
+    if (inConcepcion && sub >= FREE_IN_CONCEPCION_FROM) {
+        return { cost: 0, label: 'Despacho gratis en Concepción (compra sobre $20.000)' };
+    }
+    return band;
+}
+
+function etaForDistance(distanceKm: number): string {
+    if (distanceKm <= 3.5) return '25-40 min';
+    if (distanceKm <= 7.5) return '35-50 min';
+    if (distanceKm <= 9.5) return '40-55 min';
+    return '50-70 min';
+}
 
 function normalizeText(raw: string) {
     return String(raw || '')
@@ -64,39 +102,18 @@ export class ShippingService {
     }
 
     getDeliveryMode() {
-        return { mode: this.deliveryMode, maxDistanceKm: this.maxDistanceKm };
+        return {
+            mode: this.deliveryMode,
+            maxDistanceKm: this.maxDistanceKm,
+            origin: { ...this.ORIGIN_COORDS, address: this.ORIGIN_ADDRESS },
+            bands: SHIPPING_BANDS,
+        };
     }
 
     setMaxDistance(km: number) {
         this.maxDistanceKm = Math.max(1, Math.min(km, 80));
         this.logger.log(`[SHIPPING] Radio de delivery cambiado a: ${this.maxDistanceKm}km`);
         return { maxDistanceKm: this.maxDistanceKm };
-    }
-
-    /** Comuna Concepción (no Gran Concepción completo). */
-    isInConcepcion(address: string, city?: string, distanceKm?: number): boolean {
-        const text = normalizeText(`${address} ${city || ''}`);
-        if (OUTSIDE_COMUNA_HINTS.some((hint) => text.includes(normalizeText(hint)))) {
-            return false;
-        }
-        if (text.includes('concepcion')) return true;
-        // Sin comuna clara: cerca del local (~6 km) se trata como Concepción
-        if (typeof distanceKm === 'number' && distanceKm > 0 && distanceKm <= 6) return true;
-        return false;
-    }
-
-    private priceFor(inConcepcion: boolean, cartSubtotal: number): { cost: number; label: string } {
-        const sub = Math.max(0, Math.round(Number(cartSubtotal) || 0));
-        if (sub >= FREE_ANYWHERE_FROM) {
-            return { cost: 0, label: 'Despacho gratis (compra sobre $25.000)' };
-        }
-        if (inConcepcion && sub >= FREE_IN_CONCEPCION_FROM) {
-            return { cost: 0, label: 'Despacho gratis en Concepción (compra sobre $20.000)' };
-        }
-        if (inConcepcion) {
-            return { cost: COST_CONCEPCION, label: 'Despacho Concepción' };
-        }
-        return { cost: COST_OUTSIDE, label: 'Despacho fuera de Concepción' };
     }
 
     async calculateQuote(dto: ShippingQuoteDto): Promise<ShippingQuoteResponse> {
@@ -123,29 +140,61 @@ export class ShippingService {
             distanceKm = await this.mockDistanceCalculation(address);
         }
 
-        if (distanceKm > this.maxDistanceKm && channel !== 'POS') {
+        const limit = Math.min(this.maxDistanceKm, LOCATION.maxDeliveryRadiusKm);
+        if (distanceKm > limit && channel !== 'POS') {
             return {
                 valid: false,
                 distanceKm,
                 cost: 0,
                 deliveryTimeEstimate: 'N/A',
-                reason: `Estás muy lejos de nuestro local (${distanceKm.toFixed(1)} km). Prueba con retiro en tienda o una dirección más cercana.`,
+                reason: `Estás fuera de nuestra zona de despacho (${distanceKm.toFixed(1)} km; máximo ${limit} km). Prueba con retiro en tienda.`,
             };
         }
 
-        const inConcepcion = this.isInConcepcion(address, (dto as any).city, distanceKm);
-        const priced = this.priceFor(inConcepcion, cartSubtotal);
+        const band = priceForDistance(distanceKm);
+        if (!band && channel !== 'POS') {
+            return {
+                valid: false,
+                distanceKm,
+                cost: 0,
+                deliveryTimeEstimate: 'N/A',
+                reason: `Estás fuera de nuestra zona de despacho (${distanceKm.toFixed(1)} km; máximo ${LOCATION.maxDeliveryRadiusKm} km). Prueba con retiro en tienda.`,
+            };
+        }
 
-        this.logger.log(`[QUOTE] Distance: ${distanceKm}km | Zone: ${inConcepcion ? 'Concepción' : 'Fuera'} | Cost: ${priced.cost}`);
+        // POS fuera de radio: último tramo
+        const baseBand = band || SHIPPING_BANDS[SHIPPING_BANDS.length - 1];
+        const inConcepcion = this.isInConcepcion(address, (dto as any).city, distanceKm);
+        const priced = applyFreeShipping(
+            distanceKm > LOCATION.maxDeliveryRadiusKm
+                ? { cost: baseBand.cost, label: `${baseBand.label} (fuera de radio, POS)` }
+                : baseBand,
+            cartSubtotal,
+            inConcepcion,
+        );
+
+        this.logger.log(`[QUOTE] Origin ${this.ORIGIN_COORDS.lat},${this.ORIGIN_COORDS.lng} → ${distanceKm}km | CCO=${inConcepcion} | ${priced.label} | $${priced.cost}`);
 
         return {
             valid: true,
             cost: priced.cost,
-            deliveryTimeEstimate: inConcepcion ? '30-45 min' : '40-60 min',
-            estimateId: `zone-${inConcepcion ? 'cco' : 'out'}-${Date.now()}`,
+            deliveryTimeEstimate: etaForDistance(Math.min(distanceKm, LOCATION.maxDeliveryRadiusKm)),
+            estimateId: `band-${Date.now()}`,
             distanceKm,
-            reason: priced.label,
+            reason: priced.cost === 0 ? priced.label : `${priced.label} · ${distanceKm.toFixed(1)} km`,
         };
+    }
+
+    /** Comuna Concepción (no todo el Gran Concepción). */
+    isInConcepcion(address: string, city?: string, distanceKm?: number): boolean {
+        const text = normalizeText(`${address} ${city || ''}`);
+        if (OUTSIDE_COMUNA_HINTS.some((hint) => text.includes(normalizeText(hint)))) {
+            return false;
+        }
+        if (text.includes('concepcion')) return true;
+        // Sin comuna clara: tramo cercano (≤3,5 km) se trata como Concepción
+        if (typeof distanceKm === 'number' && distanceKm > 0 && distanceKm <= 3.5) return true;
+        return false;
     }
 
     private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -164,15 +213,17 @@ export class ShippingService {
         return deg * (Math.PI / 180);
     }
 
+    /** Fallback sin coords (POS): estima por texto; con Google activo debería usarse coords. */
     private async mockDistanceCalculation(address: string): Promise<number> {
         const text = normalizeText(address);
-        if (OUTSIDE_COMUNA_HINTS.some((h) => text.includes(normalizeText(h)))) return 12;
-        if (text.includes('concepcion')) return 3.5;
-        return 8;
+        if (text.includes('talcahuano') || text.includes('san pedro') || text.includes('chiguayante')) return 8;
+        if (text.includes('hualpen') || text.includes('hualpén') || text.includes('penco')) return 10;
+        if (text.includes('concepcion')) return 2.5;
+        return 6;
     }
 
     async confirmDelivery(estimateId: string) {
-        if (estimateId.startsWith('internal-') || estimateId.startsWith('mock-') || estimateId.startsWith('zone-')) {
+        if (estimateId.startsWith('internal-') || estimateId.startsWith('mock-') || estimateId.startsWith('zone-') || estimateId.startsWith('band-')) {
             this.logger.log(`[SHIPPING] Confirmando despacho Local/Zona: ${estimateId}`);
             return { success: true, trackingId: `TRACK-MOCK-${Date.now()}` };
         }

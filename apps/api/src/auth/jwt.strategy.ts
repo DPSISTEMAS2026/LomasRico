@@ -17,7 +17,7 @@ const USER_CACHE_MS = 60_000;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    private readonly users = new Map<string, { at: number; user: { id: string; email: string | null; role: string } | null }>();
+    private readonly users = new Map<string, { at: number; user: { id: string; email: string | null; role: string; name: string | null } | null }>();
 
     constructor(private readonly prisma: PrismaService) {
         super({
@@ -35,12 +35,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         if (user === undefined) {
             user = await this.prisma.user.findUnique({
                 where: { id },
-                select: { id: true, email: true, role: true },
+                select: { id: true, email: true, role: true, name: true },
             });
             if (this.users.size > 500) this.users.clear();
             this.users.set(id, { at: Date.now(), user });
         }
         if (!user) throw new UnauthorizedException('Sesión inválida o vencida');
-        return { userId: user.id, email: user.email, role: user.role };
+        return { userId: user.id, email: user.email, role: user.role, name: user.name };
     }
 }

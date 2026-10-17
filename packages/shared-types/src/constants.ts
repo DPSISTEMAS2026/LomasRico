@@ -1,6 +1,6 @@
 /**
  * Business constants for Lo Más Rico.
- * 
+ *
  * Centralized configuration to avoid magic strings and numbers
  * scattered across the codebase. Change values here, not in
  * individual services.
@@ -16,30 +16,39 @@ export const BUSINESS = {
     supportEmail: 'soporte@lomasrico.cl',
 } as const;
 
+/** Local: Obispo Hipólito Salas 1205/1209, Concepción (punto central de despacho). */
 export const LOCATION = {
-    address: 'Cruz 92, Concepción, Chile',
+    address: 'Obispo Hipólito Salas 1205, Concepción, Chile',
     city: 'Concepción',
     comuna: 'Concepción',
-    lat: -36.8211,
-    lng: -73.0603,
-    /** Soft max for absurd addresses (km). Zone pricing decides cost inside this. */
-    maxDeliveryRadiusKm: 45,
+    lat: -36.821777,
+    lng: -73.06093,
+    /** Máximo de despacho (último tramo). */
+    maxDeliveryRadiusKm: 12,
 } as const;
 
-// ─── Shipping ──────────────────────────────────────────────
+// ─── Shipping (tarifas por distancia desde LOCATION) ────────
+
+/** Tramos inclusivos en el tope: d <= maxKm. */
+export const SHIPPING_BANDS = [
+    { maxKm: 3.5, cost: 2000, label: 'Despacho 0–3,5 km' },
+    { maxKm: 7.5, cost: 3500, label: 'Despacho 3,5–7,5 km' },
+    { maxKm: 9.5, cost: 4000, label: 'Despacho 7,5–9,5 km' },
+    { maxKm: 12, cost: 5500, label: 'Despacho 9,5–12 km' },
+] as const;
 
 export const SHIPPING = {
-    /** Despacho dentro de la comuna Concepción (CLP) */
-    concepcionCost: 2500,
-    /** Despacho fuera de Concepción (CLP) */
-    outsideCost: 4000,
-    /** Envío gratis en Concepción desde este subtotal (CLP) */
+    bands: SHIPPING_BANDS,
+    maxDistanceKm: 12,
+    concepcionCost: 2000,
+    outsideCost: 5500,
+    /** Envío gratis en comuna Concepción desde este subtotal (CLP) */
     freeInConcepcionFrom: 20000,
-    /** Envío gratis a cualquier destino desde este subtotal (CLP) */
+    /** Envío gratis en cualquier dirección/tramo desde este subtotal (CLP) */
     freeAnywhereFrom: 25000,
     /** @deprecated use freeAnywhereFrom */
     freeDeliveryThreshold: 25000,
-    baseCost: 2500,
+    baseCost: 2000,
     perKmCost: 0,
     baseDistanceKm: 0,
 } as const;

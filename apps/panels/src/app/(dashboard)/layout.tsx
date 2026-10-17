@@ -24,6 +24,7 @@ import {
     Mail,
     MessageCircle,
     ShieldCheck,
+    Bike,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -67,18 +68,26 @@ export default function DashboardLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Auto-collapse sidebar on kitchen page
+    // Auto-collapse sidebar on kitchen / driver
     useEffect(() => {
-        if (pathname === '/kitchen') {
+        if (pathname === '/kitchen' || pathname === '/driver') {
             setIsCollapsed(true);
         }
     }, [pathname]);
+
+    // Repartidor solo ve /driver
+    useEffect(() => {
+        if (user?.role === 'DRIVER' && pathname !== '/driver') {
+            router.replace('/driver');
+        }
+    }, [user?.role, pathname, router]);
 
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
         { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER'] },
         { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'] },
         { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
+        { href: '/driver', icon: Bike, label: 'Reparto', moduleId: 'driver', roles: ['OWNER', 'ADMIN', 'DRIVER'] },
         { href: '/owner/catalog', icon: Package, label: 'Catálogo', moduleId: 'catalog', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/modifiers', icon: Layers, label: 'Modificadores', moduleId: 'modifiers', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/banners', icon: MonitorSmartphone, label: 'Marketing', moduleId: 'banners', roles: ['OWNER', 'ADMIN'] },

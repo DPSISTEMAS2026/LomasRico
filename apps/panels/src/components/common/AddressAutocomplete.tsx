@@ -49,7 +49,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
         requestOptions: {
             componentRestrictions: { country: 'cl' },
             location: { lat: LOCATION.lat, lng: LOCATION.lng },
-            radius: 25000,
+            radius: 12000,
         },
         defaultValue,
         debounce: 300,

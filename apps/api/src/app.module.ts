@@ -30,6 +30,7 @@ import { TablesModule } from './tables/tables.module';
 import { MailModule } from './mail/mail.module';
 import { MediaModule } from './media/media.module';
 import { AuditModule } from './audit/audit.module';
+import { DeliveryModule } from './delivery/delivery.module';
 
 // App Root
 import { AppController } from './app.controller';
@@ -62,6 +63,7 @@ import { AppService } from './app.service';
     MailModule,
     MediaModule,
     AuditModule,
+    DeliveryModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AccessGuard }],
