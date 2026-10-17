@@ -56,9 +56,9 @@ services:
         value: "https://lomasrico.cl,https://www.lomasrico.cl,https://paneles.lomasrico.cl"
       - key: SKIP_SEED
         value: "true"
-      # --- Pedidos web con pago online (cerrado hasta abrir el delivery) ---
+      # --- Pedidos web (delivery + retiro) ---
       - key: WEB_ORDERS_ENABLED
-        value: "false"
+        value: "true"
       - key: WEB_HOURS
         value: "11:00-22:00"
       - key: BREVO_API_KEY

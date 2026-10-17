@@ -55,7 +55,14 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const closed = !dineIn && !!store && (!store.open || !store.ordersEnabled);
 
     useEffect(() => {
-        if (isOpen && !dineIn) getStoreStatus().then(setStore);
+        if (isOpen && !dineIn) {
+            getStoreStatus().then((s) => {
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'pre-fix',hypothesisId:'A',location:'CheckoutModal.tsx:storeStatus',message:'store status for checkout pay button',data:{store:s,closed:!dineIn&&!!s&&(!s.open||!s.ordersEnabled),deliveryType:deliveryTypeRef.current,buttonLabel:s&&(!s.open||!s.ordersEnabled)?(s.ordersEnabled?`Pedidos de ${s.opensAt} a ${s.closesAt}`:'Pedidos web pronto'):'PROCEDER AL PAGO'},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                setStore(s);
+            });
+        }
     }, [isOpen, dineIn]);
 
     useEffect(() => {
