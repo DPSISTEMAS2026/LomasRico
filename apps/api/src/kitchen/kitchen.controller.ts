@@ -18,8 +18,10 @@ export class KitchenController {
     ) { }
 
     @Get('version')
-    version() {
-        return { v: this.prisma.liveVersion };
+    async version() {
+        // DB-backed: no depende del liveCounter en memoria de cada proceso
+        const v = await this.kitchenService.getLiveVersion();
+        return { v };
     }
 
     @Get('active')

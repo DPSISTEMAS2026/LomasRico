@@ -68,34 +68,51 @@ export default function KitchenPage() {
     const [fixTicket, setFixTicket] = useState<any | null>(null);
     const prevTicketIds = useRef<Set<string>>(new Set());
     const tabBarRef = useRef<HTMLDivElement>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+    const [audioReady, setAudioReady] = useState(false);
 
-    // 🔔 Sound notification for new tickets
-    const playNotificationSound = useCallback(() => {
+    const ensureAudio = useCallback(async () => {
         try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.5);
-            // Second beep
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc2.frequency.value = 1100;
-            osc2.type = 'sine';
-            gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15);
-            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
-            osc2.start(ctx.currentTime + 0.15);
-            osc2.stop(ctx.currentTime + 0.65);
-        } catch (e) { /* Audio not supported */ }
+            const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+            if (!Ctx) return false;
+            if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+            if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
+            const ok = audioCtxRef.current.state === 'running';
+            setAudioReady(ok);
+            return ok;
+        } catch {
+            return false;
+        }
     }, []);
+
+    // Tilín corto (~180ms) al entrar pedido a Entrantes
+    const playNotificationSound = useCallback(() => {
+        void (async () => {
+            try {
+                await ensureAudio();
+                const ctx = audioCtxRef.current;
+                if (!ctx) return;
+                const t0 = ctx.currentTime;
+                const beep = (freq: number, start: number, dur: number) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, t0 + start);
+                    gain.gain.exponentialRampToValueAtTime(0.35, t0 + start + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+                    osc.start(t0 + start);
+                    osc.stop(t0 + start + dur + 0.02);
+                };
+                beep(1320, 0, 0.09);
+                beep(1760, 0.1, 0.08);
+            } catch {
+                /* Audio no disponible */
+            }
+        })();
+    }, [ensureAudio]);
 
     const hasLoaded = useRef(false);
     const inFlight = useRef(false);
@@ -104,6 +121,7 @@ export default function KitchenPage() {
     const lastVersion = useRef<string | null>(null);
 
     const printQueue = useRef<Promise<void>>(Promise.resolve());
+    const printedIds = useRef<Set<string>>(new Set());
 
     const openPrintHtml = useCallback(async (path: string, opts?: { silent?: boolean }) => {
         const res = await authFetch(`${API_URL}${path}`);
@@ -155,6 +173,8 @@ export default function KitchenPage() {
 
     const enqueueAutoPrint = useCallback((ids: string[]) => {
         for (const id of ids) {
+            if (printedIds.current.has(id)) continue;
+            printedIds.current.add(id);
             printQueue.current = printQueue.current
                 .then(async () => {
                     await openPrintHtml(`/kitchen/${id}/print`, { silent: true });
@@ -174,7 +194,7 @@ export default function KitchenPage() {
             const ids = new Set<string>(data.map((t: any) => t.id));
             if (hasLoaded.current) {
                 const fresh = data
-                    .filter((t: any) => !prevTicketIds.current.has(t.id))
+                    .filter((t: any) => !prevTicketIds.current.has(t.id) && t.status === 'WAITING')
                     .map((t: any) => t.id as string);
                 if (fresh.length > 0) {
                     playNotificationSound();
@@ -219,10 +239,22 @@ export default function KitchenPage() {
         return () => clearInterval(tick);
     }, []);
 
+    // Desbloquear audio con el primer toque (política del navegador)
+    useEffect(() => {
+        const unlock = () => { void ensureAudio(); };
+        window.addEventListener('pointerdown', unlock);
+        window.addEventListener('keydown', unlock);
+        return () => {
+            window.removeEventListener('pointerdown', unlock);
+            window.removeEventListener('keydown', unlock);
+        };
+    }, [ensureAudio]);
+
     useEffect(() => {
         loadIfChanged();
-        const check = setInterval(() => { if (!document.hidden) loadIfChanged(); }, 5000);
-        const full = setInterval(() => { if (!document.hidden) loadTickets(); }, 120_000);
+        // Poll cada 3s (version DB) + full cada 60s por si acaso
+        const check = setInterval(() => { if (!document.hidden) loadIfChanged(); }, 3000);
+        const full = setInterval(() => { if (!document.hidden) loadTickets(); }, 60_000);
         const onVisible = () => { if (!document.hidden) loadIfChanged(); };
         document.addEventListener('visibilitychange', onVisible);
         return () => {
@@ -331,6 +363,15 @@ export default function KitchenPage() {
                 <div className="shrink-0 bg-red-500 text-white text-xs font-black uppercase tracking-wide text-center py-1.5">
                     Sin conexión · reintentando
                 </div>
+            )}
+            {!audioReady && (
+                <button
+                    type="button"
+                    onClick={() => { void ensureAudio().then((ok) => { if (ok) playNotificationSound(); }); }}
+                    className="shrink-0 bg-amber-500 text-white text-xs font-black uppercase tracking-wide text-center py-1.5 hover:bg-amber-600"
+                >
+                    Tocar para activar tilín e impresión
+                </button>
             )}
             {/* Header */}
             <div className="shrink-0 px-4 md:px-6 pt-4 md:pt-6 pb-0">

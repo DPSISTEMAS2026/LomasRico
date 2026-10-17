@@ -25,6 +25,30 @@ export class KitchenService {
     constructor(private prisma: PrismaService, private audit: AuditService) { }
 
     /**
+     * Versión de cocina basada en DB (sirve con varias instancias de API).
+     * Cambia cuando entra/cambia un ticket activo.
+     */
+    async getLiveVersion(): Promise<string> {
+        const latest = await (this.prisma as any).kitchenTicket.findFirst({
+            where: {
+                status: { notIn: [TicketStatus.DELIVERED] },
+                sale: { status: { not: OrderStatus.CANCELLED } },
+            },
+            orderBy: { updatedAt: 'desc' },
+            select: { updatedAt: true, id: true },
+        });
+        const count = await (this.prisma as any).kitchenTicket.count({
+            where: {
+                status: { notIn: [TicketStatus.DELIVERED] },
+                sale: { status: { not: OrderStatus.CANCELLED } },
+            },
+        });
+        const ts = latest?.updatedAt ? new Date(latest.updatedAt).getTime() : 0;
+        const id = latest?.id ? String(latest.id).slice(0, 8) : '0';
+        return `${ts}.${count}.${id}`;
+    }
+
+    /**
      * Retorna tickets activos: WAITING + PREPARING + READY
      * Solo excluye DELIVERED (ya fue entregado al repartidor/cliente)
      */
