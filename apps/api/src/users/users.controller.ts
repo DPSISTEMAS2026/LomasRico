@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Query, Request, ForbiddenException 
 import { UsersService } from './users.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { Roles } from '../auth/roles.decorator';
-import { ANY_USER_ROLES, CASH_ROLES } from '../auth/access';
+import { ANY_USER_ROLES, CASH_ROLES, MANAGER_ROLES } from '../auth/access';
 
 @Controller('users')
 export class UsersController {
@@ -17,6 +17,13 @@ export class UsersController {
     @Get('customers/list')
     async findAllCustomers(@Query('search') search?: string) {
         return this.usersService.findAllCustomers(search);
+    }
+
+    /** Genera clave temporal y la devuelve al admin (sin email). */
+    @Roles(...MANAGER_ROLES)
+    @Post('customers/:id/reset-password')
+    async resetCustomerPassword(@Param('id') id: string, @Request() req: any) {
+        return this.usersService.resetCustomerPassword(id, req.user);
     }
 
     /**

@@ -14,7 +14,10 @@ import {
     RefreshCcw,
     Filter,
     ArrowUpRight,
-    Star
+    Star,
+    KeyRound,
+    Copy,
+    X,
 } from 'lucide-react';
 
 export default function CustomersPage() {
@@ -28,6 +31,8 @@ export default function CustomersPage() {
     const [brevoMsg, setBrevoMsg] = useState('');
     const [testEmail, setTestEmail] = useState('d.diazaraya19@gmail.com');
     const [tab, setTab] = useState<'list' | 'mail'>('list');
+    const [resetBusyId, setResetBusyId] = useState('');
+    const [tempCred, setTempCred] = useState<{ name: string; email?: string; phone?: string; tempPassword: string } | null>(null);
 
     useEffect(() => {
         loadCustomers();
@@ -85,6 +90,30 @@ export default function CustomersPage() {
             if (res.ok) setBrevo(await res.json());
         } catch {
             setBrevo(null);
+        }
+    };
+
+    const resetPassword = async (customer: any) => {
+        if (!customer?.id) return;
+        if (!confirm(`¿Generar clave temporal para ${customer.name || 'esta clienta'}?\nLa anterior dejará de servir.`)) return;
+        setResetBusyId(customer.id);
+        try {
+            const res = await authFetch(`${API_URL}/users/customers/${customer.id}/reset-password`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.message || `Error ${res.status}`);
+                return;
+            }
+            setTempCred({
+                name: data.name || customer.name,
+                email: data.email || customer.email,
+                phone: data.phone || customer.phone,
+                tempPassword: data.tempPassword,
+            });
+        } catch (e: any) {
+            alert(e?.message || 'No se pudo generar la clave');
+        } finally {
+            setResetBusyId('');
         }
     };
 
@@ -284,6 +313,15 @@ export default function CustomersPage() {
                             <p className="text-sm font-black italic text-slate-900">${Number(customer.historicalSpent || 0).toLocaleString('es-CL')}</p>
                             <p className="text-[9px] font-black uppercase text-slate-800">{customer.historicalOrders || 0} ped.</p>
                         </div>
+                        <button
+                            type="button"
+                            title="Generar clave temporal"
+                            disabled={resetBusyId === customer.id}
+                            onClick={() => resetPassword(customer)}
+                            className="shrink-0 w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 text-orange-500 flex items-center justify-center disabled:opacity-40"
+                        >
+                            {resetBusyId === customer.id ? <RefreshCcw size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                        </button>
                     </div>
                 )) : (
                     <div className="py-14 flex flex-col items-center justify-center">
@@ -295,6 +333,47 @@ export default function CustomersPage() {
                 )}
             </div>
             </>
+            )}
+
+            {tempCred && (
+                <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4" onClick={() => setTempCred(null)}>
+                    <div
+                        className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Clave temporal</p>
+                                <p className="font-black uppercase italic text-slate-900 text-lg tracking-tighter">{tempCred.name}</p>
+                                <p className="text-xs font-bold text-slate-600">{tempCred.email || tempCred.phone || '—'}</p>
+                            </div>
+                            <button type="button" onClick={() => setTempCred(null)} className="p-2 text-slate-400 hover:text-slate-800">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between gap-3">
+                            <code className="text-2xl font-black tracking-[0.2em] text-slate-900">{tempCred.tempPassword}</code>
+                            <button
+                                type="button"
+                                onClick={() => navigator.clipboard?.writeText(tempCred.tempPassword)}
+                                className="shrink-0 w-10 h-10 rounded-xl bg-white border border-slate-100 text-slate-700 flex items-center justify-center"
+                                title="Copiar"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                        <p className="text-[11px] font-medium text-slate-500">
+                            Dásela a la clienta ahora. Entra en la web con su correo/celular y esta clave. No se puede volver a consultar; si se pierde, genera otra.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setTempCred(null)}
+                            className="w-full py-3 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase italic tracking-widest"
+                        >
+                            Listo
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

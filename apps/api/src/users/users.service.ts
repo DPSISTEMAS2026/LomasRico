@@ -1,10 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAddressDto } from './dto/create-address.dto';
+import { AuditService } from '../audit/audit.service';
+
+function makeTempPassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = randomBytes(8);
+    let out = '';
+    for (let i = 0; i < 8; i++) out += alphabet[bytes[i] % alphabet.length];
+    return out;
+}
 
 @Injectable()
 export class UsersService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private audit: AuditService) { }
 
     async getAddresses(userId: string) {
         // @ts-ignore
@@ -85,5 +96,40 @@ export class UsersService {
                 longitude: a.lng
             }))
         }));
+    }
+
+    /**
+     * Genera clave temporal para una clienta (OWNER/ADMIN).
+     * No se puede leer la clave anterior (hash); esta se muestra una sola vez al admin.
+     */
+    async resetCustomerPassword(customerId: string, actor: { userId: string; role: string }) {
+        const user = await (this.prisma as any).user.findUnique({
+            where: { id: customerId },
+            select: { id: true, name: true, email: true, phone: true, role: true },
+        });
+        if (!user) throw new NotFoundException('Cliente no encontrado');
+        if (user.role !== 'CUSTOMER') throw new BadRequestException('Solo se puede resetear clientes');
+
+        const tempPassword = makeTempPassword();
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        await (this.prisma as any).user.update({
+            where: { id: user.id },
+            data: { password: hashedPassword },
+        });
+
+        await this.audit.log({
+            action: 'CUSTOMER_PASSWORD_RESET',
+            actorId: actor.userId,
+            details: { customerId: user.id, email: user.email || null, phone: user.phone || null },
+        });
+
+        return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            tempPassword,
+            message: 'Clave temporal lista. Dásela a la clienta; no vuelve a mostrarse.',
+        };
     }
 }
