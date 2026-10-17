@@ -28,8 +28,8 @@ const METHOD_LABEL: Record<TerminalPayMethod, string> = {
 const WAIT_HINT: Record<TerminalPayMethod, string> = {
     DEBIT: 'Pasa o acerca la tarjeta en la máquina',
     CREDIT: 'Pasa o acerca la tarjeta en la máquina',
-    CASH: 'En la máquina: aceptá el cobro y elegí Efectivo para la boleta',
-    TRANSFER: 'En la máquina: aceptá el cobro y elegí Efectivo para la boleta',
+    CASH: 'En la máquina: acepta el cobro y elige Efectivo para la boleta',
+    TRANSFER: 'En la máquina: acepta el cobro y elige Efectivo para la boleta',
 };
 
 export function TerminalChargeModal({ amount, method, reference, onPaid, onClose }: Props) {

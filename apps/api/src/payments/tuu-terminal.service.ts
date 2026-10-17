@@ -55,14 +55,21 @@ function normalizeMethod(raw: string | undefined): TerminalMethod {
     return 'CASH';
 }
 
-/** Código Haulmer: 1 crédito, 2 débito. Efectivo: omitir (máquina elige) o TUU_CASH_PAYMENT_METHOD. */
-function haulmerPaymentMethodCode(method: TerminalMethod): number | undefined {
+/**
+ * Códigos Haulmer/TUU (Inter-App + RemotePayment):
+ * 0 = pedir método en la máquina (débito / crédito / efectivo)
+ * 1 = crédito, 2 = débito
+ * Efectivo/transferencia: 0 por defecto (así aparece Efectivo). Override: TUU_CASH_PAYMENT_METHOD.
+ */
+function haulmerPaymentMethodCode(method: TerminalMethod): number {
     if (method === 'DEBIT') return 2;
     if (method === 'CREDIT') return 1;
     const configured = process.env.TUU_CASH_PAYMENT_METHOD;
-    if (configured === '' || configured == null) return undefined;
-    const n = Number(configured);
-    return Number.isFinite(n) ? n : undefined;
+    if (configured != null && String(configured).trim() !== '') {
+        const n = Number(configured);
+        if (Number.isFinite(n)) return n;
+    }
+    return 0;
 }
 
 // #region agent log
@@ -122,39 +129,58 @@ export class TuuTerminalService {
         const key = randomUUID();
         const reference = asciiField(String(input.reference || '')).slice(0, 20);
         const paymentMethod = haulmerPaymentMethodCode(method);
+        const isCashLike = method === 'CASH' || method === 'TRANSFER';
         const body: Record<string, unknown> = {
             idempotencyKey: key,
             amount,
             device: String(process.env.TUU_DEVICE_SERIAL),
             description: asciiField(`Lo Mas Rico ${reference}`).slice(0, 60),
             dteType: Number(process.env.TUU_DTE_TYPE || 48),
-            tipAmount: 0,
-            cashbackAmount: 0,
+            paymentMethod,
             extraData: {
                 customFields: reference ? [{ name: 'Pedido', value: reference, print: true }] : [],
                 sourceName: 'LomasRico',
                 sourceVersion: '1.0',
             },
         };
-        // Tarjeta: forzar débito/crédito. Efectivo/transfer: sin paymentMethod → en la máquina elijen Efectivo y sale boleta.
-        if (paymentMethod != null) body.paymentMethod = paymentMethod;
+        // tip/cashback solo en tarjeta (en efectivo confunden el flujo de la máquina)
+        if (!isCashLike) {
+            body.tipAmount = 0;
+            body.cashbackAmount = 0;
+        }
 
+        this.logger.log(`TUU charge method=${method} paymentMethod=${paymentMethod} amount=${amount}`);
         // #region agent log
         dbg('H1', 'tuu.charge.send', {
             method,
             amount,
-            hasPaymentMethod: paymentMethod != null,
-            paymentMethod: paymentMethod ?? null,
+            isCashLike,
+            paymentMethod,
+            hasTipCashback: !isCashLike,
             dteType: body.dteType,
         });
         // #endregion
 
-        await this.call('/RemotePayment/v2/Create', {
-            method: 'POST',
-            body: JSON.stringify(body),
-        });
+        try {
+            await this.call('/RemotePayment/v2/Create', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+        } catch (err) {
+            // #region agent log
+            dbg('H2', 'tuu.charge.rejected', {
+                method,
+                paymentMethod,
+                error: err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
+            });
+            // #endregion
+            throw err;
+        }
         this.requested.set(key, { amount, method, at: Date.now() });
         for (const [k, v] of this.requested) if (Date.now() - v.at > 6 * 60 * 60_000) this.requested.delete(k);
+        // #region agent log
+        dbg('H1', 'tuu.charge.accepted', { method, paymentMethod, keyPrefix: key.slice(0, 8) });
+        // #endregion
         return { key, amount, method };
     }
 
