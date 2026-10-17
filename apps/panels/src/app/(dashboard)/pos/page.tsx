@@ -41,7 +41,7 @@ import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
 import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
 import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
 import { DiscountModal } from '../../../components/pos/DiscountModal';
-import { PaymentMethodPicker, checkoutButtonLabel, isTerminalCardMethod, useCardTerminal, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
+import { PaymentMethodPicker, checkoutButtonLabel, isTerminalPayMethod, useCardTerminal, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
 import { TerminalChargeModal } from '../../../components/pos/TerminalChargeModal';
 import { SHOW_POS_DELIVERY } from '../../../config/features';
 
@@ -251,7 +251,7 @@ export default function POSPage() {
         if (isSubmitting || cart.length === 0) return;
         if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(total).toLocaleString('es-CL')} en el Point?`)) return;
         let terminalPaymentKey: string | undefined;
-        if (cardTerminal && isTerminalCardMethod(paymentMethod)) {
+        if (cardTerminal && isTerminalPayMethod(paymentMethod)) {
             terminalPaymentKey = chargedKey ?? (paidTerminal?.amount === Math.round(total) ? paidTerminal.key : undefined);
             if (!terminalPaymentKey) { setTerminalCharge(Math.round(total)); return; }
         }
@@ -951,7 +951,7 @@ export default function POSPage() {
                 />
             )}
 
-            {terminalCharge !== null && isTerminalCardMethod(paymentMethod) && (
+            {terminalCharge !== null && isTerminalPayMethod(paymentMethod) && (
                 <TerminalChargeModal
                     amount={terminalCharge}
                     method={paymentMethod}

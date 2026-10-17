@@ -389,7 +389,10 @@ export class SalesService {
         // Sumar envío DESPUÉS del descuento y puntos para no descontar sobre el despacho
         totalAmount += computedShippingCost;
 
-        const terminalPayment = channel === 'POS' && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT') && cardTerminalEnabled()
+        const needsTerminal = channel === 'POS'
+            && cardTerminalEnabled()
+            && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT' || paymentMethod === 'CASH' || paymentMethod === 'TRANSFER');
+        const terminalPayment = needsTerminal
             ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount)
             : null;
         const saleShipping = terminalPayment ? { ...(shippingData || {}), terminalPayment } : shippingData;

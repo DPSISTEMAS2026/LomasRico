@@ -15,7 +15,7 @@ import { BoletaPrinter, type BoletaGuest } from '../../../../components/printer/
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
 import { ApprovalModal, type Approval } from '../../../../components/common/ApprovalModal';
-import { PaymentMethodPicker, isTerminalCardMethod, useCardTerminal, type PosPaymentMethod, type TerminalCardMethod } from '../../../../components/pos/PaymentMethodPicker';
+import { PaymentMethodPicker, isTerminalPayMethod, useCardTerminal, type PosPaymentMethod, type TerminalPayMethod } from '../../../../components/pos/PaymentMethodPicker';
 import { TerminalChargeModal } from '../../../../components/pos/TerminalChargeModal';
 import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
@@ -61,7 +61,7 @@ export default function SalonTablePage() {
     const [payMethod, setPayMethod] = useState<PosPaymentMethod>('CASH');
     const [tipPercent, setTipPercent] = useState(0);
     const cardTerminal = useCardTerminal();
-    const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalCardMethod } | null>(null);
+    const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalPayMethod } | null>(null);
     const [paidTerminal, setPaidTerminal] = useState<{ guestId?: string; amount: number; key: string } | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
     const [printSale, setPrintSale] = useState<{
@@ -363,7 +363,7 @@ export default function SalonTablePage() {
         const tip = Math.round(prompt.amount * tipPercent / 100);
         setPayPrompt(null);
         let key: string | undefined;
-        if (cardTerminal && isTerminalCardMethod(payMethod)) {
+        if (cardTerminal && isTerminalPayMethod(payMethod)) {
             const amount = Math.round(prompt.amount + tip);
             if (paidTerminal?.guestId === prompt.guestId && paidTerminal?.amount === amount) key = paidTerminal.key;
             else { setTerminalCharge({ guestId: prompt.guestId, amount, method: payMethod }); return; }

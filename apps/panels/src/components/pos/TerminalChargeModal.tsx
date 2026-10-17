@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Loader2, XCircle } from 'lucide-react';
+import { Banknote, CreditCard, Loader2, XCircle } from 'lucide-react';
 import { getTerminalCharge, startTerminalCharge } from '../../services/api';
+import type { TerminalPayMethod } from './PaymentMethodPicker';
 
 const POLL_MS = 2500;
 const WAIT_LIMIT_MS = 3 * 60_000;
 
 interface Props {
     amount: number;
-    method: 'CREDIT' | 'DEBIT';
+    method: TerminalPayMethod;
     reference: string;
     onPaid: (key: string) => void;
     onClose: () => void;
@@ -17,10 +18,18 @@ interface Props {
 
 type Phase = 'sending' | 'waiting' | 'failed' | 'timeout';
 
-const STATUS_TEXT: Record<string, string> = {
-    PENDING: 'Enviando a la máquina…',
-    SENT: 'Pasa o acerca la tarjeta en la máquina',
-    PROCESSING: 'Procesando el pago…',
+const METHOD_LABEL: Record<TerminalPayMethod, string> = {
+    DEBIT: 'Débito',
+    CREDIT: 'Crédito',
+    CASH: 'Efectivo',
+    TRANSFER: 'Transferencia',
+};
+
+const WAIT_HINT: Record<TerminalPayMethod, string> = {
+    DEBIT: 'Pasa o acerca la tarjeta en la máquina',
+    CREDIT: 'Pasa o acerca la tarjeta en la máquina',
+    CASH: 'En la máquina: aceptá el cobro y elegí Efectivo para la boleta',
+    TRANSFER: 'En la máquina: aceptá el cobro y elegí Efectivo para la boleta',
 };
 
 export function TerminalChargeModal({ amount, method, reference, onPaid, onClose }: Props) {
@@ -31,6 +40,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
     const charge = useRef<{ attempt: number; request: Promise<{ key: string }> } | null>(null);
     const onPaidRef = useRef(onPaid);
     onPaidRef.current = onPaid;
+    const isCashLike = method === 'CASH' || method === 'TRANSFER';
 
     useEffect(() => {
         if (charge.current?.attempt !== attempt) {
@@ -48,7 +58,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                 setStatus(res.status);
                 if (res.status === 'COMPLETED') { onPaidRef.current(key); return; }
                 if (res.status === 'FAILED' || res.status === 'CANCELED') {
-                    setError(res.status === 'CANCELED' ? 'Se canceló el cobro en la máquina' : 'La tarjeta fue rechazada');
+                    setError(res.status === 'CANCELED' ? 'Se canceló el cobro en la máquina' : 'El cobro fue rechazado en la máquina');
                     setPhase('failed');
                     return;
                 }
@@ -78,6 +88,11 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
     }, [attempt]);
 
     const busy = phase === 'sending' || phase === 'waiting';
+    const waitingText = status === 'SENT' || status === 'PENDING'
+        ? WAIT_HINT[method]
+        : status === 'PROCESSING'
+            ? 'Procesando en la máquina…'
+            : 'Esperando a la máquina…';
 
     return (
         <div className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4">
@@ -87,17 +102,19 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                         ? <Loader2 size={48} className="animate-spin text-orange-500" />
                         : phase === 'failed'
                             ? <XCircle size={48} className="text-red-600" />
-                            : <CreditCard size={48} className="text-slate-900" />}
+                            : isCashLike
+                                ? <Banknote size={48} className="text-slate-900" />
+                                : <CreditCard size={48} className="text-slate-900" />}
                 </div>
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">
-                        {method === 'DEBIT' ? 'Débito' : 'Crédito'} · Máquina TUU
+                        {METHOD_LABEL[method]} · Máquina TUU / Haulmer
                     </p>
                     <p className="text-3xl font-black italic text-slate-900">${Math.round(amount).toLocaleString('es-CL')}</p>
                 </div>
                 <p className="text-sm font-bold text-slate-900">
                     {phase === 'sending' && 'Enviando el cobro a la máquina…'}
-                    {phase === 'waiting' && (STATUS_TEXT[status] || 'Esperando a la máquina…')}
+                    {phase === 'waiting' && waitingText}
                     {phase === 'failed' && error}
                     {phase === 'timeout' && 'La máquina no respondió. Revisa la máquina antes de reintentar.'}
                 </p>

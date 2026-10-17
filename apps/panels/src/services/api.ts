@@ -223,7 +223,11 @@ export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal:
     }
 }
 
-export async function startTerminalCharge(amount: number, method: 'CREDIT' | 'DEBIT', reference: string): Promise<{ key: string }> {
+export async function startTerminalCharge(
+    amount: number,
+    method: 'CREDIT' | 'DEBIT' | 'CASH' | 'TRANSFER',
+    reference: string,
+): Promise<{ key: string }> {
     return jsonOrThrow(await authFetch(`${API_URL}/payments/terminal/charge`, {
         method: 'POST',
         body: JSON.stringify({ amount, method, reference }),

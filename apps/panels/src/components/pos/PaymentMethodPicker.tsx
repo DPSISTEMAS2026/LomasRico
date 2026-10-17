@@ -11,9 +11,15 @@ export type PosPaymentMethod = Extract<
 >;
 
 export type TerminalCardMethod = Extract<PosPaymentMethod, 'DEBIT' | 'CREDIT'>;
+/** Medios que pasan por la máquina TUU (boleta Haulmer). */
+export type TerminalPayMethod = Extract<PosPaymentMethod, 'DEBIT' | 'CREDIT' | 'CASH' | 'TRANSFER'>;
 
 export function isTerminalCardMethod(method: PosPaymentMethod): method is TerminalCardMethod {
     return method === 'DEBIT' || method === 'CREDIT';
+}
+
+export function isTerminalPayMethod(method: PosPaymentMethod): method is TerminalPayMethod {
+    return method === 'DEBIT' || method === 'CREDIT' || method === 'CASH' || method === 'TRANSFER';
 }
 
 let terminalConfig: Promise<boolean> | null = null;
@@ -130,6 +136,8 @@ export function checkoutButtonLabel(method: PosPaymentMethod): string {
     if (method === 'MP') return 'COBRAR CON MP';
     if (method === 'DEBIT') return 'COBRAR DÉBITO';
     if (method === 'CREDIT') return 'COBRAR CRÉDITO';
+    if (method === 'CASH') return 'COBRAR EFECTIVO';
+    if (method === 'TRANSFER') return 'COBRAR TRANSFERENCIA';
     if (method === 'EDENRED') return 'COBRAR EDENRED';
     if (method === 'PLUXEE') return 'COBRAR PLUXEE';
     if (method === 'JUNAEB') return 'COBRAR JUNAEB';

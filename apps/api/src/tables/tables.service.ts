@@ -3,7 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { RecipeResolverService } from '../recipe-engineering/recipe-resolver.service';
 import { isInventoryEnforced } from '../config/flags';
 import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
-import { TuuTerminalService, cardTerminalEnabled } from '../payments/tuu-terminal.service';
+import { TuuTerminalService, cardTerminalEnabled, isTerminalPaymentMethod } from '../payments/tuu-terminal.service';
 
 const TABLE_COUNT = 5;
 const TABLE_CLOSED = 'Pídele al garzón que abra la mesa para pedir desde el celular.';
@@ -18,7 +18,7 @@ export class TablesService implements OnModuleInit {
     ) {}
 
     private paidOnTerminal(method: string) {
-        return (method === 'DEBIT' || method === 'CREDIT') && cardTerminalEnabled();
+        return isTerminalPaymentMethod(method) && cardTerminalEnabled();
     }
 
     async onModuleInit() {

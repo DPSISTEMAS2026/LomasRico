@@ -1,29 +1,38 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { appendFileSync } from 'fs';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 
 const REMOTE_BASE = 'https://integrations.payment.haulmer.com';
 const STATUS_BY_CODE = ['PENDING', 'SENT', 'CANCELED', 'PROCESSING', 'FAILED', 'COMPLETED'] as const;
 export type TerminalStatus = (typeof STATUS_BY_CODE)[number];
-export type TerminalMethod = 'CREDIT' | 'DEBIT';
+/** CASH/TRANSFER: la máquina muestra el flujo (efectivo + boleta). DEBIT/CREDIT: tarjeta. */
+export type TerminalMethod = 'CREDIT' | 'DEBIT' | 'CASH' | 'TRANSFER';
 
 const ERRORS: Record<string, string> = {
     'MR-100': 'La máquina no está asociada a la cuenta TUU',
     'MR-161': 'No se encontró la máquina TUU configurada',
     'MR-180': 'La máquina tiene demasiados cobros en cola. Cancélalos en la máquina',
     'MR-203': 'Ya hay un cobro en proceso en la máquina',
-    'RP-028': 'El monto mínimo para cobrar con tarjeta es $100',
+    'RP-028': 'El monto mínimo para cobrar en la máquina es $100',
     'RP-029': 'La máquina no está en modo integración',
-    'RP-032': 'La máquina no permite ese tipo de tarjeta',
+    'RP-032': 'La máquina no permite ese método de pago',
+    'RP-008': 'Falta el método de pago en la máquina',
+    'RP-025': 'Método de pago no válido para la máquina',
     'KEY-003': 'La clave de TUU no es válida',
     'MR-000': 'La clave de TUU no es válida',
 };
 
-/** Cobro con tarjeta en la máquina TUU. `CARD_TERMINAL=tuu` lo activa en caja y salón. */
+/** Cobro en la máquina TUU (tarjeta o efectivo/boleta). `CARD_TERMINAL=tuu` lo activa. */
 export function cardTerminalEnabled() {
     return String(process.env.CARD_TERMINAL || '').trim().toLowerCase() === 'tuu'
         && !!process.env.TUU_API_KEY
         && !!process.env.TUU_DEVICE_SERIAL;
+}
+
+export function isTerminalPaymentMethod(method: string | undefined | null): method is TerminalMethod {
+    return method === 'CREDIT' || method === 'DEBIT' || method === 'CASH' || method === 'TRANSFER';
 }
 
 function asciiField(value: string) {
@@ -37,6 +46,43 @@ function normalizeStatus(raw: unknown): TerminalStatus | null {
     if (text === 'CANCELLED') return 'CANCELED';
     return (STATUS_BY_CODE as readonly string[]).includes(text) ? (text as TerminalStatus) : null;
 }
+
+function normalizeMethod(raw: string | undefined): TerminalMethod {
+    const m = String(raw || '').toUpperCase();
+    if (m === 'DEBIT') return 'DEBIT';
+    if (m === 'CREDIT') return 'CREDIT';
+    if (m === 'TRANSFER') return 'TRANSFER';
+    return 'CASH';
+}
+
+/** Código Haulmer: 1 crédito, 2 débito. Efectivo: omitir (máquina elige) o TUU_CASH_PAYMENT_METHOD. */
+function haulmerPaymentMethodCode(method: TerminalMethod): number | undefined {
+    if (method === 'DEBIT') return 2;
+    if (method === 'CREDIT') return 1;
+    const configured = process.env.TUU_CASH_PAYMENT_METHOD;
+    if (configured === '' || configured == null) return undefined;
+    const n = Number(configured);
+    return Number.isFinite(n) ? n : undefined;
+}
+
+// #region agent log
+function dbg(hypothesisId: string, message: string, data: Record<string, unknown>) {
+    try {
+        appendFileSync(
+            join(process.cwd(), 'debug-88a466.log'),
+            JSON.stringify({
+                sessionId: '88a466',
+                runId: 'tuu-cash',
+                hypothesisId,
+                location: 'tuu-terminal.service.ts',
+                message,
+                data,
+                timestamp: Date.now(),
+            }) + '\n',
+        );
+    } catch { /* ignore */ }
+}
+// #endregion
 
 @Injectable()
 export class TuuTerminalService {
@@ -59,6 +105,9 @@ export class TuuTerminalService {
         if (!res.ok || data?.error === true) {
             const code = String(data?.code || '');
             this.logger.error(`TUU ${path} ${res.status} ${code}: ${String(data?.message || text).slice(0, 200)}`);
+            // #region agent log
+            dbg('H1', 'tuu.call.error', { path, status: res.status, code, msg: String(data?.message || '').slice(0, 160) });
+            // #endregion
             throw new BadRequestException(ERRORS[code] || `La máquina rechazó el cobro${code ? ` (${code})` : ''}`);
         }
         return data;
@@ -68,27 +117,41 @@ export class TuuTerminalService {
     async charge(input: { amount: number; method: TerminalMethod; reference: string }) {
         if (!cardTerminalEnabled()) throw new ServiceUnavailableException('La máquina TUU no está configurada');
         const amount = Math.round(Number(input.amount));
-        if (!(amount >= 100)) throw new BadRequestException('El monto mínimo para cobrar con tarjeta es $100');
-        const method: TerminalMethod = input.method === 'DEBIT' ? 'DEBIT' : 'CREDIT';
+        if (!(amount >= 100)) throw new BadRequestException('El monto mínimo para cobrar en la máquina es $100');
+        const method = normalizeMethod(input.method);
         const key = randomUUID();
         const reference = asciiField(String(input.reference || '')).slice(0, 20);
+        const paymentMethod = haulmerPaymentMethodCode(method);
+        const body: Record<string, unknown> = {
+            idempotencyKey: key,
+            amount,
+            device: String(process.env.TUU_DEVICE_SERIAL),
+            description: asciiField(`Lo Mas Rico ${reference}`).slice(0, 60),
+            dteType: Number(process.env.TUU_DTE_TYPE || 48),
+            tipAmount: 0,
+            cashbackAmount: 0,
+            extraData: {
+                customFields: reference ? [{ name: 'Pedido', value: reference, print: true }] : [],
+                sourceName: 'LomasRico',
+                sourceVersion: '1.0',
+            },
+        };
+        // Tarjeta: forzar débito/crédito. Efectivo/transfer: sin paymentMethod → en la máquina elijen Efectivo y sale boleta.
+        if (paymentMethod != null) body.paymentMethod = paymentMethod;
+
+        // #region agent log
+        dbg('H1', 'tuu.charge.send', {
+            method,
+            amount,
+            hasPaymentMethod: paymentMethod != null,
+            paymentMethod: paymentMethod ?? null,
+            dteType: body.dteType,
+        });
+        // #endregion
+
         await this.call('/RemotePayment/v2/Create', {
             method: 'POST',
-            body: JSON.stringify({
-                idempotencyKey: key,
-                amount,
-                device: String(process.env.TUU_DEVICE_SERIAL),
-                description: asciiField(`Lo Mas Rico ${reference}`).slice(0, 60),
-                dteType: Number(process.env.TUU_DTE_TYPE || 48),
-                paymentMethod: method === 'DEBIT' ? 2 : 1,
-                tipAmount: 0,
-                cashbackAmount: 0,
-                extraData: {
-                    customFields: reference ? [{ name: 'Pedido', value: reference, print: true }] : [],
-                    sourceName: 'LomasRico',
-                    sourceVersion: '1.0',
-                },
-            }),
+            body: JSON.stringify(body),
         });
         this.requested.set(key, { amount, method, at: Date.now() });
         for (const [k, v] of this.requested) if (Date.now() - v.at > 6 * 60 * 60_000) this.requested.delete(k);
