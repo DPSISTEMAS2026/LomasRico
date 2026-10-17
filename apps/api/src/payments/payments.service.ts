@@ -263,6 +263,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
             saleCode: sale.code,
             reason: 'Confirmación manual de pago web (callback TUU ausente)',
         });
+        await this.sendConfirmation(sale.id);
         return { ok: true, code: sale.code, alreadyConfirmed: false };
     }
 
@@ -304,6 +305,8 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
 
         if (sale?.status === 'CONFIRMED' && sale.paymentStatus === 'APPROVED') {
             await this.kitchenService.createTicket(orderId);
+            // Reintento seguro: si el correo no salió en el primer approve, se intenta de nuevo.
+            await this.sendConfirmation(orderId);
             return;
         }
         if (sale?.status === 'CANCELLED' && sale.paymentStatus !== 'PAID_AFTER_CANCEL') {
@@ -457,6 +460,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
 
         if (!confirmed) {
             await this.kitchenService.createTicket(orderId);
+            await this.sendConfirmation(orderId);
             return;
         }
 
@@ -476,8 +480,21 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Order ${orderId} fully confirmed and sent to kitchen.`);
     }
 
+    /** Reenvío manual (dueño) o tras confirmación forzada. */
+    async resendConfirmation(orderIdOrCode: string) {
+        const code = orderIdOrCode.startsWith('#') || orderIdOrCode.length < 20
+            ? (orderIdOrCode.startsWith('#') ? orderIdOrCode : `#${orderIdOrCode.replace(/\D/g, '')}`)
+            : null;
+        const sale = code
+            ? await this.prisma.sale.findUnique({ where: { code }, select: { id: true, code: true } })
+            : await this.prisma.sale.findUnique({ where: { id: orderIdOrCode }, select: { id: true, code: true } });
+        if (!sale) throw new NotFoundException('Pedido no encontrado');
+        await this.sendConfirmation(sale.id);
+        return { ok: true, code: sale.code };
+    }
+
     /** El correo nunca bloquea el pedido: si Brevo falla, solo queda en el log. */
-    private async sendConfirmation(orderId: string) {
+    async sendConfirmation(orderId: string) {
         try {
             if (!this.brevo.isConfigured()) return;
             const sale = await this.prisma.sale.findUnique({

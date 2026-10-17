@@ -66,6 +66,13 @@ export class PaymentsController {
         return this.paymentsService.manualConfirmPending(body?.code, body?.orderId);
     }
 
+    /** Dueño/admin: reenvía el correo de confirmación del pedido. */
+    @Roles(...MANAGER_ROLES)
+    @Post('resend-confirmation')
+    resendConfirmation(@Body() body: { code?: string; orderId?: string }) {
+        return this.paymentsService.resendConfirmation(body?.orderId || body?.code || '');
+    }
+
     @Roles(...STAFF_ROLES)
     @Get('config')
     config() {
