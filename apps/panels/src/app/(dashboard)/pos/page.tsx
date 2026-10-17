@@ -173,8 +173,14 @@ export default function POSPage() {
         try {
             const res = await authFetch(`${API_URL}/shifts/active/${user.id}`);
             const text = await res.text();
-            if (text && text !== 'null' && text.trim() !== '') {
-                setActiveShift(JSON.parse(text));
+            if (!text || text === 'null' || !text.trim()) {
+                setActiveShift(null);
+                return;
+            }
+            const data = JSON.parse(text);
+            // API devuelve { active: false } cuando no hay turno (evitar tratarlo como abierto)
+            if (data?.id && data?.status === 'OPEN') {
+                setActiveShift(data);
             } else {
                 setActiveShift(null);
             }
