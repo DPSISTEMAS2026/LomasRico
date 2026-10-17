@@ -374,9 +374,9 @@ export class KitchenService {
             const unit = Number(item.priceUnit || 0);
             const lineTotal = unit * qty;
             const modsHtml = formatMods(item.modifiers);
-            const notes = item.note ? `<div style="padding-left:12px;font-size:11px;color:#c00;font-weight:bold;">⚠ ${escapeHtml(item.note)}</div>` : '';
+            const notes = item.note ? `<div style="padding-left:12px;font-size:11px;font-weight:bold;">NOTA: ${escapeHtml(item.note)}</div>` : '';
             return `
-                <div style="border-bottom:1px dashed #ccc;padding:6px 0;">
+                <div style="border-bottom:1px dashed #000;padding:6px 0;">
                     <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;">
                         <span>${qty}x ${name}</span>
                         <span>${isAccount ? `$${lineTotal.toLocaleString('es-CL')}` : `x${qty}`}</span>
@@ -401,31 +401,34 @@ export class KitchenService {
             color: #000;
         }
         .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-        .header h1 { font-size: 22px; margin: 0; letter-spacing: 2px; }
-        .header .order { font-size: 28px; font-weight: bold; margin: 4px 0; }
+        .header h1 { font-size: 18px; margin: 0; letter-spacing: 1px; font-weight: bold; }
+        .header .doc { font-size: 11px; margin-top: 4px; text-transform: uppercase; }
+        .header .order { font-size: 22px; font-weight: bold; margin: 6px 0 2px; }
+        .header .code { font-size: 13px; font-weight: bold; }
         .meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; }
+        .note { margin-top: 8px; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 12px; font-weight: bold; }
         .footer { text-align: center; margin-top: 12px; padding-top: 8px; border-top: 2px solid #000; font-size: 10px; }
         @media print { body { -webkit-print-color-adjust: exact; } }
     </style>
 </head>
 <body onload="window.print()">
     <div class="header">
-        <h1>🔥 LO MÁS RICO</h1>
-        <div>${isAccount ? 'CUENTA / BOLETA INTERNA' : 'COMANDA DE COCINA'}</div>
+        <h1>LO MAS RICO</h1>
+        <div class="doc">${isAccount ? 'Cuenta interna' : 'Comanda cocina'}</div>
         <div class="order">${channel}</div>
-        ${guestName ? `<div style="font-size:20px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
-        ${ticket.batchNumber ? `<div style="font-size:14px;margin-top:2px;">TANDA ${ticket.batchNumber}</div>` : ''}
-        <div>#${orderCode}</div>
+        ${guestName ? `<div style="font-size:16px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
+        ${ticket.batchNumber ? `<div style="font-size:12px;margin-top:2px;">Tanda ${ticket.batchNumber}</div>` : ''}
+        <div class="code">#${orderCode}</div>
     </div>
     <div class="meta">
-        <span>📅 ${date}</span>
-        <span>🕐 ${time}</span>
+        <span>${date}</span>
+        <span>${time}</span>
     </div>
     ${itemsHtml}
-    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div><div style="text-align:center;margin-top:8px;font-size:11px;">Documento interno · reimpresión</div>` : ''}
-    ${sale.note && !isAccount ? `<div style="margin-top:8px;padding:6px;background:#fff3cd;border:1px solid #ffc107;font-size:12px;font-weight:bold;">📝 ${escapeHtml(sale.note).replace(/\n/g, '<br>')}</div>` : ''}
+    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div><div style="text-align:center;margin-top:8px;font-size:10px;">Documento interno</div>` : ''}
+    ${sale.note && !isAccount ? `<div class="note">NOTA<br>${escapeHtml(sale.note).replace(/\n/g, '<br>')}</div>` : ''}
     <div class="footer">
-        <div>Reimpresión: ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone })}</div>
+        <div>${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone })}</div>
     </div>
 </body>
 </html>`;
