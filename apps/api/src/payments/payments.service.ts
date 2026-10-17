@@ -219,22 +219,51 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
 
     /** Aviso del checkout TUU: solo se procesa si la firma es válida. */
     async processTuuCallback(body: Record<string, any>) {
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-orders',hypothesisId:'D',location:'payments.service.ts:processTuuCallback',message:'tuu callback received',data:{hasSig:!!body?.x_signature,result:String(body?.x_result||''),ref:String(body?.x_reference||'').slice(0,40),amount:body?.x_amount,keys:Object.keys(body||{}).filter(k=>k.startsWith('x_'))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const callback = this.tuuOnline.parseCallback(body);
         if (!callback) {
             this.logger.warn(`TUU callback con firma inválida (ref ${String(body?.x_reference || '').slice(0, 60)})`);
             throw new BadRequestException('Firma inválida');
         }
         this.logger.log(`TUU callback ${callback.reference}: ${callback.result} $${callback.amount}`);
-        if (callback.result !== 'completed') return { status: 'OK' };
+        if (callback.result !== 'completed') return { status: 'IGNORED', result: callback.result };
         const sale = callback.saleCode
-            ? await this.prisma.sale.findUnique({ where: { code: callback.saleCode }, select: { id: true, channel: true } })
+            ? await this.prisma.sale.findUnique({ where: { code: callback.saleCode }, select: { id: true, channel: true, status: true, paymentStatus: true, code: true } })
             : null;
         if (!sale || sale.channel !== 'WEB') {
-            this.logger.error(`TUU pagó ${callback.reference} pero no hay pedido web con ese código`);
-            return { status: 'OK' };
+            this.logger.error(`TUU pagó ${callback.reference} pero no hay pedido web con ese código (${callback.saleCode})`);
+            return { status: 'OK', confirmed: false, reason: 'sale_not_found' };
         }
         await this.handleApprovedPayment(sale.id, callback.amount, `tuu:${callback.reference}`, 'TUU');
-        return { status: 'OK' };
+        return { status: 'OK', confirmed: true, code: sale.code };
+    }
+
+    /** Confirma a mano un WEB PENDING (cuando TUU cobró pero el callback no llegó). */
+    async manualConfirmPending(code?: string, orderId?: string) {
+        const normalized = code ? (String(code).startsWith('#') ? String(code) : `#${String(code).replace(/\D/g, '')}`) : null;
+        const sale = orderId
+            ? await this.prisma.sale.findUnique({ where: { id: orderId }, select: { id: true, code: true, channel: true, status: true, paymentStatus: true } })
+            : normalized
+                ? await this.prisma.sale.findUnique({ where: { code: normalized }, select: { id: true, code: true, channel: true, status: true, paymentStatus: true } })
+                : null;
+        if (!sale || sale.channel !== 'WEB') throw new NotFoundException('Pedido web no encontrado');
+        if (sale.status === 'CONFIRMED' && sale.paymentStatus === 'APPROVED') {
+            await this.kitchenService.createTicket(sale.id);
+            return { ok: true, code: sale.code, alreadyConfirmed: true };
+        }
+        if (sale.status !== 'PENDING') {
+            throw new BadRequestException(`El pedido ${sale.code} está en estado ${sale.status}`);
+        }
+        await this.handleApprovedOrder(sale.id, 'TUU');
+        await this.audit.log({
+            action: 'MANUAL_PAYMENT_CONFIRM',
+            saleId: sale.id,
+            saleCode: sale.code,
+            reason: 'Confirmación manual de pago web (callback TUU ausente)',
+        });
+        return { ok: true, code: sale.code, alreadyConfirmed: false };
     }
 
     /** Solo confirma si lo pagado cubre el total guardado; si no, deja el pedido marcado para revisión. */
@@ -297,12 +326,14 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
         // 2. Transacción de base de datos para asegurar consistencia
         const confirmed = await this.prisma.$transaction(async (tx: any) => {
             // Reclamo atómico: si llegan dos webhooks a la vez, solo uno confirma.
+            // En algunos entornos el enum aún no tiene TUU → guardar como CREDIT (tarjeta).
+            const paymentMethodDb = method === 'TUU' ? 'CREDIT' : method;
             const claim = await tx.sale.updateMany({
                 where: { id: orderId, status: 'PENDING' },
                 data: {
                     status: 'CONFIRMED',
                     paymentStatus: 'APPROVED',
-                    paymentMethod: method,
+                    paymentMethod: paymentMethodDb,
                 }
             });
             if (claim.count === 0) return false;

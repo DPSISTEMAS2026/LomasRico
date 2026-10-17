@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle2, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, ShoppingBag, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { CART_STORAGE, useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
+import { API_URL } from '../../../services/api';
 
 function SuccessContent() {
     const searchParams = useSearchParams();
@@ -16,6 +17,8 @@ function SuccessContent() {
     const tuuCode = /^LMR(\d+)-/.exec(searchParams.get('x_reference') || '')?.[1];
     const status = tuuResult === 'completed' ? 'approved' : searchParams.get('status');
     const rejected = !!tuuResult && tuuResult !== 'completed';
+    const [confirming, setConfirming] = useState(!!tuuResult && tuuResult === 'completed');
+    const [confirmNote, setConfirmNote] = useState('');
 
     const { clearCart } = useCart();
     const { isLoggedIn } = useAuth();
@@ -27,6 +30,32 @@ function SuccessContent() {
         }
         localStorage.removeItem(CART_STORAGE);
         clearCart();
+
+        // TUU: reenviar campos firmados al API (el callback servidor a veces no llega).
+        if (tuuResult === 'completed' && searchParams.get('x_signature')) {
+            const body: Record<string, string> = {};
+            searchParams.forEach((value, key) => {
+                if (key.startsWith('x_')) body[key] = value;
+            });
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'web-orders',hypothesisId:'E',location:'checkout/success:tuuComplete',message:'forwarding TUU return to API',data:{ref:body.x_reference,result:body.x_result,amount:body.x_amount},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            fetch(`${API_URL}/payments/tuu/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) setConfirmNote(data.message || 'No pudimos avisar a cocina automáticamente. Si pagaste, avísanos en el local.');
+                    else if (data.confirmed) setConfirmNote('Pedido enviado a cocina.');
+                    else setConfirmNote('');
+                })
+                .catch(() => setConfirmNote('No pudimos avisar a cocina automáticamente. Si pagaste, avísanos en el local.'))
+                .finally(() => setConfirming(false));
+        } else {
+            setConfirming(false);
+        }
     }, []);
 
     if (rejected) return null;
@@ -47,9 +76,17 @@ function SuccessContent() {
                     <h1 className="text-4xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-[0.9] mb-3">
                         ¡Pago<br />Exitoso!
                     </h1>
-                    <p className="text-slate-900 font-medium mb-8">
-                        Tu pedido fue confirmado y está siendo preparado.
+                    <p className="text-slate-900 font-medium mb-4">
+                        {confirming ? 'Confirmando tu pedido en cocina…' : 'Tu pedido fue confirmado y está siendo preparado.'}
                     </p>
+                    {confirming && (
+                        <div className="flex justify-center mb-6">
+                            <Loader2 className="animate-spin text-[#f2642e]" size={28} />
+                        </div>
+                    )}
+                    {!!confirmNote && !confirming && (
+                        <p className="text-xs font-bold text-slate-700 mb-6">{confirmNote}</p>
+                    )}
 
                     {/* Order Details */}
                     <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left space-y-3">

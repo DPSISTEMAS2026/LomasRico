@@ -23,6 +23,10 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule);
+  // TUU envía el callback como x-www-form-urlencoded
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const express = require('express') as typeof import('express');
+  app.use(express.urlencoded({ extended: true }));
 
   // CORS: solo dominios propios. Se compara el origen exacto (no prefijos).
   const allowedOrigins = new Set(

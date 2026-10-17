@@ -48,6 +48,24 @@ export class PaymentsController {
         return this.paymentsService.processTuuCallback(body || {});
     }
 
+    /**
+     * Confirmación desde el navegador al volver de TUU (x_url_complete).
+     * El callback server-to-server a veces no llega; esta ruta usa los mismos campos firmados.
+     */
+    @Public()
+    @Post('tuu/complete')
+    @HttpCode(200)
+    tuuComplete(@Body() body: any) {
+        return this.paymentsService.processTuuCallback(body || {});
+    }
+
+    /** Dueño/admin: fuerza confirmación de un pedido web PENDING (pago verificado a mano). */
+    @Roles(...MANAGER_ROLES)
+    @Post('manual-confirm')
+    manualConfirm(@Body() body: { code?: string; orderId?: string }) {
+        return this.paymentsService.manualConfirmPending(body?.code, body?.orderId);
+    }
+
     @Roles(...STAFF_ROLES)
     @Get('config')
     config() {
