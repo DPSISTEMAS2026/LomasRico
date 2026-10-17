@@ -104,9 +104,18 @@ services:
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
         sync: false
+      # Clave Maps: debe ser la de LomasricoV2 CON facturación (Places New + Geocoding).
+      # Si el dashboard tiene otra key, esa gana: cámbiala y Trigger Deploy.
       - key: NEXT_PUBLIC_GOOGLE_MAPS_KEY
         sync: false
 
+  # API (dashboard Render → Environment), requeridas para TUU/Haulmer:
+  #   CARD_TERMINAL=tuu
+  #   TUU_API_KEY=
+  #   TUU_DEVICE_SERIAL=
+  #   TUU_DTE_TYPE=48
+  # Web/Netlify (lomasrico.cl + paneles):
+  #   NEXT_PUBLIC_GOOGLE_MAPS_KEY=<clave facturada LomasricoV2>
   # --------------------------------------------------------
   # Web: https://lomasrico.cl · Panel: https://paneles.lomasrico.cl
   # --------------------------------------------------------
