@@ -11,6 +11,7 @@ import {
     verifyEmail as apiVerifyEmail,
     changeUserPassword
 } from '../services/api';
+import { quietError } from '../lib/quietLog';
 
 // Claves EXCLUSIVAS para la web de clientes.
 // Son intencionalmente distintas a las del panel interno (lr_user / lr_token)
@@ -74,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(dbUser));
             localStorage.setItem(STORAGE_KEY_TOKEN, accessToken);
         } catch (error) {
-            console.error('Auth Error:', error);
+            quietError('Auth Error:', error);
             throw error;
         }
     };

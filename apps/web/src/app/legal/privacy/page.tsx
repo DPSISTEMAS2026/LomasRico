@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, Lock, Database, Trash2, Globe, Scale, Clock, Send } from 'lucide-react';
-
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50/30">
@@ -14,7 +13,7 @@ export default function PrivacyPage() {
                         <span className="font-black italic text-sm sm:text-lg uppercase tracking-tighter text-slate-900 truncate">Volver al Inicio</span>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-orange-50 text-[#f2642e] px-3 py-1 rounded-full border border-orange-100">
-                        Vigente 2026
+                        Octubre 2026
                     </span>
                 </div>
             </header>
@@ -53,11 +52,11 @@ export default function PrivacyPage() {
                             </div>
                             <div>
                                 <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Dirección Comercial</p>
-                                <p className="text-base text-slate-950 font-black">Santiago, República de Chile</p>
+                                <p className="text-base text-slate-950 font-black">Obispo Hipólito Salas 1205, Concepción, Chile</p>
                             </div>
                             <div>
                                 <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Contacto de Privacidad</p>
-                                <a href="mailto:privacidad@lomasrico.cl" className="text-[#f2642e] hover:underline font-black">privacidad@lomasrico.cl</a>
+                                <a href="mailto:soporte@lomasrico.cl" className="text-[#f2642e] hover:underline font-black">soporte@lomasrico.cl</a>
                             </div>
                         </div>
                     </div>
@@ -116,7 +115,7 @@ export default function PrivacyPage() {
                                 <span className="font-black text-[9px] uppercase tracking-wider bg-orange-100 text-orange-950 px-2.5 py-1 rounded-md">Contrato</span>
                                 <div>
                                     <strong className="text-slate-950 block text-sm">Gestión Operativa y Comercial</strong>
-                                    <span className="text-xs">Procesamiento de pedidos, preparación de alimentos, facturación, y despacho de productos a su domicilio (a través de nuestro sistema de despacho o integradores como PedidosYa Envíos).</span>
+                                    <span className="text-xs">Procesamiento de pedidos, preparación de alimentos, facturación, y despacho a domicilio con repartidores propios del local (o retiro en tienda).</span>
                                 </div>
                             </li>
                             <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -169,15 +168,15 @@ export default function PrivacyPage() {
                         <ul className="space-y-3 text-sm text-slate-700 font-semibold pl-1">
                             <li className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#f2642e]"></div>
-                                <span><strong>Despachadores (PedidosYa Envíos):</strong> Compartimos su nombre, teléfono y dirección física exclusivamente para el traslado físico del pedido.</span>
+                                <span><strong>Reparto propio:</strong> Nombre, teléfono y dirección se usan únicamente para que el personal del local prepare y entregue su pedido.</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#f2642e]"></div>
-                                <span><strong>Proveedor de pagos:</strong> Información del carro de compras y monto total para procesar la transacción segura de pago.</span>
+                                <span><strong>Proveedores de pago:</strong> Datos del pedido y monto para procesar la transacción (p. ej. pasarela o terminal) bajo estándares PCI-DSS; no almacenamos números de tarjeta.</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#f2642e]"></div>
-                                <span><strong>Servicios Cloud (Supabase / Vercel):</strong> Para alojar de forma encriptada las bases de datos y la aplicación en servidores ubicados fuera de Chile, cumpliendo con certificaciones de seguridad internacionales (ISO 27001, SOC2).</span>
+                                <span><strong>Infraestructura cloud:</strong> Alojamiento encriptado de base de datos y aplicación en proveedores con certificaciones internacionales de seguridad.</span>
                             </li>
                         </ul>
                     </div>
@@ -223,8 +222,8 @@ export default function PrivacyPage() {
                             <p className="text-xs text-slate-900 font-medium mb-4">
                                 Para solicitar el ejercicio de cualquiera de sus derechos o la eliminación inmediata y permanente de toda su información en nuestros servidores, envíe su requerimiento de forma gratuita adjuntando su nombre completo y copia o número de cédula de identidad/RUT para verificación al correo electrónico:
                             </p>
-                            <a href="mailto:privacidad@lomasrico.cl" className="inline-flex items-center gap-2 bg-[#f2642e] hover:bg-[#d94e1b] text-white px-5 py-2.5 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:scale-105 shadow-md shadow-orange-700/20">
-                                <Send size={14} /> privacidad@lomasrico.cl
+                            <a href="mailto:soporte@lomasrico.cl" className="inline-flex items-center gap-2 bg-[#f2642e] hover:bg-[#d94e1b] text-white px-5 py-2.5 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:scale-105 shadow-md shadow-orange-700/20">
+                                <Send size={14} /> soporte@lomasrico.cl
                             </a>
                         </div>
                     </div>
@@ -232,7 +231,7 @@ export default function PrivacyPage() {
                     {/* Footer legal */}
                     <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
-                        <p>Santiago, Chile. Todos los derechos reservados.</p>
+                        <p>Obispo Hipólito Salas 1205, Concepción, Chile. Todos los derechos reservados.</p>
                     </div>
                 </div>
             </main>

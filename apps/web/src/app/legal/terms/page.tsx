@@ -14,7 +14,7 @@ export default function TermsPage() {
                         <span className="font-black italic text-sm sm:text-lg uppercase tracking-tighter text-slate-900 truncate">Volver al Inicio</span>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-orange-50 text-[#f2642e] px-3 py-1 rounded-full border border-orange-100">
-                        Enero 2026
+                        Octubre 2026
                     </span>
                 </div>
             </header>
@@ -127,14 +127,14 @@ export default function TermsPage() {
                             Jurisdicción y Ley Aplicable
                         </h2>
                         <p className="text-sm md:text-base">
-                            Para todo efecto legal derivado de la utilización de esta plataforma, las partes fijan domicilio convencional en la comuna de Santiago de Chile, sometiéndose a la competencia exclusiva de sus Tribunales Ordinarios de Justicia.
+                            Para todo efecto legal derivado de la utilización de esta plataforma, las partes fijan domicilio convencional en la comuna de <strong>Concepción</strong>, Región del Biobío, Chile, sometiéndose a la competencia de los Tribunales Ordinarios de Justicia correspondientes.
                         </p>
                     </div>
 
                     {/* Footer legal */}
                     <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
-                        <p>Santiago, Chile. Todos los derechos reservados.</p>
+                        <p>Obispo Hipólito Salas 1205, Concepción, Chile. Todos los derechos reservados.</p>
                     </div>
                 </div>
             </main>

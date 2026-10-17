@@ -8,8 +8,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "LomasRico PRO | Gestión Unificada",
-  description: "Terminal de operaciones, cocina y auditoría estratégica.",
+  title: "Lo Más Rico | Operaciones",
+  description: "Terminal de operaciones del local.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },

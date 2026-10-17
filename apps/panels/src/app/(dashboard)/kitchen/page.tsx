@@ -103,6 +103,67 @@ export default function KitchenPage() {
 
     const lastVersion = useRef<string | null>(null);
 
+    const printQueue = useRef<Promise<void>>(Promise.resolve());
+
+    const openPrintHtml = useCallback(async (path: string, opts?: { silent?: boolean }) => {
+        const res = await authFetch(`${API_URL}${path}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const html = await res.text();
+        // iframe: evita bloqueo de popups al auto-imprimir pedidos web
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) {
+            iframe.remove();
+            if (!opts?.silent) {
+                const w = window.open('', '_blank', 'width=380,height=640');
+                if (!w) return;
+                w.document.write(html);
+                w.document.close();
+            }
+            return;
+        }
+        doc.open();
+        doc.write(html);
+        doc.close();
+        const runPrint = () => {
+            try {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+            } catch {
+                /* ignore */
+            }
+            setTimeout(() => iframe.remove(), 60_000);
+        };
+        // Esperar a que el HTML de la comanda cargue tipografías/imágenes
+        if (iframe.contentWindow?.document.readyState === 'complete') {
+            setTimeout(runPrint, 250);
+        } else {
+            iframe.onload = () => setTimeout(runPrint, 250);
+        }
+    }, []);
+
+    const printTicket = useCallback((id: string) => {
+        void openPrintHtml(`/kitchen/${id}/print`);
+    }, [openPrintHtml]);
+
+    const printAccount = useCallback((ticket: any) => {
+        void openPrintHtml(`/kitchen/${ticket.id}/print-account`);
+    }, [openPrintHtml]);
+
+    const enqueueAutoPrint = useCallback((ids: string[]) => {
+        for (const id of ids) {
+            printQueue.current = printQueue.current
+                .then(async () => {
+                    await openPrintHtml(`/kitchen/${id}/print`, { silent: true });
+                    await new Promise((r) => setTimeout(r, 800));
+                })
+                .catch(() => { /* no bloquear la cola */ });
+        }
+    }, [openPrintHtml]);
+
     const loadTickets = useCallback(async (): Promise<boolean> => {
         if (inFlight.current) return false;
         inFlight.current = true;
@@ -111,8 +172,14 @@ export default function KitchenPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const ids = new Set<string>(data.map((t: any) => t.id));
-            if (hasLoaded.current && data.some((t: any) => !prevTicketIds.current.has(t.id))) {
-                playNotificationSound();
+            if (hasLoaded.current) {
+                const fresh = data
+                    .filter((t: any) => !prevTicketIds.current.has(t.id))
+                    .map((t: any) => t.id as string);
+                if (fresh.length > 0) {
+                    playNotificationSound();
+                    enqueueAutoPrint(fresh);
+                }
             }
             prevTicketIds.current = ids;
             hasLoaded.current = true;
@@ -128,7 +195,7 @@ export default function KitchenPage() {
             inFlight.current = false;
             setLoading(false);
         }
-    }, [playNotificationSound]);
+    }, [playNotificationSound, enqueueAutoPrint]);
 
     const loadIfChanged = useCallback(async () => {
         try {
@@ -202,17 +269,6 @@ export default function KitchenPage() {
         await loadTickets();
         if (activeTab === 'HISTORY') await loadHistory(historyQ);
     };
-    const openPrintHtml = async (path: string) => {
-        const res = await authFetch(`${API_URL}${path}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const html = await res.text();
-        const w = window.open('', '_blank', 'width=380,height=640');
-        if (!w) return;
-        w.document.write(html);
-        w.document.close();
-    };
-    const printTicket = (id: string) => { void openPrintHtml(`/kitchen/${id}/print`); };
-    const printAccount = (ticket: any) => { void openPrintHtml(`/kitchen/${ticket.id}/print-account`); };
     const toggleRecipe = (key: string) => setExpandedRecipes(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
     const loadHistory = useCallback(async (q = '') => {

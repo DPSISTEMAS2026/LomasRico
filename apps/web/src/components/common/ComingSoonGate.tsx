@@ -8,7 +8,8 @@ import { useTableSession } from '../../context/TableSessionContext';
 import FloatingDishes from './FloatingDishes';
 import AuthModal from '../modals/AuthModal';
 
-const ENABLED = process.env.NEXT_PUBLIC_COMING_SOON === 'true';
+/** Desactivado: la web está abierta a pedidos. Para volver a la cortina: true. */
+const ENABLED = false;
 const PREVIEW_KEY = 'lr_coming_soon_preview';
 const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION.address)}`;
 const WAZE_URL = `https://waze.com/ul?q=${encodeURIComponent(LOCATION.address)}&navigate=true`;

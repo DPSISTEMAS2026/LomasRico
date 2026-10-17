@@ -3,9 +3,10 @@ export function isInventoryEnforced(): boolean {
   return process.env.INVENTORY_ENFORCEMENT === 'true';
 }
 
-/** Pedidos web (delivery/retiro con pago online) cerrados salvo WEB_ORDERS_ENABLED=true */
+/** Pedidos web abiertos por defecto. Cerrar con WEB_ORDERS_ENABLED=false */
 export function isWebOrdersEnabled(): boolean {
-  return process.env.WEB_ORDERS_ENABLED === 'true';
+  const v = String(process.env.WEB_ORDERS_ENABLED ?? 'true').trim().toLowerCase();
+  return v !== 'false' && v !== '0' && v !== 'off';
 }
 
 type DayHours = { days: number[]; opensAt: string; closesAt: string; label: string };

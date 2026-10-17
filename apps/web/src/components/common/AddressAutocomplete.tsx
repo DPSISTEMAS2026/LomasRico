@@ -1,11 +1,10 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
-import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLoadScript } from '@react-google-maps/api';
 import { MapPin, Loader2 } from 'lucide-react';
 import { LOCATION } from '@lomasrico/shared-types';
+import { quietError } from '../../lib/quietLog';
 
 interface Props {
     onSelect: (data: { address: string; lat?: number; lng?: number }) => void;
@@ -13,9 +12,14 @@ interface Props {
     defaultValue?: string;
 }
 
-const libraries: ("places")[] = ["places"];
+type SuggestionItem = {
+    id: string;
+    description: string;
+    prediction: google.maps.places.PlacePrediction;
+};
 
-/** Sesgo a Concepción para que calles cortas (ej. Obispo Hipólito) no resuelvan en otra ciudad. */
+const libraries: 'places'[] = ['places'];
+
 function biasToLocal(address: string) {
     const raw = String(address || '').trim();
     if (!raw) return raw;
@@ -23,14 +27,14 @@ function biasToLocal(address: string) {
     return `${raw}, Concepción, Chile`;
 }
 
-export default function AddressAutocomplete({ onSelect, placeholder = "Buscar dirección...", defaultValue = "" }: Props) {
+export default function AddressAutocomplete({ onSelect, placeholder = 'Buscar dirección...', defaultValue = '' }: Props) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '';
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: apiKey,
+        id: 'google-map-script',
         libraries,
     });
 
-    // Sin API key no cargamos Places (evita NoApiKeys + geocode REQUEST_DENIED)
     if (!apiKey) {
         return <ManualInput onSelect={onSelect} defaultValue={defaultValue} placeholder={placeholder} error />;
     }
@@ -40,50 +44,149 @@ export default function AddressAutocomplete({ onSelect, placeholder = "Buscar di
     return <SearchBox onSelect={onSelect} defaultValue={defaultValue} placeholder={placeholder} />;
 }
 
-function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
-    const {
-        ready,
-        value,
-        setValue,
-        suggestions: { status, data },
-        clearSuggestions,
-    } = usePlacesAutocomplete({
-        requestOptions: {
-            componentRestrictions: { country: 'cl' },
-            location: { lat: LOCATION.lat, lng: LOCATION.lng },
-            radius: 12000,
-        },
-        defaultValue,
-        debounce: 300,
-    });
+function SearchBox({ onSelect, defaultValue = '', placeholder }: Props) {
+    const [value, setValue] = useState(defaultValue);
+    const [items, setItems] = useState<SuggestionItem[]>([]);
+    const [ready, setReady] = useState(false);
+    const [fetchStatus, setFetchStatus] = useState<'idle' | 'ok' | 'empty' | 'error'>('idle');
+    const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const requestSeq = useRef(0);
 
     useEffect(() => {
-        if (defaultValue) setValue(defaultValue, false);
-    }, [defaultValue, setValue]);
+        let cancelled = false;
+        (async () => {
+            try {
+                const places = (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary;
+                if (cancelled) return;
+                sessionTokenRef.current = new places.AutocompleteSessionToken();
+                setReady(!!places.AutocompleteSuggestion);
+            } catch (e) {
+                quietError('Places library init failed', e);
+                setReady(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
-    const handleSelect = async (address: string) => {
-        setValue(address, false);
-        clearSuggestions();
-        const query = biasToLocal(address);
+    useEffect(() => {
+        if (defaultValue) setValue(defaultValue);
+    }, [defaultValue]);
 
+    const refreshToken = useCallback(async () => {
+        const places = (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary;
+        sessionTokenRef.current = new places.AutocompleteSessionToken();
+    }, []);
+
+    const fetchSuggestions = useCallback(async (input: string) => {
+        const seq = ++requestSeq.current;
+        const q = input.trim();
+        if (q.length < 2) {
+            setItems([]);
+            setFetchStatus('idle');
+            return;
+        }
         try {
-            const results = await getGeocode({
-                address: query,
-                componentRestrictions: { country: 'cl' },
+            const places = (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary;
+            if (!sessionTokenRef.current) {
+                sessionTokenRef.current = new places.AutocompleteSessionToken();
+            }
+            const { suggestions } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                input: q,
+                includedRegionCodes: ['cl'],
+                language: 'es-CL',
+                region: 'cl',
+                locationBias: {
+                    center: { lat: LOCATION.lat, lng: LOCATION.lng },
+                    radius: 12000,
+                },
+                sessionToken: sessionTokenRef.current,
             });
-            const { lat, lng } = await getLatLng(results[0]);
-            onSelect({ address: results[0]?.formatted_address || query, lat, lng });
-        } catch (error) {
-            console.error('Error geocoding: ', error);
-            onSelect({ address: query });
+            if (seq !== requestSeq.current) return;
+
+            const mapped: SuggestionItem[] = (suggestions || [])
+                .map((s, i) => {
+                    const prediction = s.placePrediction;
+                    if (!prediction) return null;
+                    return {
+                        id: prediction.placeId || `s-${i}`,
+                        description: prediction.text?.toString?.() || String(prediction.text || ''),
+                        prediction,
+                    };
+                })
+                .filter(Boolean) as SuggestionItem[];
+
+            setItems(mapped);
+            setFetchStatus(mapped.length ? 'ok' : 'empty');
+        } catch (e) {
+            if (seq !== requestSeq.current) return;
+            setItems([]);
+            setFetchStatus('error');
+            quietError('AutocompleteSuggestion failed', e);
+        }
+    }, []);
+
+    const onChange = (next: string) => {
+        setValue(next);
+        if (!next) {
+            setItems([]);
+            setFetchStatus('idle');
+            onSelect({ address: '' });
+        }
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            void fetchSuggestions(next);
+        }, 280);
+    };
+
+    const handleSelectPrediction = async (item: SuggestionItem) => {
+        setValue(item.description);
+        setItems([]);
+        try {
+            const place = item.prediction.toPlace();
+            await place.fetchFields({ fields: ['formattedAddress', 'location'] });
+            const address = place.formattedAddress || item.description;
+            const lat = place.location?.lat?.();
+            const lng = place.location?.lng?.();
+            onSelect({
+                address,
+                lat: typeof lat === 'number' ? lat : undefined,
+                lng: typeof lng === 'number' ? lng : undefined,
+            });
+            await refreshToken();
+        } catch (e) {
+            quietError('Place fetchFields failed', e);
+            onSelect({ address: biasToLocal(item.description) });
+            await refreshToken();
         }
     };
 
-    // Si escribe a mano: geocodifica con sesgo local (no dejar sin coords)
-    const handleManualSubmit = () => {
-        if (value && value.trim().length > 3) {
-            void handleSelect(value.trim());
+    const handleManualSubmit = async () => {
+        const raw = value.trim();
+        if (raw.length <= 3) return;
+        setItems([]);
+        const query = biasToLocal(raw);
+        try {
+            const geocoder = new google.maps.Geocoder();
+            const { results } = await geocoder.geocode({
+                address: query,
+                componentRestrictions: { country: 'cl' },
+            });
+            const first = results?.[0];
+            if (first) {
+                onSelect({
+                    address: first.formatted_address || query,
+                    lat: first.geometry.location.lat(),
+                    lng: first.geometry.location.lng(),
+                });
+                return;
+            }
+        } catch (e) {
+            quietError('Error geocoding: ', e);
         }
+        onSelect({ address: query });
     };
 
     return (
@@ -93,27 +196,34 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
             </div>
             <input
                 value={value}
-                onChange={(e) => {
-                    setValue(e.target.value);
-                    if (!e.target.value) onSelect({ address: '' });
+                onChange={(e) => onChange(e.target.value)}
+                onBlur={() => {
+                    setTimeout(() => {
+                        if (items.length === 0) void handleManualSubmit();
+                    }, 180);
                 }}
-                onBlur={handleManualSubmit}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); } }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        void handleManualSubmit();
+                    }
+                }}
                 disabled={!ready}
                 className="w-full p-4 pl-12 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-slate-900 transition-all placeholder:text-slate-900"
-                placeholder={placeholder}
+                placeholder={ready ? placeholder : 'Cargando sugerencias...'}
             />
 
-            {status === "OK" && (
+            {fetchStatus === 'ok' && items.length > 0 && (
                 <ul className="absolute z-50 top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden max-h-60 overflow-y-auto">
-                    {data.map(({ place_id, description }) => (
+                    {items.map((item) => (
                         <li
-                            key={place_id}
-                            onClick={() => handleSelect(description)}
+                            key={item.id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => void handleSelectPrediction(item)}
                             className="p-3 hover:bg-slate-50 cursor-pointer font-medium text-xs text-slate-900 border-b border-slate-50 last:border-none flex items-center gap-2"
                         >
                             <MapPin size={14} className="text-slate-900" />
-                            {description}
+                            {item.description}
                         </li>
                     ))}
                 </ul>
@@ -122,7 +232,7 @@ function SearchBox({ onSelect, defaultValue, placeholder }: Props) {
     );
 }
 
-function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Props & { error?: boolean, loading?: boolean }) {
+function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Props & { error?: boolean; loading?: boolean }) {
     const [val, setVal] = useState(defaultValue);
 
     const submit = () => {
@@ -140,9 +250,14 @@ function ManualInput({ onSelect, defaultValue, placeholder, error, loading }: Pr
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
                 onBlur={submit}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submit();
+                    }
+                }}
                 className={`w-full p-4 pl-12 rounded-xl bg-slate-50 border font-bold text-sm outline-none transition-all placeholder:text-slate-900 ${error ? 'border-red-200 bg-red-50' : 'border-slate-200 focus:border-slate-900'}`}
-                placeholder={loading ? 'Cargando mapa...' : (placeholder || 'Ingresa tu dirección manual...')}
+                placeholder={loading ? 'Cargando mapa...' : placeholder || 'Ingresa tu dirección manual...'}
                 disabled={loading}
             />
         </div>

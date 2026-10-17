@@ -75,16 +75,16 @@ export default function DashboardLayout({
         }
     }, [pathname]);
 
-    // Repartidor solo ve /driver
+    // Repartidor: solo cocina + reparto
     useEffect(() => {
-        if (user?.role === 'DRIVER' && pathname !== '/driver') {
+        if (user?.role === 'DRIVER' && pathname !== '/driver' && pathname !== '/kitchen') {
             router.replace('/driver');
         }
     }, [user?.role, pathname, router]);
 
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
-        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER'] },
+        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER', 'DRIVER'] },
         { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'] },
         { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
         { href: '/driver', icon: Bike, label: 'Reparto', moduleId: 'driver', roles: ['OWNER', 'ADMIN', 'DRIVER'] },
@@ -145,7 +145,7 @@ export default function DashboardLayout({
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-orange-500 border-t-white rounded-full animate-spin mx-auto mb-8 scale-150 shadow-2xl shadow-orange-500/20" />
                     <h2 className="text-3xl font-black italic tracking-tighter uppercase text-white mb-2">AUTENTICANDO...</h2>
-                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.4em] italic leading-none">LomasRico PRO v2.3.0</p>
+                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.4em] italic leading-none">Lo Más Rico</p>
                 </div>
             </div>
         );

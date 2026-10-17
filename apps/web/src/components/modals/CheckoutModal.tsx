@@ -10,6 +10,7 @@ import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import { cleanModifierLabel } from '@lomasrico/shared-types';
+import { quietError } from '../../lib/quietLog';
 
 interface Props {
     isOpen: boolean;
@@ -168,7 +169,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                 setShowNewAddressInput(true);
             }
         } catch (e) {
-            console.error('Failed to load addresses');
+            quietError('Failed to load addresses');
             setShowNewAddressInput(true);
         }
     };
@@ -323,7 +324,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
         } catch (e: any) {
             const msg = e?.message || 'Error desconocido al iniciar el pago';
-            console.error('[Checkout] ❌ Payment failed:', msg, e);
+            quietError('[Checkout] Payment failed:', msg, e);
             setStatus('error');
             setErrorMsg(msg);
             setPreferenceId(null);

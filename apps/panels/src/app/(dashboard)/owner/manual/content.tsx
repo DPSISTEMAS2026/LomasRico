@@ -59,7 +59,7 @@ export function ManualContent() {
             <H3>1.1 URLs del Sistema</H3>
             <Table headers={['Plataforma', 'URL', 'Para quién']} rows={[
                 ['Web Tienda', '<a href="https://lomasrico.cl" target="_blank" class="text-orange-600 underline">lomasrico.cl</a>', 'Clientes'],
-                ['Panel de Gestión', '<a href="https://paneles.lomasrico.cl" target="_blank" class="text-orange-600 underline break-all">paneles.lomasrico.cl</a>', 'Dueño, Admin, Cajeros, Cocina'],
+                ['Operaciones', '<a href="https://paneles.lomasrico.cl" target="_blank" class="text-orange-600 underline break-all">Ingreso operaciones</a>', 'Dueño, Admin, Cajeros, Cocina'],
             ]} />
             <H3>1.2 Roles de Usuario</H3>
             <Table headers={['Rol', 'Acceso', 'Para quién']} rows={[
@@ -72,7 +72,7 @@ export function ManualContent() {
             <P>Cada usuario puede tener <strong>módulos individuales</strong> asignados para controlar qué secciones puede ver.</P>
             <H3>1.3 Cómo Ingresar</H3>
             <ol className="list-decimal pl-6 space-y-1 text-sm text-slate-600 mb-4">
-                <li>Ir a <Go href="https://paneles.lomasrico.cl/login">paneles.lomasrico.cl</Go></li>
+                <li>Ir a <Go href="https://paneles.lomasrico.cl/login">Ingreso operaciones</Go></li>
                 <li>Ingresar <strong>usuario</strong> y <strong>contraseña</strong></li>
                 <li>El sistema redirige al panel según su rol</li>
             </ol>
@@ -82,7 +82,7 @@ export function ManualContent() {
             <H2 id="web">2. Web E-commerce</H2>
             <P>La web pública donde los clientes ven el menú, arman su pedido, eligen delivery o retiro, y pagan online.</P>
             <H3>2.1 Flujo de Compra</H3>
-            <Flow steps={['Cliente ingresa a lomasrico.cl', 'Navega catálogo por categorías', 'Selecciona producto → personaliza (proteínas, extras)', 'Agrega al carrito', 'Ingresa dirección → cotización de envío automática (PedidosYa)', 'Paga con MercadoPago (tarjeta/débito)', 'Pedido aparece en Panel Cocina automáticamente']} />
+            <Flow steps={['Cliente ingresa a lomasrico.cl', 'Navega catálogo por categorías', 'Selecciona producto → personaliza (proteínas, extras)', 'Agrega al carrito', 'Ingresa dirección → cotización de envío por km', 'Paga online (tarjeta/débito)', 'Pedido aparece en Cocina automáticamente']} />
             <H3>2.2 Lo que el Cliente Ve</H3>
             <ul className="list-disc pl-6 space-y-1 text-sm text-slate-600 mb-4">
                 <li><strong>Banners</strong> promocionales (administrables desde <Go href="/owner/banners">Marketing</Go>)</li>
@@ -221,8 +221,8 @@ export function ManualContent() {
             <Warn>Requiere renovación de cookie cada 24-48h. El Health Check detecta expiración. Cubierto por soporte.</Warn>
             <H3>7.2 MercadoPago</H3>
             <P>Pasarela de pagos: tarjeta, débito, saldo MP. Funciona en web y WhatsApp. Confirmación automática vía webhook.</P>
-            <H3>7.3 PedidosYa</H3>
-            <P>Cotización de envío integrada en checkout. El cliente ingresa dirección y se cotiza delivery.</P>
+            <H3>7.3 Despacho propio</H3>
+            <P>Cotización de envío por km desde el local. El cliente ingresa dirección y se aplica la tarifa del tramo (con umbral de envío gratis).</P>
             <H3>7.4 Google Maps</H3>
             <P>Autocompletado de direcciones, cobertura de delivery y geocodificación.</P>
 
@@ -258,7 +258,7 @@ export function ManualContent() {
 
             <H3>¿Qué Cubre el Soporte?</H3>
             <Table headers={['✅ SÍ cubre', '❌ NO cubre']} rows={[
-                ['Integraciones (Uber, PedidosYa, MP)', 'Cambio de productos y precios'],
+                ['Integraciones (Uber Eats, pagos)', 'Cambio de productos y precios'],
                 ['Funcionamiento del bot Maxi', 'Gestión de banners'],
                 ['Caídas del servidor o errores', 'Apertura/cierre de cajas'],
                 ['Actualizaciones de seguridad', 'Creación de usuarios'],

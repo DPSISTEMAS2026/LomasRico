@@ -10,7 +10,7 @@ export const PIN_ROLES = [...STAFF_ROLES, 'DRIVER'];
 export const MANAGER_ROLES = ['OWNER', 'ADMIN'];
 export const CASH_ROLES = ['OWNER', 'ADMIN', 'CASHIER'];
 export const FLOOR_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'];
-export const KITCHEN_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'];
+export const KITCHEN_ROLES = ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'WAITER', 'DRIVER'];
 export const DRIVER_ROLES = ['OWNER', 'ADMIN', 'DRIVER'];
 export const ANY_USER_ROLES = [...STAFF_ROLES, 'CUSTOMER', 'DRIVER'];
 

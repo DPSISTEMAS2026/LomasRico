@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Cookie, Shield, Eye, Settings, HelpCircle } from 'lucide-react';
-
 export default function CookiesPage() {
     return (
         <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50/30">
@@ -14,7 +13,7 @@ export default function CookiesPage() {
                         <span className="font-black italic text-sm sm:text-lg uppercase tracking-tighter text-slate-900 truncate">Volver al Inicio</span>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-orange-50 text-[#f2642e] px-3 py-1 rounded-full border border-orange-100">
-                        Vigente 2026
+                        Octubre 2026
                     </span>
                 </div>
             </header>
@@ -176,15 +175,15 @@ export default function CookiesPage() {
                         <p className="text-slate-900 leading-relaxed font-medium text-sm md:text-base mb-4">
                             Para conocer más detalles sobre el tratamiento de sus datos personales, le sugerimos revisar nuestra Política de Privacidad. Si tiene cualquier duda técnica sobre el funcionamiento de las cookies en este sitio, puede escribirnos a:
                         </p>
-                        <a href="mailto:privacidad@lomasrico.cl" className="text-[#f2642e] font-black text-lg hover:underline">
-                            privacidad@lomasrico.cl
+                        <a href="mailto:soporte@lomasrico.cl" className="text-[#f2642e] font-black text-lg hover:underline">
+                            soporte@lomasrico.cl
                         </a>
                     </div>
 
                     {/* Footer legal */}
                     <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
-                        <p>Santiago, Chile. Todos los derechos reservados.</p>
+                        <p>Obispo Hipólito Salas 1205, Concepción, Chile. Todos los derechos reservados.</p>
                     </div>
                 </div>
             </main>

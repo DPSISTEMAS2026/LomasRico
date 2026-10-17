@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { quietError } from '../lib/quietLog';
 
 export default function GlobalError({
   error,
@@ -10,7 +11,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Web error:', error);
+    quietError('Web error:', error);
   }, [error]);
 
   return (

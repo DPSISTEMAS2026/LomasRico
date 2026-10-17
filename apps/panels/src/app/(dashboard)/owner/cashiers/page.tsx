@@ -35,7 +35,7 @@ const ADMIN_ONLY = ['ADMIN'];
 const ALL_MODULES = [
     { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.', roles: ['ADMIN', 'CASHIER', 'WAITER'] },
     { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.', roles: ['ADMIN', 'CASHIER'] },
-    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER', 'DRIVER'] },
     { id: 'driver', label: 'Reparto', desc: 'Cola de despachos, Maps/Waze y estados de entrega.', roles: ['ADMIN', 'DRIVER'] },
     { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.', roles: ADMIN_ONLY },
     { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.', roles: ADMIN_ONLY },
