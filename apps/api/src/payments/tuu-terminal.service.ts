@@ -7,8 +7,8 @@ import { PrismaService } from '../database/prisma.service';
 const REMOTE_BASE = 'https://integrations.payment.haulmer.com';
 const STATUS_BY_CODE = ['PENDING', 'SENT', 'CANCELED', 'PROCESSING', 'FAILED', 'COMPLETED'] as const;
 export type TerminalStatus = (typeof STATUS_BY_CODE)[number];
-/** CASH/TRANSFER: la máquina muestra el flujo (efectivo + boleta). DEBIT/CREDIT: tarjeta. */
-export type TerminalMethod = 'CREDIT' | 'DEBIT' | 'CASH' | 'TRANSFER';
+/** Solo tarjeta: la API RemotePayment de Haulmer admite paymentMethod 1 (crédito) o 2 (débito). Efectivo va por la app Pago de la TUU, no por RemotePayment. */
+export type TerminalMethod = 'CREDIT' | 'DEBIT';
 
 const ERRORS: Record<string, string> = {
     'MR-100': 'La máquina no está asociada a la cuenta TUU',
@@ -24,15 +24,16 @@ const ERRORS: Record<string, string> = {
     'MR-000': 'La clave de TUU no es válida',
 };
 
-/** Cobro en la máquina TUU (tarjeta o efectivo/boleta). `CARD_TERMINAL=tuu` lo activa. */
+/** Cobro con tarjeta en la máquina TUU vía RemotePayment. `CARD_TERMINAL=tuu` lo activa. */
 export function cardTerminalEnabled() {
     return String(process.env.CARD_TERMINAL || '').trim().toLowerCase() === 'tuu'
         && !!process.env.TUU_API_KEY
         && !!process.env.TUU_DEVICE_SERIAL;
 }
 
+/** Solo débito/crédito pasan por RemotePayment. Efectivo/transferencia no. */
 export function isTerminalPaymentMethod(method: string | undefined | null): method is TerminalMethod {
-    return method === 'CREDIT' || method === 'DEBIT' || method === 'CASH' || method === 'TRANSFER';
+    return method === 'CREDIT' || method === 'DEBIT';
 }
 
 function asciiField(value: string) {
@@ -50,26 +51,12 @@ function normalizeStatus(raw: unknown): TerminalStatus | null {
 function normalizeMethod(raw: string | undefined): TerminalMethod {
     const m = String(raw || '').toUpperCase();
     if (m === 'DEBIT') return 'DEBIT';
-    if (m === 'CREDIT') return 'CREDIT';
-    if (m === 'TRANSFER') return 'TRANSFER';
-    return 'CASH';
+    return 'CREDIT';
 }
 
-/**
- * Códigos Haulmer/TUU (Inter-App + RemotePayment):
- * 0 = pedir método en la máquina (débito / crédito / efectivo)
- * 1 = crédito, 2 = débito
- * Efectivo/transferencia: 0 por defecto (así aparece Efectivo). Override: TUU_CASH_PAYMENT_METHOD.
- */
+/** Haulmer RemotePayment: 1 = crédito, 2 = débito. No hay código de efectivo. */
 function haulmerPaymentMethodCode(method: TerminalMethod): number {
-    if (method === 'DEBIT') return 2;
-    if (method === 'CREDIT') return 1;
-    const configured = process.env.TUU_CASH_PAYMENT_METHOD;
-    if (configured != null && String(configured).trim() !== '') {
-        const n = Number(configured);
-        if (Number.isFinite(n)) return n;
-    }
-    return 0;
+    return method === 'DEBIT' ? 2 : 1;
 }
 
 // #region agent log
@@ -129,13 +116,14 @@ export class TuuTerminalService {
         const key = randomUUID();
         const reference = asciiField(String(input.reference || '')).slice(0, 20);
         const paymentMethod = haulmerPaymentMethodCode(method);
-        const isCashLike = method === 'CASH' || method === 'TRANSFER';
         const body: Record<string, unknown> = {
             idempotencyKey: key,
             amount,
             device: String(process.env.TUU_DEVICE_SERIAL),
             description: asciiField(`Lo Mas Rico ${reference}`).slice(0, 60),
             dteType: Number(process.env.TUU_DTE_TYPE || 48),
+            tipAmount: 0,
+            cashbackAmount: 0,
             paymentMethod,
             extraData: {
                 customFields: reference ? [{ name: 'Pedido', value: reference, print: true }] : [],
@@ -143,21 +131,15 @@ export class TuuTerminalService {
                 sourceVersion: '1.0',
             },
         };
-        // tip/cashback solo en tarjeta (en efectivo confunden el flujo de la máquina)
-        if (!isCashLike) {
-            body.tipAmount = 0;
-            body.cashbackAmount = 0;
-        }
 
         this.logger.log(`TUU charge method=${method} paymentMethod=${paymentMethod} amount=${amount}`);
         // #region agent log
-        dbg('H1', 'tuu.charge.send', {
+        dbg('H3', 'tuu.charge.send', {
             method,
             amount,
-            isCashLike,
             paymentMethod,
-            hasTipCashback: !isCashLike,
             dteType: body.dteType,
+            note: 'RemotePayment solo tarjeta; efectivo no usa este endpoint',
         });
         // #endregion
 
@@ -168,7 +150,7 @@ export class TuuTerminalService {
             });
         } catch (err) {
             // #region agent log
-            dbg('H2', 'tuu.charge.rejected', {
+            dbg('H3', 'tuu.charge.rejected', {
                 method,
                 paymentMethod,
                 error: err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160),
@@ -179,7 +161,7 @@ export class TuuTerminalService {
         this.requested.set(key, { amount, method, at: Date.now() });
         for (const [k, v] of this.requested) if (Date.now() - v.at > 6 * 60 * 60_000) this.requested.delete(k);
         // #region agent log
-        dbg('H1', 'tuu.charge.accepted', { method, paymentMethod, keyPrefix: key.slice(0, 8) });
+        dbg('H3', 'tuu.charge.accepted', { method, paymentMethod, keyPrefix: key.slice(0, 8) });
         // #endregion
         return { key, amount, method };
     }

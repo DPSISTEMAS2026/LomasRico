@@ -54,10 +54,10 @@ export class PaymentsController {
         return { web: webPaymentProvider(), cardTerminal: cardTerminalEnabled() ? 'tuu' : null };
     }
 
-    /** Envía un cobro a la máquina TUU (tarjeta o efectivo/boleta). */
+    /** Envía un cobro con tarjeta a la máquina TUU (RemotePayment: solo débito/crédito). */
     @Roles(...FLOOR_ROLES)
     @Post('terminal/charge')
-    terminalCharge(@Body() body: { amount: number; method: 'CREDIT' | 'DEBIT' | 'CASH' | 'TRANSFER'; reference?: string }) {
+    terminalCharge(@Body() body: { amount: number; method: 'CREDIT' | 'DEBIT'; reference?: string }) {
         return this.terminal.charge({ amount: body?.amount, method: body?.method, reference: body?.reference || '' });
     }
 

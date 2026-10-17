@@ -809,6 +809,11 @@ export default function POSPage() {
                         {/* Ayuda Vuelto para Efectivo */}
                         {paymentMethod === 'CASH' && (
                             <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                {cardTerminal && (
+                                    <p className="text-[11px] font-bold text-slate-900 leading-snug px-1">
+                                        Boleta fiscal: en la TUU abre la app <span className="italic">Pago</span> (sin modo integración), elige Efectivo e imprime la boleta por ${total.toLocaleString('es-CL')}. Después cobra aquí para registrar la venta.
+                                    </p>
+                                )}
                                 <div className="flex justify-between items-center px-1">
                                     <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Total a Cobrar</span>
                                     <span className="text-sm font-black text-slate-800">${total.toLocaleString('es-CL')}</span>

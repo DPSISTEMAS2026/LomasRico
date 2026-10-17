@@ -389,9 +389,10 @@ export class SalesService {
         // Sumar envío DESPUÉS del descuento y puntos para no descontar sobre el despacho
         totalAmount += computedShippingCost;
 
+        // RemotePayment Haulmer solo tarjeta (1/2). Efectivo/transferencia: boleta en app Pago de la TUU, sin este cobro remoto.
         const needsTerminal = channel === 'POS'
             && cardTerminalEnabled()
-            && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT' || paymentMethod === 'CASH' || paymentMethod === 'TRANSFER');
+            && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT');
         const terminalPayment = needsTerminal
             ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount)
             : null;

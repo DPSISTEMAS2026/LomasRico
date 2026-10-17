@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Banknote, CreditCard, Loader2, XCircle } from 'lucide-react';
+import { CreditCard, Loader2, XCircle } from 'lucide-react';
 import { getTerminalCharge, startTerminalCharge } from '../../services/api';
-import type { TerminalPayMethod } from './PaymentMethodPicker';
+import type { TerminalCardMethod } from './PaymentMethodPicker';
 
 const POLL_MS = 2500;
 const WAIT_LIMIT_MS = 3 * 60_000;
 
 interface Props {
     amount: number;
-    method: TerminalPayMethod;
+    method: TerminalCardMethod;
     reference: string;
     onPaid: (key: string) => void;
     onClose: () => void;
@@ -18,18 +18,9 @@ interface Props {
 
 type Phase = 'sending' | 'waiting' | 'failed' | 'timeout';
 
-const METHOD_LABEL: Record<TerminalPayMethod, string> = {
+const METHOD_LABEL: Record<TerminalCardMethod, string> = {
     DEBIT: 'Débito',
     CREDIT: 'Crédito',
-    CASH: 'Efectivo',
-    TRANSFER: 'Transferencia',
-};
-
-const WAIT_HINT: Record<TerminalPayMethod, string> = {
-    DEBIT: 'Pasa o acerca la tarjeta en la máquina',
-    CREDIT: 'Pasa o acerca la tarjeta en la máquina',
-    CASH: 'En la máquina: acepta el cobro y elige Efectivo para la boleta',
-    TRANSFER: 'En la máquina: acepta el cobro y elige Efectivo para la boleta',
 };
 
 export function TerminalChargeModal({ amount, method, reference, onPaid, onClose }: Props) {
@@ -40,7 +31,6 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
     const charge = useRef<{ attempt: number; request: Promise<{ key: string }> } | null>(null);
     const onPaidRef = useRef(onPaid);
     onPaidRef.current = onPaid;
-    const isCashLike = method === 'CASH' || method === 'TRANSFER';
 
     useEffect(() => {
         if (charge.current?.attempt !== attempt) {
@@ -89,7 +79,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
 
     const busy = phase === 'sending' || phase === 'waiting';
     const waitingText = status === 'SENT' || status === 'PENDING'
-        ? WAIT_HINT[method]
+        ? 'Pasa o acerca la tarjeta en la máquina'
         : status === 'PROCESSING'
             ? 'Procesando en la máquina…'
             : 'Esperando a la máquina…';
@@ -102,9 +92,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                         ? <Loader2 size={48} className="animate-spin text-orange-500" />
                         : phase === 'failed'
                             ? <XCircle size={48} className="text-red-600" />
-                            : isCashLike
-                                ? <Banknote size={48} className="text-slate-900" />
-                                : <CreditCard size={48} className="text-slate-900" />}
+                            : <CreditCard size={48} className="text-slate-900" />}
                 </div>
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">

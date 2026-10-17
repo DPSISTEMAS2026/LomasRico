@@ -10,16 +10,18 @@ export type PosPaymentMethod = Extract<
     'CASH' | 'MP' | 'TRANSFER' | 'DEBIT' | 'CREDIT' | 'EDENRED' | 'PLUXEE' | 'JUNAEB' | 'FOOD_CARD'
 >;
 
+/** Solo débito/crédito: RemotePayment de Haulmer no soporta efectivo. */
 export type TerminalCardMethod = Extract<PosPaymentMethod, 'DEBIT' | 'CREDIT'>;
-/** Medios que pasan por la máquina TUU (boleta Haulmer). */
-export type TerminalPayMethod = Extract<PosPaymentMethod, 'DEBIT' | 'CREDIT' | 'CASH' | 'TRANSFER'>;
+/** @deprecated Usar TerminalCardMethod — efectivo ya no va por RemotePayment. */
+export type TerminalPayMethod = TerminalCardMethod;
 
 export function isTerminalCardMethod(method: PosPaymentMethod): method is TerminalCardMethod {
     return method === 'DEBIT' || method === 'CREDIT';
 }
 
+/** Alias: solo tarjeta pasa por cobro remoto a la TUU. */
 export function isTerminalPayMethod(method: PosPaymentMethod): method is TerminalPayMethod {
-    return method === 'DEBIT' || method === 'CREDIT' || method === 'CASH' || method === 'TRANSFER';
+    return isTerminalCardMethod(method);
 }
 
 let terminalConfig: Promise<boolean> | null = null;
@@ -126,6 +128,13 @@ export function PaymentMethodPicker({ value, onChange, cardTerminal = false }: P
             {isFoodPaymentMethod(value) && (
                 <p className="text-[10px] font-bold text-slate-900 px-1">
                     Pasa la tarjeta en el lector de alimentación y luego confirma la venta.
+                </p>
+            )}
+            {cardTerminal && (value === 'CASH' || value === 'TRANSFER') && (
+                <p className="text-[10px] font-bold text-slate-900 px-1">
+                    {value === 'CASH'
+                        ? 'La integración remota de TUU solo manda débito/crédito. La boleta en efectivo se emite en la app Pago de la máquina.'
+                        : 'Registra la transferencia aquí. Si necesitas boleta, emítela en la app Pago de la TUU.'}
                 </p>
             )}
         </div>
