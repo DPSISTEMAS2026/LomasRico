@@ -2,24 +2,27 @@
 
 import { useEffect, useState } from 'react';
 
+/** v=4: originales en alta (no el preview 1024px de Cursor). */
+const V = '4';
+
 const SLIDES = [
   {
     id: 'acevichado',
     alt: 'Acevichado Lo Más Rico — ¡Un roll lleno de sabor!',
-    desktop: '/assets/banners/acevichado-desktop.jpg',
-    mobile: '/assets/banners/acevichado-mobile.jpg',
+    desktop: `/assets/banners/acevichado-desktop.jpg?v=${V}`,
+    mobile: `/assets/banners/acevichado-mobile.jpg?v=${V}`,
   },
   {
     id: 'ceviche',
     alt: 'Ceviche Tradicional — ¡Frescura que se disfruta!',
-    desktop: '/assets/banners/ceviche-desktop.jpg',
-    mobile: '/assets/banners/ceviche-mobile.jpg',
+    desktop: `/assets/banners/ceviche-desktop.jpg?v=${V}`,
+    mobile: `/assets/banners/ceviche-mobile.jpg?v=${V}`,
   },
   {
     id: 'gohan',
     alt: '¡Elige tu Gohan! — Tu próximo antojo está aquí',
-    desktop: '/assets/banners/gohan-desktop.jpg',
-    mobile: '/assets/banners/gohan-mobile.jpg',
+    desktop: `/assets/banners/gohan-desktop.jpg?v=${V}`,
+    mobile: `/assets/banners/gohan-mobile.jpg?v=${V}`,
   },
 ] as const;
 
@@ -45,15 +48,15 @@ export function BannerSection() {
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      {/* Escritorio */}
+      {/* Escritorio — ratio ~3:1 como los PNG originales */}
       <div className="hidden md:block w-full aspect-[3/1] overflow-hidden bg-[#fff6ea] relative">
         {SLIDES.map((slide, i) => (
           <img
             key={`d-${slide.id}`}
             src={slide.desktop}
             alt={slide.alt}
-            width={1920}
-            height={640}
+            width={2172}
+            height={724}
             decoding={i === 0 ? 'sync' : 'async'}
             fetchPriority={i === 0 ? 'high' : 'low'}
             className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
@@ -63,15 +66,15 @@ export function BannerSection() {
         ))}
       </div>
 
-      {/* Móvil / web */}
+      {/* Móvil — ratio 3:2 */}
       <div className="block md:hidden w-full aspect-[3/2] overflow-hidden bg-[#fff6ea] relative">
         {SLIDES.map((slide, i) => (
           <img
             key={`m-${slide.id}`}
             src={slide.mobile}
             alt={slide.alt}
-            width={1080}
-            height={720}
+            width={1536}
+            height={1024}
             decoding={i === 0 ? 'sync' : 'async'}
             fetchPriority={i === 0 ? 'high' : 'low'}
             className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
