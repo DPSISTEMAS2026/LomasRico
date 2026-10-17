@@ -130,13 +130,6 @@ export function PaymentMethodPicker({ value, onChange, cardTerminal = false }: P
                     Pasa la tarjeta en el lector de alimentación y luego confirma la venta.
                 </p>
             )}
-            {cardTerminal && (value === 'CASH' || value === 'TRANSFER') && (
-                <p className="text-[10px] font-bold text-slate-900 px-1">
-                    {value === 'CASH'
-                        ? 'La integración remota de TUU solo manda débito/crédito. La boleta en efectivo se emite en la app Pago de la máquina.'
-                        : 'Registra la transferencia aquí. Si necesitas boleta, emítela en la app Pago de la TUU.'}
-                </p>
-            )}
         </div>
     );
 }

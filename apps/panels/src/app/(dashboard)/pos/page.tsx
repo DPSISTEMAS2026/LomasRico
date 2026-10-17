@@ -809,11 +809,6 @@ export default function POSPage() {
                         {/* Ayuda Vuelto para Efectivo */}
                         {paymentMethod === 'CASH' && (
                             <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                {cardTerminal && (
-                                    <p className="text-[11px] font-bold text-slate-900 leading-snug px-1">
-                                        Boleta fiscal: en la TUU abre la app <span className="italic">Pago</span> (sin modo integración), elige Efectivo e imprime la boleta por ${total.toLocaleString('es-CL')}. Después cobra aquí para registrar la venta.
-                                    </p>
-                                )}
                                 <div className="flex justify-between items-center px-1">
                                     <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Total a Cobrar</span>
                                     <span className="text-sm font-black text-slate-800">${total.toLocaleString('es-CL')}</span>
@@ -911,27 +906,6 @@ export default function POSPage() {
                 </div>
             </div>
             </div>
-
-            {/* ── Floating Mobile Button To Toggle View ── */}
-            {cart.length > 0 && (
-                <button
-                    onClick={() => setMobileTab(mobileTab === 'CATALOG' ? 'CART' : 'CATALOG')}
-                    className="xl:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-orange-500 text-white px-8 py-4 rounded-full font-black uppercase italic shadow-[0_10px_40px_rgba(249,115,22,0.4)] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-10 border-4 border-white"
-                >
-                    {mobileTab === 'CATALOG' ? (
-                        <>
-                            <ShoppingBag size={20} />
-                            <span>VER TICKET (${total.toLocaleString('es-CL')})</span>
-                            <span className="bg-white text-orange-500 w-6 h-6 rounded-full flex items-center justify-center text-[10px]">{cart.length}</span>
-                        </>
-                    ) : (
-                        <>
-                            <Search size={20} />
-                            <span>VOLVER AL CATÁLOGO</span>
-                        </>
-                    )}
-                </button>
-            )}
 
             {/* ── Modales ───────────────────────────────────── */}
             {showOpenShift && user && (
