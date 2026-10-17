@@ -73,6 +73,12 @@ export default function CustomersPage() {
             const res = await authFetch(`${API_URL}/users/customers/list`, { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
+                // #region agent log
+                const withPhone = data.filter((c: any) => String(c.phone || '').replace(/\D/g, '').length >= 8).length;
+                const withEmail = data.filter((c: any) => String(c.email || '').includes('@')).length;
+                const phoneHiddenByEmailUi = data.filter((c: any) => c.email && c.phone).length;
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'customers-phones',hypothesisId:'A',location:'customers/page.tsx:loadCustomers',message:'customer phone vs email coverage',data:{total:data.length,withPhone,withEmail,phoneHiddenByEmailUi,sample:data.slice(0,3).map((c:any)=>({name:c.name,email:!!c.email,phone:c.phone||null}))},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
                 setCustomers(data);
             } else {
                 console.error('Error loading customers:', res.status);
@@ -307,7 +313,9 @@ export default function CustomersPage() {
                         <span className="w-6 text-center font-black italic text-slate-900 text-sm shrink-0">{i + 1}</span>
                         <div className="min-w-0 flex-1">
                             <p className="font-black uppercase italic tracking-tighter text-slate-900 text-sm truncate">{customer.name}</p>
-                            <p className="text-[10px] font-bold text-slate-800 truncate">{customer.email || customer.phone || '—'}</p>
+                            <p className="text-[10px] font-bold text-slate-800 truncate">
+                                {[customer.phone, customer.email].filter(Boolean).join(' · ') || '—'}
+                            </p>
                         </div>
                         <div className="text-right shrink-0">
                             <p className="text-sm font-black italic text-slate-900">${Number(customer.historicalSpent || 0).toLocaleString('es-CL')}</p>
@@ -345,7 +353,9 @@ export default function CustomersPage() {
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Clave temporal</p>
                                 <p className="font-black uppercase italic text-slate-900 text-lg tracking-tighter">{tempCred.name}</p>
-                                <p className="text-xs font-bold text-slate-600">{tempCred.email || tempCred.phone || '—'}</p>
+                                <p className="text-xs font-bold text-slate-600">
+                                    {[tempCred.phone, tempCred.email].filter(Boolean).join(' · ') || '—'}
+                                </p>
                             </div>
                             <button type="button" onClick={() => setTempCred(null)} className="p-2 text-slate-400 hover:text-slate-800">
                                 <X size={18} />
