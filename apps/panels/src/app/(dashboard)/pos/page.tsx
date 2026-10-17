@@ -285,8 +285,10 @@ export default function POSPage() {
                 MP: 'Mercado Pago Point',
                 FOOD: 'Alimentación',
             };
-            // Cuenta larga con detalle en la impresora del POS.
-            // Si el cobro fue con tarjeta, TUU/Haulmer imprime aparte su boleta fiscal en la máquina.
+            // Cuenta larga → impresora por defecto (comandera única).
+            // Sin alert previo: el diálogo nativo de print no debe quedar bloqueado.
+            // Si cobro TUU, la boleta fiscal sale sola en la máquina Haulmer.
+            // Si la pestaña Cocina está abierta, también imprime la comanda de cocina en la misma impresora.
             setLastSaleForPrint({
                 code: saleRes.code,
                 items: [...cart],
@@ -294,11 +296,6 @@ export default function POSPage() {
                 total: Math.round(total),
                 paymentLabel: paymentLabels[paymentMethod] || paymentMethod,
             });
-            alert(
-                terminalPaymentKey
-                    ? `✓ Venta cobrada! Código: ${saleRes.code}\n\nSe imprime la cuenta en caja. La boleta fiscal sale de la máquina TUU.`
-                    : `✓ Venta cobrada! Código: ${saleRes.code}`,
-            );
             setCart([]);
             setShippingCost(0);
             setCashReceived(0);
