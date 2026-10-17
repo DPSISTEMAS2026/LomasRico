@@ -14,6 +14,12 @@ function phoneKey(raw?: string | null) {
     return digits.length >= 8 ? digits.slice(-9) : '';
 }
 
+/** Contraseña inicial de clientas del CSV: últimos 4 dígitos del celular. */
+export function passwordFromPhone(phone?: string | null) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return digits.length >= 4 ? digits.slice(-4) : '';
+}
+
 function verificationEmailHtml(name: string, code: string) {
     const safeName = String(name || '').replace(/[<>&"]/g, '');
     return `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:32px 12px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
@@ -215,16 +221,67 @@ export class AuthService implements OnModuleInit {
     }
 
     async login(dto: LoginDto) {
-        // @ts-ignore
-        const user = await (this.prisma as any).user.findUnique({
-            where: { email: dto.email },
-        });
+        const rawId = String(dto.email || '').trim();
+        const looksEmail = rawId.includes('@');
+        let user: any = null;
 
-        const hashOk = user?.password ? await bcrypt.compare(String(dto.password || ''), user.password) : false;
+        if (looksEmail) {
+            // @ts-ignore
+            user = await (this.prisma as any).user.findUnique({
+                where: { email: rawId.toLowerCase() },
+            });
+        } else {
+            const key = phoneKey(rawId);
+            if (key) {
+                // @ts-ignore
+                const candidates: any[] = await (this.prisma as any).user.findMany({
+                    where: { phone: { not: null }, role: 'CUSTOMER' },
+                });
+                user = candidates.find((u) => phoneKey(u.phone) === key) || null;
+            }
+        }
 
-        if (!user || !hashOk) {
+        const typed = String(dto.password || '');
+        const typedDigits = typed.replace(/\D/g, '');
+        const pin = passwordFromPhone(user?.phone);
+        const isCustomer = user?.role === 'CUSTOMER';
+        const pinOk =
+            !!user &&
+            isCustomer &&
+            pin.length === 4 &&
+            typedDigits === pin &&
+            typedDigits.length === 4;
+        const hashOk = user?.password ? await bcrypt.compare(typed, user.password) : false;
+        // Import CSV antiguo hasheó el celular completo; aceptar ese fallback una vez.
+        const fullPhoneOk =
+            !!user &&
+            isCustomer &&
+            !!user.password &&
+            typedDigits.length >= 8 &&
+            !!phoneKey(user.phone) &&
+            typedDigits.slice(-9) === phoneKey(user.phone)
+                ? await bcrypt.compare(typedDigits, user.password)
+                : false;
+
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'login-phone4',hypothesisId:'B',location:'auth.service.ts:login',message:'customer login attempt',data:{looksEmail,found:!!user,hasPhone:!!user?.phone,pinLen:pin.length,pinOk,hashOk,fullPhoneOk,passLen:typed.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        if (!user || (!hashOk && !pinOk && !fullPhoneOk)) {
             throw new UnauthorizedException('Credenciales inválidas');
         }
+
+        if ((pinOk || fullPhoneOk) && !hashOk) {
+            const nextPlain = pinOk ? pin : typedDigits.slice(-4);
+            const hashedPassword = await bcrypt.hash(nextPlain, 10);
+            // @ts-ignore
+            await (this.prisma as any).user.update({
+                where: { id: user.id },
+                data: { password: hashedPassword },
+            });
+        }
+
+        if (user.role === 'CUSTOMER') await this.linkGuestSales(user.id, user.email);
 
         const jwtPayload = { sub: user.id, email: user.email, role: user.role };
         return {

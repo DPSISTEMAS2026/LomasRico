@@ -101,7 +101,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                         : 'Bienvenido';
 
     const subtitle =
-        mode === 'LOGIN' ? 'Ingresa para gestionar tus pedidos'
+        mode === 'LOGIN' ? 'Correo + los 4 últimos dígitos de tu celular'
             : mode === 'REGISTER' ? 'Crea tu cuenta en segundos'
                 : mode === 'VERIFY' ? 'Ingresa el código enviado a tu correo'
                     : mode === 'FORGOT' ? 'Correo o celular de tu cuenta'
@@ -225,8 +225,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                                     <div className="relative group">
                                         <Mail className="absolute left-4 top-3.5 text-slate-900" size={18} />
                                         <input
-                                            type="email"
-                                            placeholder="Correo Electrónico"
+                                            type="text"
+                                            inputMode="email"
+                                            autoComplete="username"
+                                            placeholder={mode === 'LOGIN' ? 'Correo o celular' : 'Correo Electrónico'}
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
@@ -237,7 +239,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'LOGIN' }: Pr
                                         <Lock className="absolute left-4 top-3.5 text-slate-900" size={18} />
                                         <input
                                             type="password"
-                                            placeholder="Contraseña"
+                                            placeholder={mode === 'LOGIN' ? 'Contraseña o 4 dígitos del celular' : 'Contraseña'}
                                             required
                                             minLength={4}
                                             value={password}
