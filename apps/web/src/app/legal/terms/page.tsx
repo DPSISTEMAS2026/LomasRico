@@ -134,7 +134,7 @@ export default function TermsPage() {
                     {/* Footer legal */}
                     <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
-                        <p>Obispo Hipólito Salas 1205, Concepción, Chile. Todos los derechos reservados.</p>
+                        <p>General Cruz 92, Concepción, Chile. Todos los derechos reservados.</p>
                     </div>
                 </div>
             </main>

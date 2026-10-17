@@ -16,13 +16,13 @@ export const BUSINESS = {
     supportEmail: 'soporte@lomasrico.cl',
 } as const;
 
-/** Local: Obispo Hipólito Salas 1205/1209, Concepción (punto central de despacho). */
+/** Local actual: General Cruz 92, Concepción (punto central de despacho). */
 export const LOCATION = {
-    address: 'Obispo Hipólito Salas 1205, Concepción, Chile',
+    address: 'General Cruz 92, Concepción, Chile',
     city: 'Concepción',
     comuna: 'Concepción',
-    lat: -36.821777,
-    lng: -73.06093,
+    lat: -36.8211,
+    lng: -73.0603,
     /** Máximo de despacho (último tramo). */
     maxDeliveryRadiusKm: 12,
 } as const;

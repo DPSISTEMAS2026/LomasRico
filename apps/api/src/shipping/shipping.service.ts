@@ -2,12 +2,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
 
-/** Punto central = local (Obispo Hipólito Salas 1205, Concepción). */
+/** Punto central = local (General Cruz 92, Concepción). */
 const LOCATION = {
-    address: 'Obispo Hipólito Salas 1205, Concepción, Chile',
+    address: 'General Cruz 92, Concepción, Chile',
     city: 'Concepción',
-    lat: -36.821777,
-    lng: -73.06093,
+    lat: -36.8211,
+    lng: -73.0603,
     maxDeliveryRadiusKm: 12,
 } as const;
 

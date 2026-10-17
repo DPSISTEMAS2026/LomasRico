@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                             </div>
                             <div>
                                 <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Dirección Comercial</p>
-                                <p className="text-base text-slate-950 font-black">Obispo Hipólito Salas 1205, Concepción, Chile</p>
+                                <p className="text-base text-slate-950 font-black">General Cruz 92, Concepción, Chile</p>
                             </div>
                             <div>
                                 <p className="text-slate-900 text-xs font-black uppercase tracking-wider">Contacto de Privacidad</p>
@@ -231,7 +231,7 @@ export default function PrivacyPage() {
                     {/* Footer legal */}
                     <div className="text-slate-900 text-xs font-semibold text-center pt-8 border-t border-slate-200">
                         <p className="font-bold">LOMASRICO SpA • RUT: 77.615.941-7</p>
-                        <p>Obispo Hipólito Salas 1205, Concepción, Chile. Todos los derechos reservados.</p>
+                        <p>General Cruz 92, Concepción, Chile. Todos los derechos reservados.</p>
                     </div>
                 </div>
             </main>

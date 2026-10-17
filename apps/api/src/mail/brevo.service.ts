@@ -17,9 +17,11 @@ type LocalRecipient = {
     tag: string;
 };
 
-export const DEFAULT_ANNOUNCE_SUBJECT = 'Lo Más Rico: gran reapertura · abrimos mañana';
+export const DEFAULT_ANNOUNCE_SUBJECT = '¡Ya volvimos! Lo Más Rico abierto con delivery y retiro';
 export const DEFAULT_LOGO_URL = process.env.BREVO_LOGO_URL
     || 'https://xnwbrdnorjafwwyfhysx.supabase.co/storage/v1/object/public/assets/logo-email.png';
+
+const LOCAL_ADDRESS = 'General Cruz 92, Concepción, Chile';
 
 export function logoSrc() {
     return DEFAULT_LOGO_URL;
@@ -29,8 +31,8 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
     const logo = logoUrl
         ? `<img src="${logoUrl}" width="80" alt="Lo Más Rico" style="display:block;margin:0 auto 18px auto;border:0;width:80px;height:auto;" />`
         : '';
-    const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Obispo Hipólito Salas 1205, Concepción, Chile');
-    const wazeUrl = 'https://waze.com/ul?q=' + encodeURIComponent('Obispo Hipólito Salas 1205, Concepción, Chile') + '&navigate=true';
+    const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(LOCAL_ADDRESS);
+    const wazeUrl = 'https://waze.com/ul?q=' + encodeURIComponent(LOCAL_ADDRESS) + '&navigate=true';
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -44,33 +46,33 @@ export function defaultAnnounceHtml(logoUrl = logoSrc()) {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid #e5e7eb;">
         <tr><td style="padding:36px 36px 12px 36px;text-align:center;">
           ${logo}
-          <p style="margin:0 0 10px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.35em;text-transform:uppercase;text-align:center;">Abrimos mañana</p>
+          <p style="margin:0 0 10px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.35em;text-align:center;">¡YA ABIERTOS!</p>
           <h1 style="margin:0;color:#0f172a;font-size:28px;font-weight:900;font-style:italic;letter-spacing:-0.04em;text-transform:uppercase;line-height:0.95;text-align:center;">Gran<br/>reapertura</h1>
         </td></tr>
         <tr><td style="padding:16px 36px 36px 36px;color:#0f172a;font-size:15px;line-height:1.65;text-align:center;">
-          <p style="margin:0 0 16px 0;text-align:center;">Hola, {{ params.NOMBRE }}:</p>
+          <p style="margin:0 0 16px 0;text-align:center;">¡Hola, {{ params.NOMBRE }}!</p>
           <p style="margin:0 0 14px 0;text-align:center;">
-            Mañana abrimos con delivery y retiro en Concepción.
+            ¡Volvimos! Ya estamos abiertos en Concepción con <strong>delivery y retiro</strong>. El ceviche ya está listo… ¡pide el tuyo!
           </p>
-          <p style="margin:0 0 6px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Nueva dirección</p>
-          <p style="margin:0 0 10px 0;font-weight:800;text-align:center;">Obispo Hipólito Salas 1205, Concepción, Chile</p>
+          <p style="margin:0 0 6px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.2em;text-align:center;">NUEVA DIRECCIÓN</p>
+          <p style="margin:0 0 10px 0;font-weight:800;text-align:center;">${LOCAL_ADDRESS}</p>
           <p style="margin:0 0 18px 0;text-align:center;">
             <a href="${mapsUrl}" style="color:#0f172a;font-weight:800;font-size:12px;text-decoration:underline;">Google Maps</a>
             &nbsp;·&nbsp;
             <a href="${wazeUrl}" style="color:#0f172a;font-weight:800;font-size:12px;text-decoration:underline;">Waze</a>
           </p>
-          <p style="margin:0 0 6px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Horario</p>
+          <p style="margin:0 0 6px 0;color:#f2642e;font-size:10px;font-weight:800;letter-spacing:0.2em;text-align:center;">HORARIO</p>
           <p style="margin:0 0 4px 0;text-align:center;">Lun–Mié · 14:30 a 21:00</p>
           <p style="margin:0 0 18px 0;text-align:center;">Jue–Dom · 11:30 a 22:00</p>
           <p style="margin:0 0 14px 0;text-align:center;">
-            Si ya estás registrado, podrás ingresar con los <strong>4 últimos dígitos del celular</strong> registrado en tu cuenta. Después puedes cambiar la contraseña.
+            ¿Ya tienes cuenta? Entra con los <strong>4 últimos dígitos de tu celular</strong> y después cambia la contraseña si quieres.
           </p>
           <p style="margin:0 0 18px 0;text-align:center;">
-            Si aún no tienes cuenta, regístrate en pocos pasos y suma puntos desde tu primer pedido.
+            ¿Todavía no? ¡Regístrate en un rato y empieza a sumar puntos desde tu primer pedido!
           </p>
           <p style="margin:0 0 12px 0;text-align:center;">
             <a href="https://lomasrico.cl" style="display:inline-block;background:#f2642e;color:#ffffff;text-decoration:none;font-weight:800;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:14px 22px;border-radius:999px;">
-              Ir al sitio
+              ¡Pedir ahora!
             </a>
           </p>
           <p style="margin:0 0 8px 0;text-align:center;">

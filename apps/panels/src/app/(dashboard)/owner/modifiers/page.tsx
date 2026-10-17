@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-    ArrowLeft, Check, ChefHat, Layers, Loader2, Pencil, Plus, Search, Sparkles, Trash2, UtensilsCrossed,
+    ArrowLeft, Check, ChefHat, Eye, EyeOff, Layers, Loader2, Pencil, Plus, Search, Sparkles, Trash2, UtensilsCrossed,
 } from 'lucide-react';
 import { authFetch } from '../../../../services/authFetch';
 import { API_URL } from '../../../../services/api';
@@ -36,6 +36,7 @@ type ModifierOption = {
     name: string;
     priceAdjustment: number;
     sortOrder?: number;
+    isActive?: boolean;
 };
 
 type AssignedProduct = {
@@ -528,19 +529,50 @@ function ReviewGroupEditor({
     const initialMin = Number(group.minSelections ?? 0);
     const initialMax = Math.max(1, Number(group.maxSelections ?? 1));
     const [displayName, setDisplayName] = useState(group.displayName || '');
-    const [options, setOptions] = useState<{ id?: string; name: string; price: number }[]>(
-        (group.options || []).map((o) => ({ id: o.id, name: o.name, price: Number(o.priceAdjustment) || 0 })),
+    const [options, setOptions] = useState<{ id?: string; name: string; price: number; isActive: boolean }[]>(
+        (group.options || []).map((o) => ({
+            id: o.id,
+            name: o.name,
+            price: Number(o.priceAdjustment) || 0,
+            isActive: o.isActive !== false,
+        })),
     );
     const [minSel, setMinSel] = useState(initialMin);
     const [maxSel, setMaxSel] = useState(initialMax);
     const [saving, setSaving] = useState(false);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const toggleVisible = async (optionId: string | undefined, next: boolean) => {
+        if (!optionId) {
+            setOptions((prev) => prev.map((o) => (o.id === optionId ? { ...o, isActive: next } : o)));
+            return;
+        }
+        setTogglingId(optionId);
+        try {
+            const res = await authFetch(`${API_URL}/modifiers/options/${optionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: next }),
+            });
+            if (!res.ok) throw new Error('toggle');
+            setOptions((prev) => prev.map((o) => (o.id === optionId ? { ...o, isActive: next } : o)));
+        } catch {
+            setError('No se pudo cambiar la visibilidad.');
+        } finally {
+            setTogglingId(null);
+        }
+    };
 
     const save = async () => {
         if (!groupId || !displayName.trim()) return;
         const clean = options.filter((o) => o.name.trim());
         if (clean.length === 0) {
             setError('Deja al menos una respuesta.');
+            return;
+        }
+        if (clean.filter((o) => o.isActive).length === 0) {
+            setError('Deja al menos una opción visible (ojito abierto).');
             return;
         }
         setSaving(true);
@@ -557,17 +589,28 @@ function ReviewGroupEditor({
                     const created = await authFetch(`${API_URL}/modifiers/groups/${groupId}/options`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: opt.name.trim(), priceAdjustment: Number(opt.price) || 0 }),
+                        body: JSON.stringify({
+                            name: opt.name.trim(),
+                            priceAdjustment: Number(opt.price) || 0,
+                            isActive: opt.isActive !== false,
+                        }),
                     });
                     if (!created.ok) throw new Error('add');
                     continue;
                 }
                 const prev = (group.options || []).find((o) => o.id === opt.id);
-                if (prev && prev.name === opt.name.trim() && Number(prev.priceAdjustment) === Number(opt.price)) continue;
+                const sameName = prev && prev.name === opt.name.trim();
+                const samePrice = prev && Number(prev.priceAdjustment) === Number(opt.price);
+                const sameActive = prev && (prev.isActive !== false) === opt.isActive;
+                if (sameName && samePrice && sameActive) continue;
                 const patched = await authFetch(`${API_URL}/modifiers/options/${opt.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: opt.name.trim(), priceAdjustment: Number(opt.price) || 0 }),
+                    body: JSON.stringify({
+                        name: opt.name.trim(),
+                        priceAdjustment: Number(opt.price) || 0,
+                        isActive: opt.isActive,
+                    }),
                 });
                 if (!patched.ok) throw new Error('patch');
             }
@@ -619,10 +662,14 @@ function ReviewGroupEditor({
                 <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest text-slate-800">
                     <span className="flex-1">Opción</span>
                     <span className="w-28 text-center">Recargo $</span>
+                    <span className="w-8 text-center" title="Visible al cliente">Ver</span>
                     <span className="w-6" />
                 </div>
                 {options.map((opt, i) => (
-                    <div key={opt.id || `new-${i}`} className="flex gap-2">
+                    <div
+                        key={opt.id || `new-${i}`}
+                        className={`flex gap-2 items-center ${opt.isActive ? '' : 'opacity-50'}`}
+                    >
                         <input
                             value={opt.name}
                             onChange={(e) => setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, name: e.target.value } : o))}
@@ -639,8 +686,24 @@ function ReviewGroupEditor({
                         </div>
                         <button
                             type="button"
+                            disabled={!!opt.id && togglingId === opt.id}
+                            onClick={() => void toggleVisible(opt.id, !opt.isActive)}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
+                                opt.isActive
+                                    ? 'border-emerald-200 text-emerald-600 bg-emerald-50'
+                                    : 'border-slate-200 text-slate-400 bg-white'
+                            }`}
+                            title={opt.isActive ? 'Visible en el armado · clic para ocultar' : 'Oculta · clic para mostrar'}
+                        >
+                            {togglingId === opt.id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : opt.isActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setOptions((prev) => prev.filter((_, idx) => idx !== i))}
                             className="text-slate-300 hover:text-red-500 p-1"
+                            title="Eliminar del grupo"
                         >
                             <Trash2 size={14} />
                         </button>
@@ -648,7 +711,7 @@ function ReviewGroupEditor({
                 ))}
                 <button
                     type="button"
-                    onClick={() => setOptions((prev) => [...prev, { name: '', price: 0 }])}
+                    onClick={() => setOptions((prev) => [...prev, { name: '', price: 0, isActive: true }])}
                     className="text-[10px] font-black uppercase tracking-widest text-orange-500"
                 >
                     Agregar
@@ -657,7 +720,7 @@ function ReviewGroupEditor({
             <ChoiceLimits
                 min={minSel}
                 max={maxSel}
-                optionCount={options.filter((o) => o.name.trim()).length}
+                optionCount={Math.max(1, options.filter((o) => o.name.trim() && o.isActive).length)}
                 onChange={(mn, mx) => { setMinSel(mn); setMaxSel(mx); }}
             />
             {error && <p className="text-xs font-bold text-red-500">{error}</p>}
@@ -692,7 +755,8 @@ function ReviewView({
     const hydrateGroup = (g: ModifierGroup): ModifierGroup => {
         const id = g.groupId || g.id;
         const catalog = groups.find((x) => x.id === id);
-        const options = (g.options && g.options.length > 0 ? g.options : catalog?.options) || [];
+        // Preferir opciones del catálogo admin (incluye isActive=false) para el ojito
+        const options = (catalog?.options && catalog.options.length > 0 ? catalog.options : g.options) || [];
         return {
             ...catalog,
             ...g,
@@ -786,7 +850,8 @@ function ReviewView({
                                                                         <p className="text-xs text-slate-800">
                                                                             {(g.options || []).map((o) => {
                                                                                 const extra = Number(o.priceAdjustment) || 0;
-                                                                                return extra ? `${o.name} +$${extra}` : o.name;
+                                                                                const label = extra ? `${o.name} +$${extra}` : o.name;
+                                                                                return o.isActive === false ? `${label} (oculta)` : label;
                                                                             }).join(' · ') || '—'}
                                                                         </p>
                                                                     )}

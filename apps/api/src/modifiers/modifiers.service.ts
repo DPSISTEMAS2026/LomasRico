@@ -17,10 +17,11 @@ export class ModifiersService {
     // ===============================================
 
     async findAllGroups() {
+        // Admin: incluir opciones inactivas para poder mostrar/ocultar con el ojito.
+        // El catálogo de cliente (getProductModifiers / products) sigue filtrando isActive.
         const groups = await this.prisma.modifierGroup.findMany({
             include: {
                 options: {
-                    where: { isActive: true },
                     orderBy: { sortOrder: 'asc' },
                     include: {
                         inventoryItem: { select: { id: true, name: true } },

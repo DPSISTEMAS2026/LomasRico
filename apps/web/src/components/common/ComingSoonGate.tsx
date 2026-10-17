@@ -80,13 +80,13 @@ export default function ComingSoonGate({ children }: { children: React.ReactNode
                         className="h-20 w-20 mx-auto object-contain mb-5"
                     />
                     <p className="text-[10px] font-black uppercase tracking-[0.35em] text-[#f2642e] mb-3">
-                        Abrimos mañana
+                        Ya abiertos
                     </p>
                     <h1 className="text-3xl font-[900] italic uppercase tracking-tighter text-slate-900 leading-none">
                         Gran<br />reapertura
                     </h1>
                     <p className="mt-4 text-sm font-bold text-slate-900 leading-relaxed">
-                        Delivery y retiro en nuestra nueva dirección. Regístrate hoy y suma puntos desde tu primer pedido.
+                        Ya estamos abiertos con delivery y retiro. Regístrate y suma puntos desde tu primer pedido.
                     </p>
 
                     <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
