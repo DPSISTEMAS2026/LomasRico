@@ -32,7 +32,7 @@ import { createSale, getShippingQuote, fetchCatalog, API_URL } from '../../../se
 import { authFetch } from '../../../services/authFetch';
 import { useAuth } from '../../../context/AuthContext';
 import { CevicheBuilderModal } from '../../../components/modals/CevicheBuilderModal';
-import { ComandaPrinter } from '../../../components/printer/ComandaPrinter';
+import { BoletaPrinter } from '../../../components/printer/BoletaPrinter';
 import AddressAutocomplete from '../../../components/common/AddressAutocomplete';
 import { Product, CartItem } from '../../../types';
 
@@ -111,7 +111,13 @@ export default function POSPage() {
     }, [customerSearchTerm]);
 
     // Printer
-    const [lastSaleForPrint, setLastSaleForPrint] = useState<{ code: string, items: CartItem[], channel: string, customerInfo?: string } | null>(null);
+    const [lastSaleForPrint, setLastSaleForPrint] = useState<{
+        code: string;
+        items: CartItem[];
+        customerInfo?: string;
+        total: number;
+        paymentLabel: string;
+    } | null>(null);
     const printerRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useReactToPrint({
@@ -271,8 +277,28 @@ export default function POSPage() {
             } as any);
 
             setPaidTerminal(null);
-            alert(`✓ Venta cobrada! Código: ${saleRes.code}`);
-            setLastSaleForPrint({ code: saleRes.code, items: [...cart], channel: 'RETIRO', customerInfo });
+            const paymentLabels: Record<string, string> = {
+                CASH: 'Efectivo',
+                TRANSFER: 'Transferencia',
+                DEBIT: 'Débito (TUU)',
+                CREDIT: 'Crédito (TUU)',
+                MP: 'Mercado Pago Point',
+                FOOD: 'Alimentación',
+            };
+            // Cuenta larga con detalle en la impresora del POS.
+            // Si el cobro fue con tarjeta, TUU/Haulmer imprime aparte su boleta fiscal en la máquina.
+            setLastSaleForPrint({
+                code: saleRes.code,
+                items: [...cart],
+                customerInfo,
+                total: Math.round(total),
+                paymentLabel: paymentLabels[paymentMethod] || paymentMethod,
+            });
+            alert(
+                terminalPaymentKey
+                    ? `✓ Venta cobrada! Código: ${saleRes.code}\n\nSe imprime la cuenta en caja. La boleta fiscal sale de la máquina TUU.`
+                    : `✓ Venta cobrada! Código: ${saleRes.code}`,
+            );
             setCart([]);
             setShippingCost(0);
             setCashReceived(0);
@@ -962,15 +988,21 @@ export default function POSPage() {
                 />
             )}
 
-            {/* Hidden Printer Component */}
+            {/* Hidden Printer: cuenta larga (detalle + total). Boleta SII la imprime TUU. */}
             <div style={{ display: 'none' }}>
                 {lastSaleForPrint && (
-                    <ComandaPrinter
+                    <BoletaPrinter
                         ref={printerRef}
-                        saleCode={lastSaleForPrint.code}
-                        items={lastSaleForPrint.items}
-                        channel={lastSaleForPrint.channel}
-                        customerInfo={lastSaleForPrint.customerInfo}
+                        mode="pos"
+                        saleCode={`#${String(lastSaleForPrint.code).replace(/^#+/, '')}`}
+                        heading={lastSaleForPrint.customerInfo || 'Retiro · POS'}
+                        paymentLabel={lastSaleForPrint.paymentLabel}
+                        waiter={user?.name || undefined}
+                        guests={[{
+                            name: lastSaleForPrint.customerInfo || 'Cliente',
+                            items: lastSaleForPrint.items,
+                            total: lastSaleForPrint.total,
+                        }]}
                     />
                 )}
             </div>

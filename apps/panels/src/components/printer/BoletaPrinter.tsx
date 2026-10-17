@@ -9,13 +9,16 @@ export type BoletaGuest = {
 };
 
 interface BoletaProps {
-    mode: 'guest' | 'table';
+    mode: 'guest' | 'table' | 'pos';
     tableNumber?: number | string;
     saleCode?: string;
     guests: BoletaGuest[];
     waiter?: string;
     tipPercent?: number;
     date?: Date;
+    /** Título libre (ej. Retiro / POS). Si no va, se arma según mode. */
+    heading?: string;
+    paymentLabel?: string;
 }
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString('es-CL')}`;
@@ -41,7 +44,7 @@ const rule = (style: 'solid' | 'dashed' = 'dashed', weight = 1): React.CSSProper
 });
 
 export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
-    mode, tableNumber, saleCode, guests, waiter, tipPercent = 0, date = new Date(),
+    mode, tableNumber, saleCode, guests, waiter, tipPercent = 0, date = new Date(), heading, paymentLabel,
 }, ref) => {
     const pct = Number(tipPercent) || 0;
     const time = date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
@@ -49,9 +52,13 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
     const subtotal = guests.reduce((s, g) => s + guestTotal(g), 0);
     const tip = pct > 0 ? Math.round((subtotal * pct) / 100) : 0;
     const showGuestHeaders = mode === 'table' && guests.length > 1;
-    const title = mode === 'table'
-        ? `Mesa ${tableNumber ?? ''}`
-        : `${guests[0]?.name || 'Comensal'} · Mesa ${tableNumber ?? ''}`;
+    const isPos = mode === 'pos';
+    const title = heading
+        || (mode === 'table'
+            ? `Mesa ${tableNumber ?? ''}`
+            : isPos
+                ? (guests[0]?.name || 'Retiro · POS')
+                : `${guests[0]?.name || 'Comensal'} · Mesa ${tableNumber ?? ''}`);
 
     return (
         <div
@@ -93,6 +100,7 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                     {day} · {time}{saleCode ? ` · ${saleCode}` : ''}
                 </div>
                 {waiter && <div style={{ fontSize: 11 }}>Te atendió {waiter}</div>}
+                {paymentLabel && <div style={{ fontSize: 11, marginTop: 2 }}>Pago: {paymentLabel}</div>}
             </div>
 
             <div style={rule('solid', 2)} />
@@ -157,13 +165,21 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
             <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <div style={{ fontSize: 15, fontWeight: 900 }}>¡Gracias por venir!</div>
                 <div style={{ fontSize: 12, marginTop: 4 }}>
-                    Fue un gusto tenerte en nuestra mesa.
-                    <br />
-                    Te esperamos pronto con más limón y ají.
+                    {isPos ? (
+                        <>Te esperamos pronto con más limón y ají.</>
+                    ) : (
+                        <>
+                            Fue un gusto tenerte en nuestra mesa.
+                            <br />
+                            Te esperamos pronto con más limón y ají.
+                        </>
+                    )}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, marginTop: 8 }}>@cevichelomasrico</div>
                 <div style={{ fontSize: 9, marginTop: 10 }}>
-                    La propina es voluntaria · Documento no válido como boleta
+                    {isPos
+                        ? 'Documento interno · no es boleta SII'
+                        : 'La propina es voluntaria · Documento no válido como boleta'}
                 </div>
             </div>
         </div>
