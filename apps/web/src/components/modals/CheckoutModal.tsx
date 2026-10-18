@@ -63,6 +63,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     useEffect(() => {
         if (isOpen && !dineIn) {
             getStoreStatus().then((s) => {
+                if (!s) return;
                 const isClosed = !s.open || !s.ordersEnabled;
                 // #region agent log
                 fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'closed-popup',hypothesisId:'P1',location:'CheckoutModal.tsx:storeStatus',message:'store closed popup decision',data:{store:s,isClosed,showPopup:isClosed},timestamp:Date.now()})}).catch(()=>{});

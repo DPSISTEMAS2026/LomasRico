@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Product } from '../../types';
 import { Plus, AlertTriangle } from 'lucide-react';
 
@@ -21,6 +21,19 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
     const videoSrc = product.hoverVideoUrl || `/assets/videos/${product.name}.mp4`;
     
     const videoRef = useRef<HTMLVideoElement>(null);
+    const descRef = useRef<HTMLParagraphElement>(null);
+    const [expanded, setExpanded] = useState(false);
+    const [clamped, setClamped] = useState(false);
+
+    useEffect(() => {
+        const el = descRef.current;
+        if (!el || expanded) return;
+        const check = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+        check();
+        const observer = new ResizeObserver(check);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [product.description, expanded]);
 
     const handleMouseEnter = () => {
         if (hasVideo && videoRef.current) {
@@ -101,16 +114,31 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
             </div>
 
             {/* Content Area */}
-            <div className="p-6 flex flex-col flex-grow bg-white text-center">
+            <div className="p-4 sm:p-6 flex flex-col flex-grow bg-white text-center">
                 <div className="flex-grow">
                     <h3 className={`font-black text-xl italic tracking-tighter uppercase leading-[0.9] mb-2.5 transition-colors
                         ${isOutOfStock ? 'text-slate-400' : 'text-slate-900 group-hover:text-[#f2642e]'}`}>
                         {product.name}
                     </h3>
 
-                    <p className="text-slate-900 text-xs font-semibold leading-relaxed mb-6 line-clamp-2">
+                    <p
+                        ref={descRef}
+                        className={`text-slate-900 text-xs font-semibold leading-relaxed whitespace-pre-line ${expanded ? '' : 'line-clamp-3'} ${clamped || expanded ? 'mb-2' : 'mb-6'}`}
+                    >
                         {product.description}
                     </p>
+                    {(clamped || expanded) && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setExpanded((v) => !v);
+                            }}
+                            className="mb-4 text-[10px] font-black uppercase tracking-widest text-[#f2642e] hover:underline"
+                        >
+                            {expanded ? 'Ver menos' : 'Ver más'}
+                        </button>
+                    )}
                 </div>
 
                 <div className="mt-auto pt-6 border-t border-slate-50">
