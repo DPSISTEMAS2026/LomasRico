@@ -62,10 +62,28 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
     }, []);
 
     const summary = (shift as any)?.cashSummary as
-        | { expectedCash: number; byMethod: Record<string, number>; expenses: number; withdrawals: number; refunds: number }
+        | {
+            expectedCash: number;
+            byMethod: Record<string, number>;
+            expenses: number;
+            withdrawals: number;
+            refunds: number;
+            tipsTotal?: number;
+            tipsCash?: number;
+            shippingTotal?: number;
+        }
         | undefined;
     const systemAmount = Number(summary?.expectedCash ?? shift?.startAmount ?? 0);
     const methodRows = Object.entries(summary?.byMethod || {}).filter(([, v]) => v !== 0);
+    const tipsTotal = Math.round(Number(summary?.tipsTotal || 0));
+    const tipsCash = Math.round(Number(summary?.tipsCash || 0));
+    const shippingTotal = Math.round(Number(summary?.shippingTotal || 0));
+
+    useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-UI',location:'CloseShiftModal.tsx:summary',message:'close shift summary fields',data:{hasSummary:!!summary,expectedCash:systemAmount,tipsTotal,tipsCash,shippingTotal,methodCount:methodRows.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }, [summary, systemAmount, tipsTotal, tipsCash, shippingTotal, methodRows.length]);
 
     const countedAmount = parseFloat(endAmount) || 0;
     const diff = countedAmount - systemAmount;
@@ -145,7 +163,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     </div>
                 </div>
 
-                {(methodRows.length > 0 || summary?.withdrawals || summary?.expenses || summary?.refunds) ? (
+                {(methodRows.length > 0 || summary?.withdrawals || summary?.expenses || summary?.refunds || tipsTotal > 0 || shippingTotal > 0) ? (
                     <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-1">
                         {methodRows.map(([method, total]) => (
                             <div key={method} className="flex justify-between text-xs font-black uppercase text-slate-900">
@@ -153,6 +171,24 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                                 <span>${total.toLocaleString('es-CL')}</span>
                             </div>
                         ))}
+                        {shippingTotal > 0 && (
+                            <div className="flex justify-between text-xs font-black uppercase text-sky-700 pt-2 border-t border-slate-200 mt-2">
+                                <span>Reparto / envío</span>
+                                <span>${shippingTotal.toLocaleString('es-CL')}</span>
+                            </div>
+                        )}
+                        {tipsTotal > 0 && (
+                            <div className="flex justify-between text-xs font-black uppercase text-emerald-700 pt-2 border-t border-slate-200 mt-2">
+                                <span>Propinas</span>
+                                <span>${tipsTotal.toLocaleString('es-CL')}</span>
+                            </div>
+                        )}
+                        {tipsCash > 0 && (
+                            <div className="flex justify-between text-[10px] font-bold uppercase text-emerald-600/80 pl-2">
+                                <span>↳ En efectivo (cajón)</span>
+                                <span>${tipsCash.toLocaleString('es-CL')}</span>
+                            </div>
+                        )}
                         {!!summary?.withdrawals && (
                             <div className="flex justify-between text-xs font-black uppercase text-red-600">
                                 <span>Retiros</span><span>-${summary.withdrawals.toLocaleString('es-CL')}</span>

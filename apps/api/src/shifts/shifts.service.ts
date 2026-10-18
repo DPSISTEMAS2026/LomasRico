@@ -71,7 +71,10 @@ export class ShiftsService {
         const txs: any[] = shift.transactions || [];
         const saleIds = [...new Set(txs.map((t) => t.relatedSaleId).filter(Boolean))];
         const sales = saleIds.length
-            ? await (this.prisma as any).sale.findMany({ where: { id: { in: saleIds } }, select: { id: true, paymentMethod: true } })
+            ? await (this.prisma as any).sale.findMany({
+                where: { id: { in: saleIds } },
+                select: { id: true, paymentMethod: true, shippingData: true },
+            })
             : [];
         const methodOf = new Map<string, string>(sales.map((s: any) => [s.id, s.paymentMethod || 'OTHER']));
         const byMethod: Record<string, number> = {};
@@ -79,6 +82,20 @@ export class ShiftsService {
         let expenses = 0;
         let withdrawals = 0;
         let refunds = 0;
+        let tipsTotal = 0;
+        let tipsCash = 0;
+        let shippingTotal = 0;
+        for (const sale of sales) {
+            const ship = sale.shippingData && typeof sale.shippingData === 'object' ? sale.shippingData : {};
+            const tip = Math.round(Number(ship?.tip?.amount || 0));
+            const shipping = Math.round(Number(ship?.cost || 0));
+            const method = sale.paymentMethod || 'OTHER';
+            if (tip > 0) {
+                tipsTotal += tip;
+                if (method === 'CASH') tipsCash += tip;
+            }
+            if (shipping > 0) shippingTotal += shipping;
+        }
         for (const tx of txs) {
             const amount = Number(tx.amount);
             const method = tx.relatedSaleId ? (methodOf.get(tx.relatedSaleId) || 'OTHER') : 'CASH';
@@ -97,7 +114,20 @@ export class ShiftsService {
                 expectedCash -= amount;
             }
         }
-        return { startAmount: Number(shift.startAmount || 0), expectedCash, byMethod, expenses, withdrawals, refunds };
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H1-H3',location:'shifts.service.ts:cashSummary',message:'cashSummary tip+shipping',data:{shiftId:shift?.id,sales:sales.length,expectedCash,tipsTotal,tipsCash,shippingTotal},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return {
+            startAmount: Number(shift.startAmount || 0),
+            expectedCash,
+            byMethod,
+            expenses,
+            withdrawals,
+            refunds,
+            tipsTotal,
+            tipsCash,
+            shippingTotal,
+        };
     }
 
     /** El turno debe existir, estar abierto y ser de quien opera (salvo dueño/admin). */
