@@ -289,6 +289,10 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
     // Create preference and show Wallet Brick
     const handlePreparePayment = async () => {
+        if (closed) {
+            setShowClosedPopup(true);
+            return;
+        }
         if (deliveryType === 'delivery' && !address) {
             setErrorMsg('Ingresa una dirección válida');
             return;
