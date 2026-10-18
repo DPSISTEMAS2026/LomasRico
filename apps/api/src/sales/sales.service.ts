@@ -387,6 +387,16 @@ export class SalesService {
             }
         }
 
+        // Propina de caja: sobre el consumo (sin despacho). Como en salón, no es venta: va fuera del total y de la caja.
+        const posOperator = channel === 'POS' ? (createSaleDto as any).operator as { id: string } | undefined : undefined;
+        const tipPercent = posOperator ? Math.max(0, Math.min(30, Math.round(Number((createSaleDto as any).tipPercent) || 0))) : 0;
+        const tipAmount = Math.round(totalAmount * tipPercent / 100);
+        let tipMeta: Record<string, unknown> | undefined;
+        if (tipAmount > 0 && posOperator) {
+            const waiter = await this.prisma.user.findUnique({ where: { id: posOperator.id }, select: { name: true } });
+            tipMeta = { amount: tipAmount, percent: tipPercent, waiterId: posOperator.id, waiterName: waiter?.name || null };
+        }
+
         // Sumar envío DESPUÉS del descuento y puntos para no descontar sobre el despacho
         totalAmount += computedShippingCost;
 
@@ -395,9 +405,11 @@ export class SalesService {
             && cardTerminalEnabled()
             && (paymentMethod === 'DEBIT' || paymentMethod === 'CREDIT');
         const terminalPayment = needsTerminal
-            ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount)
+            ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount + tipAmount)
             : null;
-        const saleShipping = terminalPayment ? { ...(shippingData || {}), terminalPayment } : shippingData;
+        const saleShipping = terminalPayment || tipMeta
+            ? { ...(shippingData || {}), ...(terminalPayment ? { terminalPayment } : {}), ...(tipMeta ? { tip: tipMeta } : {}) }
+            : shippingData;
 
         // Transaction (timeout extendido para pedidos con modificadores dinámicos)
         return this.prisma.$transaction(async (tx: any) => {
