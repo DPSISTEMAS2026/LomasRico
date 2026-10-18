@@ -181,10 +181,20 @@ export function formatModifierPrintLines(modifiers?: {
         byGroup.set(label, [...prev, ...names]);
     }
     for (const [label, names] of byGroup) {
-        const uniq = [...new Set(names)];
-        lines.push(uniq.length === 1 && label.toLowerCase() === uniq[0].toLowerCase()
-            ? uniq[0]
-            : `${label}: ${uniq.join(', ')}`);
+        // Repeticiones válidas (ej. Acevichado ×2): no colapsar con Set
+        const order: string[] = [];
+        const counts = new Map<string, number>();
+        for (const n of names) {
+            if (!counts.has(n)) order.push(n);
+            counts.set(n, (counts.get(n) || 0) + 1);
+        }
+        const pretty = order.map((n) => {
+            const q = counts.get(n) || 1;
+            return q > 1 ? `${n} ×${q}` : n;
+        });
+        lines.push(pretty.length === 1 && label.toLowerCase() === order[0]?.toLowerCase()
+            ? pretty[0]
+            : `${label}: ${pretty.join(', ')}`);
     }
 
     for (const n of mods.selectedProteinNames || []) {
