@@ -474,14 +474,30 @@ export default function POSPage() {
                             {filteredProducts.map(product => (
                                 <button
                                     key={product.id}
+                                    type="button"
                                     onClick={() => handleProductClick(product)}
                                     disabled={product.available === false}
-                                    className={`group relative rounded-[2rem] shadow-sm border p-3 transition-all flex flex-col gap-3 text-left overflow-hidden
+                                    className={`group relative rounded-[2rem] shadow-sm border p-3 transition-all flex flex-col gap-3 text-left
                                         ${product.available === false
-                                            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
-                                            : 'bg-white border-slate-100 hover:shadow-2xl hover:-translate-y-1 active:scale-95'
+                                            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed overflow-hidden'
+                                            : 'bg-white border-slate-100 hover:shadow-2xl hover:-translate-y-1 active:scale-95 hover:z-20'
                                         }`}
                                 >
+                                    {/* Descripción desde catálogo ya cargado — sin fetch al hover */}
+                                    {!!product.description?.trim() && product.available !== false && (
+                                        <div
+                                            role="tooltip"
+                                            className="pointer-events-none absolute left-1/2 bottom-[calc(100%-0.5rem)] z-30 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 opacity-0 translate-y-1 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200"
+                                        >
+                                            <div className="rounded-2xl bg-slate-900 text-white px-3.5 py-3 shadow-2xl shadow-slate-900/30 border border-slate-700">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-orange-400 mb-1">Incluye</p>
+                                                <p className="text-[11px] font-bold leading-snug normal-case tracking-normal not-italic">
+                                                    {product.description}
+                                                </p>
+                                            </div>
+                                            <div className="mx-auto -mt-px h-2.5 w-2.5 rotate-45 bg-slate-900 border-r border-b border-slate-700" />
+                                        </div>
+                                    )}
                                     <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 relative shrink-0">
                                         <img
                                             src={product.imageUrl || '/assets/Logo Restaurante.png'}
