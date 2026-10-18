@@ -6,11 +6,14 @@ import { CHECKOUT_CONTACT } from './AuthModal';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
-import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon, Instagram, Clock } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import { cleanModifierLabel } from '@lomasrico/shared-types';
+import { cleanModifierLabel, LOCATION } from '@lomasrico/shared-types';
 import { quietError } from '../../lib/quietLog';
+
+const INSTAGRAM_URL = 'https://www.instagram.com/cevichelomasrico/';
+const INSTAGRAM_HANDLE = '@cevichelomasrico';
 
 interface Props {
     isOpen: boolean;
@@ -50,19 +53,25 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const [tableBill, setTableBill] = useState<any>(null);
     const [billMode, setBillMode] = useState<'ALL' | 'MINE'>('ALL');
     const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+    const [showClosedPopup, setShowClosedPopup] = useState(false);
     const [contact, setContact] = useState({ name: '', phone: '', email: '', marketing: false });
     const [store, setStore] = useState<StoreStatus | null>(null);
     const closed = !dineIn && !!store && (!store.open || !store.ordersEnabled);
+    const closedByHours = closed && !!store?.ordersEnabled;
+    const closedByOwner = closed && store && !store.ordersEnabled;
 
     useEffect(() => {
         if (isOpen && !dineIn) {
             getStoreStatus().then((s) => {
+                const isClosed = !s.open || !s.ordersEnabled;
                 // #region agent log
-                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'pre-fix',hypothesisId:'A',location:'CheckoutModal.tsx:storeStatus',message:'store status for checkout pay button',data:{store:s,closed:!dineIn&&!!s&&(!s.open||!s.ordersEnabled),deliveryType:deliveryTypeRef.current,buttonLabel:s&&(!s.open||!s.ordersEnabled)?(s.ordersEnabled?`Pedidos de ${s.opensAt} a ${s.closesAt}`:'Pedidos web pronto'):'PROCEDER AL PAGO'},timestamp:Date.now()})}).catch(()=>{});
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'closed-popup',hypothesisId:'P1',location:'CheckoutModal.tsx:storeStatus',message:'store closed popup decision',data:{store:s,isClosed,showPopup:isClosed},timestamp:Date.now()})}).catch(()=>{});
                 // #endregion
                 setStore(s);
+                if (isClosed) setShowClosedPopup(true);
             });
         }
+        if (!isOpen) setShowClosedPopup(false);
     }, [isOpen, dineIn]);
 
     useEffect(() => {
@@ -755,19 +764,19 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
 
                         {!preferenceId ? (
                             <button
-                                onClick={handlePreparePayment}
-                                disabled={closed || !canPay || loading || items.length === 0}
+                                onClick={closed ? () => setShowClosedPopup(true) : handlePreparePayment}
+                                disabled={!closed && (!canPay || loading || items.length === 0)}
                                 className={`w-full py-5 rounded-2xl font-black text-base uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${!closed && canPay && items.length > 0
                                     ? USES_MERCADO_PAGO
                                         ? 'bg-[#009EE3] text-white hover:bg-[#0089C7] hover:scale-[1.02] shadow-blue-200'
                                         : 'bg-[#f2642e] text-white hover:bg-[#d9551f] hover:scale-[1.02] shadow-orange-200'
-                                    : 'bg-slate-200 text-slate-900 cursor-not-allowed'
+                                    : closed
+                                        ? 'bg-slate-900 text-white hover:bg-slate-800'
+                                        : 'bg-slate-200 text-slate-900 cursor-not-allowed'
                                     }`}
                             >
                                 {closed ? (
-                                    <span className="italic">
-                                        {store?.ordersEnabled ? `Pedidos de ${store.opensAt} a ${store.closesAt}` : 'Pedidos web pronto'}
-                                    </span>
+                                    <span className="italic">No estamos atendiendo</span>
                                 ) : loading ? (
                                     <Loader2 className="animate-spin" size={20} />
                                 ) : (
@@ -807,6 +816,66 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                 </div>
             </div>
         </div>
+        {showClosedPopup && closed && (
+            <div className="fixed inset-0 z-[130] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-[2rem] p-6 md:p-8 space-y-5 max-h-[85vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95">
+                    <div className="flex justify-between items-start gap-3">
+                        <div className="w-14 h-14 rounded-2xl bg-orange-50 text-[#f2642e] flex items-center justify-center">
+                            <Clock size={28} />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowClosedPopup(false)}
+                            className="p-2 rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200"
+                            aria-label="Cerrar"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-2">
+                            {closedByOwner ? 'Pedidos web pausados' : 'Fuera de horario'}
+                        </p>
+                        <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
+                            Ahora no estamos atendiendo pedidos online
+                        </h2>
+                        <p className="mt-3 text-sm font-bold text-slate-800 leading-relaxed">
+                            {closedByHours
+                                ? `Recibimos pedidos web de ${store?.opensAt} a ${store?.closesAt}. Mientras tanto, visitanos en ${LOCATION.address} o síguenos en redes para novedades y promos.`
+                                : `Por ahora la tienda online está cerrada. Visítanos en ${LOCATION.address} y mantente atento a nuestras redes sociales.`}
+                        </p>
+                    </div>
+                    {closedByHours && (
+                        <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center gap-3 border border-slate-100">
+                            <Clock size={18} className="text-[#f2642e] shrink-0" />
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-800">Horario pedidos web</p>
+                                <p className="text-sm font-black text-slate-900">{store?.opensAt} – {store?.closesAt}</p>
+                            </div>
+                        </div>
+                    )}
+                    <a
+                        href={INSTAGRAM_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-slate-800 transition-colors"
+                    >
+                        <Instagram size={18} />
+                        {INSTAGRAM_HANDLE}
+                    </a>
+                    <button
+                        type="button"
+                        onClick={() => { setShowClosedPopup(false); onClose(); }}
+                        className="w-full py-4 rounded-2xl bg-[#f2642e] text-white font-black uppercase italic tracking-tight hover:bg-[#d9551f] transition-colors"
+                    >
+                        Entendido
+                    </button>
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-800">
+                        Cevichería · {LOCATION.city}
+                    </p>
+                </div>
+            </div>
+        )}
         {showConfirmPopup && (
             <div className="fixed inset-0 z-[120] bg-black/70 flex items-end sm:items-center justify-center p-4">
                 <div className="w-full max-w-md bg-white rounded-[2rem] p-6 space-y-4 max-h-[85vh] overflow-y-auto">
