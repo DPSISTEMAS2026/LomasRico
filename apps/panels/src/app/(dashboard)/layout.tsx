@@ -68,12 +68,18 @@ export default function DashboardLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Auto-collapse sidebar on kitchen / driver
+    // En desktop, cocina/reparto usan rail estrecho. En móvil el drawer siempre va expandido.
     useEffect(() => {
-        if (pathname === '/kitchen' || pathname === '/driver') {
-            setIsCollapsed(true);
-        }
+        if (pathname !== '/kitchen' && pathname !== '/driver') return;
+        const wide = window.matchMedia('(min-width: 1024px)');
+        const apply = () => { if (wide.matches) setIsCollapsed(true); };
+        apply();
+        wide.addEventListener('change', apply);
+        return () => wide.removeEventListener('change', apply);
     }, [pathname]);
+
+    // Drawer móvil: nunca icon-only (foto 2). Siempre labels + blur de fondo.
+    const showCollapsed = isCollapsed && !isSidebarOpen;
 
     // Repartidor: solo cocina + reparto
     useEffect(() => {
@@ -124,7 +130,15 @@ export default function DashboardLayout({
     const currentItem = menuItems.find(item => item.href === pathname);
     const hasPermission = !currentItem || canSee(currentItem);
 
-    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    const toggleSidebar = () => {
+        setIsSidebarOpen((open) => {
+            const next = !open;
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'mobile-nav',hypothesisId:'N1',location:'layout.tsx:toggleSidebar',message:'mobile drawer toggle',data:{next,pathname,isCollapsed,willShowCollapsed:isCollapsed&&!next},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return next;
+        });
+    };
 
     // Redirect to login if not authenticated
     useEffect(() => {
@@ -186,22 +200,22 @@ export default function DashboardLayout({
                 {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
 
-            {/* Sidebar */}
+            {/* Sidebar — móvil siempre expandido (w-72 + labels); colapsado solo desktop */}
             <aside className={`
-                fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 ease-in-out lg:static
-                ${isCollapsed ? 'w-[72px]' : 'w-72'}
+                fixed inset-y-0 left-0 z-40 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 ease-in-out lg:static shadow-2xl lg:shadow-none
+                ${showCollapsed ? 'w-[72px]' : 'w-[min(18rem,85vw)]'}
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
                 {/* Logo */}
-                <div className={`relative flex flex-col items-center ${isCollapsed ? 'p-3 gap-2' : 'p-6 pb-4'}`}>
+                <div className={`relative flex flex-col items-center ${showCollapsed ? 'p-3 gap-2' : 'p-6 pb-4'}`}>
                     <img
                         src="/assets/Logo Restaurante.png"
                         alt="Lo Más Rico"
-                        className={`object-contain ${isCollapsed ? 'w-10 h-10' : 'w-28 h-28'}`}
+                        className={`object-contain ${showCollapsed ? 'w-10 h-10' : 'w-28 h-28'}`}
                     />
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className={`hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-800 hover:text-slate-600 transition-colors ${isCollapsed ? '' : 'absolute top-4 right-3'}`}
+                        className={`hidden lg:flex p-2 rounded-xl hover:bg-slate-100 text-slate-800 hover:text-slate-600 transition-colors ${showCollapsed ? '' : 'absolute top-4 right-3'}`}
                         title={isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
                     >
                         {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -209,7 +223,7 @@ export default function DashboardLayout({
                 </div>
 
                 {/* Nav */}
-                <nav className={`flex-1 space-y-1.5 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                <nav className={`flex-1 space-y-1.5 overflow-y-auto ${showCollapsed ? 'px-2' : 'px-3'}`}>
                     {filteredMenu.map((item) => (
                         <SidebarItem
                             key={item.href}
@@ -217,15 +231,15 @@ export default function DashboardLayout({
                             icon={item.icon}
                             label={item.label}
                             active={item.href === '/salon' ? pathname.startsWith('/salon') : pathname === item.href}
-                            collapsed={isCollapsed}
+                            collapsed={showCollapsed}
                             onClick={() => setIsSidebarOpen(false)}
                         />
                     ))}
                 </nav>
 
                 {/* Footer */}
-                <div className={`border-t border-slate-100 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-                    {!isCollapsed && (
+                <div className={`border-t border-slate-100 ${showCollapsed ? 'p-2' : 'p-4'}`}>
+                    {!showCollapsed && (
                         <div className="flex items-center gap-3 px-3 py-2 mb-2">
                             <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold uppercase shrink-0">
                                 {user?.name?.[0] || 'U'}
@@ -239,23 +253,23 @@ export default function DashboardLayout({
 
                     <button
                         onClick={logout}
-                        title={isCollapsed ? 'Cerrar Sesión' : undefined}
+                        title={showCollapsed ? 'Cerrar Sesión' : undefined}
                         className={`flex items-center gap-3 rounded-2xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-all font-bold w-full ${
-                            isCollapsed ? 'justify-center px-3 py-3' : 'px-5 py-3'
+                            showCollapsed ? 'justify-center px-3 py-3' : 'px-5 py-3'
                         }`}
                     >
                         <LogOut size={20} />
-                        {!isCollapsed && <span className="text-sm uppercase italic tracking-tighter text-red-600">Cerrar Sesión</span>}
+                        {!showCollapsed && <span className="text-sm uppercase italic tracking-tighter text-red-600">Cerrar Sesión</span>}
                     </button>
 
-                    <div className={`mt-3 grid gap-2 ${isCollapsed ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    <div className={`mt-3 grid gap-2 ${showCollapsed ? 'grid-cols-1' : 'grid-cols-2'}`}>
                         <a
                             href="mailto:contacto@dpsistemas.cl"
                             title="contacto@dpsistemas.cl"
                             className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors"
                         >
                             <Mail size={16} />
-                            {!isCollapsed && 'Correo'}
+                            {!showCollapsed && 'Correo'}
                         </a>
                         <a
                             href="https://wa.me/56974342276"
@@ -265,17 +279,18 @@ export default function DashboardLayout({
                             className="flex items-center justify-center gap-2 rounded-xl bg-green-600 text-white py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-colors"
                         >
                             <MessageCircle size={16} />
-                            {!isCollapsed && 'WhatsApp'}
+                            {!showCollapsed && 'WhatsApp'}
                         </a>
                     </div>
                 </div>
             </aside>
 
-            {/* Backdrop for mobile */}
+            {/* Backdrop móvil: difumina el módulo de atrás */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-30 bg-slate-900/45 backdrop-blur-md lg:hidden"
                     onClick={() => setIsSidebarOpen(false)}
+                    aria-hidden
                 />
             )}
 
