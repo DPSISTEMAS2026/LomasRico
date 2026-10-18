@@ -6,9 +6,10 @@ import { DatabaseModule } from '../database/database.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { MailModule } from '../mail/mail.module';
 import { TuuModule } from './tuu.module';
+import { StoreSettingsModule } from '../store-settings/store-settings.module';
 
 @Module({
-    imports: [KitchenModule, DatabaseModule, ShippingModule, MailModule, TuuModule],
+    imports: [KitchenModule, DatabaseModule, ShippingModule, MailModule, TuuModule, StoreSettingsModule],
     controllers: [PaymentsController],
     providers: [PaymentsService],
     exports: [PaymentsService],

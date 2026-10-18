@@ -3,21 +3,26 @@ export function isInventoryEnforced(): boolean {
   return process.env.INVENTORY_ENFORCEMENT === 'true';
 }
 
-/** Pedidos web abiertos por defecto. Cerrar con WEB_ORDERS_ENABLED=false */
-export function isWebOrdersEnabled(): boolean {
+/** Kill-switch de entorno (Render). El panel dueño usa StoreSettings en DB. */
+export function isWebOrdersEnabledFromEnv(): boolean {
   const v = String(process.env.WEB_ORDERS_ENABLED ?? 'true').trim().toLowerCase();
   return v !== 'false' && v !== '0' && v !== 'off';
 }
 
-type DayHours = { days: number[]; opensAt: string; closesAt: string; label: string };
+/** @deprecated Preferir StoreSettingsService.isWebOrdersEnabled() */
+export function isWebOrdersEnabled(): boolean {
+  return isWebOrdersEnabledFromEnv();
+}
+
+export type DayHours = { days: number[]; opensAt: string; closesAt: string; label: string };
 
 /**
  * Horario de pedidos web (America/Santiago).
  * Default: Lun–Mié 14:30–21:00 · Jue–Dom 11:30–22:00
  *
  * Override:
- *   WEB_HOURS_SCHEDULE="1,2,3:14:30-21:00;0,4,5,6:11:30-22:00"  (0=dom … 6=sáb)
- *   WEB_HOURS="11:00-22:00"  → mismo rango todos los días
+ *   WEB_HOURS_SCHEDULE / WEB_HOURS (env)
+ *   StoreSettings.webHours desde el panel ("11:00-22:00")
  */
 const DEFAULT_SCHEDULE: DayHours[] = [
   { days: [1, 2, 3], opensAt: '14:30', closesAt: '21:00', label: 'Lun–Mié' },
@@ -29,7 +34,13 @@ function toMin(hhmm: string) {
   return h * 60 + (m || 0);
 }
 
-function parseSchedule(): DayHours[] {
+export function parseSchedule(webHoursOverride?: string | null): DayHours[] {
+  const fromPanel = String(webHoursOverride || '').trim();
+  if (/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(fromPanel)) {
+    const [opensAt, closesAt] = fromPanel.split('-');
+    return [{ days: [0, 1, 2, 3, 4, 5, 6], opensAt, closesAt, label: 'Todos los días' }];
+  }
+
   const raw = String(process.env.WEB_HOURS_SCHEDULE || '').trim();
   if (raw) {
     const parsed: DayHours[] = [];
@@ -69,8 +80,8 @@ function chileClock(now: Date) {
   };
 }
 
-export function storeStatus(now = new Date()) {
-  const schedule = parseSchedule();
+export function storeStatus(now = new Date(), webHoursOverride?: string | null) {
+  const schedule = parseSchedule(webHoursOverride);
   const { day, current } = chileClock(now);
   const today = schedule.find((s) => s.days.includes(day)) || schedule[0];
   const { opensAt, closesAt } = today;

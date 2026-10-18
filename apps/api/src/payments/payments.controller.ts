@@ -3,15 +3,16 @@ import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/payment.dto';
 import { FLOOR_ROLES, MANAGER_ROLES, Public, STAFF_ROLES } from '../auth/access';
 import { Roles } from '../auth/roles.decorator';
-import { isWebOrdersEnabled } from '../config/flags';
 import { TuuTerminalService, cardTerminalEnabled } from './tuu-terminal.service';
 import { webPaymentProvider } from './tuu-online.service';
+import { StoreSettingsService } from '../store-settings/store-settings.service';
 
 @Controller('payments')
 export class PaymentsController {
     constructor(
         private readonly paymentsService: PaymentsService,
         private readonly terminal: TuuTerminalService,
+        private readonly store: StoreSettingsService,
     ) { }
 
     /**
@@ -21,7 +22,9 @@ export class PaymentsController {
     @Public()
     @Post('create-preference')
     async createPreference(@Body() dto: CreatePaymentDto) {
-        if (!isWebOrdersEnabled()) throw new ForbiddenException('Los pedidos web aún no están disponibles');
+        if (!(await this.store.isWebOrdersEnabled())) {
+            throw new ForbiddenException('Los pedidos web aún no están disponibles');
+        }
         return this.paymentsService.createPreference(dto);
     }
 

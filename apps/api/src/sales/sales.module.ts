@@ -6,9 +6,10 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { ShippingModule } from '../shipping/shipping.module';
 import { AvailabilityModule } from '../availability/availability.module';
 import { TuuModule } from '../payments/tuu.module';
+import { StoreSettingsModule } from '../store-settings/store-settings.module';
 
 @Module({
-    imports: [RecipeEngineeringModule, InventoryModule, ShippingModule, AvailabilityModule, TuuModule],
+    imports: [RecipeEngineeringModule, InventoryModule, ShippingModule, AvailabilityModule, TuuModule, StoreSettingsModule],
     controllers: [SalesController],
     providers: [SalesService],
     exports: [SalesService],

@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MANAGER_ROLES, Public } from './auth/access';
 import { Roles } from './auth/roles.decorator';
-import { isWebOrdersEnabled, storeStatus } from './config/flags';
 
 @Controller()
 export class AppController {
@@ -26,12 +25,6 @@ export class AppController {
       timestamp: new Date().toISOString(),
       memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
     };
-  }
-
-  @Public()
-  @Get('store/status')
-  store() {
-    return { ...storeStatus(), ordersEnabled: isWebOrdersEnabled() };
   }
 
   // Helper for assets (Approved to keep valid image selector)

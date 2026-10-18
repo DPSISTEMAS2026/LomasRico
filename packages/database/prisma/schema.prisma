@@ -765,3 +765,17 @@ model ExternalOrder {
   @@index([platform])
   @@index([scrapedAt])
 }
+
+// --------------------------------------------------------
+// CONFIG TIENDA WEB (panel dueño: emergencia + horario)
+// --------------------------------------------------------
+
+model StoreSettings {
+  id               String   @id @default("default")
+  /// false = cierra pedidos web de inmediato (emergencia / apanados)
+  webOrdersEnabled Boolean  @default(true)
+  /// "11:00-22:00" todos los días; null = horario env/default del código
+  webHours         String?
+  updatedAt        DateTime @updatedAt
+  updatedBy        String?
+}

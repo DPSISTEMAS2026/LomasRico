@@ -4,8 +4,8 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { ValidateSaleItemDto } from './dto/validate-item.dto';
 import { CASH_ROLES, KITCHEN_ROLES, MANAGER_ROLES, Public } from '../auth/access';
 import { Roles } from '../auth/roles.decorator';
-import { isWebOrdersEnabled, storeStatus } from '../config/flags';
 import { AuditService } from '../audit/audit.service';
+import { StoreSettingsService } from '../store-settings/store-settings.service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -21,7 +21,11 @@ function webContact(raw: any) {
 
 @Controller('sales')
 export class SalesController {
-    constructor(private readonly salesService: SalesService, private readonly audit: AuditService) { }
+    constructor(
+        private readonly salesService: SalesService,
+        private readonly audit: AuditService,
+        private readonly store: StoreSettingsService,
+    ) { }
 
     /**
      * Abierto para el checkout web. Solo caja (con sesión) puede crear ventas POS,
@@ -54,10 +58,10 @@ export class SalesController {
             }
             return sale;
         }
-        if (!isWebOrdersEnabled()) {
+        if (!(await this.store.isWebOrdersEnabled())) {
             throw new ForbiddenException('Los pedidos web aún no están disponibles');
         }
-        const hours = storeStatus();
+        const hours = await this.store.getStatus();
         if (!hours.open) {
             throw new ForbiddenException(`Estamos cerrados. Recibimos pedidos de ${hours.opensAt} a ${hours.closesAt}`);
         }

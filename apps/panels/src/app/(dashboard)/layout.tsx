@@ -25,6 +25,7 @@ import {
     MessageCircle,
     ShieldCheck,
     Bike,
+    Store,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -80,6 +81,7 @@ export default function DashboardLayout({
 
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
+        { href: '/owner/store', icon: Store, label: 'Tienda web', moduleId: 'store', roles: ['OWNER', 'ADMIN'] },
         { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER', 'DRIVER'] },
         { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'] },
         { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },

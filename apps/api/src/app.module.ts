@@ -31,6 +31,7 @@ import { MailModule } from './mail/mail.module';
 import { MediaModule } from './media/media.module';
 import { AuditModule } from './audit/audit.module';
 import { DeliveryModule } from './delivery/delivery.module';
+import { StoreSettingsModule } from './store-settings/store-settings.module';
 
 // App Root
 import { AppController } from './app.controller';
@@ -64,6 +65,7 @@ import { AppService } from './app.service';
     MediaModule,
     AuditModule,
     DeliveryModule,
+    StoreSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AccessGuard }],
