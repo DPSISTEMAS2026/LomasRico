@@ -59,7 +59,7 @@ export default function SalonTablePage() {
     const [voidItem, setVoidItem] = useState<{ saleId: string; guestName: string; item: any } | null>(null);
     const [payPrompt, setPayPrompt] = useState<{ guestId?: string; label: string; amount: number } | null>(null);
     const [payMethod, setPayMethod] = useState<PosPaymentMethod>('CASH');
-    const [tipPercent, setTipPercent] = useState(0);
+    const [tipPercent, setTipPercent] = useState(10);
     const cardTerminal = useCardTerminal();
     const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalPayMethod } | null>(null);
     const [paidTerminal, setPaidTerminal] = useState<{ guestId?: string; amount: number; key: string } | null>(null);
@@ -345,7 +345,7 @@ export default function SalonTablePage() {
         const row = table?.guests?.find((g: any) => g.id === payId);
         if (!payId || !row?.openSale?.items?.length) return;
         setPayMethod('CASH');
-        setTipPercent(0);
+        // Conserva tipPercent elegido en la cuenta / pre-cuenta
         setPayPrompt({ guestId: payId, label: `Cobrar a ${row.name}`, amount: Number(row.openSale.total || 0) });
     };
 
@@ -353,7 +353,6 @@ export default function SalonTablePage() {
         const amount = Number(bill?.grandTotal ?? table?.openTotal ?? 0);
         if (!amount) return;
         setPayMethod('CASH');
-        setTipPercent(0);
         setPayPrompt({ label: 'Cobrar toda la mesa', amount });
     };
 
@@ -447,7 +446,7 @@ export default function SalonTablePage() {
                 guestName: g.name,
                 kind: 'account',
                 mode: 'guest',
-                tipPercent: 10,
+                tipPercent,
                 guests: [{ name: g.name, items, total: Number(g.total || 0) }],
                 total: Number(g.total || 0),
             });
@@ -472,7 +471,7 @@ export default function SalonTablePage() {
                 channel: `MESA ${bill.number}`,
                 kind: 'account',
                 mode: 'table',
-                tipPercent: 10,
+                tipPercent,
                 guests: tableGuests,
                 total: Number(bill.grandTotal || 0),
             });
@@ -833,9 +832,34 @@ export default function SalonTablePage() {
                                 </div>
                             </div>
                         ))}
-                        <div className="flex justify-between text-xl font-black italic">
-                            <span>Total mesa</span>
-                            <span>${Number(bill.grandTotal).toLocaleString('es-CL')}</span>
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Propina (antes del cobro)</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[0, 10, 15, 20].map((p) => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => setTipPercent(p)}
+                                        className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-900 border-transparent'}`}
+                                    >
+                                        {p === 0 ? 'No' : `${p}%`}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex justify-between text-sm font-black italic text-slate-900 pt-1">
+                                <span>Subtotal</span>
+                                <span>${Number(bill.grandTotal).toLocaleString('es-CL')}</span>
+                            </div>
+                            {tipPercent > 0 && (
+                                <div className="flex justify-between text-sm font-bold text-emerald-800">
+                                    <span>Propina {tipPercent}%</span>
+                                    <span>${Math.round(Number(bill.grandTotal) * tipPercent / 100).toLocaleString('es-CL')}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-xl font-black italic text-slate-900 border-t border-emerald-100 pt-2">
+                                <span>Total {tipPercent > 0 ? 'con propina' : 'mesa'}</span>
+                                <span>${Math.round(Number(bill.grandTotal) * (1 + tipPercent / 100)).toLocaleString('es-CL')}</span>
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 pt-2">
                             <button
@@ -868,7 +892,16 @@ export default function SalonTablePage() {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-orange-500">Mesa {table?.number}</p>
                                 <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">{payPrompt.label}</h2>
                             </div>
-                            <span className="text-2xl font-black italic text-slate-900">${Math.round(payPrompt.amount).toLocaleString('es-CL')}</span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black italic text-slate-900">
+                                    ${Math.round(payPrompt.amount * (1 + tipPercent / 100)).toLocaleString('es-CL')}
+                                </span>
+                                {tipPercent > 0 && (
+                                    <p className="text-[10px] font-bold text-slate-800">
+                                        Incluye propina {tipPercent}%
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         <PaymentMethodPicker value={payMethod} onChange={setPayMethod} cardTerminal={cardTerminal} />
                         <div>
