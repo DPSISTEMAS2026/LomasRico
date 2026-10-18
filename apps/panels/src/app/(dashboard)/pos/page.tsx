@@ -579,19 +579,26 @@ export default function POSPage() {
                                     <div className="flex-1 min-w-0">
                                         <div className="font-black text-slate-900 uppercase tracking-tighter text-sm md:text-base italic truncate group-hover:text-orange-500 transition-colors">{item.name}</div>
                                         <div className="flex flex-wrap gap-1.5 mt-2">
-                                            {item.modifiers.dynamicSelections?.map((selection: any) => (
-                                                selection.selectedOptions.map((opt: any) => (
-                                                    <span 
-                                                        key={`${selection.groupId}-${opt.id}`} 
+                                            {item.modifiers.dynamicSelections?.map((selection: any) => {
+                                                const counts = new Map<string, { name: string; qty: number }>();
+                                                for (const opt of selection.selectedOptions || []) {
+                                                    const key = opt.id || opt.name;
+                                                    const prev = counts.get(key);
+                                                    if (prev) prev.qty += 1;
+                                                    else counts.set(key, { name: opt.name, qty: 1 });
+                                                }
+                                                return [...counts.entries()].map(([key, { name, qty }]) => (
+                                                    <span
+                                                        key={`${selection.groupId}-${key}`}
                                                         className={`text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border italic tracking-tighter
-                                                            ${selection.groupName.toLowerCase().includes('proteina') 
-                                                                ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                                                            ${selection.groupName.toLowerCase().includes('proteina')
+                                                                ? 'bg-orange-50 text-orange-600 border-orange-100'
                                                                 : 'bg-slate-100 text-slate-600 border-slate-200'}`}
                                                     >
-                                                        {opt.name}
+                                                        {name}{qty > 1 ? ` ×${qty}` : ''}
                                                     </span>
-                                                ))
-                                            ))}
+                                                ));
+                                            })}
                                             {/* Legacy compatibility */}
                                             {!item.modifiers.dynamicSelections && item.modifiers.selectedProteinNames?.map((n: string, i: number) => (
                                                 <span key={`p-${i}`} className="text-[8px] md:text-[9px] font-black uppercase bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg border border-orange-100 italic">{n}</span>
