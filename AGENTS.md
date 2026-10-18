@@ -15,7 +15,7 @@ Brief para soporte desde celular (Cursor iOS / [cursor.com/agents](https://curso
 Respuestas cortas en **español chileno**. Destrabar servicio sin romper producción.
 
 ## Checklist al despertar / consulta urgente
-1. `GET https://api.lomasrico.cl/store/status` — mirá `ordersEnabled`, `open`, `opensAt`/`closesAt`.
+1. `node scripts/ops-status.mjs` (o `GET https://api.lomasrico.cl/store/status`) — `ordersEnabled`, `open`, horario.
 2. Pedidos WEB: `APPROVED` sin ticket de cocina vs `PENDING` (abandonados; ignorar).
 3. Turno cajera: solo `APPROVED`; no colgar `PENDING`.
 4. Reportá en ≤3 líneas qué está OK y qué hay que hacer.
