@@ -85,6 +85,7 @@ export default function POSPage() {
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('FIXED');
     const [showDiscountModal, setShowDiscountModal] = useState(false);
+    const [tipPercent, setTipPercent] = useState(0);
     const [orderNote, setOrderNote] = useState('');
 
     // Customer Selection
@@ -117,6 +118,8 @@ export default function POSPage() {
         customerInfo?: string;
         total: number;
         paymentLabel: string;
+        tipAmount: number;
+        tipPercent: number;
     } | null>(null);
     const printerRef = useRef<HTMLDivElement>(null);
 
@@ -249,11 +252,11 @@ export default function POSPage() {
 
     const handleCheckout = async (chargedKey?: string) => {
         if (isSubmitting || cart.length === 0) return;
-        if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(total).toLocaleString('es-CL')} en el Point?`)) return;
+        if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(chargeTotal).toLocaleString('es-CL')} en el Point?`)) return;
         let terminalPaymentKey: string | undefined;
         if (cardTerminal && isTerminalPayMethod(paymentMethod)) {
-            terminalPaymentKey = chargedKey ?? (paidTerminal?.amount === Math.round(total) ? paidTerminal.key : undefined);
-            if (!terminalPaymentKey) { setTerminalCharge(Math.round(total)); return; }
+            terminalPaymentKey = chargedKey ?? (paidTerminal?.amount === Math.round(chargeTotal) ? paidTerminal.key : undefined);
+            if (!terminalPaymentKey) { setTerminalCharge(Math.round(chargeTotal)); return; }
         }
         setIsSubmitting(true);
         const contactName = (selectedCustomer?.name || guestName).trim();
@@ -274,6 +277,7 @@ export default function POSPage() {
                 note: orderNote || undefined,
                 fulfillmentType: 'TAKEAWAY',
                 terminalPaymentKey,
+                tipPercent: tipPercent || undefined,
             } as any);
 
             setPaidTerminal(null);
@@ -295,8 +299,11 @@ export default function POSPage() {
                 customerInfo,
                 total: Math.round(total),
                 paymentLabel: paymentLabels[paymentMethod] || paymentMethod,
+                tipAmount: Math.round(Number(saleRes.shippingData?.tip?.amount ?? 0)),
+                tipPercent: Number(saleRes.shippingData?.tip?.percent ?? 0),
             });
             setCart([]);
+            setTipPercent(0);
             setShippingCost(0);
             setCashReceived(0);
             setShippingAddress('');
@@ -354,6 +361,8 @@ export default function POSPage() {
     const initialTotal = subtotal + shippingCost;
     const discountValue = Math.min(subtotal, Math.round(discountType === 'PERCENT' ? subtotal * (Math.min(discount, 100) / 100) : discount));
     const total = Math.max(0, initialTotal - discountValue);
+    const tipAmount = Math.round(Math.max(0, subtotal - discountValue) * tipPercent / 100);
+    const chargeTotal = total + tipAmount;
 
     const filteredProducts = products.filter(p => {
         if (!p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -564,7 +573,7 @@ export default function POSPage() {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => setCart([])} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Limpiar todo">
+                        <button onClick={() => { setCart([]); setTipPercent(0); }} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Limpiar todo">
                             <Trash2 size={20} />
                         </button>
                     </div>
@@ -648,11 +657,18 @@ export default function POSPage() {
                                     <span className="animate-pulse">+ ${shippingCost.toLocaleString('es-CL')}</span>
                                 </div>
                             )}
+                            {tipAmount > 0 && (
+                                <div className="flex justify-between text-[10px] md:text-[11px] font-black text-emerald-700 uppercase tracking-widest px-1">
+                                    <span className="italic">PROPINA {tipPercent}%</span>
+                                    <span>+ ${tipAmount.toLocaleString('es-CL')}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between items-end pt-3 border-t-2 border-slate-200 mt-2">
                                 <span className="text-base md:text-lg font-black text-slate-900 uppercase italic tracking-tighter">Total a Cobrar</span>
                                 <div className="flex flex-col items-end">
                                     {discount > 0 && <span className="text-sm font-bold text-slate-300 line-through decoration-red-400/50 decoration-2 italic mb-1">${initialTotal.toLocaleString('es-CL')}</span>}
-                                    <span className="text-3xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none shadow-orange-100 drop-shadow-sm">${total.toLocaleString('es-CL')}</span>
+                                    <span className="text-3xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none shadow-orange-100 drop-shadow-sm">${chargeTotal.toLocaleString('es-CL')}</span>
+                                    {tipAmount > 0 && <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest mt-1">Sin propina ${total.toLocaleString('es-CL')}</span>}
                                 </div>
                             </div>
                         </div>
@@ -683,6 +699,24 @@ export default function POSPage() {
                             >
                                 <TrendingDown size={14} /> Aplicar Descuento Especial
                             </button>
+                        )}
+
+                        {cart.length > 0 && (
+                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Propina (antes del cobro)</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[0, 10, 15, 20].map((p) => (
+                                        <button
+                                            key={p}
+                                            type="button"
+                                            onClick={() => setTipPercent(p)}
+                                            className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-900 border-transparent'}`}
+                                        >
+                                            {p === 0 ? 'No' : `${p}%`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
                         {/* Búsqueda de Cliente / Sesión de Cliente Operativo */}
@@ -831,7 +865,7 @@ export default function POSPage() {
                             <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex justify-between items-center px-1">
                                     <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Total a Cobrar</span>
-                                    <span className="text-sm font-black text-slate-800">${total.toLocaleString('es-CL')}</span>
+                                    <span className="text-sm font-black text-slate-800">${chargeTotal.toLocaleString('es-CL')}</span>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="block text-[9px] font-black uppercase text-slate-800 tracking-widest px-1">Efectivo Recibido</label>
@@ -857,17 +891,17 @@ export default function POSPage() {
                                         )}
                                     </div>
                                 </div>
-                                {total > 0 && (
+                                {chargeTotal > 0 && (
                                     <div className="flex flex-wrap gap-1.5 px-0.5">
                                         {[
-                                            total,
-                                            Math.ceil(total / 1000) * 1000,
-                                            Math.ceil(total / 5000) * 5000,
-                                            total <= 5000 ? 5000 : null,
-                                            total <= 10000 ? 10000 : null,
-                                            total <= 20000 ? 20000 : null
+                                            chargeTotal,
+                                            Math.ceil(chargeTotal / 1000) * 1000,
+                                            Math.ceil(chargeTotal / 5000) * 5000,
+                                            chargeTotal <= 5000 ? 5000 : null,
+                                            chargeTotal <= 10000 ? 10000 : null,
+                                            chargeTotal <= 20000 ? 20000 : null
                                         ]
-                                            .filter((val): val is number => val !== null && val >= total)
+                                            .filter((val): val is number => val !== null && val >= chargeTotal)
                                             .filter((val, idx, self) => self.indexOf(val) === idx)
                                             .slice(0, 5)
                                             .map((val) => (
@@ -885,10 +919,10 @@ export default function POSPage() {
                                             ))}
                                     </div>
                                 )}
-                                {cashReceived >= total && (
+                                {cashReceived >= chargeTotal && (
                                     <div className="flex justify-between items-center pt-3 border-t border-slate-100/50 px-1 animate-in zoom-in-95">
                                         <span className="text-[10px] font-black uppercase text-green-600 tracking-wider">Vuelto a entregar</span>
-                                        <span className="text-base font-black text-green-600 animate-pulse">${(cashReceived - total).toLocaleString('es-CL')}</span>
+                                        <span className="text-base font-black text-green-600 animate-pulse">${(cashReceived - chargeTotal).toLocaleString('es-CL')}</span>
                                     </div>
                                 )}
                             </div>
@@ -994,6 +1028,8 @@ export default function POSPage() {
                         heading={lastSaleForPrint.customerInfo || 'Retiro · POS'}
                         paymentLabel={lastSaleForPrint.paymentLabel}
                         waiter={user?.name || undefined}
+                        tipPercent={lastSaleForPrint.tipPercent}
+                        tipAmount={lastSaleForPrint.tipAmount}
                         guests={[{
                             name: lastSaleForPrint.customerInfo || 'Cliente',
                             items: lastSaleForPrint.items,

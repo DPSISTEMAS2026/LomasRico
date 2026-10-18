@@ -15,6 +15,8 @@ interface BoletaProps {
     guests: BoletaGuest[];
     waiter?: string;
     tipPercent?: number;
+    /** Monto ya calculado (caja: sobre el consumo, sin despacho). Si no va, se calcula con tipPercent. */
+    tipAmount?: number;
     date?: Date;
     /** Título libre (ej. Retiro / POS). Si no va, se arma según mode. */
     heading?: string;
@@ -35,13 +37,13 @@ const rule = (style: 'solid' | 'dashed' = 'dashed', weight = 1): React.CSSProper
 });
 
 export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
-    mode, tableNumber, saleCode, guests, waiter, tipPercent = 0, date = new Date(), heading, paymentLabel,
+    mode, tableNumber, saleCode, guests, waiter, tipPercent = 0, tipAmount, date = new Date(), heading, paymentLabel,
 }, ref) => {
     const pct = Number(tipPercent) || 0;
     const time = date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     const day = date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const subtotal = guests.reduce((s, g) => s + guestTotal(g), 0);
-    const tip = pct > 0 ? Math.round((subtotal * pct) / 100) : 0;
+    const tip = tipAmount != null ? Math.round(tipAmount) : pct > 0 ? Math.round((subtotal * pct) / 100) : 0;
     const showGuestHeaders = mode === 'table' && guests.length > 1;
     const isPos = mode === 'pos';
     const title = heading
@@ -132,9 +134,9 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                 <span>Consumo</span>
                 <span>{clp(subtotal)}</span>
             </div>
-            {pct > 0 && tip > 0 && (
+            {tip > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Propina ({pct}%)</span>
+                    <span>Propina{pct > 0 ? ` (${pct}%)` : ''}</span>
                     <span>{clp(tip)}</span>
                 </div>
             )}
@@ -145,7 +147,7 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                 <span>TOTAL</span>
                 <span>{clp(subtotal + tip)}</span>
             </div>
-            {pct > 0 && tip > 0 && (
+            {tip > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 2 }}>
                     <span>Sin propina</span>
                     <span>{clp(subtotal)}</span>
@@ -170,7 +172,7 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                 <div style={{ fontSize: 12, fontWeight: 700, marginTop: 8 }}>@cevichelomasrico</div>
                 <div style={{ fontSize: 9, marginTop: 10 }}>
                     {isPos
-                        ? 'Documento interno · no es boleta SII'
+                        ? `${tip > 0 ? 'La propina es voluntaria · ' : ''}Documento interno · no es boleta SII`
                         : 'La propina es voluntaria · Documento no válido como boleta'}
                 </div>
             </div>
