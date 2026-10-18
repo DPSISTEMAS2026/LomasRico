@@ -477,32 +477,17 @@ export default function POSPage() {
                                     type="button"
                                     onClick={() => handleProductClick(product)}
                                     disabled={product.available === false}
-                                    className={`group relative rounded-[2rem] shadow-sm border p-3 transition-all flex flex-col gap-3 text-left
+                                    className={`group relative rounded-[2rem] shadow-sm border p-3 transition-all flex flex-col gap-3 text-left overflow-hidden
                                         ${product.available === false
-                                            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed overflow-hidden'
-                                            : 'bg-white border-slate-100 hover:shadow-2xl hover:-translate-y-1 active:scale-95 hover:z-20'
+                                            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                                            : 'bg-white border-slate-100 hover:shadow-2xl hover:-translate-y-1 active:scale-95'
                                         }`}
                                 >
-                                    {/* Descripción desde catálogo ya cargado — sin fetch al hover */}
-                                    {!!product.description?.trim() && product.available !== false && (
-                                        <div
-                                            role="tooltip"
-                                            className="pointer-events-none absolute left-1/2 bottom-[calc(100%-0.5rem)] z-30 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 opacity-0 translate-y-1 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200"
-                                        >
-                                            <div className="rounded-2xl bg-slate-900 text-white px-3.5 py-3 shadow-2xl shadow-slate-900/30 border border-slate-700">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-orange-400 mb-1">Incluye</p>
-                                                <p className="text-[11px] font-bold leading-snug normal-case tracking-normal not-italic">
-                                                    {product.description}
-                                                </p>
-                                            </div>
-                                            <div className="mx-auto -mt-px h-2.5 w-2.5 rotate-45 bg-slate-900 border-r border-b border-slate-700" />
-                                        </div>
-                                    )}
                                     <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 relative shrink-0">
                                         <img
                                             src={product.imageUrl || '/assets/Logo Restaurante.png'}
                                             alt={product.name}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            className={`w-full h-full object-cover transition-transform duration-700 ${product.description?.trim() && product.available !== false ? 'group-hover:scale-105' : 'group-hover:scale-110'}`}
                                             onError={e => {
                                                 const img = e.currentTarget;
                                                 if (img.src.includes('Logo')) return;
@@ -510,7 +495,19 @@ export default function POSPage() {
                                                 img.className = 'w-full h-full object-contain p-6 opacity-30';
                                             }}
                                         />
-                                        <div className="absolute top-3 right-3">
+                                        {/* Descripción sobre la foto (catálogo local, sin fetch) */}
+                                        {!!product.description?.trim() && product.available !== false && (
+                                            <div
+                                                role="tooltip"
+                                                className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-end bg-gradient-to-t from-slate-950/95 via-slate-900/80 to-slate-900/20 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                            >
+                                                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-orange-400 mb-1">Incluye</p>
+                                                <p className="text-[10px] md:text-[11px] font-bold leading-snug text-white normal-case tracking-normal not-italic line-clamp-5">
+                                                    {product.description}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div className={`absolute top-3 right-3 z-20 transition-opacity ${product.description?.trim() ? 'group-hover:opacity-0' : ''}`}>
                                             <span className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase text-slate-900 shadow-sm border border-slate-100">
                                                 {product.category.split(' ')[0]}
                                             </span>
