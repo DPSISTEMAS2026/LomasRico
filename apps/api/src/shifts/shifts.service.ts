@@ -240,9 +240,8 @@ export class ShiftsService {
     }
 
     /**
-     * Get a complete shift summary with revenue breakdown by channel.
-     * Queries ALL sales during the shift period (not just shiftId-linked),
-     * so Uber Eats and other external orders are included.
+     * Resumen del turno: solo ventas vinculadas a este shiftId.
+     * WEB/apps se asignan al turno de cajera; paneles OWNER/ADMIN quedan aparte.
      */
     async getShiftSummary(shiftId: string) {
         const shift = await (this.prisma as any).cashShift.findUnique({
@@ -255,14 +254,9 @@ export class ShiftsService {
 
         if (!shift) throw new Error('Turno no encontrado');
 
-        // Query ALL sales during the shift period (captures Uber, Web, POS, etc.)
-        const periodEnd = shift.closingTime || new Date();
         const allSalesInPeriod = await (this.prisma as any).sale.findMany({
             where: {
-                createdAt: {
-                    gte: shift.openingTime,
-                    lte: periodEnd,
-                },
+                shiftId,
                 status: { not: 'CANCELLED' },
             },
             select: {

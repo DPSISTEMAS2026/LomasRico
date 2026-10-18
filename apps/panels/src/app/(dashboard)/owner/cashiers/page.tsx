@@ -523,7 +523,12 @@ export default function CashiersManagementPage() {
                                                 </div>
                                                 <div className="min-w-0">
                                                     <h4 className="font-black uppercase italic tracking-tighter text-slate-900 group-hover:text-orange-500 transition-colors leading-none truncate">{shift.cashier?.name?.split(' ')[0]}</h4>
-                                                    <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mt-1 italic">{isOpen ? 'Turno en curso' : 'Turno cerrado'}</p>
+                                                    <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mt-1 italic">
+                                                        {isOpen ? 'Turno en curso' : 'Turno cerrado'}
+                                                        {String(shift.note || '').toLowerCase().includes('gestión') || String(shift.note || '').toLowerCase().includes('permanente')
+                                                            ? ' · Panel gestión'
+                                                            : ''}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className={`p-2.5 rounded-xl border ${isOpen ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>

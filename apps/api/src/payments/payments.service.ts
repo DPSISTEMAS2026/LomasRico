@@ -10,6 +10,7 @@ import { orderConfirmationHtml } from '../mail/order-email';
 import { isInventoryEnforced } from '../config/flags';
 import { AuditService } from '../audit/audit.service';
 import { TuuOnlineService, webPaymentProvider } from './tuu-online.service';
+import { findOpenCashierShift } from '../shifts/shift-routing';
 
 const PAYMENT_LABEL: Record<string, string> = { MERCADO_PAGO: 'Mercado Pago', TUU: 'TUU' };
 
@@ -360,22 +361,32 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
                 }
             }
 
-            // Registrar en el turno de caja
-            // ✅ FIX: Si la venta no tiene shiftId (WEB, etc.), buscar turno activo
+            // Registrar en el turno de caja (WEB/apps → cajera; no turnos permanentes admin)
             let shiftId = sale.shiftId;
-            if (!shiftId) {
-                const activeShift = await tx.cashShift.findFirst({
-                    where: { status: 'OPEN' },
-                    orderBy: { openingTime: 'desc' },
-                });
-                if (activeShift) {
-                    shiftId = activeShift.id;
-                    // Vincular la venta al turno para futuros reportes
+            if (!shiftId || sale.channel === 'WEB' || sale.channel === 'UBER_EATS' || sale.channel === 'PEDIDOS_YA' || sale.channel === 'WHATSAPP') {
+                const cashierShift = await findOpenCashierShift(tx);
+                if (cashierShift) {
+                    shiftId = cashierShift.id;
                     await tx.sale.update({
                         where: { id: orderId },
                         data: { shiftId },
                     });
+                } else if (!shiftId) {
+                    const fallback = await tx.cashShift.findFirst({
+                        where: { status: 'OPEN' },
+                        orderBy: { openingTime: 'desc' },
+                    });
+                    if (fallback) {
+                        shiftId = fallback.id;
+                        await tx.sale.update({
+                            where: { id: orderId },
+                            data: { shiftId },
+                        });
+                    }
                 }
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'shift-routing',hypothesisId:'S1',location:'payments.service.ts:approve',message:'payment shift routing',data:{channel:sale.channel,shiftId:shiftId||null},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
             }
             if (shiftId) {
                 await tx.cashTransaction.create({

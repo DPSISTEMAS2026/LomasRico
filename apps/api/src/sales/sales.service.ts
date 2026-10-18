@@ -11,6 +11,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { ValidateSaleItemDto } from './dto/validate-item.dto';
 import { modifierExtrasByItem, validQuantity } from '../common/modifier-pricing';
 import { TuuTerminalService, cardTerminalEnabled } from '../payments/tuu-terminal.service';
+import { findOpenCashierShift } from '../shifts/shift-routing';
 
 // USAMOS ENUMS COMO STRINGS PARA EVITAR ERRORES DE REGENERACION
 const OrderStatus = {
@@ -433,7 +434,7 @@ export class SalesService {
                                 status: 'OPEN',
                                 startAmount: 0,
                                 openingTime: new Date(),
-                                note: `Turno Permanente Auto-generado por ${user.role} (Oscar/Admin)`
+                                note: `Gestión panel ${user.role} — ventas propias (descuentos/admin)`,
                             }
                         });
                     }
@@ -441,14 +442,13 @@ export class SalesService {
                 }
             }
 
-            // ✅ FIX: Para canales sin shiftId (WEB, UBER_EATS, PEDIDOS_YA, WHATSAPP),
-            // vincular al turno de caja abierto más reciente para que registre en reportes
+            // WEB / apps / externos → siempre turno de CAJERA (no turnos permanentes OWNER/ADMIN)
             if (!finalShiftId && channel !== 'POS') {
-                const activeShift = await tx.cashShift.findFirst({
-                    where: { status: 'OPEN' },
-                    orderBy: { openingTime: 'desc' },
-                });
-                if (activeShift) finalShiftId = activeShift.id;
+                const cashierShift = await findOpenCashierShift(tx);
+                if (cashierShift) finalShiftId = cashierShift.id;
+                // #region agent log
+                fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'shift-routing',hypothesisId:'S1',location:'sales.service.ts:assignShift',message:'non-POS sale shift routing',data:{channel,shiftId:finalShiftId||null,cashierShiftFound:!!cashierShift},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
             }
 
             // Generar código único secuencial (con retry para race conditions)
@@ -743,9 +743,11 @@ export class SalesService {
             }
 
             if (paid && amount > 0) {
-                const shiftId = sale.shiftId || (await tx.cashShift.findFirst({
-                    where: { status: 'OPEN' }, orderBy: { openingTime: 'desc' }, select: { id: true },
-                }))?.id;
+                const shiftId = sale.shiftId
+                    || (await findOpenCashierShift(tx))?.id
+                    || (await tx.cashShift.findFirst({
+                        where: { status: 'OPEN' }, orderBy: { openingTime: 'desc' }, select: { id: true },
+                    }))?.id;
                 if (shiftId) {
                     await tx.cashTransaction.create({
                         data: {
