@@ -338,8 +338,8 @@ export class KitchenService {
     }
 
     /**
-     * Genera HTML optimizado para impresión en impresora térmica de 80mm.
-     * Incluye: #pedido, canal, hora, items con modificadores, notas.
+     * HTML para térmica 58mm (BciPagos / POS Chile).
+     * Sin onload=print: la cocina imprime una sola vez desde el iframe.
      */
     async generatePrintHtml(ticketId: string, kind: 'kitchen' | 'account' = 'kitchen'): Promise<string> {
         const ticket = await (this.prisma as any).kitchenTicket.findUnique({
@@ -366,12 +366,22 @@ export class KitchenService {
 
         const sale = labeled.sale;
         const escapeHtml = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
-        const channel = escapeHtml(labeled.label || (sale.externalOrder ? sale.channel : 'POS'));
-        const guestName = escapeHtml(sale.guest?.name || [sale.customer?.name, sale.customer?.phone].filter(Boolean).join(' · '));
+        const channelRaw = String(labeled.label || (sale.externalOrder ? sale.channel : 'POS'));
+        const channel = escapeHtml(channelRaw);
+        const guestRaw = String(sale.guest?.name || [sale.customer?.name, sale.customer?.phone].filter(Boolean).join(' · ') || '').trim();
+        // Evitar "MESA 2" + "2" redundante (comanda de mesa salía enorme y cortaba el plato)
+        const guestRedundant = !guestRaw
+            || channelRaw.toUpperCase().includes(guestRaw.toUpperCase())
+            || (/^mesa\s*\d+$/i.test(channelRaw) && /^\d+$/.test(guestRaw));
+        const guestName = guestRedundant ? '' : escapeHtml(guestRaw);
         const orderCode = escapeHtml(sale.code || sale.id.substring(0, 6).toUpperCase());
         const timeZone = 'America/Santiago';
         const time = new Date(ticket.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone });
         const date = new Date(ticket.createdAt).toLocaleDateString('es-CL', { timeZone });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'comanda-print',hypothesisId:'H1-H2',location:'kitchen.service.ts:generatePrintHtml',message:'print html meta',data:{ticketId,kind,channel:channelRaw,guestRaw,guestShown:!guestRedundant,paperMm:58,hasOnloadPrint:false,itemCount:sale.items?.length||0},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         const cleanLabel = (label?: string) => String(label || '')
             .replace(/elige\s+hasta\s+\d+\s+prote[ií]nas?!?/gi, 'Proteínas')
@@ -387,7 +397,7 @@ export class KitchenService {
                 ? (typeof raw === 'string' ? JSON.parse(raw) : raw)
                 : {};
             // Negro sólido: el gris (#666) no se ve en impresoras térmicas.
-            const lineStyle = 'padding-left:12px;font-size:12px;font-weight:700;color:#000;';
+            const lineStyle = 'padding-left:2mm;font-size:12px;font-weight:700;color:#000;word-break:break-word;';
             if (Array.isArray(mods)) {
                 return mods.map((m: any) => `<div style="${lineStyle}">+ ${escapeHtml(m.name || m.optionName || m)}</div>`).join('');
             }
@@ -420,12 +430,11 @@ export class KitchenService {
             const unit = Number(item.priceUnit || 0);
             const lineTotal = unit * qty;
             const modsHtml = formatMods(item.modifiers);
-            const notes = item.note ? `<div style="padding-left:12px;font-size:11px;font-weight:bold;">NOTA: ${escapeHtml(item.note)}</div>` : '';
+            const notes = item.note ? `<div style="padding-left:2mm;font-size:11px;font-weight:bold;word-break:break-word;">NOTA: ${escapeHtml(item.note)}</div>` : '';
             return `
-                <div style="border-bottom:1px dashed #000;padding:6px 0;">
-                    <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;">
-                        <span>${qty}x ${name}</span>
-                        <span>${isAccount ? `$${lineTotal.toLocaleString('es-CL')}` : `x${qty}`}</span>
+                <div style="border-bottom:1px dashed #000;padding:5px 0;">
+                    <div style="font-weight:900;font-size:14px;word-break:break-word;overflow-wrap:anywhere;">
+                        ${qty}x ${name}${isAccount ? ` · $${lineTotal.toLocaleString('es-CL')}` : ''}
                     </div>
                     ${modsHtml}
                     ${notes}
@@ -437,35 +446,51 @@ export class KitchenService {
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="x-comanda-paper" content="58mm">
     <style>
-        @page { size: 80mm auto; margin: 0; }
-        body {
-            font-family: 'Courier New', monospace;
-            width: 72mm;
-            margin: 4mm;
-            font-size: 12px;
+        /* BciPagos / térmica estrecha: 58mm (antes 80mm se recortaba: "LO MAS RI") */
+        @page { size: 58mm auto; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 58mm;
+            max-width: 58mm;
             color: #000;
+            background: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; color: #000; }
-        .header h1 { font-size: 18px; margin: 0; letter-spacing: 1px; font-weight: 900; color: #000; }
-        .header .doc { font-size: 12px; margin-top: 4px; text-transform: uppercase; font-weight: 700; color: #000; }
-        .header .order { font-size: 22px; font-weight: 900; margin: 6px 0 2px; color: #000; }
-        .header .code { font-size: 13px; font-weight: 900; color: #000; }
-        .meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; color: #000; }
-        .note { margin-top: 8px; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 12px; font-weight: 900; color: #000; }
-        .footer { text-align: center; margin-top: 12px; padding-top: 8px; border-top: 2px solid #000; font-size: 11px; font-weight: 700; color: #000; }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.3;
+            padding: 2mm 2.5mm 18mm;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
+        .header h1 { font-size: 15px; margin: 0; letter-spacing: 0.5px; font-weight: 900; }
+        .header .doc { font-size: 11px; margin-top: 3px; text-transform: uppercase; font-weight: 700; }
+        .header .order { font-size: 20px; font-weight: 900; margin: 5px 0 2px; line-height: 1.1; }
+        .header .code { font-size: 13px; font-weight: 900; }
+        .meta { display: flex; justify-content: space-between; gap: 4px; font-size: 11px; font-weight: 700; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #000; }
+        .note { margin-top: 6px; padding: 5px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 12px; font-weight: 900; word-break: break-word; }
+        .footer { text-align: center; margin-top: 8px; padding-top: 6px; border-top: 2px solid #000; font-size: 10px; font-weight: 700; }
+        .cut-feed { height: 12mm; }
         @media print {
-            body, body * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            html, body { width: 58mm !important; max-width: 58mm !important; }
+            body, body * { color: #000 !important; }
         }
     </style>
 </head>
-<body onload="window.print()">
+<body>
     <div class="header">
         <h1>LO MAS RICO</h1>
         <div class="doc">${isAccount ? 'Cuenta interna' : 'Comanda cocina'}</div>
         <div class="order">${channel}</div>
-        ${guestName ? `<div style="font-size:16px;font-weight:bold;margin-top:4px;">${guestName}</div>` : ''}
-        ${ticket.batchNumber ? `<div style="font-size:12px;font-weight:700;margin-top:2px;color:#000;">Tanda ${ticket.batchNumber}</div>` : ''}
+        ${guestName ? `<div style="font-size:14px;font-weight:bold;margin-top:3px;">${guestName}</div>` : ''}
+        ${ticket.batchNumber ? `<div style="font-size:11px;font-weight:700;margin-top:2px;">Tanda ${ticket.batchNumber}</div>` : ''}
         <div class="code">#${orderCode}</div>
     </div>
     <div class="meta">
@@ -473,11 +498,12 @@ export class KitchenService {
         <span>${time}</span>
     </div>
     ${itemsHtml}
-    ${isAccount ? `<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:bold;"><span>TOTAL</span><span>$${saleTotal.toLocaleString('es-CL')}</span></div><div style="text-align:center;margin-top:8px;font-size:10px;">Documento interno</div>` : ''}
+    ${isAccount ? `<div style="margin-top:8px;border-top:2px solid #000;padding-top:6px;font-size:15px;font-weight:900;"><div>TOTAL</div><div>$${saleTotal.toLocaleString('es-CL')}</div></div><div style="text-align:center;margin-top:6px;font-size:10px;">Documento interno</div>` : ''}
     ${sale.note && !isAccount ? `<div class="note">NOTA<br>${escapeHtml(sale.note).replace(/\n/g, '<br>')}</div>` : ''}
     <div class="footer">
         <div>${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone })}</div>
     </div>
+    <div class="cut-feed" aria-hidden="true"></div>
 </body>
 </html>`;
     }

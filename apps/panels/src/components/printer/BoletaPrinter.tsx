@@ -55,21 +55,22 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
         <div
             ref={ref}
             style={{
-                width: '80mm',
-                maxWidth: '80mm',
+                width: '58mm',
+                maxWidth: '58mm',
                 color: '#000',
                 background: '#fff',
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 fontSize: '12px',
                 lineHeight: 1.3,
-                padding: '5mm 4mm 14mm',
+                padding: '3mm 2.5mm 18mm',
                 boxSizing: 'border-box',
+                wordBreak: 'break-word',
             }}
         >
             <style>{`
-                @page { size: 80mm auto; margin: 0; }
+                @page { size: 58mm auto; margin: 0; }
                 @media print {
-                    html, body { margin: 0 !important; width: 80mm !important; }
+                    html, body { margin: 0 !important; width: 58mm !important; max-width: 58mm !important; }
                 }
             `}</style>
 

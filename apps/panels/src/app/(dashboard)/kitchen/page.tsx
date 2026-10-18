@@ -127,6 +127,11 @@ export default function KitchenPage() {
         const res = await authFetch(`${API_URL}${path}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const html = await res.text();
+        const hasOnloadPrint = /onload\s*=\s*["']?\s*window\.print/i.test(html);
+        const paperMeta = html.match(/x-comanda-paper"\s+content="([^"]+)"/i)?.[1] || 'unknown';
+        // #region agent log
+        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'comanda-print',hypothesisId:'H1',location:'kitchen/page.tsx:openPrintHtml',message:'print job queued once',data:{path,silent:!!opts?.silent,hasOnloadPrint,paperMeta,htmlLen:html.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // iframe: evita bloqueo de popups al auto-imprimir pedidos web
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
@@ -149,6 +154,7 @@ export default function KitchenPage() {
         const runPrint = () => {
             try {
                 iframe.contentWindow?.focus();
+                // Una sola impresión: el HTML ya no trae onload=window.print()
                 iframe.contentWindow?.print();
             } catch {
                 /* ignore */
@@ -157,9 +163,9 @@ export default function KitchenPage() {
         };
         // Esperar a que el HTML de la comanda cargue tipografías/imágenes
         if (iframe.contentWindow?.document.readyState === 'complete') {
-            setTimeout(runPrint, 250);
+            setTimeout(runPrint, 400);
         } else {
-            iframe.onload = () => setTimeout(runPrint, 250);
+            iframe.onload = () => setTimeout(runPrint, 400);
         }
     }, []);
 
@@ -178,7 +184,8 @@ export default function KitchenPage() {
             printQueue.current = printQueue.current
                 .then(async () => {
                     await openPrintHtml(`/kitchen/${id}/print`, { silent: true });
-                    await new Promise((r) => setTimeout(r, 800));
+                    // Pausa para que el cutter de la térmica termine el trabajo anterior
+                    await new Promise((r) => setTimeout(r, 2200));
                 })
                 .catch(() => { /* no bloquear la cola */ });
         }
