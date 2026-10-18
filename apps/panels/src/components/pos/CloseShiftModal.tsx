@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Lock, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Lock, Loader2, AlertTriangle } from 'lucide-react';
 import { authFetch } from '../../services/authFetch';
 import { API_URL } from '../../services/api';
 import type { CashierShift, ShiftTransaction } from '@lomasrico/shared-types';
@@ -26,11 +26,40 @@ interface Props {
     onClose: () => void;
 }
 
+type OpenTable = { number: number; name: string };
+
 export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
     const [endAmount, setEndAmount] = useState('');
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [openTables, setOpenTables] = useState<OpenTable[] | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await authFetch(`${API_URL}/shifts/floor/open-tables`);
+                if (!res.ok) throw new Error('No se pudo revisar mesas abiertas');
+                const data = (await res.json()) as OpenTable[];
+                if (!cancelled) setOpenTables(Array.isArray(data) ? data : []);
+            } catch {
+                // Fallback: listado de salón
+                try {
+                    const res = await authFetch(`${API_URL}/tables`);
+                    if (!res.ok) throw new Error('fail');
+                    const tables = (await res.json()) as any[];
+                    const open = (tables || [])
+                        .filter((t) => t?.occupied || Number(t?.openTotal) > 0 || (t?.guests || []).some((g: any) => g?.openSale))
+                        .map((t) => ({ number: t.number, name: t.name || `Mesa ${t.number}` }));
+                    if (!cancelled) setOpenTables(open);
+                } catch {
+                    if (!cancelled) setOpenTables([]);
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     const summary = (shift as any)?.cashSummary as
         | { expectedCash: number; byMethod: Record<string, number>; expenses: number; withdrawals: number; refunds: number }
@@ -40,16 +69,27 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
 
     const countedAmount = parseFloat(endAmount) || 0;
     const diff = countedAmount - systemAmount;
+    const hasOpenTables = (openTables?.length || 0) > 0;
+    const openLabels = (openTables || []).map((t) => t.name || `Mesa ${t.number}`).join(', ');
 
     const handleClose = async () => {
+        if (hasOpenTables) {
+            setError(`No puedes cerrar el turno: hay mesas abiertas (${openLabels}). Cóbralas o ciérralas en Salón antes.`);
+            return;
+        }
         if (endAmount === '') { setError('Ingresa el efectivo contado'); return; }
         setLoading(true);
+        setError('');
         try {
             const res = await authFetch(`${API_URL}/shifts/${shift.id}/close`, {
                 method: 'POST',
                 body: JSON.stringify({ endAmount: countedAmount, note })
             });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.message || 'Error al cerrar turno'); }
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                const msg = Array.isArray(d.message) ? d.message.join(' ') : (d.message || 'Error al cerrar turno');
+                throw new Error(msg);
+            }
             onSuccess();
         } catch (e: any) {
             setError(e.message);
@@ -71,6 +111,23 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Cierre de Caja</h2>
                     <p className="text-slate-800 font-bold text-xs uppercase tracking-widest mt-1">Turno abierto desde las {openTime}</p>
                 </div>
+
+                {openTables === null ? (
+                    <div className="mb-6 flex items-center justify-center gap-2 text-slate-500 text-xs font-bold uppercase">
+                        <Loader2 size={14} className="animate-spin" /> Revisando mesas…
+                    </div>
+                ) : hasOpenTables ? (
+                    <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 flex gap-3 items-start">
+                        <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={22} />
+                        <div>
+                            <p className="text-sm font-black text-amber-900 uppercase tracking-tight">Mesas abiertas</p>
+                            <p className="text-xs font-bold text-amber-800 mt-1 leading-relaxed">
+                                No puedes cerrar el turno mientras haya mesas abiertas: <span className="text-amber-950">{openLabels}</span>.
+                                Cóbralas o ciérralas en Salón antes.
+                            </p>
+                        </div>
+                    </div>
+                ) : null}
 
                 {/* Resumen del turno */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
@@ -124,7 +181,8 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                             min="0"
                             value={endAmount}
                             onChange={e => setEndAmount(e.target.value)}
-                            className="w-full pl-10 pr-5 py-5 border-2 border-slate-100 rounded-2xl font-black text-3xl text-slate-900 focus:outline-none focus:border-red-400 transition-all text-center"
+                            disabled={hasOpenTables}
+                            className="w-full pl-10 pr-5 py-5 border-2 border-slate-100 rounded-2xl font-black text-3xl text-slate-900 focus:outline-none focus:border-red-400 transition-all text-center disabled:opacity-50"
                             placeholder="0"
                             autoFocus
                         />
@@ -132,7 +190,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                 </div>
 
                 {/* Diferencia */}
-                {endAmount !== '' && (
+                {endAmount !== '' && !hasOpenTables && (
                     <div className={`rounded-2xl p-4 mb-4 flex items-center justify-between ${Math.abs(diff) < 100 ? 'bg-green-50' : diff > 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
                         <span className="text-xs font-black uppercase text-slate-500">Diferencia</span>
                         <span className={`text-xl font-black italic ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -147,7 +205,8 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     <textarea
                         value={note}
                         onChange={e => setNote(e.target.value)}
-                        className="w-full border-2 border-slate-100 rounded-2xl p-4 font-bold text-sm text-slate-700 focus:outline-none focus:border-slate-300 transition-all resize-none"
+                        disabled={hasOpenTables}
+                        className="w-full border-2 border-slate-100 rounded-2xl p-4 font-bold text-sm text-slate-700 focus:outline-none focus:border-slate-300 transition-all resize-none disabled:opacity-50"
                         rows={2}
                         placeholder="Observaciones del turno..."
                     />
@@ -161,8 +220,8 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     </button>
                     <button
                         onClick={handleClose}
-                        disabled={loading}
-                        className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-black uppercase italic text-sm hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                        disabled={loading || hasOpenTables || openTables === null}
+                        className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-black uppercase italic text-sm hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-red-500"
                     >
                         {loading ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
                         Cerrar Turno

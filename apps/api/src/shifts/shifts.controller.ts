@@ -16,9 +16,10 @@ export class ShiftsController {
         return this.shiftsService.findAll({ cashierId, status });
     }
 
-    @Get(':id/summary')
-    getShiftSummary(@Param('id') id: string) {
-        return this.shiftsService.getShiftSummary(id);
+    /** Mesas con comensales o cuenta sin cobrar — bloquea cierre de turno. */
+    @Get('floor/open-tables')
+    listOpenFloorTables() {
+        return this.shiftsService.listOpenFloorTables();
     }
 
     @Get('active/:cashierId')
@@ -29,6 +30,11 @@ export class ShiftsController {
         const shift = await this.shiftsService.getActiveShift(cashierId);
         // Siempre retornar JSON válido — null causaba "Unexpected end of JSON input" en el cliente
         return shift ?? { active: false };
+    }
+
+    @Get(':id/summary')
+    getShiftSummary(@Param('id') id: string) {
+        return this.shiftsService.getShiftSummary(id);
     }
 
     @Post('open')

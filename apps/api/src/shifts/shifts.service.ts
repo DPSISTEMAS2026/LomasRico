@@ -111,6 +111,42 @@ export class ShiftsService {
         return shift;
     }
 
+    /** Mesas con comensales activos o cuenta DINE_IN sin cobrar. */
+    async listOpenFloorTables(): Promise<{ number: number; name: string }[]> {
+        const [occupied, unpaid] = await Promise.all([
+            (this.prisma as any).diningTable.findMany({
+                where: { isActive: true, guests: { some: { isActive: true } } },
+                select: { number: true, name: true },
+                orderBy: { number: 'asc' },
+            }),
+            (this.prisma as any).sale.findMany({
+                where: {
+                    fulfillmentType: 'DINE_IN',
+                    paymentStatus: 'PENDING',
+                    status: { notIn: ['CANCELLED', 'COMPLETED'] },
+                    tableId: { not: null },
+                },
+                select: { table: { select: { number: true, name: true } } },
+            }),
+        ]);
+        const byNumber = new Map<number, { number: number; name: string }>();
+        for (const t of occupied) byNumber.set(t.number, { number: t.number, name: t.name || `Mesa ${t.number}` });
+        for (const s of unpaid) {
+            const t = s.table;
+            if (t?.number != null) byNumber.set(t.number, { number: t.number, name: t.name || `Mesa ${t.number}` });
+        }
+        return [...byNumber.values()].sort((a, b) => a.number - b.number);
+    }
+
+    private async assertNoOpenTables() {
+        const open = await this.listOpenFloorTables();
+        if (!open.length) return;
+        const labels = open.map((t) => t.name || `Mesa ${t.number}`).join(', ');
+        throw new BadRequestException(
+            `No puedes cerrar el turno: hay mesas abiertas (${labels}). Cóbralas o ciérralas en Salón antes.`,
+        );
+    }
+
     // Cerrar turno
     async closeShift(shiftId: string, data: { endAmount: number; note?: string }, actorId?: string) {
         const endAmount = Number(data?.endAmount);
@@ -129,6 +165,8 @@ export class ShiftsService {
         if (shift.status === 'CLOSED') {
             throw new BadRequestException('El turno ya está cerrado');
         }
+
+        await this.assertNoOpenTables();
 
         const summary = await this.cashSummary(shift);
         const systemAmount = summary.expectedCash;
