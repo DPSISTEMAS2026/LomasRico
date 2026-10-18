@@ -410,8 +410,18 @@ export class KitchenService {
                 byGroup.set(label, [...(byGroup.get(label) || []), ...names]);
             }
             for (const [label, names] of byGroup) {
-                const uniq = [...new Set(names)];
-                lines.push(`${label}: ${uniq.join(', ')}`);
+                // Permitir repetir la misma opción (ej. Acevichado ×2 en "elige tu roll")
+                const order: string[] = [];
+                const counts = new Map<string, number>();
+                for (const n of names) {
+                    if (!counts.has(n)) order.push(n);
+                    counts.set(n, (counts.get(n) || 0) + 1);
+                }
+                const pretty = order.map((n) => {
+                    const q = counts.get(n) || 1;
+                    return q > 1 ? `${n} ×${q}` : n;
+                });
+                lines.push(`${label}: ${pretty.join(', ')}`);
             }
             (mods.selectedProteinNames || []).forEach((n: string) => n && lines.push(String(n)));
             (mods.selectedProteins || []).forEach((n: string) => n && lines.push(String(n)));
