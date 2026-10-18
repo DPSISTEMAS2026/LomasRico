@@ -7,6 +7,34 @@ import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
 import { canEnlargeBySize, channelOffersSizeUpgrade, cleanModifierLabel, filterModifiersForChannel, findSizeModifierGroup, isSuggestionRole, nextSizeUpgrade, normalizeDrinkModifiers, resolveModifierRole } from '@lomasrico/shared-types';
 
+/** MULTI con cupo ≥2: se puede repetir opción (+/−). Proteínas reales no: son sabores distintos. */
+function allowsOptionQuantities(group: {
+    type?: string;
+    maxSelections?: number;
+    groupName?: string;
+    displayName?: string;
+}) {
+    if (group.type !== 'MULTI_SELECT') return false;
+    if (Number(group.maxSelections) < 2) return false;
+    const label = `${group.groupName || ''} ${group.displayName || ''}`.toLowerCase();
+    if (/prote[ií]n/.test(label)) return false;
+    return true;
+}
+
+function countOption(ids: string[], optionId: string) {
+    return ids.reduce((n, id) => n + (id === optionId ? 1 : 0), 0);
+}
+
+function summarizeSelectedIds(ids: string[]) {
+    const order: string[] = [];
+    const counts = new Map<string, number>();
+    for (const id of ids) {
+        if (!counts.has(id)) order.push(id);
+        counts.set(id, (counts.get(id) || 0) + 1);
+    }
+    return order.map((id) => ({ id, qty: counts.get(id) || 0 }));
+}
+
 interface CevicheBuilderModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -171,6 +199,20 @@ export const CevicheBuilderModal = ({
                     return prev;
                 }
             }
+        });
+    };
+
+    /** Cupos por opción (permite repetir el mismo roll/sabor/etc.). */
+    const setOptionQuantity = (groupId: string, optionId: string, nextQty: number, max: number) => {
+        setSelections((prev) => {
+            const current = prev[groupId] || [];
+            const others = current.filter((id) => id !== optionId);
+            const capped = Math.max(0, Math.min(Math.floor(nextQty), max - others.length));
+            const next = [...others, ...Array.from({ length: capped }, () => optionId)];
+            // #region agent log
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qty-multi',hypothesisId:'Q1',location:'CevicheBuilderModal.tsx:setOptionQuantity',message:'option qty change',data:{groupId,optionId,nextQty,capped,total:next.length,max},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            return { ...prev, [groupId]: next };
         });
     };
 
@@ -341,7 +383,9 @@ export const CevicheBuilderModal = ({
                                             <p className="text-slate-900 font-bold uppercase text-[9px] tracking-[0.2em] italic">
                                                 {currentModifier.type === 'SINGLE_SELECT' 
                                                     ? 'Elige 1 de la lista' 
-                                                    : currentModifier.minSelections > 0 
+                                                    : allowsOptionQuantities(currentModifier)
+                                                        ? `Cupos ${(selections[currentModifier.groupId] || []).length}/${currentModifier.maxSelections}${currentModifier.minSelections > 0 ? ` · mínimo ${currentModifier.minSelections}` : ''} · puedes repetir`
+                                                        : currentModifier.minSelections > 0 
                                                         ? `Selecciona de ${currentModifier.minSelections} a ${currentModifier.maxSelections}`
                                                         : `Selecciona hasta ${currentModifier.maxSelections} (opcional)`
                                                 }
@@ -376,8 +420,83 @@ export const CevicheBuilderModal = ({
 
                                         {filteredOptions.length > 0 ? (
                                             filteredOptions.map((option) => {
-                                                const isSelected = (selections[currentModifier.groupId] || []).includes(option.id);
+                                                const selectedIds = selections[currentModifier.groupId] || [];
+                                                const qty = countOption(selectedIds, option.id);
+                                                const isSelected = qty > 0;
                                                 const isUnavailable = option.available === false;
+                                                const useQty = allowsOptionQuantities(currentModifier);
+                                                const canAdd = !isUnavailable && selectedIds.length < currentModifier.maxSelections;
+
+                                                if (useQty) {
+                                                    return (
+                                                        <div
+                                                            key={option.id}
+                                                            className={`p-5 rounded-[1.5rem] border-2 transition-all flex items-center justify-between ${
+                                                                isUnavailable
+                                                                    ? 'bg-slate-50 border-slate-100 text-slate-300 opacity-50'
+                                                                    : isSelected
+                                                                        ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-900/10'
+                                                                        : 'bg-white border-slate-50 text-slate-900'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-4 min-w-0">
+                                                                <span className={`font-black italic uppercase text-sm tracking-tighter truncate ${isUnavailable ? 'line-through' : ''}`}>
+                                                                    {option.name}
+                                                                </span>
+                                                                {isUnavailable && (
+                                                                    <span className="text-[8px] font-black uppercase bg-red-50 text-red-400 px-2 py-0.5 rounded-full tracking-widest shrink-0">
+                                                                        Sin stock
+                                                                    </span>
+                                                                )}
+                                                                {option.priceAdjustment !== 0 && (
+                                                                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg shrink-0 ${
+                                                                        isUnavailable ? 'bg-slate-100 text-slate-300' :
+                                                                        isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
+                                                                    }`}>
+                                                                        {option.priceAdjustment > 0 ? '+' : ''}
+                                                                        ${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Quitar ${option.name}`}
+                                                                    disabled={isUnavailable || qty <= 0}
+                                                                    onClick={() => setOptionQuantity(currentModifier.groupId, option.id, qty - 1, currentModifier.maxSelections)}
+                                                                    className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition-all active:scale-90 ${
+                                                                        qty <= 0 || isUnavailable
+                                                                            ? 'border-slate-200/40 text-slate-400 cursor-not-allowed'
+                                                                            : isSelected
+                                                                                ? 'border-white/30 text-white hover:bg-white/10'
+                                                                                : 'border-slate-200 text-slate-900'
+                                                                    }`}
+                                                                >
+                                                                    <Minus size={16} strokeWidth={3} />
+                                                                </button>
+                                                                <span className={`w-8 text-center text-lg font-black italic tabular-nums ${isSelected ? 'text-orange-400' : 'text-slate-900'}`}>
+                                                                    {qty}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Agregar ${option.name}`}
+                                                                    disabled={!canAdd}
+                                                                    onClick={() => setOptionQuantity(currentModifier.groupId, option.id, qty + 1, currentModifier.maxSelections)}
+                                                                    className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition-all active:scale-90 ${
+                                                                        !canAdd
+                                                                            ? 'border-slate-200/40 text-slate-400 cursor-not-allowed'
+                                                                            : isSelected
+                                                                                ? 'border-orange-400 text-orange-400 hover:bg-orange-500/20'
+                                                                                : 'border-slate-200 text-slate-900 hover:border-orange-300 hover:text-orange-500'
+                                                                    }`}
+                                                                >
+                                                                    <Plus size={16} strokeWidth={3} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
                                                 return (
                                                     <button
                                                         key={option.id}
@@ -462,19 +581,20 @@ export const CevicheBuilderModal = ({
                                         {mainSteps.map(group => {
                                             const selectedIds = selections[group.groupId] || [];
                                             if (selectedIds.length === 0) return null;
+                                            const summarized = summarizeSelectedIds(selectedIds);
                                             
                                             return (
                                                 <div key={group.groupId} className="flex flex-col gap-1 border-b border-slate-200/50 pb-3 last:border-0 last:pb-0">
                                                     <p className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">{group.displayName}</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {selectedIds.map(optId => {
+                                                        {summarized.map(({ id: optId, qty }) => {
                                                             const opt = group.options.find(o => o.id === optId);
                                                             return (
                                                                 <span key={optId} className="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-900 shadow-sm border border-slate-100">
-                                                                    {opt?.name}
+                                                                    {opt?.name}{qty > 1 ? ` ×${qty}` : ''}
                                                                     {opt && opt.priceAdjustment !== 0 && (
                                                                         <span className="ml-1 text-orange-500 text-[10px]">
-                                                                            +${Number(opt.priceAdjustment).toLocaleString('es-CL')}
+                                                                            +${Number(opt.priceAdjustment * qty).toLocaleString('es-CL')}
                                                                         </span>
                                                                     )}
                                                                 </span>

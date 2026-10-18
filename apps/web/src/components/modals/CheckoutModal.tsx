@@ -421,11 +421,21 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {item.modifiers?.dynamicSelections
                                                     ?.filter((ds: any) => ds.selectedOptions?.length > 0)
-                                                    .map((ds: any) => (
+                                                    .map((ds: any) => {
+                                                        const counts = new Map<string, number>();
+                                                        for (const o of ds.selectedOptions || []) {
+                                                            const key = o.name || o.id;
+                                                            counts.set(key, (counts.get(key) || 0) + 1);
+                                                        }
+                                                        const label = [...counts.entries()]
+                                                            .map(([name, qty]) => (qty > 1 ? `${name} ×${qty}` : name))
+                                                            .join(', ');
+                                                        return (
                                                         <span key={ds.groupId} className="text-[9px] bg-slate-100 text-slate-900 font-bold px-2 py-0.5 rounded-full">
-                                                            {ds.selectedOptions.map((o: any) => o.name).join(', ')}
+                                                            {label}
                                                         </span>
-                                                    ))}
+                                                        );
+                                                    })}
                                             </div>
                                         )}
                                         {item.modifiers?.extras?.map((ex: any) => (
