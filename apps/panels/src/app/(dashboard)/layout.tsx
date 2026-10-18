@@ -68,17 +68,7 @@ export default function DashboardLayout({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // En desktop, cocina/reparto usan rail estrecho. En móvil el drawer siempre va expandido.
-    useEffect(() => {
-        if (pathname !== '/kitchen' && pathname !== '/driver') return;
-        const wide = window.matchMedia('(min-width: 1024px)');
-        const apply = () => { if (wide.matches) setIsCollapsed(true); };
-        apply();
-        wide.addEventListener('change', apply);
-        return () => wide.removeEventListener('change', apply);
-    }, [pathname]);
-
-    // Drawer móvil: nunca icon-only (foto 2). Siempre labels + blur de fondo.
+    // Solo íconos si el usuario aprieta colapsar (desktop). En drawer móvil siempre expandido.
     const showCollapsed = isCollapsed && !isSidebarOpen;
 
     // Repartidor: solo cocina + reparto
