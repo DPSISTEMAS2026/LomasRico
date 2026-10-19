@@ -114,9 +114,6 @@ export class ShiftsService {
                 expectedCash -= amount;
             }
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H1-H3',location:'shifts.service.ts:cashSummary',message:'cashSummary tip+shipping',data:{shiftId:shift?.id,sales:sales.length,expectedCash,tipsTotal,tipsCash,shippingTotal},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return {
             startAmount: Number(shift.startAmount || 0),
             expectedCash,
@@ -128,6 +125,22 @@ export class ShiftsService {
             tipsCash,
             shippingTotal,
         };
+    }
+
+    private parseDayBound(raw?: string, endOfDay = false): Date | undefined {
+        if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+        const [y, m, d] = raw.split('-').map(Number);
+        const utcGuess = Date.UTC(y, m - 1, d + (endOfDay ? 1 : 0));
+        // Aprox. medianoche Chile (−03/−04): usamos offset actual Santiago vía Intl
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Santiago',
+                timeZoneName: 'longOffset',
+            }).formatToParts(new Date(utcGuess)).map((p) => [p.type, p.value]),
+        );
+        const match = /GMT([+-])(\d{2}):?(\d{2})?/.exec(parts.timeZoneName || '');
+        const offsetMin = match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3] || 0)) : -180;
+        return new Date(utcGuess - offsetMin * 60_000);
     }
 
     /** El turno debe existir, estar abierto y ser de quien opera (salvo dueño/admin). */
@@ -271,11 +284,21 @@ export class ShiftsService {
     }
 
     // Listar todos los turnos
-    async findAll(filters?: { cashierId?: string; status?: string }) {
+    async findAll(filters?: { cashierId?: string; status?: string; from?: string; to?: string }) {
+        const from = this.parseDayBound(filters?.from, false);
+        const to = this.parseDayBound(filters?.to, true);
+        const openingTime =
+            from || to
+                ? {
+                    ...(from ? { gte: from } : {}),
+                    ...(to ? { lt: to } : {}),
+                }
+                : undefined;
         const shifts = await (this.prisma as any).cashShift.findMany({
             where: {
                 cashierId: filters?.cashierId,
-                status: filters?.status as any
+                status: filters?.status as any,
+                ...(openingTime ? { openingTime } : {}),
             },
             include: {
                 cashier: {
@@ -300,11 +323,13 @@ export class ShiftsService {
                     orderBy: { createdAt: 'desc' },
                 }
             },
-            orderBy: { openingTime: 'desc' }
+            orderBy: { openingTime: 'desc' },
+            take: 120,
         });
-        return Promise.all(shifts.map(async (shift: any) =>
-            shift.status === 'OPEN' ? { ...shift, cashSummary: await this.cashSummary(shift) } : shift,
-        ));
+        return Promise.all(shifts.map(async (shift: any) => ({
+            ...shift,
+            cashSummary: await this.cashSummary(shift),
+        })));
     }
 
     /**

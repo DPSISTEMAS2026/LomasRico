@@ -12,8 +12,13 @@ export class ShiftsController {
 
     @Roles(...MANAGER_ROLES)
     @Get()
-    findAll(@Query('cashierId') cashierId?: string, @Query('status') status?: string) {
-        return this.shiftsService.findAll({ cashierId, status });
+    findAll(
+        @Query('cashierId') cashierId?: string,
+        @Query('status') status?: string,
+        @Query('from') from?: string,
+        @Query('to') to?: string,
+    ) {
+        return this.shiftsService.findAll({ cashierId, status, from, to });
     }
 
     /** Mesas con comensales o cuenta sin cobrar — bloquea cierre de turno. */

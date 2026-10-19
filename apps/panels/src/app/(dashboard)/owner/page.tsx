@@ -1,84 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-    fetchOwnerDashboard,
-    fetchTopProducts,
-    fetchPeakHours
-} from '../../../services/api';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
-    TrendingUp,
-    Users,
-    ShoppingBag,
-    ArrowUpRight,
-    ArrowDownRight,
     RefreshCcw,
-    PieChart as PieIcon,
     Flame,
-    Clock
+    Clock,
+    ShoppingBag,
+    Users,
 } from 'lucide-react';
+import { API_URL } from '../../../services/api';
+import { authFetch } from '../../../services/authFetch';
 
-// Dynamic imports for charts to avoid SSR issues
-const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
-const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
-const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
-const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
-const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
-const PieChart = dynamic(() => import('recharts').then(mod => mod.PieChart), { ssr: false });
-const Pie = dynamic(() => import('recharts').then(mod => mod.Pie), { ssr: false });
+const BarChart = dynamic(() => import('recharts').then((mod) => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then((mod) => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then((mod) => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then((mod) => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then((mod) => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then((mod) => mod.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.ResponsiveContainer), { ssr: false });
+
+function chileYmd(d = new Date()) {
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+}
+
+function chileDaysAgo(days: number) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return chileYmd(d);
+}
+
+const METHOD_LABEL: Record<string, string> = {
+    CASH: 'Efectivo',
+    DEBIT: 'Débito',
+    CREDIT: 'Crédito',
+    TRANSFER: 'Transferencia',
+    MERCADO_PAGO: 'MercadoPago',
+    MP: 'MercadoPago',
+    TUU: 'Web TUU',
+    OTHER: 'Otro',
+};
+
 export default function OwnerDashboardPage() {
+    const [from, setFrom] = useState(() => chileDaysAgo(6));
+    const [to, setTo] = useState(() => chileYmd());
     const [data, setData] = useState<any>(null);
-    const [topProducts, setTopProducts] = useState<any[]>([]);
-    const [peakHours, setPeakHours] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [tab, setTab] = useState<'channels' | 'top' | 'hours'>('channels');
-
-    useEffect(() => {
-        loadData();
-    }, []);
+    const [tab, setTab] = useState<'hours' | 'top' | 'customers' | 'payments'>('hours');
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [stats, products, shifts] = await Promise.all([
-                fetchOwnerDashboard(),
-                fetchTopProducts(),
-                fetchPeakHours()
-            ]);
-            setData(stats);
-            setTopProducts(products);
-            setPeakHours(shifts);
+            const q = new URLSearchParams({ from, to });
+            const res = await authFetch(`${API_URL}/stats/range?${q.toString()}`, { cache: 'no-store' });
+            if (res.ok) setData(await res.json());
+            else setData(null);
         } catch (e) {
-            console.error('Error loading analytics:', e);
+            console.error('Error loading resumen:', e);
+            setData(null);
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
-                <RefreshCcw size={48} className="text-orange-500 mb-4 animate-spin" />
-                <p className="text-xl font-black uppercase tracking-tighter italic animate-pulse">
-                    Analizando Datos...
-                </p>
-            </div>
-        );
-    }
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const COLORS = ['#f2642e', '#0f172a', '#3b82f6', '#10b981'];
-
-    const tabs = [
-        { key: 'channels' as const, short: 'Canales', full: 'Canales', Icon: PieIcon },
-        { key: 'top' as const, short: 'Top', full: 'Top productos', Icon: Flame },
-        { key: 'hours' as const, short: 'Horas', full: 'Horas pico', Icon: Clock },
-    ];
+    const peakHours = (data?.hours || []).filter((h: any) => h.count > 0);
+    const strongHours = (data?.peakHours || []).slice(0, 5);
 
     return (
-        <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700 pb-10 min-w-0 overflow-x-hidden">
+        <div className="space-y-4 md:space-y-5 animate-in fade-in duration-700 pb-10 min-w-0 overflow-x-hidden">
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 pl-14 lg:pl-0 text-right lg:text-left">
                     <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
@@ -86,197 +80,169 @@ export default function OwnerDashboardPage() {
                     </h1>
                 </div>
                 <button
+                    type="button"
                     onClick={loadData}
                     className="shrink-0 bg-white p-2.5 md:px-4 md:py-3 rounded-xl border border-slate-100 flex items-center justify-center gap-2 shadow-sm font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-slate-50"
-                    title="Refrescar"
                 >
-                    <RefreshCcw size={14} className="text-orange-500" />
+                    <RefreshCcw size={14} className={`text-orange-500 ${loading ? 'animate-spin' : ''}`} />
                     <span className="hidden md:inline">Refrescar</span>
                 </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
-                <StatCard
-                    title="Hoy"
-                    value={`$${Number(data?.sales?.today || 0).toLocaleString('es-CL')}`}
-                    trend={`${data?.sales?.trend || 0}%`}
-                    isUp={Number(data?.sales?.trend || 0) >= 0}
-                    icon={<TrendingUp size={16} />}
-                />
-                <StatCard
-                    title="Mes"
-                    value={`$${Number(data?.sales?.month || 0).toLocaleString('es-CL')}`}
-                    trend={`${data?.sales?.monthTrend || 0}%`}
-                    isUp={Number(data?.sales?.monthTrend || 0) >= 0}
-                    icon={<ShoppingBag size={16} />}
-                />
-                <StatCard
-                    title="Cocina"
-                    value={data?.orders?.active || 0}
-                    trend="En cola"
-                    isUp={Number(data?.orders?.active || 0) > 0}
-                    icon={<Users size={16} />}
-                />
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div className="flex-1">
+                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Desde</label>
+                    <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold" />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Hasta</label>
+                    <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold" />
+                </div>
+                <button
+                    type="button"
+                    onClick={loadData}
+                    disabled={loading}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest italic disabled:opacity-50"
+                >
+                    Buscar
+                </button>
             </div>
-            {Number(data?.inventory?.lowStock || 0) > 0 && (
-                <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 text-xs font-bold text-amber-900">
-                    {data.inventory.lowStock} ítem(s) de inventario bajo el umbral mínimo
+
+            <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50 text-sm">
+                <Row label="Ventas" value={`$${Number(data?.total || 0).toLocaleString('es-CL')}`} />
+                <Row label="Pedidos" value={String(data?.count || 0)} />
+                <Row label="Ticket promedio" value={`$${Number(data?.avgTicket || 0).toLocaleString('es-CL')}`} />
+                {!!data?.tipsTotal && <Row label="Propinas" value={`$${Number(data.tipsTotal).toLocaleString('es-CL')}`} />}
+            </div>
+
+            {strongHours.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-3">Horarios fuertes</p>
+                    <div className="flex flex-wrap gap-2">
+                        {strongHours.map((h: any) => (
+                            <span key={h.hour} className="px-3 py-1.5 rounded-xl bg-orange-50 text-orange-700 text-xs font-black">
+                                {String(h.hour).padStart(2, '0')}:00 · {h.count}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-2xl">
-                {tabs.map((t) => {
+            <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl">
+                {[
+                    { key: 'hours' as const, label: 'Horas', Icon: Clock },
+                    { key: 'top' as const, label: 'Top', Icon: Flame },
+                    { key: 'customers' as const, label: 'Clientes', Icon: Users },
+                    { key: 'payments' as const, label: 'Pagos', Icon: ShoppingBag },
+                ].map((t) => {
                     const active = tab === t.key;
                     const Icon = t.Icon;
                     return (
                         <button
                             key={t.key}
                             type="button"
-                            onClick={() => {
-                                setTab(t.key);
-                            }}
-                            className={`min-w-0 flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 px-1 rounded-xl font-black uppercase italic tracking-tight text-[9px] md:text-xs transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-800'}`}
+                            onClick={() => setTab(t.key)}
+                            className={`flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 py-2 rounded-xl font-black uppercase italic text-[9px] md:text-xs ${active ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-700'}`}
                         >
                             <Icon size={14} />
-                            <span className="md:hidden">{t.short}</span>
-                            <span className="hidden md:inline">{t.full}</span>
+                            {t.label}
                         </button>
                     );
                 })}
             </div>
 
-            {tab === 'channels' && (
-            <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col min-w-0">
-                    <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-6 md:mb-8">Canales de Venta</h3>
-                    <div className="h-[240px] md:h-[280px] w-full min-w-0 max-w-full overflow-hidden">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={(data?.orders?.byChannel || []).map((entry: any, index: number) => ({ ...entry, fill: COLORS[index % COLORS.length] }))}
-                                    innerRadius={60}
-                                    outerRadius={85}
-                                    paddingAngle={8}
-                                    dataKey="_count.id"
-                                    nameKey="channel"
-                                    stroke="none"
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6">
-                        {(data?.orders?.byChannel || []).map((entry: any, index: number) => (
-                            <div key={entry.channel} className="flex flex-col p-2.5 md:p-3 bg-slate-50 rounded-xl md:rounded-2xl">
-                                <span className="flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[9px] font-black uppercase text-slate-800">
-                                    <div className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                    {entry.channel}
-                                </span>
-                                <span className="text-base md:text-lg font-black italic text-slate-900 tracking-tighter">{entry._count.id}</span>
-                            </div>
-                        ))}
-                    </div>
-            </div>
+            {loading && (
+                <div className="py-16 flex justify-center">
+                    <RefreshCcw size={28} className="text-orange-500 animate-spin" />
+                </div>
             )}
 
-            {tab === 'top' && (
-                <div className="bg-white p-6 md:p-8 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 flex flex-col">
-                    <div className="flex justify-between items-center mb-6 md:mb-10">
-                        <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Productos más Vendidos</h3>
-                        <div className="bg-orange-50 text-orange-600 px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase">Top 5</div>
-                    </div>
-                    <div className="space-y-4 md:space-y-6 flex-1">
-                        {topProducts && topProducts.length > 0 ? topProducts.map((p, i) => (
-                            <div key={p.name} className="flex items-center gap-4 md:gap-6 group">
-                                <span className="w-4 md:w-6 font-black italic text-slate-800 text-2xl md:text-3xl group-hover:text-orange-500 transition-colors duration-500">
-                                    {i + 1}
-                                </span>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-1.5 md:mb-2 text-wrap pr-1">
-                                        <span className="font-black uppercase text-xs md:text-sm italic tracking-tighter text-slate-700 truncate max-w-[150px] md:max-w-none">{p.name}</span>
-                                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                                            <span className="font-black text-xs md:text-sm text-slate-900">{p.quantity}</span>
-                                            <span className="text-[8px] md:text-[9px] font-bold text-slate-800 uppercase">Uni.</span>
-                                        </div>
-                                    </div>
-                                    <div className="h-2 md:h-3 bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-100 shadow-inner">
-                                        <div
-                                            className="h-full bg-slate-800 rounded-full transition-all duration-1000 ease-out"
-                                            style={{ width: `${(p.quantity / topProducts[0].quantity) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="h-full min-h-[150px] flex flex-col items-center justify-center border-2 border-dashed border-slate-50 rounded-3xl md:rounded-[32px]">
-                                <ShoppingBag size={32} className="text-slate-100 mb-2 md:w-12 md:h-12" />
-                                <p className="text-slate-800 font-bold uppercase text-[9px] md:text-[10px] tracking-widest text-center px-4">Sin datos de productos</p>
-                            </div>
+            {!loading && tab === 'hours' && (
+                <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-4">Distribución horaria</p>
+                    <div className="h-[240px] md:h-[280px]">
+                        {peakHours.length ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={peakHours}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} tickFormatter={(h: number) => `${h}`} />
+                                    <YAxis hide />
+                                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 20px rgb(0 0 0 / 0.08)' }} />
+                                    <Bar dataKey="count" fill="#f2642e" radius={[8, 8, 4, 4]} barSize={22} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <Empty />
                         )}
                     </div>
                 </div>
             )}
 
-            {tab === 'hours' && (
-            <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] shadow-sm border border-slate-100 min-w-0">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-8 md:mb-12">
-                    <div>
-                        <h3 className="text-slate-800 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Distribución Horaria</h3>
-                        <p className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-slate-900 mt-1">Horas de Mayor Demanda</p>
-                    </div>
-                    <div className="hidden sm:flex gap-1.5 h-10 shrink-0">
-                        {[0, 1, 2, 3, 4, 5, 6].map(i => <div key={i} className="w-1.5 md:w-2 bg-slate-100 rounded-full h-full" />)}
-                    </div>
-                </div>
-                <div className="h-[250px] md:h-[300px] min-w-0 max-w-full overflow-hidden">
-                    {peakHours && peakHours.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={peakHours}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis
-                                    dataKey="hour"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }}
-                                    tickFormatter={(h: number) => `${h}:00`}
-                                />
-                                <YAxis hide />
-                                <Tooltip
-                                    cursor={{ fill: '#f8fafc' }}
-                                    contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
-                                />
-                                <Bar dataKey="count" fill="#f2642e" radius={[12, 12, 4, 4]} barSize={30} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-50 rounded-3xl md:rounded-[40px]">
-                            <p className="text-slate-200 font-black uppercase text-[10px] md:text-xs tracking-[0.2em] text-center px-6">Sincronizando Tendencias...</p>
+            {!loading && tab === 'top' && (
+                <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+                    {(data?.topProducts || []).length ? (data.topProducts as any[]).map((p, i) => (
+                        <div key={p.name} className="flex items-center justify-between px-4 py-3 gap-3">
+                            <span className="text-xs font-black text-slate-400 w-5">{i + 1}</span>
+                            <span className="flex-1 text-sm font-black uppercase italic tracking-tighter text-slate-800 truncate">{p.name}</span>
+                            <span className="text-sm font-black text-slate-900">{p.quantity}</span>
                         </div>
-                    )}
+                    )) : <div className="p-8"><Empty /></div>}
                 </div>
-            </div>
+            )}
+
+            {!loading && tab === 'customers' && (
+                <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+                    {(data?.habitualCustomers || []).length ? (data.habitualCustomers as any[]).map((c) => (
+                        <div key={c.userId} className="flex items-center justify-between px-4 py-3 gap-3">
+                            <div className="min-w-0">
+                                <p className="text-sm font-black uppercase italic tracking-tighter text-slate-900 truncate">{c.name}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.phone || 'Sin teléfono'} · {c.orders} pedidos</p>
+                            </div>
+                            <span className="text-sm font-black text-slate-900 shrink-0">${Number(c.total).toLocaleString('es-CL')}</span>
+                        </div>
+                    )) : <div className="p-8"><Empty label="Sin clientes habituales en el rango" /></div>}
+                </div>
+            )}
+
+            {!loading && tab === 'payments' && (
+                <div className="space-y-3">
+                    <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+                        <p className="px-4 pt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">Medios de pago</p>
+                        {(data?.byPayment || []).map((p: any) => (
+                            <div key={p.method} className="flex justify-between px-4 py-2.5 text-xs font-black uppercase">
+                                <span>{METHOD_LABEL[p.method] || p.method} ({p.count})</span>
+                                <span>${Number(p.total).toLocaleString('es-CL')}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+                        <p className="px-4 pt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">Canales</p>
+                        {(data?.byChannel || []).map((c: any) => (
+                            <div key={c.channel} className="flex justify-between px-4 py-2.5 text-xs font-black uppercase">
+                                <span>{c.channel} ({c.count})</span>
+                                <span>${Number(c.total).toLocaleString('es-CL')}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
     );
 }
 
-function StatCard({ title, value, trend, isUp, icon, color = "text-slate-900" }: any) {
+function Row({ label, value }: { label: string; value: string }) {
     return (
-        <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 min-w-0">
-            <div className="flex justify-between items-start mb-2 md:mb-4">
-                <div className="p-2 md:p-3 bg-slate-50 text-slate-900 rounded-xl shrink-0">
-                    {icon}
-                </div>
-                <div className={`flex items-center gap-0.5 text-[8px] md:text-[10px] font-black uppercase italic ${isUp ? 'text-green-500' : 'text-slate-800'} shrink-0`}>
-                    {isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    <span className="tracking-tight hidden sm:inline">{trend}</span>
-                </div>
-            </div>
-            <p className="text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 truncate">{title}</p>
-            <p className={`text-lg md:text-3xl font-black italic tracking-tighter uppercase leading-none truncate ${color}`}>
-                {value}
-            </p>
+        <div className="flex justify-between items-center px-4 py-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+            <span className="font-black italic text-slate-900 tracking-tighter text-lg">{value}</span>
+        </div>
+    );
+}
+
+function Empty({ label = 'Sin datos en el rango' }: { label?: string }) {
+    return (
+        <div className="h-full min-h-[120px] flex items-center justify-center border-2 border-dashed border-slate-100 rounded-2xl">
+            <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest text-center px-4">{label}</p>
         </div>
     );
 }

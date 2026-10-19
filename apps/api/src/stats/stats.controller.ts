@@ -20,14 +20,19 @@ export class StatsController {
         return this.statsService.getMonthReport();
     }
 
+    @Get('range')
+    getRange(@Query('from') from?: string, @Query('to') to?: string) {
+        return this.statsService.getRangeReport(from, to);
+    }
+
     @Get('top-products')
-    getTopProducts() {
-        return this.statsService.getTopProducts();
+    getTopProducts(@Query('from') from?: string, @Query('to') to?: string) {
+        return this.statsService.getTopProducts(from, to);
     }
 
     @Get('peak-hours')
-    getPeakHours() {
-        return this.statsService.getPeakHours();
+    getPeakHours(@Query('from') from?: string, @Query('to') to?: string) {
+        return this.statsService.getPeakHours(from, to);
     }
 
     @Get('tips')

@@ -222,6 +222,31 @@ function TeamMemberCard({
 // ------------------------------------------------------------------
 // Página principal
 // ------------------------------------------------------------------
+const METHOD_LABEL: Record<string, string> = {
+    CASH: 'Efectivo',
+    DEBIT: 'Débito',
+    CREDIT: 'Crédito',
+    TRANSFER: 'Transferencia',
+    MERCADO_PAGO: 'MercadoPago',
+    MP: 'MercadoPago',
+    TUU: 'Web TUU',
+    EDENRED: 'Edenred',
+    PLUXEE: 'Pluxee',
+    JUNAEB: 'Junaeb',
+    FOOD_CARD: 'Tarjeta alimentación',
+    OTHER: 'Otro',
+};
+
+function chileYmd(d = new Date()) {
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+}
+
+function chileDaysAgo(days: number) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return chileYmd(d);
+}
+
 export default function CashiersManagementPage() {
     const { user } = useAuth();
     const roleOptions = user?.role === 'OWNER' ? ROLES : ROLES.filter(r => r.value !== 'ADMIN');
@@ -232,6 +257,9 @@ export default function CashiersManagementPage() {
     const [showNewForm, setShowNewForm] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [myPin, setMyPin] = useState('');
+    const [shiftFrom, setShiftFrom] = useState(() => chileDaysAgo(14));
+    const [shiftTo, setShiftTo] = useState(() => chileYmd());
+    const [expandedShiftId, setExpandedShiftId] = useState<string | null>(null);
 
     const [newMember, setNewMember] = useState({
         name: '', email: '', pin: '', role: 'CASHIER', modules: [] as string[]
@@ -248,7 +276,10 @@ export default function CashiersManagementPage() {
                 const data = await res.json();
                 setMembers(Array.isArray(data) ? data : []);
             } else {
-                const res = await authFetch(`${API_URL}/shifts`);
+                const q = new URLSearchParams();
+                if (shiftFrom) q.set('from', shiftFrom);
+                if (shiftTo) q.set('to', shiftTo);
+                const res = await authFetch(`${API_URL}/shifts?${q.toString()}`);
                 const data = await res.json();
                 setShifts(Array.isArray(data) ? data : []);
             }
@@ -477,235 +508,149 @@ export default function CashiersManagementPage() {
                 </>
             ) : (
                 <>
-                    {/* Sección Turnos de Caja (Dashboard) */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 md:px-6 md:py-4 rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm">
-                        <div className="flex gap-3 md:gap-4 w-full md:w-auto">
-                            <div className="flex-1 md:flex-none px-4 md:px-6 py-2.5 md:py-3 bg-green-50 text-green-700 rounded-xl md:rounded-full font-black uppercase text-[8px] md:text-[10px] italic flex items-center justify-center md:justify-start gap-2 border border-green-100">
-                                <Unlock size={14} className="animate-pulse" /> {shifts.filter(s => s.status === 'OPEN').length} <span className="hidden sm:inline">ACTIVOS</span>
+                    <div className="bg-white p-4 md:px-5 md:py-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                            <div className="flex-1">
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Desde</label>
+                                <input type="date" value={shiftFrom} onChange={(e) => setShiftFrom(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-900" />
                             </div>
-                            <div className="flex-1 md:flex-none px-4 md:px-6 py-2.5 md:py-3 bg-slate-50 text-slate-800 rounded-xl md:rounded-full font-black uppercase text-[8px] md:text-[10px] italic flex items-center justify-center md:justify-start gap-2 border border-slate-100">
-                                <Lock size={14} /> {shifts.filter(s => s.status === 'CLOSED').length} <span className="hidden sm:inline">CERRADOS</span>
+                            <div className="flex-1">
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Hasta</label>
+                                <input type="date" value={shiftTo} onChange={(e) => setShiftTo(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-900" />
                             </div>
+                            <button
+                                type="button"
+                                onClick={loadData}
+                                disabled={loading}
+                                className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest italic flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Buscar
+                            </button>
                         </div>
-                        <button
-                            onClick={loadData}
-                            disabled={loading}
-                            className="w-full md:w-auto p-3 text-slate-800 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest italic"
-                        >
-                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> <span className="md:hidden">Sincronizar</span>
-                        </button>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            {shifts.filter((s) => s.status === 'OPEN').length} abiertos · {shifts.filter((s) => s.status === 'CLOSED').length} cerrados
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-                        {shifts.map(shift => {
+                    <div className="space-y-2">
+                        {shifts.length === 0 && !loading && (
+                            <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center text-xs font-bold uppercase tracking-widest text-slate-400">
+                                Sin turnos en ese rango
+                            </div>
+                        )}
+                        {shifts.map((shift) => {
                             const isOpen = shift.status === 'OPEN';
                             const openTime = new Date(shift.openingTime).toLocaleString('es-CL', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
-                            const closeTime = shift.closingTime ? new Date(shift.closingTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-
-                            const salesInPos = (shift.transactions || []).filter((t: any) => t.type === 'SALE_INCOME');
-                            const totalSalesValue = salesInPos.reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+                            const closeTime = shift.closingTime
+                                ? new Date(shift.closingTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+                                : '—';
+                            const summary = shift.cashSummary as {
+                                expectedCash?: number;
+                                byMethod?: Record<string, number>;
+                                tipsTotal?: number;
+                                tipsCash?: number;
+                                shippingTotal?: number;
+                                expenses?: number;
+                                withdrawals?: number;
+                                refunds?: number;
+                            } | undefined;
                             const systemValue = shift.systemAmount != null
                                 ? Number(shift.systemAmount)
-                                : Number(shift.cashSummary?.expectedCash ?? shift.startAmount ?? 0);
-                            let diff = 0;
-                            if (!isOpen && shift.endAmount !== null) {
-                                diff = Number(shift.endAmount) - systemValue;
-                            }
+                                : Number(summary?.expectedCash ?? shift.startAmount ?? 0);
+                            const diff = !isOpen && shift.endAmount != null ? Number(shift.endAmount) - systemValue : 0;
+                            const methodRows = Object.entries(summary?.byMethod || {}).filter(([, v]) => Number(v) !== 0);
+                            const salesCount = (shift.transactions || []).filter((t: any) => t.type === 'SALE_INCOME').length;
+                            const expanded = expandedShiftId === shift.id;
 
                             return (
-                                <div key={shift.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden group flex flex-col relative">
-                                    <div className={`h-2 w-full transition-colors duration-500 ${isOpen ? 'bg-green-500 shadow-[0_2px_10px_rgba(34,197,94,0.3)]' : 'bg-slate-200'}`} />
-                                    <div className="p-6 md:p-8 flex-1 flex flex-col">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors shadow-sm ${isOpen ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-800'}`}>
-                                                    <User size={20} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-black uppercase italic tracking-tighter text-slate-900 group-hover:text-orange-500 transition-colors leading-none truncate">{shift.cashier?.name?.split(' ')[0]}</h4>
-                                                    <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mt-1 italic">
-                                                        {isOpen ? 'Turno en curso' : 'Turno cerrado'}
-                                                        {String(shift.note || '').toLowerCase().includes('gestión') || String(shift.note || '').toLowerCase().includes('permanente')
-                                                            ? ' · Panel gestión'
-                                                            : ''}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className={`p-2.5 rounded-xl border ${isOpen ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
-                                                {isOpen ? <Activity size={18} className="animate-pulse" /> : <Lock size={18} />}
-                                            </div>
+                                <div key={shift.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => setExpandedShiftId(expanded ? null : shift.id)}
+                                        className="w-full text-left px-4 py-3 md:px-5 md:py-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 hover:bg-slate-50/80 transition-colors"
+                                    >
+                                        <div className="min-w-[7rem] flex-1">
+                                            <p className="font-black uppercase italic text-sm text-slate-900 tracking-tighter">
+                                                {shift.cashier?.name?.split(' ')[0] || 'Caja'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                                {openTime} → {closeTime} · {isOpen ? 'Abierto' : 'Cerrado'}
+                                            </p>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
-                                            <div>
-                                                <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 flex items-center gap-1.5 mb-1.5 italic"><Clock size={10} className="text-orange-500" /> Iniciado</p>
-                                                <p className="text-[11px] md:text-sm font-black text-slate-700 italic">{openTime}</p>
-                                            </div>
-                                            <div className="border-l border-slate-200 pl-4">
-                                                <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 flex items-center gap-1.5 mb-1.5 italic"><Lock size={10} className="text-orange-500" /> Finalizado</p>
-                                                <p className="text-[11px] md:text-sm font-black text-slate-700 italic">{isOpen ? '---' : closeTime}</p>
-                                            </div>
+                                        <div className="text-[10px] font-black uppercase text-slate-600 tracking-widest">{salesCount} ventas</div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Esperado</p>
+                                            <p className="font-black text-sm text-slate-900">${systemValue.toLocaleString('es-CL')}</p>
                                         </div>
-
-                                        <div className="space-y-3 py-6 border-y border-slate-50">
-                                            <div className="flex justify-between items-center text-[10px] md:text-xs">
-                                                <span className="font-black text-slate-800 uppercase tracking-widest italic">Capital Inicial</span>
-                                                <span className="font-black text-slate-900">${Number(shift.startAmount).toLocaleString('es-CL')}</span>
+                                        {!isOpen && (
+                                            <div className="text-right">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Contado</p>
+                                                <p className="font-black text-sm text-slate-900">${Number(shift.endAmount || 0).toLocaleString('es-CL')}</p>
                                             </div>
-
-                                            {/* === DESGLOSE POR CANAL === */}
-                                            {(() => {
-                                                // Build channel breakdown from sales
-                                                const channelData: Record<string, { count: number; total: number }> = {};
-                                                const sales = shift.sales || [];
-                                                for (const sale of sales) {
-                                                    const ch = sale.channel || 'OTHER';
-                                                    if (!channelData[ch]) channelData[ch] = { count: 0, total: 0 };
-                                                    channelData[ch].count++;
-                                                    channelData[ch].total += Number(sale.total);
-                                                }
-
-                                                const CHANNEL_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-                                                    POS: { label: 'POS (Local)', icon: '🏪', color: 'text-blue-600' },
-                                                    UBER_EATS: { label: 'Uber Eats', icon: '🟢', color: 'text-green-600' },
-                                                    PEDIDOS_YA: { label: 'PedidosYa', icon: '🔴', color: 'text-red-600' },
-                                                    WEB: { label: 'Web', icon: '🌐', color: 'text-purple-600' },
-                                                    WHATSAPP: { label: 'WhatsApp', icon: '💬', color: 'text-emerald-600' },
-                                                };
-
-                                                const channels = Object.entries(channelData);
-                                                const totalAllChannels = channels.reduce((s, [, v]) => s + v.total, 0);
-
-                                                if (channels.length === 0) {
-                                                    return (
-                                                        <div className="flex justify-between items-center text-[10px] md:text-xs">
-                                                            <span className="font-black text-slate-800 uppercase tracking-widest italic">Ventas</span>
-                                                            <span className="font-black text-slate-900 italic">Sin ventas</span>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                return (
-                                                    <>
-                                                        {channels.map(([ch, data]) => {
-                                                            const cfg = CHANNEL_CONFIG[ch] || { label: ch, icon: '📦', color: 'text-slate-600' };
-                                                            return (
-                                                                <div key={ch} className="flex justify-between items-center text-[10px] md:text-xs">
-                                                                    <span className="font-black text-slate-800 uppercase tracking-widest italic">
-                                                                        {cfg.icon} {cfg.label} ({data.count})
-                                                                    </span>
-                                                                    <span className={`font-black ${cfg.color}`}>+${data.total.toLocaleString('es-CL')}</span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-100">
-                                                            <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Bruto</span>
-                                                            <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">${totalAllChannels.toLocaleString('es-CL')}</span>
-                                                        </div>
-
-                                                        {/* === COMISIONES PLATAFORMAS === */}
-                                                        {(() => {
-                                                            const COMMISSIONS: Record<string, { rate: number; label: string; icon: string }> = {
-                                                                UBER_EATS: { rate: 0.15, label: 'Uber Eats', icon: '🟢' },
-                                                                PEDIDOS_YA: { rate: 0.20, label: 'PedidosYa', icon: '🔴' },
-                                                            };
-                                                            let totalComm = 0;
-                                                            const commLines: { label: string; icon: string; gross: number; rate: number; commission: number; net: number }[] = [];
-
-                                                            for (const [ch, cfg] of Object.entries(COMMISSIONS)) {
-                                                                const cd = channelData[ch];
-                                                                if (cd && cd.count > 0) {
-                                                                    const commission = Math.round(cd.total * cfg.rate);
-                                                                    totalComm += commission;
-                                                                    commLines.push({
-                                                                        label: cfg.label,
-                                                                        icon: cfg.icon,
-                                                                        gross: cd.total,
-                                                                        rate: cfg.rate,
-                                                                        commission,
-                                                                        net: cd.total - commission,
-                                                                    });
-                                                                }
-                                                            }
-
-                                                            if (commLines.length === 0) return null;
-
-                                                            return (
-                                                                <div className="mt-3 bg-red-50/50 rounded-2xl p-3 border border-red-100/50 space-y-2">
-                                                                    <p className="text-[8px] font-black text-red-400 uppercase tracking-widest italic mb-2">📊 Comisiones Plataformas</p>
-                                                                    {commLines.map(c => (
-                                                                        <div key={c.label} className="space-y-1">
-                                                                            <div className="flex justify-between items-center text-[10px]">
-                                                                                <span className="font-bold text-slate-500 italic">{c.icon} {c.label} ({(c.rate * 100).toFixed(0)}%)</span>
-                                                                                <span className="font-black text-red-500 italic">-${c.commission.toLocaleString('es-CL')}</span>
-                                                                            </div>
-                                                                            <div className="flex justify-between items-center text-[9px] pl-4">
-                                                                                <span className="text-slate-800 italic">Neto {c.label}</span>
-                                                                                <span className="font-bold text-green-600 italic">${c.net.toLocaleString('es-CL')}</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                    <div className="flex justify-between items-center text-[10px] md:text-xs pt-2 mt-1 border-t border-red-200/50">
-                                                                        <span className="font-black text-red-500 uppercase tracking-widest italic">Total Comisiones</span>
-                                                                        <span className="font-black text-red-600 italic">-${totalComm.toLocaleString('es-CL')}</span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
-
-                                                        {/* INGRESO NETO (después de comisiones) */}
-                                                        {(() => {
-                                                            const RATES: Record<string, number> = { UBER_EATS: 0.15, PEDIDOS_YA: 0.20 };
-                                                            let totalComm = 0;
-                                                            for (const [ch, rate] of Object.entries(RATES)) {
-                                                                const cd = channelData[ch];
-                                                                if (cd && cd.count > 0) totalComm += Math.round(cd.total * rate);
-                                                            }
-                                                            if (totalComm === 0) return null;
-                                                            return (
-                                                                <div className="flex justify-between items-center text-[11px] md:text-sm pt-2 mt-1">
-                                                                    <span className="font-black text-green-700 uppercase tracking-widest italic">💰 Ingreso Neto</span>
-                                                                    <span className="font-black text-green-700 text-lg md:text-xl italic tracking-tighter">${(totalAllChannels - totalComm).toLocaleString('es-CL')}</span>
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </>
-                                                );
-                                            })()}
-
-                                            <div className="flex justify-between items-center text-[11px] md:text-sm pt-4 mt-2 border-t border-slate-50">
-                                                <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Esperado</span>
-                                                <span className="font-black text-slate-950 text-lg md:text-xl italic tracking-tighter">$ {systemValue.toLocaleString('es-CL')}</span>
+                                        )}
+                                        {!isOpen && (
+                                            <div className={`font-black italic text-sm ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                                {diff > 0 ? '+' : ''}{diff.toLocaleString('es-CL')}
                                             </div>
+                                        )}
+                                        <ChevronUp size={16} className={`text-slate-300 transition-transform ${expanded ? '' : 'rotate-180'}`} />
+                                    </button>
 
-                                            {!isOpen && (
-                                                <div className="flex justify-between items-center text-[10px] md:text-xs pt-3 bg-slate-50/50 p-3 rounded-xl border border-dashed border-slate-200">
-                                                    <span className="font-black text-slate-800 uppercase tracking-widest italic">Total Contado</span>
-                                                    <span className="font-black text-slate-900 italic">$ {Number(shift.endAmount || 0).toLocaleString('es-CL')}</span>
+                                    {expanded && (
+                                        <div className="px-4 pb-4 md:px-5 md:pb-5 border-t border-slate-50 space-y-2 pt-3">
+                                            <div className="flex justify-between text-xs font-black uppercase text-slate-700">
+                                                <span>Efectivo inicial</span>
+                                                <span>${Number(shift.startAmount || 0).toLocaleString('es-CL')}</span>
+                                            </div>
+                                            {methodRows.map(([method, total]) => (
+                                                <div key={method} className="flex justify-between text-xs font-black uppercase text-slate-900">
+                                                    <span>{METHOD_LABEL[method] || method}</span>
+                                                    <span>${Number(total).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            ))}
+                                            {!!summary?.shippingTotal && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-sky-700 pt-2 border-t border-slate-100">
+                                                    <span>Reparto / envío</span>
+                                                    <span>${Number(summary.shippingTotal).toLocaleString('es-CL')}</span>
                                                 </div>
                                             )}
-                                        </div>
-
-                                        {!isOpen && (
-                                            <div className={`mt-auto pt-6 flex items-center justify-between`}>
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-900 italic">Balance Final</span>
-                                                <div className={`flex items-center gap-2 font-black italic text-lg md:text-2xl tracking-tighter ${diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                                    {diff > 0 ? <TrendingUp size={24} /> : diff < 0 ? <TrendingDown size={24} /> : <ShieldCheck size={24} />}
-                                                    {diff > 0 ? '+' : ''}{diff.toLocaleString('es-CL')}
+                                            {!!summary?.tipsTotal && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-emerald-700 pt-2 border-t border-slate-100">
+                                                    <span>Propinas</span>
+                                                    <span>${Number(summary.tipsTotal).toLocaleString('es-CL')}</span>
                                                 </div>
-                                            </div>
-                                        )}
-                                        {shift.note && (
-                                            <div className="mt-4 bg-orange-50/30 p-4 rounded-2xl border border-orange-100 group-hover:bg-white transition-colors duration-500">
-                                                <p className="text-[8px] font-black text-orange-400 uppercase mb-2 flex items-center gap-1.5 italic"><FileText size={12} /> Observación</p>
-                                                <p className="text-[11px] font-bold text-slate-600 italic leading-snug">"{shift.note}"</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl translate-x-12 -translate-y-12 transition-all group-hover:bg-orange-500/10" />
+                                            )}
+                                            {!!summary?.tipsCash && (
+                                                <div className="flex justify-between text-[10px] font-bold uppercase text-emerald-600/80 pl-2">
+                                                    <span>↳ En efectivo (cajón)</span>
+                                                    <span>${Number(summary.tipsCash).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {!!summary?.withdrawals && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                                    <span>Retiros</span>
+                                                    <span>-${Number(summary.withdrawals).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {!!summary?.expenses && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                                    <span>Gastos</span>
+                                                    <span>-${Number(summary.expenses).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {!!summary?.refunds && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-red-600">
+                                                    <span>Devoluciones</span>
+                                                    <span>-${Number(summary.refunds).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {shift.note && (
+                                                <p className="text-[11px] font-bold text-slate-500 italic pt-2 border-t border-slate-50">"{shift.note}"</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            )
+                            );
                         })}
                     </div>
                 </>

@@ -89,10 +89,6 @@ export class StoreSettingsService implements OnModuleInit {
     });
     await this.refreshCache();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'store-settings',hypothesisId:'ST1',location:'store-settings.service.ts:update',message:'store settings updated',data:{webOrdersEnabled:row.webOrdersEnabled,webHours:row.webHours,updatedBy},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     return this.getAdmin();
   }
 }

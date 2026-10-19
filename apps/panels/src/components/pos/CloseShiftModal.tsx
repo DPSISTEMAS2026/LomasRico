@@ -79,12 +79,6 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
     const tipsCash = Math.round(Number(summary?.tipsCash || 0));
     const shippingTotal = Math.round(Number(summary?.shippingTotal || 0));
 
-    useEffect(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'post-fix',hypothesisId:'H-UI',location:'CloseShiftModal.tsx:summary',message:'close shift summary fields',data:{hasSummary:!!summary,expectedCash:systemAmount,tipsTotal,tipsCash,shippingTotal,methodCount:methodRows.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-    }, [summary, systemAmount, tipsTotal, tipsCash, shippingTotal, methodRows.length]);
-
     const countedAmount = parseFloat(endAmount) || 0;
     const diff = countedAmount - systemAmount;
     const hasOpenTables = (openTables?.length || 0) > 0;

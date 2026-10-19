@@ -246,13 +246,31 @@ export class StatsService {
         };
     }
 
-    async getTopProducts() {
+    private parseDayBound(raw?: string, endOfDay = false): Date | undefined {
+        if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+        const [y, m, d] = raw.split('-').map(Number);
+        const utcGuess = Date.UTC(y, m - 1, d + (endOfDay ? 1 : 0));
+        return new Date(utcGuess - zoned(new Date(utcGuess)).offsetMin * 60_000);
+    }
+
+    private rangeFromQuery(from?: string, to?: string) {
+        const today = zoned(new Date());
+        const start = this.parseDayBound(from, false) || santiagoMidnight(today.year, today.month, today.day - 6);
+        const end = this.parseDayBound(to, true) || new Date(santiagoMidnight(today.year, today.month, today.day).getTime() + 24 * 3600_000);
+        return { start, end };
+    }
+
+    async getTopProducts(from?: string, to?: string) {
+        const { start, end } = this.rangeFromQuery(from, to);
         const byProduct = await (this.prisma as any).saleItem.groupBy({
             by: ['sellingProductId'],
-            where: { sellingProductId: { not: null }, sale: PAID },
+            where: {
+                sellingProductId: { not: null },
+                sale: { ...PAID, createdAt: { gte: start, lt: end } },
+            },
             _sum: { quantity: true },
             orderBy: { _sum: { quantity: 'desc' } },
-            take: 5
+            take: 8,
         });
         if (!byProduct.length) return [];
 
@@ -268,12 +286,11 @@ export class StatsService {
         }));
     }
 
-    async getPeakHours() {
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
+    async getPeakHours(from?: string, to?: string) {
+        const { start, end } = this.rangeFromQuery(from, to);
         const sales = await (this.prisma as any).sale.findMany({
-            where: { createdAt: { gte: sevenDaysAgo }, ...PAID },
-            select: { createdAt: true }
+            where: { createdAt: { gte: start, lt: end }, ...PAID },
+            select: { createdAt: true },
         });
 
         const hours = new Array(24).fill(0);
@@ -282,5 +299,96 @@ export class StatsService {
         });
 
         return hours.map((count, hour) => ({ hour, count }));
+    }
+
+    /** Resumen filtrable: ventas, ticket, horas, canales, clientes habituales. */
+    async getRangeReport(from?: string, to?: string) {
+        const { start, end } = this.rangeFromQuery(from, to);
+        const sales = await (this.prisma as any).sale.findMany({
+            where: { createdAt: { gte: start, lt: end }, ...PAID },
+            select: {
+                id: true,
+                total: true,
+                createdAt: true,
+                paymentMethod: true,
+                channel: true,
+                fulfillmentType: true,
+                userId: true,
+                shippingData: true,
+                user: { select: { id: true, name: true, phone: true, email: true } },
+            },
+        });
+
+        let total = 0;
+        let tipsTotal = 0;
+        const payments = new Map<string, { method: string; total: number; count: number }>();
+        const channels = new Map<string, { channel: string; total: number; count: number }>();
+        const hours = new Array(24).fill(0);
+        const byUser = new Map<string, { userId: string; name: string; phone: string | null; orders: number; total: number }>();
+
+        for (const s of sales) {
+            const amount = Number(s.total || 0);
+            total += amount;
+            hours[zoned(new Date(s.createdAt)).hour]++;
+
+            const tip = Math.round(Number((s.shippingData as any)?.tip?.amount || 0));
+            if (tip > 0) tipsTotal += tip;
+
+            const method = s.paymentMethod || 'OTHER';
+            const p = payments.get(method) || { method, total: 0, count: 0 };
+            p.total += amount;
+            p.count += 1;
+            payments.set(method, p);
+
+            const channel = s.channel === 'POS' && s.fulfillmentType === 'DINE_IN' ? 'SALON' : (s.channel || 'OTHER');
+            const c = channels.get(channel) || { channel, total: 0, count: 0 };
+            c.total += amount;
+            c.count += 1;
+            channels.set(channel, c);
+
+            if (s.userId && s.user) {
+                const u = byUser.get(s.userId) || {
+                    userId: s.userId,
+                    name: s.user.name || 'Cliente',
+                    phone: s.user.phone || null,
+                    orders: 0,
+                    total: 0,
+                };
+                u.orders += 1;
+                u.total += amount;
+                byUser.set(s.userId, u);
+            }
+        }
+
+        const count = sales.length;
+        const peakHours = hours
+            .map((countH, hour) => ({ hour, count: countH }))
+            .filter((h) => h.count > 0)
+            .sort((a, b) => b.count - a.count);
+        const habitualCustomers = [...byUser.values()]
+            .filter((u) => u.orders >= 2)
+            .sort((a, b) => b.orders - a.orders || b.total - a.total)
+            .slice(0, 15);
+
+        const [topProducts] = await Promise.all([
+            this.getTopProducts(from, to),
+        ]);
+
+        return {
+            from: from || null,
+            to: to || null,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            total,
+            count,
+            avgTicket: count ? Math.round(total / count) : 0,
+            tipsTotal,
+            byPayment: [...payments.values()].sort((a, b) => b.total - a.total),
+            byChannel: [...channels.values()].sort((a, b) => b.total - a.total),
+            peakHours,
+            hours: hours.map((countH, hour) => ({ hour, count: countH })),
+            topProducts,
+            habitualCustomers,
+        };
     }
 }
