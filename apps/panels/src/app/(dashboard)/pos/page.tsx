@@ -86,6 +86,7 @@ export default function POSPage() {
     const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('FIXED');
     const [showDiscountModal, setShowDiscountModal] = useState(false);
     const [tipPercent, setTipPercent] = useState(0);
+    const [tipManual, setTipManual] = useState('');
     const [orderNote, setOrderNote] = useState('');
 
     // Customer Selection
@@ -278,6 +279,7 @@ export default function POSPage() {
                 fulfillmentType: 'TAKEAWAY',
                 terminalPaymentKey,
                 tipPercent: tipPercent || undefined,
+                tipAmount: tipPercent > 0 ? undefined : (Math.round(Number(tipManual) || 0) || undefined),
             } as any);
 
             setPaidTerminal(null);
@@ -304,6 +306,7 @@ export default function POSPage() {
             });
             setCart([]);
             setTipPercent(0);
+            setTipManual('');
             setShippingCost(0);
             setCashReceived(0);
             setShippingAddress('');
@@ -361,7 +364,10 @@ export default function POSPage() {
     const initialTotal = subtotal + shippingCost;
     const discountValue = Math.min(subtotal, Math.round(discountType === 'PERCENT' ? subtotal * (Math.min(discount, 100) / 100) : discount));
     const total = Math.max(0, initialTotal - discountValue);
-    const tipAmount = Math.round(Math.max(0, subtotal - discountValue) * tipPercent / 100);
+    const tipBase = Math.max(0, subtotal - discountValue);
+    const tipAmount = tipPercent > 0
+        ? Math.round(tipBase * tipPercent / 100)
+        : Math.max(0, Math.round(Number(tipManual) || 0));
     const chargeTotal = total + tipAmount;
 
     const filteredProducts = products.filter(p => {
@@ -573,7 +579,7 @@ export default function POSPage() {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => { setCart([]); setTipPercent(0); }} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Limpiar todo">
+                        <button onClick={() => { setCart([]); setTipPercent(0); setTipManual(''); }} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Limpiar todo">
                             <Trash2 size={20} />
                         </button>
                     </div>
@@ -659,7 +665,7 @@ export default function POSPage() {
                             )}
                             {tipAmount > 0 && (
                                 <div className="flex justify-between text-[10px] md:text-[11px] font-black text-emerald-700 uppercase tracking-widest px-1">
-                                    <span className="italic">PROPINA {tipPercent}%</span>
+                                    <span className="italic">PROPINA{tipPercent > 0 ? ` ${tipPercent}%` : ''}</span>
                                     <span>+ ${tipAmount.toLocaleString('es-CL')}</span>
                                 </div>
                             )}
@@ -702,19 +708,36 @@ export default function POSPage() {
                         )}
 
                         {cart.length > 0 && (
-                            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Propina (antes del cobro)</p>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[0, 10, 15, 20].map((p) => (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => setTipPercent(p)}
-                                            className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-900 border-transparent'}`}
-                                        >
-                                            {p === 0 ? 'No' : `${p}%`}
-                                        </button>
-                                    ))}
+                            <div className="grid grid-cols-[1fr_1fr_1.4fr] gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setTipPercent(0); setTipManual(''); }}
+                                    className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === 0 && !tipManual ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-900 border-slate-100'}`}
+                                >
+                                    No
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setTipPercent(10); setTipManual(''); }}
+                                    className={`py-2.5 rounded-xl text-[10px] font-black uppercase italic border-2 ${tipPercent === 10 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-900 border-slate-100'}`}
+                                >
+                                    10%
+                                </button>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">$</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        inputMode="numeric"
+                                        value={tipManual}
+                                        onChange={(e) => {
+                                            setTipPercent(0);
+                                            setTipManual(e.target.value.replace(/[^\d]/g, ''));
+                                        }}
+                                        onFocus={() => setTipPercent(0)}
+                                        className={`w-full h-full pl-7 pr-2 py-2.5 rounded-xl text-[11px] font-black text-slate-900 border-2 outline-none ${tipPercent === 0 && tipManual !== '' ? 'border-emerald-600 bg-emerald-50' : 'border-slate-100 bg-white'}`}
+                                        placeholder="0"
+                                    />
                                 </div>
                             </div>
                         )}
