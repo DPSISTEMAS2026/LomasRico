@@ -9,29 +9,43 @@ export interface MediaAsset {
     url: string;
 }
 
-/** Sube el archivo directo a Cloudinary y devuelve la URL de entrega optimizada. */
-export async function uploadMedia(file: File, folder: MediaFolder): Promise<MediaAsset> {
-    const signRes = await authFetch(`${API_URL}/media/signature?folder=${folder}`);
-    if (!signRes.ok) throw new Error(`No se pudo autorizar la subida (HTTP ${signRes.status})`);
-    const sign = await signRes.json();
+async function readError(res: Response): Promise<string> {
+    const data = await res.json().catch(() => ({} as any));
+    const msg = Array.isArray(data?.message) ? data.message.join(' ') : data?.message;
+    return msg || `HTTP ${res.status}`;
+}
 
-    const isVideo = file.type.startsWith('video/');
+/**
+ * Sube por la API (Cloudinary firmado en el servidor).
+ * Más fiable que el browser → Cloudinary directo (CORS / firma / env en Render).
+ */
+export async function uploadMedia(file: File, folder: MediaFolder): Promise<MediaAsset> {
+    if (file.size > 10 * 1024 * 1024) {
+        throw new Error('El archivo supera 10 MB. Comprime la imagen e inténtalo de nuevo.');
+    }
+
     const form = new FormData();
     form.append('file', file);
-    form.append('api_key', sign.apiKey);
-    form.append('timestamp', String(sign.timestamp));
-    form.append('folder', sign.folder);
-    form.append('signature', sign.signature);
 
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/${isVideo ? 'video' : 'image'}/upload`, {
+    const res = await authFetch(`${API_URL}/media/upload?folder=${encodeURIComponent(folder)}`, {
         method: 'POST',
         body: form,
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    if (!res.ok) {
+        const detail = await readError(res);
+        if (res.status === 503 || /cloudinary/i.test(detail)) {
+            throw new Error(`${detail} Revisá las variables CLOUDINARY_* en Render.`);
+        }
+        throw new Error(detail);
+    }
+
+    const data = await res.json();
+    const isVideo = file.type.startsWith('video/');
+    const rawUrl = String(data.url || data.secure_url || '');
+    if (!rawUrl) throw new Error('La subida no devolvió URL');
 
     return {
-        publicId: data.public_id,
-        url: cloudinaryTransform(data.secure_url, isVideo ? CLOUDINARY_VIDEO : CLOUDINARY_IMAGE),
+        publicId: String(data.publicId || data.public_id || ''),
+        url: cloudinaryTransform(rawUrl, isVideo ? CLOUDINARY_VIDEO : CLOUDINARY_IMAGE),
     };
 }

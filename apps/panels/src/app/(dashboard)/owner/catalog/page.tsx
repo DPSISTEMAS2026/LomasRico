@@ -297,15 +297,15 @@ export default function CatalogManagementPage() {
         const payload = {
             name,
             description: editingProduct.description,
-            price: editingProduct.price,
+            price: Number(editingProduct.price) || 0,
             category,
-            imageUrl: editingProduct.imageUrl,
-            imageKey: editingProduct.imageKey,
+            imageUrl: editingProduct.imageUrl || undefined,
+            imageKey: editingProduct.imageKey || undefined,
             hoverVideoUrl: editingProduct.hoverVideoUrl || undefined,
             hoverVideoKey: editingProduct.hoverVideoKey || undefined,
             isActive: editingProduct.isActive,
             isConfigurable: editingProduct.isConfigurable,
-            maxProteins: editingProduct.maxProteins || 0
+            maxProteins: Number(editingProduct.maxProteins) || 0
         };
 
         try {
@@ -849,7 +849,7 @@ export default function CatalogManagementPage() {
                                             )}
                                         </div>
                                         <div className="w-full max-w-[200px]">
-                                            <input type="file" id="img-upload" className="hidden" onChange={handleFileUpload} disabled={uploading}/>
+                                            <input type="file" id="img-upload" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading}/>
                                             <label htmlFor="img-upload" className={`w-full block py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-center cursor-pointer transition-all flex items-center justify-center gap-2 ${uploading ? 'bg-slate-200 text-slate-800' : 'bg-slate-900 text-white hover:bg-black shadow-lg shadow-slate-200'}`}>
                                                 {uploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />}
                                                 {editingProduct.imageUrl ? 'CAMBIAR IMAGEN' : 'SUBIR IMAGEN'}
