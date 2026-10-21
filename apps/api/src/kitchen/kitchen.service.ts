@@ -323,17 +323,13 @@ export class KitchenService {
     }
 
     async createTicket(saleId: string) {
-        const existing = await (this.prisma as any).kitchenTicket.findFirst({
-            where: { saleId }
-        });
-
-        if (existing) return existing;
-
-        return (this.prisma as any).kitchenTicket.create({
-            data: {
-                saleId,
-                status: TicketStatus.WAITING
-            }
+        return (this.prisma as any).$transaction(async (tx: any) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${saleId}))`;
+            const existing = await tx.kitchenTicket.findFirst({ where: { saleId } });
+            if (existing) return existing;
+            return tx.kitchenTicket.create({
+                data: { saleId, status: TicketStatus.WAITING },
+            });
         });
     }
 
