@@ -2,6 +2,8 @@
 export const CLOUDINARY_IMAGE = 'f_auto,q_auto,c_limit,w_1600';
 export const CLOUDINARY_VIDEO = 'q_auto,c_limit,w_720';
 export const CLOUDINARY_THUMB = 'f_auto,q_auto,c_fill,w_300,h_300';
+/** Tarjetas y mosaico de la tienda. Más chico que la foto guardada (1600). */
+export const CLOUDINARY_CARD = 'f_auto,q_auto,c_limit,w_720';
 
 export function isCloudinaryUrl(url?: string | null): boolean {
     return !!url && /^https:\/\/res\.cloudinary\.com\/[^/]+\/(image|video)\/upload\//.test(url);

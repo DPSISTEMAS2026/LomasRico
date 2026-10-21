@@ -9,7 +9,7 @@ import { useTableSession } from '../../context/TableSessionContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon, Instagram, Clock } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import { cleanModifierLabel, LOCATION } from '@lomasrico/shared-types';
+import { cleanModifierLabel, CLOUDINARY_THUMB, cloudinaryTransform, LOCATION } from '@lomasrico/shared-types';
 import { quietError } from '../../lib/quietLog';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/cevichelomasrico/';
@@ -397,7 +397,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                 <div key={item.tempId} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 items-start group hover:border-slate-200 transition-colors">
                                     <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden shrink-0 relative">
                                         <img
-                                            src={item.imageUrl || `/assets/${item.name}.jpg`}
+                                            src={cloudinaryTransform(item.imageUrl || `/assets/${item.name}.jpg`, CLOUDINARY_THUMB)}
                                             onError={(e) => {
                                                 const target = e.currentTarget;
                                                 if (!target.src.includes('Logo')) {

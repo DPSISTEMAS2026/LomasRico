@@ -5,7 +5,7 @@ import { ProductCard } from './ProductCard';
 import { CevicheBuilderModal } from '../modals/CevicheBuilderModal';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
-import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webSectionKey, groupProductsByWebSection, filterModifiersForChannel } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, categoryRole, MENU_ROLE_LABEL, webSectionKey, groupProductsByWebSection, filterModifiersForChannel, CLOUDINARY_CARD, cloudinaryTransform } from '@lomasrico/shared-types';
 import { useTableSession } from '../../context/TableSessionContext';
 import { API_URL } from '../../services/api';
 
@@ -17,7 +17,7 @@ function photosForIds(products: Product[], ids: Set<string>) {
     const urls: string[] = [];
     for (const product of products) {
         if (!ids.has(product.id)) continue;
-        const url = product.imageUrl;
+        const url = product.imageUrl ? cloudinaryTransform(product.imageUrl, CLOUDINARY_CARD) : '';
         if (url && url.length > 4 && !urls.includes(url)) urls.push(url);
         if (urls.length >= 8) break;
     }
@@ -51,6 +51,8 @@ function CategoryMosaic({ photos }: { photos: string[] }) {
             <img
                 src={src}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 h-full w-full object-cover scale-100 transition-transform duration-500 ease-out group-hover:scale-110"
                 onError={(e) => {
                     const img = e.currentTarget;

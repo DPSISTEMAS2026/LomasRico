@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-/** v=4: originales en alta (no el preview 1024px de Cursor). */
-const V = '4';
+/** v=5: mismo tamaño en píxeles, JPEG más liviano. El navegador pide una sola por vez. */
+const V = '5';
 
 const SLIDES = [
   {
@@ -32,6 +32,8 @@ export function BannerSection() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
+  const slide = SLIDES[index];
+
   useEffect(() => {
     if (paused || SLIDES.length < 2) return;
     const timer = window.setInterval(() => {
@@ -39,6 +41,13 @@ export function BannerSection() {
     }, INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [paused]);
+
+  useEffect(() => {
+    const next = SLIDES[(index + 1) % SLIDES.length];
+    const desktop = window.matchMedia('(min-width: 768px)').matches;
+    const img = new Image();
+    img.src = desktop ? next.desktop : next.mobile;
+  }, [index]);
 
   return (
     <div
@@ -48,40 +57,20 @@ export function BannerSection() {
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      {/* Escritorio — ratio ~3:1 como los PNG originales */}
-      <div className="hidden md:block w-full aspect-[3/1] overflow-hidden bg-[#fff6ea] relative">
-        {SLIDES.map((slide, i) => (
+      {/* Una sola foto: la del tamaño de la pantalla y la que está en vista. */}
+      <div className="w-full aspect-[3/2] md:aspect-[3/1] overflow-hidden bg-[#fff6ea] relative">
+        <picture key={slide.id}>
+          <source media="(min-width: 768px)" srcSet={slide.desktop} />
           <img
-            key={`d-${slide.id}`}
-            src={slide.desktop}
-            alt={slide.alt}
-            width={2172}
-            height={724}
-            decoding={i === 0 ? 'sync' : 'async'}
-            fetchPriority={i === 0 ? 'high' : 'low'}
-            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
-              i === index ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Móvil — ratio 3:2 */}
-      <div className="block md:hidden w-full aspect-[3/2] overflow-hidden bg-[#fff6ea] relative">
-        {SLIDES.map((slide, i) => (
-          <img
-            key={`m-${slide.id}`}
             src={slide.mobile}
             alt={slide.alt}
             width={1536}
             height={1024}
-            decoding={i === 0 ? 'sync' : 'async'}
-            fetchPriority={i === 0 ? 'high' : 'low'}
-            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
-              i === index ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
+            decoding="async"
+            fetchPriority="high"
+            className="absolute inset-0 w-full h-full object-cover object-center animate-in fade-in duration-700"
           />
-        ))}
+        </picture>
       </div>
 
       <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-10">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { isShowcasePlate } from '@lomasrico/shared-types';
+import { CLOUDINARY_CARD, cloudinaryTransform, isShowcasePlate } from '@lomasrico/shared-types';
 import { API_URL } from '../../services/api';
 
 type Ball = {
@@ -164,7 +164,7 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
                     isShowcasePlate(p.category, p.name) && typeof p.imageUrl === 'string' && p.imageUrl.length > 4,
                 );
                 const excluded = all.filter((p: { category?: string; name?: string }) => !isShowcasePlate(p.category, p.name));
-                const urls = [...new Set(plates.map((p: { imageUrl: string }) => p.imageUrl))];
+                const urls = [...new Set(plates.map((p: { imageUrl: string }) => cloudinaryTransform(p.imageUrl, CLOUDINARY_CARD)))];
                 fromApi = urls.length;
                 if (urls.length >= 4) photosRef.current = urls;
             } catch {
