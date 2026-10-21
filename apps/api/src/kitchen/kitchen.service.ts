@@ -324,7 +324,7 @@ export class KitchenService {
 
     async createTicket(saleId: string) {
         return (this.prisma as any).$transaction(async (tx: any) => {
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${saleId}))`;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${saleId}), 0)`;
             const existing = await tx.kitchenTicket.findFirst({ where: { saleId } });
             if (existing) return existing;
             return tx.kitchenTicket.create({

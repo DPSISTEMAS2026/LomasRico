@@ -85,7 +85,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
             : 'Esperando a la máquina…';
 
     return (
-        <div className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[120] bg-black/50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-5 text-center shadow-2xl">
                 <div className="flex justify-center">
                     {busy

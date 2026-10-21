@@ -24,15 +24,20 @@ export function isTerminalPayMethod(method: PosPaymentMethod): method is Termina
     return isTerminalCardMethod(method);
 }
 
-let terminalConfig: Promise<boolean> | null = null;
-
 /** true cuando las tarjetas se cobran en la máquina TUU integrada. */
 export function useCardTerminal(): boolean {
     const [enabled, setEnabled] = useState(false);
     useEffect(() => {
-        terminalConfig ??= fetchPaymentConfig().then((c) => c.cardTerminal === 'tuu');
         let alive = true;
-        void terminalConfig.then((v) => { if (alive) setEnabled(v); });
+        const load = async () => {
+            for (let i = 0; i < 4 && alive; i++) {
+                const c = await fetchPaymentConfig();
+                if (!alive) return;
+                if (c.cardTerminal === 'tuu') { setEnabled(true); return; }
+                await new Promise((r) => setTimeout(r, 700));
+            }
+        };
+        void load();
         return () => { alive = false; };
     }, []);
     return enabled;

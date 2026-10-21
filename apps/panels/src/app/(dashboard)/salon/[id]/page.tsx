@@ -61,6 +61,7 @@ export default function SalonTablePage() {
     const [payMethod, setPayMethod] = useState<PosPaymentMethod>('CASH');
     const [tipPercent, setTipPercent] = useState(10);
     const cardTerminal = useCardTerminal();
+    const payMethodTouched = useRef(false);
     const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalPayMethod } | null>(null);
     const [paidTerminal, setPaidTerminal] = useState<{ guestId?: string; amount: number; key: string } | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
@@ -344,7 +345,8 @@ export default function SalonTablePage() {
         const payId = targetGuestId || guestId;
         const row = table?.guests?.find((g: any) => g.id === payId);
         if (!payId || !row?.openSale?.items?.length) return;
-        setPayMethod('CASH');
+        payMethodTouched.current = false;
+        setPayMethod(cardTerminal ? 'DEBIT' : 'CASH');
         // Conserva tipPercent elegido en la cuenta / pre-cuenta
         setPayPrompt({ guestId: payId, label: `Cobrar a ${row.name}`, amount: Number(row.openSale.total || 0) });
     };
@@ -352,9 +354,14 @@ export default function SalonTablePage() {
     const askPayAll = () => {
         const amount = Number(bill?.grandTotal ?? table?.openTotal ?? 0);
         if (!amount) return;
-        setPayMethod('CASH');
+        payMethodTouched.current = false;
+        setPayMethod(cardTerminal ? 'DEBIT' : 'CASH');
         setPayPrompt({ label: 'Cobrar toda la mesa', amount });
     };
+
+    useEffect(() => {
+        if (cardTerminal && payPrompt && !payMethodTouched.current) setPayMethod('DEBIT');
+    }, [cardTerminal, payPrompt]);
 
     const confirmPay = () => {
         if (!payPrompt) return;
@@ -362,7 +369,7 @@ export default function SalonTablePage() {
         const tip = Math.round(prompt.amount * tipPercent / 100);
         setPayPrompt(null);
         let key: string | undefined;
-        if (cardTerminal && isTerminalPayMethod(payMethod)) {
+        if (isTerminalPayMethod(payMethod)) {
             const amount = Math.round(prompt.amount + tip);
             if (paidTerminal?.guestId === prompt.guestId && paidTerminal?.amount === amount) key = paidTerminal.key;
             else { setTerminalCharge({ guestId: prompt.guestId, amount, method: payMethod }); return; }
@@ -903,7 +910,7 @@ export default function SalonTablePage() {
                                 )}
                             </div>
                         </div>
-                        <PaymentMethodPicker value={payMethod} onChange={setPayMethod} cardTerminal={cardTerminal} />
+                        <PaymentMethodPicker value={payMethod} onChange={(method) => { payMethodTouched.current = true; setPayMethod(method); }} cardTerminal={cardTerminal} />
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2">Propina</p>
                             <div className="grid grid-cols-4 gap-2">
@@ -930,7 +937,7 @@ export default function SalonTablePage() {
                                 Cancelar
                             </button>
                             <button type="button" onClick={confirmPay} disabled={busy} className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs disabled:opacity-40">
-                                {payMethod === 'MP' ? 'Cobrado en el Point' : 'Cobrar'}
+                                {payMethod === 'MP' ? 'Cobrado en el Point' : isTerminalPayMethod(payMethod) ? 'Enviar a la máquina' : 'Cobrar'}
                             </button>
                         </div>
                     </div>
