@@ -21,10 +21,11 @@ interface Props {
     total: number;
 }
 
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '';
 const USES_MERCADO_PAGO = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER !== 'tuu';
 
-if (typeof window !== 'undefined' && USES_MERCADO_PAGO) {
-    initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '', { locale: 'es-CL' });
+if (typeof window !== 'undefined' && USES_MERCADO_PAGO && MP_PUBLIC_KEY) {
+    initMercadoPago(MP_PUBLIC_KEY, { locale: 'es-CL' });
 }
 
 export default function CheckoutModal({ isOpen, onClose, total }: Props) {
@@ -334,11 +335,13 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             }
 
             const pref = await prefRes.json();
-            if (pref.preferenceId || pref.id) {
-                setPreferenceId(pref.preferenceId || pref.id);
-            } else if (pref.initPoint) {
+            const preferenceId = pref.preferenceId || pref.id;
+            const initPoint = typeof pref.initPoint === 'string' ? pref.initPoint : '';
+            if (USES_MERCADO_PAGO && MP_PUBLIC_KEY && preferenceId) {
+                setPreferenceId(preferenceId);
+            } else if (initPoint) {
                 redirecting = true;
-                window.location.assign(pref.initPoint);
+                window.location.assign(initPoint);
             } else {
                 throw new Error('No se pudo iniciar el pago.');
             }

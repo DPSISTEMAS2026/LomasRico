@@ -171,10 +171,13 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
 
             this.logger.log(`Preference created: ${result.id}`);
 
+            // Sin preferenceId el checkout web redirige a init_point.
+            // El botón embebido exige NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY en el build
+            // y, si falta, queda en blanco.
             return {
-                preferenceId: result.id,
+                preferenceId: null,
                 initPoint: result.init_point,
-                sandboxInitPoint: result.sandbox_init_point
+                sandboxInitPoint: result.sandbox_init_point,
             };
 
         } catch (error) {
