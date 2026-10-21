@@ -15,7 +15,7 @@ import { BoletaPrinter, type BoletaGuest } from '../../../../components/printer/
 import { Product, CartItem } from '../../../../types';
 import { useAuth } from '../../../../context/AuthContext';
 import { ApprovalModal, type Approval } from '../../../../components/common/ApprovalModal';
-import { PaymentMethodPicker, isTerminalPayMethod, useCardTerminal, type PosPaymentMethod, type TerminalPayMethod } from '../../../../components/pos/PaymentMethodPicker';
+import { isTerminalPayMethod, type PosPaymentMethod, type TerminalPayMethod } from '../../../../components/pos/PaymentMethodPicker';
 import { TerminalChargeModal } from '../../../../components/pos/TerminalChargeModal';
 import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
@@ -58,10 +58,8 @@ export default function SalonTablePage() {
     const [bill, setBill] = useState<any>(null);
     const [voidItem, setVoidItem] = useState<{ saleId: string; guestName: string; item: any } | null>(null);
     const [payPrompt, setPayPrompt] = useState<{ guestId?: string; label: string; amount: number } | null>(null);
-    const [payMethod, setPayMethod] = useState<PosPaymentMethod>('CASH');
+    const [payMethod, setPayMethod] = useState<PosPaymentMethod>('DEBIT');
     const [tipPercent, setTipPercent] = useState(10);
-    const cardTerminal = useCardTerminal();
-    const payMethodTouched = useRef(false);
     const [terminalCharge, setTerminalCharge] = useState<{ guestId?: string; amount: number; method: TerminalPayMethod } | null>(null);
     const [paidTerminal, setPaidTerminal] = useState<{ guestId?: string; amount: number; key: string } | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
@@ -345,8 +343,7 @@ export default function SalonTablePage() {
         const payId = targetGuestId || guestId;
         const row = table?.guests?.find((g: any) => g.id === payId);
         if (!payId || !row?.openSale?.items?.length) return;
-        payMethodTouched.current = false;
-        setPayMethod(cardTerminal ? 'DEBIT' : 'CASH');
+        setPayMethod('DEBIT');
         // Conserva tipPercent elegido en la cuenta / pre-cuenta
         setPayPrompt({ guestId: payId, label: `Cobrar a ${row.name}`, amount: Number(row.openSale.total || 0) });
     };
@@ -354,14 +351,9 @@ export default function SalonTablePage() {
     const askPayAll = () => {
         const amount = Number(bill?.grandTotal ?? table?.openTotal ?? 0);
         if (!amount) return;
-        payMethodTouched.current = false;
-        setPayMethod(cardTerminal ? 'DEBIT' : 'CASH');
+        setPayMethod('DEBIT');
         setPayPrompt({ label: 'Cobrar toda la mesa', amount });
     };
-
-    useEffect(() => {
-        if (cardTerminal && payPrompt && !payMethodTouched.current) setPayMethod('DEBIT');
-    }, [cardTerminal, payPrompt]);
 
     const confirmPay = () => {
         if (!payPrompt) return;
@@ -910,7 +902,25 @@ export default function SalonTablePage() {
                                 )}
                             </div>
                         </div>
-                        <PaymentMethodPicker value={payMethod} onChange={(method) => { payMethodTouched.current = true; setPayMethod(method); }} cardTerminal={cardTerminal} />
+                        <div className="grid grid-cols-3 gap-2">
+                            {([
+                                { id: 'DEBIT' as const, label: 'Débito' },
+                                { id: 'CREDIT' as const, label: 'Crédito' },
+                                { id: 'CASH' as const, label: 'Efectivo' },
+                            ]).map((m) => (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => setPayMethod(m.id)}
+                                    className={`h-20 rounded-2xl border-2 font-black italic uppercase text-xs tracking-wide ${payMethod === m.id ? 'bg-white border-orange-500 text-orange-500 shadow-md' : 'bg-white border-slate-200 text-slate-900'}`}
+                                >
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-xs font-bold text-slate-800 -mt-2">
+                            {isTerminalPayMethod(payMethod) ? 'El monto sale en la máquina TUU.' : 'Efectivo. Se imprime la boleta, sin máquina.'}
+                        </p>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2">Propina</p>
                             <div className="grid grid-cols-4 gap-2">
@@ -937,7 +947,7 @@ export default function SalonTablePage() {
                                 Cancelar
                             </button>
                             <button type="button" onClick={confirmPay} disabled={busy} className="py-3 rounded-2xl bg-slate-900 text-white font-black uppercase italic text-xs disabled:opacity-40">
-                                {payMethod === 'MP' ? 'Cobrado en el Point' : isTerminalPayMethod(payMethod) ? 'Enviar a la máquina' : 'Cobrar'}
+                                {isTerminalPayMethod(payMethod) ? 'Enviar a la máquina' : 'Dar boleta'}
                             </button>
                         </div>
                     </div>
