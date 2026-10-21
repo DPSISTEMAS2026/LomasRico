@@ -195,7 +195,15 @@ export class ProductsService implements OnModuleInit {
         });
     }
 
-    async findActive() {
+    async findActive(channel?: string) {
+        const data = await this.loadActiveCached();
+        if (String(channel || '').trim().toLowerCase() === 'web') {
+            return data.filter((product) => product.showOnWeb !== false);
+        }
+        return data;
+    }
+
+    private async loadActiveCached() {
         if (
             this.activeCache
             && this.activeCache.version === this.prisma.catalogVersion
@@ -223,6 +231,7 @@ export class ProductsService implements OnModuleInit {
                 imageUrl: true,
                 price: true,
                 isActive: true,
+                showOnWeb: true,
                 isConfigurable: true,
                 maxProteins: true,
                 sortOrder: true,

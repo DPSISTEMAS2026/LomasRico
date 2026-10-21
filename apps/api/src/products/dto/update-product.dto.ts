@@ -39,6 +39,10 @@ export class UpdateProductDto {
 
     @IsBoolean()
     @IsOptional()
+    showOnWeb?: boolean;
+
+    @IsBoolean()
+    @IsOptional()
     isConfigurable?: boolean;
 
     @IsNumber()

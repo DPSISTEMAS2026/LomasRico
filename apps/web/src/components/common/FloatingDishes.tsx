@@ -157,7 +157,7 @@ export default function FloatingDishes({ cardRef }: { cardRef?: RefObject<HTMLDi
         (async () => {
             let fromApi = 0;
             try {
-                const res = await fetch(`${API_URL}/products/active`);
+                const res = await fetch(`${API_URL}/products/active?channel=web`);
                 const data = res.ok ? await res.json() : [];
                 const all = Array.isArray(data) ? data : [];
                 const plates = all.filter((p: { category?: string; name?: string; imageUrl?: string }) =>

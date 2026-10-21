@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -19,8 +19,8 @@ export class ProductsController {
 
     @Public()
     @Get('active')
-    findActive() {
-        return this.productsService.findActive();
+    findActive(@Query('channel') channel?: string) {
+        return this.productsService.findActive(channel);
     }
 
     // Solo autenticados — Reordenar productos (debe ir ANTES de :id)

@@ -270,6 +270,7 @@ export default function CatalogManagementPage() {
             hoverVideoUrl: '',
             hoverVideoKey: '',
             isActive: true,
+            showOnWeb: true,
             isConfigurable: false,
             maxProteins: 0,
             order: products.length + 1
@@ -304,6 +305,7 @@ export default function CatalogManagementPage() {
             hoverVideoUrl: editingProduct.hoverVideoUrl || undefined,
             hoverVideoKey: editingProduct.hoverVideoKey || undefined,
             isActive: editingProduct.isActive,
+            showOnWeb: editingProduct.showOnWeb !== false,
             isConfigurable: editingProduct.isConfigurable,
             maxProteins: Number(editingProduct.maxProteins) || 0
         };
@@ -334,7 +336,7 @@ export default function CatalogManagementPage() {
         }
     };
 
-    const toggleProductStatus = async (id: string, currentStatus: boolean, field: 'isActive' | 'isConfigurable') => {
+    const toggleProductStatus = async (id: string, currentStatus: boolean, field: 'isActive' | 'isConfigurable' | 'showOnWeb') => {
         const next = !currentStatus;
         setProducts(prev => prev.map(p =>
             p.id === id ? { ...p, [field]: next } : p
@@ -350,7 +352,7 @@ export default function CatalogManagementPage() {
             setProducts(prev => prev.map(p =>
                 p.id === id ? { ...p, [field]: currentStatus } : p
             ));
-            alert('No se pudo cambiar la publicación en la web.');
+            alert(field === 'showOnWeb' ? 'No se pudo cambiar si sale en la web.' : 'No se pudo cambiar el producto.');
         }
     };
 
@@ -641,10 +643,19 @@ export default function CatalogManagementPage() {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => toggleProductStatus(p.id, p.isActive, 'isActive')}
-                                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase ${p.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                                    onClick={() => p.isActive
+                                        ? toggleProductStatus(p.id, p.showOnWeb !== false, 'showOnWeb')
+                                        : toggleProductStatus(p.id, p.isActive, 'isActive')}
+                                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase ${
+                                        !p.isActive
+                                            ? 'bg-slate-100 text-slate-500'
+                                            : p.showOnWeb !== false
+                                                ? 'bg-emerald-50 text-emerald-700'
+                                                : 'bg-slate-900 text-white'
+                                    }`}
+                                    title={p.isActive ? (p.showOnWeb !== false ? 'Visible en la web. Clic para dejarlo solo en caja.' : 'Solo caja y salón. Clic para mostrarlo en la web.') : 'Pausado'}
                                 >
-                                    {p.isActive ? 'Web' : 'Off'}
+                                    {!p.isActive ? 'Off' : p.showOnWeb !== false ? 'Web' : 'Caja'}
                                 </button>
                                 <button
                                     type="button"
@@ -813,15 +824,38 @@ export default function CatalogManagementPage() {
                                         </div>
                                         <div>
                                             <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
-                                                {editingProduct.isActive ? 'Visible en la web' : 'Oculto en la web'}
+                                                {editingProduct.isActive ? 'Se puede cobrar' : 'Pausado'}
                                             </p>
                                             <p className="text-[10px] font-bold text-slate-800">
-                                                {editingProduct.isActive ? 'Los clientes lo ven en la carta' : 'No aparece en la web ni en el salón'}
+                                                {editingProduct.isActive ? 'Está en caja y en el salón' : 'No se vende en ningún lado'}
                                             </p>
                                         </div>
                                     </div>
                                     <div className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all ${editingProduct.isActive ? 'bg-orange-500' : 'bg-slate-200'} shrink-0`}>
                                         <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full bg-white transition-transform ${editingProduct.isActive ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
+                                    </div>
+                                </div>
+                                <div
+                                    className={`p-4 md:p-6 rounded-2xl md:rounded-[2rem] border-2 transition-all cursor-pointer flex justify-between items-center
+                                    ${editingProduct.isActive && editingProduct.showOnWeb !== false ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-100'}
+                                    ${editingProduct.isActive ? '' : 'opacity-50 pointer-events-none'}`}
+                                    onClick={() => setEditingProduct({ ...editingProduct, showOnWeb: editingProduct.showOnWeb === false })}
+                                >
+                                    <div className="flex gap-3 md:gap-4 items-center">
+                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${editingProduct.showOnWeb !== false ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white'}`}>
+                                            <LayoutGrid size={18} className="md:w-5 md:h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-slate-900 tracking-tight text-sm md:text-base">
+                                                {editingProduct.showOnWeb !== false ? 'Sale en la web' : 'Solo caja y salón'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-800">
+                                                {editingProduct.showOnWeb !== false ? 'Los clientes lo ven en la carta' : 'Se cobra en el POS, no aparece en la web'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all ${editingProduct.showOnWeb !== false ? 'bg-emerald-500' : 'bg-slate-200'} shrink-0`}>
+                                        <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full bg-white transition-transform ${editingProduct.showOnWeb !== false ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
                                     </div>
                                 </div>
                             </section>

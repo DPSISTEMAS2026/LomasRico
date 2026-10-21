@@ -35,7 +35,7 @@ class ApiUrlBox {
 export const API_URL = new ApiUrlBox() as unknown as string;
 
 export async function fetchCatalog() {
-    const res = await fetch(`${API_URL}/products/active`);
+    const res = await fetch(`${API_URL}/products/active?channel=web`);
     if (!res.ok) throw new Error('Failed to fetch catalog');
     return res.json();
 }

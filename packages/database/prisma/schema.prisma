@@ -83,6 +83,7 @@ model SellingProduct {
   hoverVideoKey  String?          // Key en el bucket de storage
   price          Decimal          @default(0)
   isActive       Boolean          @default(true)
+  showOnWeb      Boolean          @default(true)
   isConfigurable Boolean          @default(false)
   maxProteins    Int              @default(0) // 0 = sin elección
 

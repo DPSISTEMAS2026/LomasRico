@@ -25,7 +25,7 @@ export function resolveApiUrl(envUrl?: string): string {
 // ─── Catálogo (público) ────────────────────────────────────
 
 export async function fetchCatalog(apiUrl: string) {
-    const res = await fetch(`${apiUrl}/products/active`);
+    const res = await fetch(`${apiUrl}/products/active?channel=web`);
     if (!res.ok) throw new Error('Failed to fetch catalog');
     return res.json();
 }

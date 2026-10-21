@@ -180,6 +180,8 @@ export class SalesService {
         if (channel === 'WEB') {
             const unavailable = products.find((p: any) => !p.isActive) || variants.find((v: any) => !v.isActive);
             if (unavailable) throw new BadRequestException(`${unavailable.name} ya no está disponible. Quítalo del carrito.`);
+            const staffOnly = products.find((p: any) => p.showOnWeb === false);
+            if (staffOnly) throw new BadRequestException(`${staffOnly.name} solo se cobra en caja.`);
         }
 
         const productMap = new Map(products.map((p: any) => [p.id, p]));

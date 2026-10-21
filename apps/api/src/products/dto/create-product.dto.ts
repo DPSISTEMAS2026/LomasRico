@@ -36,6 +36,10 @@ export class CreateProductDto {
 
     @IsBoolean()
     @IsOptional()
+    showOnWeb?: boolean;
+
+    @IsBoolean()
+    @IsOptional()
     isConfigurable?: boolean;
 
     @IsNumber()

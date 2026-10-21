@@ -114,7 +114,7 @@ export const ProductGrid = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const prodResponse = await fetch(`${API_URL}/products/active`);
+                const prodResponse = await fetch(`${API_URL}/products/active?channel=web`);
                 if (prodResponse.ok) {
                     const data = await prodResponse.json();
                     setProducts(Array.isArray(data) ? data : []);
@@ -136,7 +136,7 @@ export const ProductGrid = () => {
         const interval = setInterval(async () => {
             if (document.hidden) return;
             try {
-                const res = await fetch(`${API_URL}/products/active`);
+                const res = await fetch(`${API_URL}/products/active?channel=web`);
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
