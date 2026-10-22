@@ -298,7 +298,7 @@ export default function POSPage() {
                 items: [...cart],
                 customerInfo,
                 total: Math.round(total),
-                paymentLabel: paymentLabels[paymentMethod] || paymentMethod,
+                paymentLabel: paymentLabels[saleRes.paymentMethod] || paymentLabels[paymentMethod] || paymentMethod,
                 tipAmount: Math.round(Number(saleRes.shippingData?.tip?.amount ?? 0)),
                 tipPercent: Number(saleRes.shippingData?.tip?.percent ?? 0),
             });

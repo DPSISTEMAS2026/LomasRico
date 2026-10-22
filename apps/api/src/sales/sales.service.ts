@@ -416,6 +416,7 @@ export class SalesService {
         const terminalPayment = needsTerminal
             ? await this.terminal.assertPaid((createSaleDto as any).terminalPaymentKey, totalAmount + tipAmount)
             : null;
+        const savedMethod = terminalPayment?.method || paymentMethod;
         const saleShipping = terminalPayment || tipMeta
             ? { ...(shippingData || {}), ...(terminalPayment ? { terminalPayment } : {}), ...(tipMeta ? { tip: tipMeta } : {}) }
             : shippingData;
@@ -502,7 +503,7 @@ export class SalesService {
                         ? { ...(saleShipping || {}), loyalty: { redeem: pointsRedeemed, earn: Math.floor(subtotalBeforePoints * 0.04), spent: subtotalBeforePoints } }
                         : saleShipping || undefined,
                     code: uniqueCode,
-                    paymentMethod: (paymentMethod === 'MP' ? 'MERCADO_PAGO' : paymentMethod) as any,
+                    paymentMethod: (savedMethod === 'MP' ? 'MERCADO_PAGO' : savedMethod) as any,
                     paymentStatus: initialStatus === 'CONFIRMED' ? 'APPROVED' : 'PENDING',
                     shiftId: finalShiftId || undefined,
                     discount: discountValue,
@@ -613,7 +614,7 @@ export class SalesService {
                             shiftId: finalShiftId,
                             type: 'SALE_INCOME',
                             amount: totalAmount,
-                            description: `Venta ${channelLabel} ${uniqueCode} (${paymentMethod})`,
+                            description: `Venta ${channelLabel} ${uniqueCode} (${savedMethod})`,
                             relatedSaleId: sale.id
                         }
                     });

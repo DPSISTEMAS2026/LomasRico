@@ -217,6 +217,7 @@ export class TuuTerminalService {
         if (result.amount == null || Math.round(result.amount) < Math.round(total)) {
             throw new BadRequestException('Lo cobrado en la máquina no cubre el total');
         }
-        return { provider: cardTerminalKind() === 'point' ? 'POINT' : 'TUU', key, amount: result.amount };
+        const method = (result as { cardMethod?: TerminalMethod | null }).cardMethod || null;
+        return { provider: cardTerminalKind() === 'point' ? 'POINT' : 'TUU', key, amount: result.amount, ...(method ? { method } : {}) };
     }
 }

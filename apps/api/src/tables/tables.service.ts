@@ -497,6 +497,7 @@ export class TablesService implements OnModuleInit {
             };
         }
 
+        const savedMethod = String((terminalPayment as { method?: string } | null)?.method || paymentMethod);
         const shippingData = (terminalPayment || tipMeta)
             ? {
                 ...((open.shippingData as any) || {}),
@@ -516,7 +517,7 @@ export class TablesService implements OnModuleInit {
         const paid = await (this.prisma as any).$transaction(async (tx: any) => {
             const res = await tx.sale.updateMany({
                 where: { id: open.id, paymentStatus: 'PENDING' },
-                data: { paymentMethod, paymentStatus: 'APPROVED', status: 'CONFIRMED', shiftId, ...(shippingData ? { shippingData } : {}) },
+                data: { paymentMethod: savedMethod, paymentStatus: 'APPROVED', status: 'CONFIRMED', shiftId, ...(shippingData ? { shippingData } : {}) },
             });
             if (res.count !== 1) throw new BadRequestException('Esta cuenta ya fue cobrada');
             const sale = await tx.sale.findUnique({
@@ -536,7 +537,7 @@ export class TablesService implements OnModuleInit {
                         shiftId: sale.shiftId,
                         type: 'SALE_INCOME',
                         amount: sale.total,
-                        description: `Salón ${sale.code} Mesa ${sale.table?.number} ${sale.guest?.name || ''} (${paymentMethod})`,
+                        description: `Salón ${sale.code} Mesa ${sale.table?.number} ${sale.guest?.name || ''} (${savedMethod})`,
                         relatedSaleId: sale.id,
                     },
                 });

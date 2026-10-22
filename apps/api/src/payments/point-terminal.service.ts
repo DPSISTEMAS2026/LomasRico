@@ -103,10 +103,13 @@ export class PointTerminalService {
         const amount = Number(payment?.amount);
         const detail = String(payment?.status_detail || data?.status_detail || '');
         const status = mapStatus(String(data?.status || ''), String(payment?.status || ''), detail);
+        const cardType = String(payment?.payment_method?.type || '');
         return {
             key,
             status,
             amount: Number.isFinite(amount) ? amount : null,
+            /** La tarjeta que realmente pasó en la Point, aunque la cajera haya elegido otra. */
+            cardMethod: cardType === 'credit_card' ? 'CREDIT' : cardType === 'debit_card' || cardType === 'prepaid_card' ? 'DEBIT' : null,
             message: status === 'FAILED' ? failMessage(detail) : status === 'CANCELED' ? 'Se canceló el cobro en la máquina' : null,
         };
     }
