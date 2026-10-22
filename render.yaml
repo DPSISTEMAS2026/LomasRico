@@ -44,6 +44,12 @@ services:
         sync: false
       - key: MERCADOPAGO_ACCESS_TOKEN
         sync: false
+      - key: PAYMENT_PROVIDER
+        value: mercadopago
+      - key: CARD_TERMINAL
+        value: point
+      - key: MERCADOPAGO_POINT_TERMINAL_ID
+        value: NEWLAND_N950__N950NCD300010100
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: PEDIDOSYA_TOKEN
@@ -109,11 +115,8 @@ services:
       - key: NEXT_PUBLIC_GOOGLE_MAPS_KEY
         sync: false
 
-  # API (dashboard Render → Environment):
-  #   CARD_TERMINAL=point
-  #   MERCADOPAGO_POINT_TERMINAL_ID=
-  #   MERCADOPAGO_ACCESS_TOKEN=
-  # La TUU queda de respaldo si CARD_TERMINAL=tuu (TUU_API_KEY, TUU_DEVICE_SERIAL, TUU_DTE_TYPE).
+  # CARD_TERMINAL, PAYMENT_PROVIDER y la Point quedan declaradas arriba.
+  # En el dashboard solo se pega MERCADOPAGO_ACCESS_TOKEN. Las TUU_* se pueden borrar.
   # Web/Netlify (lomasrico.cl + paneles):
   #   NEXT_PUBLIC_GOOGLE_MAPS_KEY=<clave facturada LomasricoV2>
   # --------------------------------------------------------
