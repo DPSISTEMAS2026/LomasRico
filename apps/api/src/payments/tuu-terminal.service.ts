@@ -3,6 +3,8 @@ import { appendFileSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { PointTerminalService } from './point-terminal.service';
 
 const REMOTE_BASE = 'https://integrations.payment.haulmer.com';
 const STATUS_BY_CODE = ['PENDING', 'SENT', 'CANCELED', 'PROCESSING', 'FAILED', 'COMPLETED'] as const;
@@ -24,11 +26,17 @@ const ERRORS: Record<string, string> = {
     'MR-000': 'La clave de TUU no es válida',
 };
 
-/** Cobro con tarjeta en la máquina TUU vía RemotePayment. `CARD_TERMINAL=tuu` lo activa. */
+/** `point` = Point Smart 2. `tuu` = máquina Haulmer. */
+export function cardTerminalKind(): 'tuu' | 'point' | null {
+    const mode = String(process.env.CARD_TERMINAL || '').trim().toLowerCase();
+    if (mode === 'point' && process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_POINT_TERMINAL_ID) return 'point';
+    if (mode === 'tuu' && process.env.TUU_API_KEY && process.env.TUU_DEVICE_SERIAL) return 'tuu';
+    return null;
+}
+
+/** Cobro con tarjeta en la máquina del local (Point o TUU). */
 export function cardTerminalEnabled() {
-    return String(process.env.CARD_TERMINAL || '').trim().toLowerCase() === 'tuu'
-        && !!process.env.TUU_API_KEY
-        && !!process.env.TUU_DEVICE_SERIAL;
+    return cardTerminalKind() !== null;
 }
 
 /** Solo débito/crédito pasan por RemotePayment. Efectivo/transferencia no. */
@@ -83,7 +91,11 @@ export class TuuTerminalService {
     private readonly logger = new Logger(TuuTerminalService.name);
     private readonly requested = new Map<string, { amount: number; method: TerminalMethod; at: number }>();
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly audit: AuditService,
+        private readonly point: PointTerminalService,
+    ) {}
 
     private async call(path: string, init: RequestInit = {}) {
         const res = await fetch(`${process.env.TUU_REMOTE_URL || REMOTE_BASE}${path}`, {
@@ -108,7 +120,8 @@ export class TuuTerminalService {
     }
 
     /** Envía el cobro a la máquina. Devuelve la clave para seguir su estado. */
-    async charge(input: { amount: number; method: TerminalMethod; reference: string }) {
+    async charge(input: { amount: number; method: TerminalMethod; reference: string; actorId?: string }) {
+        if (cardTerminalKind() === 'point') return this.point.charge(input);
         if (!cardTerminalEnabled()) throw new ServiceUnavailableException('La máquina TUU no está configurada');
         const amount = Math.round(Number(input.amount));
         if (!(amount >= 100)) throw new BadRequestException('El monto mínimo para cobrar en la máquina es $100');
@@ -160,13 +173,27 @@ export class TuuTerminalService {
         }
         this.requested.set(key, { amount, method, at: Date.now() });
         for (const [k, v] of this.requested) if (Date.now() - v.at > 6 * 60 * 60_000) this.requested.delete(k);
+        // Si la venta no se registra después de cobrar, la clave solo queda acá para recuperarla.
+        await this.audit.log({
+            action: 'TERMINAL_CHARGE',
+            actorId: input.actorId,
+            amount,
+            reason: reference || null,
+            details: { key, method },
+        });
         // #region agent log
         dbg('H3', 'tuu.charge.accepted', { method, paymentMethod, keyPrefix: key.slice(0, 8) });
         // #endregion
         return { key, amount, method };
     }
 
+    async cancel(key: string) {
+        if (cardTerminalKind() === 'point') return this.point.cancel(key);
+        return { ok: true };
+    }
+
     async status(key: string) {
+        if (cardTerminalKind() === 'point') return this.point.status(key);
         if (!cardTerminalEnabled()) throw new ServiceUnavailableException('La máquina TUU no está configurada');
         if (!/^[a-zA-Z0-9-]{1,36}$/.test(String(key || ''))) throw new BadRequestException('Cobro no válido');
         const data = await this.call(`/RemotePayment/v2/GetPaymentRequest/${encodeURIComponent(key)}`);
@@ -178,7 +205,7 @@ export class TuuTerminalService {
 
     /** Exige que el cobro esté completado por al menos `total` y que no se haya usado en otra venta. */
     async assertPaid(key: string | undefined, total: number) {
-        if (!key) throw new BadRequestException('Cobra primero en la máquina TUU');
+        if (!key) throw new BadRequestException('Cobra primero en la máquina');
         const used = await this.prisma.sale.findFirst({
             where: { shippingData: { path: ['terminalPayment', 'key'], equals: key } },
             select: { code: true },
@@ -189,6 +216,6 @@ export class TuuTerminalService {
         if (result.amount == null || Math.round(result.amount) < Math.round(total)) {
             throw new BadRequestException('Lo cobrado en la máquina no cubre el total');
         }
-        return { provider: 'TUU', key, amount: result.amount };
+        return { provider: cardTerminalKind() === 'point' ? 'POINT' : 'TUU', key, amount: result.amount };
     }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { CreditCard, Loader2, XCircle } from 'lucide-react';
-import { getTerminalCharge, startTerminalCharge } from '../../services/api';
+import { cancelTerminalCharge, getTerminalCharge, startTerminalCharge } from '../../services/api';
 import type { TerminalCardMethod } from './PaymentMethodPicker';
 
 const POLL_MS = 2500;
@@ -30,6 +30,8 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
     const [attempt, setAttempt] = useState(0);
     const charge = useRef<{ attempt: number; request: Promise<{ key: string }> } | null>(null);
     const onPaidRef = useRef(onPaid);
+    const keyRef = useRef<string | null>(null);
+    const doneRef = useRef(false);
     onPaidRef.current = onPaid;
 
     useEffect(() => {
@@ -46,7 +48,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                 const res = await getTerminalCharge(key);
                 if (stopped) return;
                 setStatus(res.status);
-                if (res.status === 'COMPLETED') { onPaidRef.current(key); return; }
+                if (res.status === 'COMPLETED') { doneRef.current = true; onPaidRef.current(key); return; }
                 if (res.status === 'FAILED' || res.status === 'CANCELED') {
                     setError(res.status === 'CANCELED' ? 'Se canceló el cobro en la máquina' : 'El cobro fue rechazado en la máquina');
                     setPhase('failed');
@@ -55,7 +57,11 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
             } catch {
                 /* corte de red momentáneo: se sigue consultando */
             }
-            if (Date.now() - startedAt > WAIT_LIMIT_MS) { setPhase('timeout'); return; }
+            if (Date.now() - startedAt > WAIT_LIMIT_MS) {
+                setPhase('timeout');
+                void cancelTerminalCharge(key);
+                return;
+            }
             timer = setTimeout(() => void poll(key), POLL_MS);
         };
 
@@ -63,7 +69,11 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
         setError('');
         charge.current.request
             .then(({ key }) => {
-                if (stopped) return;
+                keyRef.current = key;
+                if (stopped) {
+                    if (!doneRef.current) void cancelTerminalCharge(key);
+                    return;
+                }
                 setPhase('waiting');
                 void poll(key);
             })
@@ -73,7 +83,11 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                 setPhase('failed');
             });
 
-        return () => { stopped = true; if (timer) clearTimeout(timer); };
+        return () => {
+            stopped = true;
+            if (timer) clearTimeout(timer);
+            if (!doneRef.current && keyRef.current) void cancelTerminalCharge(keyRef.current);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [attempt]);
 
@@ -96,7 +110,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                 </div>
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">
-                        {METHOD_LABEL[method]} · Máquina TUU / Haulmer
+                        {METHOD_LABEL[method]} · Point Mercado Pago
                     </p>
                     <p className="text-3xl font-black italic text-slate-900">${Math.round(amount).toLocaleString('es-CL')}</p>
                 </div>
@@ -125,7 +139,7 @@ export function TerminalChargeModal({ amount, method, reference, onPaid, onClose
                 </div>
                 {busy && (
                     <p className="text-[11px] font-bold text-slate-900">
-                        Si cierras, cancela el cobro también en la máquina.
+                        Si cierras, se cancela el cobro en la Point.
                     </p>
                 )}
             </div>

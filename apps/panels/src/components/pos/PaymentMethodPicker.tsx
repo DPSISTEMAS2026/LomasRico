@@ -33,7 +33,7 @@ export function useCardTerminal(): boolean {
             for (let i = 0; i < 4 && alive; i++) {
                 const c = await fetchPaymentConfig();
                 if (!alive) return;
-                if (c.cardTerminal === 'tuu') { setEnabled(true); return; }
+                if (c.cardTerminal === 'tuu' || c.cardTerminal === 'point') { setEnabled(true); return; }
                 await new Promise((r) => setTimeout(r, 700));
             }
         };

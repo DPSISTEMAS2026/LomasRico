@@ -1,9 +1,9 @@
-import { Controller, Post, Get, Body, Param, Query, HttpCode, Headers, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, HttpCode, Headers, ForbiddenException, Req } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/payment.dto';
 import { FLOOR_ROLES, MANAGER_ROLES, Public, STAFF_ROLES } from '../auth/access';
 import { Roles } from '../auth/roles.decorator';
-import { TuuTerminalService, cardTerminalEnabled } from './tuu-terminal.service';
+import { TuuTerminalService, cardTerminalKind } from './tuu-terminal.service';
 import { webPaymentProvider } from './tuu-online.service';
 import { StoreSettingsService } from '../store-settings/store-settings.service';
 
@@ -79,14 +79,20 @@ export class PaymentsController {
     @Roles(...STAFF_ROLES)
     @Get('config')
     config() {
-        return { web: webPaymentProvider(), cardTerminal: cardTerminalEnabled() ? 'tuu' : null };
+        return { web: webPaymentProvider(), cardTerminal: cardTerminalKind() };
     }
 
     /** Envía un cobro con tarjeta a la máquina TUU (RemotePayment: solo débito/crédito). */
     @Roles(...FLOOR_ROLES)
     @Post('terminal/charge')
-    terminalCharge(@Body() body: { amount: number; method: 'CREDIT' | 'DEBIT'; reference?: string }) {
-        return this.terminal.charge({ amount: body?.amount, method: body?.method, reference: body?.reference || '' });
+    terminalCharge(@Body() body: { amount: number; method: 'CREDIT' | 'DEBIT'; reference?: string }, @Req() req: any) {
+        return this.terminal.charge({ amount: body?.amount, method: body?.method, reference: body?.reference || '', actorId: req.user?.userId });
+    }
+
+    @Roles(...FLOOR_ROLES)
+    @Post('terminal/:key/cancel')
+    terminalCancel(@Param('key') key: string) {
+        return this.terminal.cancel(key);
     }
 
     @Roles(...FLOOR_ROLES)

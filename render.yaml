@@ -109,11 +109,11 @@ services:
       - key: NEXT_PUBLIC_GOOGLE_MAPS_KEY
         sync: false
 
-  # API (dashboard Render → Environment), requeridas para TUU/Haulmer:
-  #   CARD_TERMINAL=tuu
-  #   TUU_API_KEY=
-  #   TUU_DEVICE_SERIAL=
-  #   TUU_DTE_TYPE=48
+  # API (dashboard Render → Environment):
+  #   CARD_TERMINAL=point
+  #   MERCADOPAGO_POINT_TERMINAL_ID=
+  #   MERCADOPAGO_ACCESS_TOKEN=
+  # La TUU queda de respaldo si CARD_TERMINAL=tuu (TUU_API_KEY, TUU_DEVICE_SERIAL, TUU_DTE_TYPE).
   # Web/Netlify (lomasrico.cl + paneles):
   #   NEXT_PUBLIC_GOOGLE_MAPS_KEY=<clave facturada LomasricoV2>
   # --------------------------------------------------------

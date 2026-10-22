@@ -215,7 +215,7 @@ async function jsonOrThrow(res: Response, fallback: string) {
     return data;
 }
 
-export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal: 'tuu' | null }> {
+export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal: 'tuu' | 'point' | null }> { {
     try {
         return await jsonOrThrow(await authFetch(`${API_URL}/payments/config`, { cache: 'no-store' }), 'config');
     } catch {
@@ -236,6 +236,10 @@ export async function startTerminalCharge(
 
 export async function getTerminalCharge(key: string): Promise<{ status: string; amount: number | null }> {
     return jsonOrThrow(await authFetch(`${API_URL}/payments/terminal/${encodeURIComponent(key)}`, { cache: 'no-store' }), 'No se pudo consultar la máquina');
+}
+
+export async function cancelTerminalCharge(key: string): Promise<void> {
+    await authFetch(`${API_URL}/payments/terminal/${encodeURIComponent(key)}/cancel`, { method: 'POST' }).catch(() => null);
 }
 
 export async function simulateMPCallback(orderId: string, status: 'APPROVED' | 'REJECTED') {
