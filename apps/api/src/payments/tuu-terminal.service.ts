@@ -29,8 +29,9 @@ const ERRORS: Record<string, string> = {
 /** `point` = Point Smart 2. `tuu` = máquina Haulmer. */
 export function cardTerminalKind(): 'tuu' | 'point' | null {
     const mode = String(process.env.CARD_TERMINAL || '').trim().toLowerCase();
-    if (mode === 'point' && process.env.MERCADOPAGO_ACCESS_TOKEN && process.env.MERCADOPAGO_POINT_TERMINAL_ID) return 'point';
+    if (mode === 'off' || mode === 'false' || mode === 'none') return null;
     if (mode === 'tuu' && process.env.TUU_API_KEY && process.env.TUU_DEVICE_SERIAL) return 'tuu';
+    if (process.env.MERCADOPAGO_ACCESS_TOKEN) return 'point';
     return null;
 }
 

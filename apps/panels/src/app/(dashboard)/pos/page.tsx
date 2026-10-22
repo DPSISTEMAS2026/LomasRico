@@ -41,7 +41,7 @@ import { OpenShiftModal } from '../../../components/pos/OpenShiftModal';
 import { CloseShiftModal } from '../../../components/pos/CloseShiftModal';
 import { WithdrawalModal } from '../../../components/pos/WithdrawalModal';
 import { DiscountModal } from '../../../components/pos/DiscountModal';
-import { PaymentMethodPicker, checkoutButtonLabel, isTerminalPayMethod, useCardTerminal, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
+import { PaymentMethodPicker, checkoutButtonLabel, isTerminalPayMethod, type PosPaymentMethod } from '../../../components/pos/PaymentMethodPicker';
 import { TerminalChargeModal } from '../../../components/pos/TerminalChargeModal';
 import { SHOW_POS_DELIVERY } from '../../../config/features';
 
@@ -60,8 +60,7 @@ export default function POSPage() {
     const [shippingCost, setShippingCost] = useState(0);
     const [shippingAddress, setShippingAddress] = useState('');
     const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
-    const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('CASH');
-    const cardTerminal = useCardTerminal();
+    const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>('DEBIT');
     const [terminalCharge, setTerminalCharge] = useState<number | null>(null);
     const [paidTerminal, setPaidTerminal] = useState<{ key: string; amount: number } | null>(null);
     const [cashReceived, setCashReceived] = useState<number>(0);
@@ -253,9 +252,8 @@ export default function POSPage() {
 
     const handleCheckout = async (chargedKey?: string) => {
         if (isSubmitting || cart.length === 0) return;
-        if (paymentMethod === 'MP' && !confirm(`¿Cobraste $${Math.round(chargeTotal).toLocaleString('es-CL')} en el Point?`)) return;
         let terminalPaymentKey: string | undefined;
-        if (cardTerminal && isTerminalPayMethod(paymentMethod)) {
+        if (isTerminalPayMethod(paymentMethod)) {
             terminalPaymentKey = chargedKey ?? (paidTerminal?.amount === Math.round(chargeTotal) ? paidTerminal.key : undefined);
             if (!terminalPaymentKey) { setTerminalCharge(Math.round(chargeTotal)); return; }
         }
@@ -286,8 +284,8 @@ export default function POSPage() {
             const paymentLabels: Record<string, string> = {
                 CASH: 'Efectivo',
                 TRANSFER: 'Transferencia',
-                DEBIT: 'Débito (TUU)',
-                CREDIT: 'Crédito (TUU)',
+                DEBIT: 'Débito Mercado Pago',
+                CREDIT: 'Crédito Mercado Pago',
                 MP: 'Mercado Pago Point',
                 FOOD: 'Alimentación',
             };
@@ -881,7 +879,7 @@ export default function POSPage() {
                             </div>
                         )}
 
-                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} cardTerminal={cardTerminal} />
+                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} cardTerminal />
 
                         {/* Ayuda Vuelto para Efectivo */}
                         {paymentMethod === 'CASH' && (

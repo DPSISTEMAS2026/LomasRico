@@ -51,8 +51,8 @@ const MP_METHODS: { id: PosPaymentMethod; label: string }[] = [
 
 const TERMINAL_METHODS: { id: PosPaymentMethod; label: string }[] = [
     { id: 'CASH', label: 'Efectivo' },
-    { id: 'DEBIT', label: 'Débito' },
-    { id: 'CREDIT', label: 'Crédito' },
+    { id: 'DEBIT', label: 'MP Débito' },
+    { id: 'CREDIT', label: 'MP Crédito' },
     { id: 'TRANSFER', label: 'Transferencia' },
 ];
 
@@ -141,8 +141,8 @@ export function PaymentMethodPicker({ value, onChange, cardTerminal = false }: P
 
 export function checkoutButtonLabel(method: PosPaymentMethod): string {
     if (method === 'MP') return 'COBRAR CON MP';
-    if (method === 'DEBIT') return 'COBRAR DÉBITO';
-    if (method === 'CREDIT') return 'COBRAR CRÉDITO';
+    if (method === 'DEBIT') return 'COBRAR DÉBITO MP';
+    if (method === 'CREDIT') return 'COBRAR CRÉDITO MP';
     if (method === 'CASH') return 'COBRAR EFECTIVO';
     if (method === 'TRANSFER') return 'COBRAR TRANSFERENCIA';
     if (method === 'EDENRED') return 'COBRAR EDENRED';

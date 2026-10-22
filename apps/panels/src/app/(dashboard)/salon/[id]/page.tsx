@@ -919,7 +919,7 @@ export default function SalonTablePage() {
                             ))}
                         </div>
                         <p className="text-xs font-bold text-slate-800 -mt-2">
-                            {isTerminalPayMethod(payMethod) ? 'El monto sale en la máquina TUU.' : 'Efectivo. Se imprime la boleta, sin máquina.'}
+                            {isTerminalPayMethod(payMethod) ? 'El monto sale en la Point de Mercado Pago.' : 'Efectivo. Se imprime la boleta, sin máquina.'}
                         </p>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-2">Propina</p>

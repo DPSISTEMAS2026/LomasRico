@@ -5,6 +5,7 @@ import { AuditService } from '../audit/audit.service';
 import type { TerminalMethod, TerminalStatus } from './tuu-terminal.service';
 
 const MP = 'https://api.mercadopago.com';
+const DEFAULT_POINT_TERMINAL = 'NEWLAND_N950__N950NCD300010100';
 
 function asciiField(value: string) {
     return value.normalize('NFD').replace(/[^\x20-\x7E]/g, '').replace(/[&/]/g, '').trim();
@@ -48,18 +49,19 @@ export class PointTerminalService {
     async charge(input: { amount: number; method: TerminalMethod; reference: string; actorId?: string }) {
         const amount = Math.round(Number(input.amount));
         if (!(amount >= 100)) throw new BadRequestException('El monto mínimo para cobrar en la máquina es $100');
-        const terminalId = String(process.env.MERCADOPAGO_POINT_TERMINAL_ID || '').trim();
+        const terminalId = String(process.env.MERCADOPAGO_POINT_TERMINAL_ID || DEFAULT_POINT_TERMINAL).trim();
         if (!process.env.MERCADOPAGO_ACCESS_TOKEN || !terminalId) {
             throw new BadRequestException('La Point no está configurada');
         }
         const method: TerminalMethod = input.method === 'DEBIT' ? 'DEBIT' : 'CREDIT';
-        const reference = asciiField(String(input.reference || '')).slice(0, 40);
+        const reference = asciiField(String(input.reference || 'pos')).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+        const external = `${reference || 'pos'}-${Date.now().toString(36)}`;
         const data = await this.mp('/v1/orders', {
             method: 'POST',
             headers: { 'X-Idempotency-Key': randomUUID() },
             body: JSON.stringify({
                 type: 'point',
-                external_reference: reference || `lr-${Date.now()}`,
+                external_reference: external,
                 expiration_time: 'PT10M',
                 description: asciiField(`Lo Mas Rico ${reference}`).slice(0, 60),
                 transactions: { payments: [{ amount: String(amount) }] },
