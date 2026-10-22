@@ -215,7 +215,7 @@ async function jsonOrThrow(res: Response, fallback: string) {
     return data;
 }
 
-export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal: 'tuu' | 'point' | null }> { {
+export async function fetchPaymentConfig(): Promise<{ web: string; cardTerminal: 'tuu' | 'point' | null }> {
     try {
         return await jsonOrThrow(await authFetch(`${API_URL}/payments/config`, { cache: 'no-store' }), 'config');
     } catch {
