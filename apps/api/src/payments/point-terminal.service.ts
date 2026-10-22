@@ -11,15 +11,27 @@ function asciiField(value: string) {
     return value.normalize('NFD').replace(/[^\x20-\x7E]/g, '').replace(/[&/]/g, '').trim();
 }
 
-function mapStatus(orderStatus: string, paymentStatus: string): TerminalStatus {
+function mapStatus(orderStatus: string, paymentStatus: string, detail: string): TerminalStatus {
     const order = orderStatus.toLowerCase();
     const pay = paymentStatus.toLowerCase();
-    if (pay === 'processed' || pay === 'accredited' || pay === 'approved' || order === 'processed') return 'COMPLETED';
-    if (pay === 'rejected' || pay === 'failed' || order === 'failed') return 'FAILED';
+    const why = detail.toLowerCase();
+    const rejected = pay === 'rejected' || pay === 'failed' || order === 'failed' || order === 'rejected'
+        || why.startsWith('cc_rejected') || why.startsWith('rejected') || why === 'failed';
+    if (rejected) return 'FAILED';
+    if (pay === 'processed' || pay === 'accredited' || pay === 'approved' || why === 'accredited' || order === 'processed') return 'COMPLETED';
     if (order === 'canceled' || order === 'cancelled' || order === 'expired' || order === 'refunded' || pay === 'canceled' || pay === 'cancelled') return 'CANCELED';
-    if (order === 'at_terminal' || order === 'action_required') return 'PROCESSING';
-    if (order === 'created') return 'SENT';
+    if (order === 'at_terminal' || order === 'action_required' || pay === 'at_terminal' || pay === 'action_required') return 'PROCESSING';
+    if (order === 'created' || pay === 'created') return 'SENT';
     return 'PENDING';
+}
+
+function failMessage(detail: string): string {
+    const d = detail.toLowerCase();
+    if (d.includes('insufficient')) return 'Saldo insuficiente';
+    if (d.includes('call_for_authorize')) return 'El banco pide autorización';
+    if (d.includes('bad_filled') || d.includes('invalid')) return 'La tarjeta no se pudo leer';
+    if (d.includes('expired') || d.includes('disabled')) return 'Tarjeta vencida o bloqueada';
+    return 'La tarjeta fue rechazada';
 }
 
 /** Cobro en la Point Smart 2 (modo PDV) con la Orders API de Mercado Pago. */
@@ -89,10 +101,13 @@ export class PointTerminalService {
         const data = await this.mp(`/v1/orders/${encodeURIComponent(key)}`);
         const payment = data?.transactions?.payments?.[0];
         const amount = Number(payment?.amount);
+        const detail = String(payment?.status_detail || data?.status_detail || '');
+        const status = mapStatus(String(data?.status || ''), String(payment?.status || ''), detail);
         return {
             key,
-            status: mapStatus(String(data?.status || ''), String(payment?.status || '')),
+            status,
             amount: Number.isFinite(amount) ? amount : null,
+            message: status === 'FAILED' ? failMessage(detail) : status === 'CANCELED' ? 'Se canceló el cobro en la máquina' : null,
         };
     }
 

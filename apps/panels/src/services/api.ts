@@ -234,7 +234,7 @@ export async function startTerminalCharge(
     }), 'No se pudo enviar el cobro a la máquina');
 }
 
-export async function getTerminalCharge(key: string): Promise<{ status: string; amount: number | null }> {
+export async function getTerminalCharge(key: string): Promise<{ status: string; amount: number | null; message?: string | null }> {
     return jsonOrThrow(await authFetch(`${API_URL}/payments/terminal/${encodeURIComponent(key)}`, { cache: 'no-store' }), 'No se pudo consultar la máquina');
 }
 
