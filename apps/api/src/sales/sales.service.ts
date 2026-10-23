@@ -334,8 +334,9 @@ export class SalesService {
                 const quote = await (this as any).shippingService.calculateQuote({
                     address: shippingData.address,
                     channel: channel,
-                    coordinates: shippingData.coordinates
-                }); // Need to inject ShippingService if not present
+                    coordinates: shippingData.coordinates,
+                    cartSubtotal: totalAmount,
+                } as any);
 
                 if (!quote.valid) {
                     throw new BadRequestException(quote.reason || 'Dirección fuera de rango');
