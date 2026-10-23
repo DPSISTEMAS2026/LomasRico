@@ -11,16 +11,13 @@ const LOCATION = {
     maxDeliveryRadiusKm: 12,
 } as const;
 
-/** Tramos: distancia <= maxKm → cost. Fuera de 12 km = no despacha. */
+/** Tramos: distancia <= maxKm. freeFrom es el subtotal desde el cual ese tramo sale gratis. */
 const SHIPPING_BANDS = [
-    { maxKm: 3.5, cost: 2000, label: 'Despacho 0–3,5 km' },
-    { maxKm: 7.5, cost: 3500, label: 'Despacho 3,5–7,5 km' },
-    { maxKm: 9.5, cost: 4000, label: 'Despacho 7,5–9,5 km' },
-    { maxKm: 12, cost: 5500, label: 'Despacho 9,5–12 km' },
+    { maxKm: 3.5, cost: 2000, freeFrom: 20000, label: 'Despacho 0–3,5 km' },
+    { maxKm: 7.5, cost: 3500, freeFrom: 30000, label: 'Despacho 3,5–7,5 km' },
+    { maxKm: 9.5, cost: 4000, freeFrom: 40000, label: 'Despacho 7,5–9,5 km' },
+    { maxKm: 12, cost: 5500, freeFrom: 48000, label: 'Despacho 9,5–12 km' },
 ] as const;
-
-const FREE_IN_CONCEPCION_FROM = 20000;
-const FREE_ANYWHERE_FROM = 25000;
 
 /** Comunas del Gran Concepción que no son la comuna Concepción. */
 const OUTSIDE_COMUNA_HINTS = [
@@ -44,26 +41,26 @@ const OUTSIDE_COMUNA_HINTS = [
     'los ángeles',
 ];
 
-function priceForDistance(distanceKm: number): { cost: number; label: string } | null {
+function priceForDistance(distanceKm: number): (typeof SHIPPING_BANDS)[number] | null {
     const d = Math.max(0, Number(distanceKm) || 0);
     for (const band of SHIPPING_BANDS) {
-        if (d <= band.maxKm) return { cost: band.cost, label: band.label };
+        if (d <= band.maxKm) return band;
     }
     return null;
 }
 
-/** Gratis: ≥$25.000 cualquier dirección; ≥$20.000 solo comuna Concepción. */
+function clp(amount: number) {
+    return `$${String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+}
+
+/** El gratis depende del tramo: más lejos, más alto el monto. */
 function applyFreeShipping(
-    band: { cost: number; label: string },
+    band: { cost: number; label: string; freeFrom: number },
     cartSubtotal: number,
-    inConcepcion: boolean,
 ): { cost: number; label: string } {
     const sub = Math.max(0, Math.round(Number(cartSubtotal) || 0));
-    if (sub >= FREE_ANYWHERE_FROM) {
-        return { cost: 0, label: 'Despacho gratis (compra sobre $25.000)' };
-    }
-    if (inConcepcion && sub >= FREE_IN_CONCEPCION_FROM) {
-        return { cost: 0, label: 'Despacho gratis en Concepción (compra sobre $20.000)' };
+    if (sub >= band.freeFrom) {
+        return { cost: 0, label: `Despacho gratis (compra sobre ${clp(band.freeFrom)})` };
     }
     return band;
 }
@@ -164,16 +161,14 @@ export class ShippingService {
 
         // POS fuera de radio: último tramo
         const baseBand = band || SHIPPING_BANDS[SHIPPING_BANDS.length - 1];
-        const inConcepcion = this.isInConcepcion(address, (dto as any).city, distanceKm);
         const priced = applyFreeShipping(
             distanceKm > LOCATION.maxDeliveryRadiusKm
-                ? { cost: baseBand.cost, label: `${baseBand.label} (fuera de radio, POS)` }
+                ? { ...baseBand, label: `${baseBand.label} (fuera de radio, POS)` }
                 : baseBand,
             cartSubtotal,
-            inConcepcion,
         );
 
-        this.logger.log(`[QUOTE] Origin ${this.ORIGIN_COORDS.lat},${this.ORIGIN_COORDS.lng} → ${distanceKm}km | CCO=${inConcepcion} | ${priced.label} | $${priced.cost}`);
+        this.logger.log(`[QUOTE] Origin ${this.ORIGIN_COORDS.lat},${this.ORIGIN_COORDS.lng} → ${distanceKm}km | ${priced.label} | $${priced.cost}`);
 
         return {
             valid: true,

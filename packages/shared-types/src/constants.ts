@@ -30,11 +30,12 @@ export const LOCATION = {
 // ─── Shipping (tarifas por distancia desde LOCATION) ────────
 
 /** Tramos inclusivos en el tope: d <= maxKm. */
+/** freeFrom: subtotal del carrito desde el cual ese tramo es gratis. */
 export const SHIPPING_BANDS = [
-    { maxKm: 3.5, cost: 2000, label: 'Despacho 0–3,5 km' },
-    { maxKm: 7.5, cost: 3500, label: 'Despacho 3,5–7,5 km' },
-    { maxKm: 9.5, cost: 4000, label: 'Despacho 7,5–9,5 km' },
-    { maxKm: 12, cost: 5500, label: 'Despacho 9,5–12 km' },
+    { maxKm: 3.5, cost: 2000, freeFrom: 20000, label: 'Despacho 0–3,5 km' },
+    { maxKm: 7.5, cost: 3500, freeFrom: 30000, label: 'Despacho 3,5–7,5 km' },
+    { maxKm: 9.5, cost: 4000, freeFrom: 40000, label: 'Despacho 7,5–9,5 km' },
+    { maxKm: 12, cost: 5500, freeFrom: 48000, label: 'Despacho 9,5–12 km' },
 ] as const;
 
 export const SHIPPING = {
@@ -42,12 +43,6 @@ export const SHIPPING = {
     maxDistanceKm: 12,
     concepcionCost: 2000,
     outsideCost: 5500,
-    /** Envío gratis en comuna Concepción desde este subtotal (CLP) */
-    freeInConcepcionFrom: 20000,
-    /** Envío gratis en cualquier dirección/tramo desde este subtotal (CLP) */
-    freeAnywhereFrom: 25000,
-    /** @deprecated use freeAnywhereFrom */
-    freeDeliveryThreshold: 25000,
     baseCost: 2000,
     perKmCost: 0,
     baseDistanceKm: 0,
