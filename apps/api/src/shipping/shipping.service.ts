@@ -57,12 +57,12 @@ function clp(amount: number) {
 function applyFreeShipping(
     band: { cost: number; label: string; freeFrom: number },
     cartSubtotal: number,
-): { cost: number; label: string } {
+): { cost: number; label: string; courierFee: number } {
     const sub = Math.max(0, Math.round(Number(cartSubtotal) || 0));
     if (sub >= band.freeFrom) {
-        return { cost: 0, label: `Despacho gratis (compra sobre ${clp(band.freeFrom)})` };
+        return { cost: 0, courierFee: band.cost, label: `Despacho gratis (compra sobre ${clp(band.freeFrom)})` };
     }
-    return band;
+    return { cost: band.cost, courierFee: band.cost, label: band.label };
 }
 
 function etaForDistance(distanceKm: number): string {
@@ -173,6 +173,7 @@ export class ShippingService {
         return {
             valid: true,
             cost: priced.cost,
+            courierFee: priced.courierFee,
             deliveryTimeEstimate: etaForDistance(Math.min(distanceKm, LOCATION.maxDeliveryRadiusKm)),
             estimateId: `band-${Date.now()}`,
             distanceKm,

@@ -20,6 +20,7 @@ interface DriverOrder {
     code: string;
     total: number;
     shippingCost: number;
+    courierPay: number;
     createdAt: string;
     address: string;
     customerName: string;
@@ -289,9 +290,10 @@ export default function DriverPage() {
                             <div className="mt-3">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Total</p>
                                 <p className="text-xl font-black italic text-slate-900 leading-none">{money(order.total)}</p>
-                                {order.shippingCost > 0 && (
+                                {order.courierPay > 0 && (
                                     <p className="text-[10px] font-bold text-slate-500 mt-1">
-                                        incl. envío {money(order.shippingCost)}
+                                        Pago repartidor {money(order.courierPay)}
+                                        {order.shippingCost <= 0 ? ' · gratis para el cliente' : ''}
                                     </p>
                                 )}
                             </div>

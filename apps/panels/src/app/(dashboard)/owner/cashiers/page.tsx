@@ -550,6 +550,8 @@ export default function CashiersManagementPage() {
                                 tipsTotal?: number;
                                 tipsCash?: number;
                                 shippingTotal?: number;
+                                courierPay?: number;
+                                courierFree?: number;
                                 expenses?: number;
                                 withdrawals?: number;
                                 refunds?: number;
@@ -610,8 +612,20 @@ export default function CashiersManagementPage() {
                                             ))}
                                             {!!summary?.shippingTotal && (
                                                 <div className="flex justify-between text-xs font-black uppercase text-sky-700 pt-2 border-t border-slate-100">
-                                                    <span>Reparto / envío</span>
+                                                    <span>Reparto cobrado</span>
                                                     <span>${Number(summary.shippingTotal).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {!!summary?.courierPay && (
+                                                <div className="flex justify-between text-xs font-black uppercase text-sky-700">
+                                                    <span>Pago repartidor</span>
+                                                    <span>${Number(summary.courierPay).toLocaleString('es-CL')}</span>
+                                                </div>
+                                            )}
+                                            {!!summary?.courierFree && (
+                                                <div className="flex justify-between text-xs font-bold uppercase text-sky-600">
+                                                    <span>Gratis al cliente</span>
+                                                    <span>${Number(summary.courierFree).toLocaleString('es-CL')}</span>
                                                 </div>
                                             )}
                                             {!!summary?.tipsTotal && (

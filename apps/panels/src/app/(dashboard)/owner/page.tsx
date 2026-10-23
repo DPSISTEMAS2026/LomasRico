@@ -113,6 +113,8 @@ export default function OwnerDashboardPage() {
                 <Row label="Pedidos" value={String(data?.count || 0)} />
                 <Row label="Ticket promedio" value={`$${Number(data?.avgTicket || 0).toLocaleString('es-CL')}`} />
                 {!!data?.tipsTotal && <Row label="Propinas" value={`$${Number(data.tipsTotal).toLocaleString('es-CL')}`} />}
+                {!!data?.courierPay && <Row label="Pago repartidor" value={`$${Number(data.courierPay).toLocaleString('es-CL')}`} />}
+                {!!data?.courierFree && <Row label="Reparto gratis al cliente" value={`$${Number(data.courierFree).toLocaleString('es-CL')}`} />}
             </div>
 
             {strongHours.length > 0 && (

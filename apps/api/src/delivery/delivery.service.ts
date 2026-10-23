@@ -36,6 +36,7 @@ function mapSaleLite(sale: any) {
         code: sale.code,
         total: Number(sale.total),
         shippingCost: Number(ship.cost || 0) || 0,
+        courierPay: Number(ship.courierFee || ship.cost || 0) || 0,
         createdAt: sale.createdAt,
         address,
         customerName: String(contact.name || '').trim() || 'Cliente',

@@ -321,6 +321,8 @@ export class StatsService {
 
         let total = 0;
         let tipsTotal = 0;
+        let courierPay = 0;
+        let courierFree = 0;
         const payments = new Map<string, { method: string; total: number; count: number }>();
         const channels = new Map<string, { channel: string; total: number; count: number }>();
         const hours = new Array(24).fill(0);
@@ -331,8 +333,13 @@ export class StatsService {
             total += amount;
             hours[zoned(new Date(s.createdAt)).hour]++;
 
-            const tip = Math.round(Number((s.shippingData as any)?.tip?.amount || 0));
+            const ship = (s.shippingData as any) || {};
+            const tip = Math.round(Number(ship?.tip?.amount || 0));
             if (tip > 0) tipsTotal += tip;
+            const charged = Math.round(Number(ship?.cost || 0));
+            const courier = Math.round(Number(ship?.courierFee ?? (charged > 0 ? charged : 0)));
+            if (courier > 0) courierPay += courier;
+            if (courier > charged) courierFree += courier - charged;
 
             const method = s.paymentMethod || 'OTHER';
             const p = payments.get(method) || { method, total: 0, count: 0 };
@@ -383,6 +390,8 @@ export class StatsService {
             count,
             avgTicket: count ? Math.round(total / count) : 0,
             tipsTotal,
+            courierPay,
+            courierFree,
             byPayment: [...payments.values()].sort((a, b) => b.total - a.total),
             byChannel: [...channels.values()].sort((a, b) => b.total - a.total),
             peakHours,

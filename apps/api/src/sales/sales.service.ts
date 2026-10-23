@@ -344,10 +344,9 @@ export class SalesService {
 
                 // Use the cost from Server, ignore client 'cost'
                 computedShippingCost = Number(quote.cost);
-                confirmedEstimationId = quote.estimateId; // Update estimate ID if fresh quote
-
-                // Update shippingData with trusted values
+                confirmedEstimationId = quote.estimateId;
                 shippingData.cost = computedShippingCost;
+                shippingData.courierFee = Number(quote.courierFee ?? computedShippingCost);
                 shippingData.estimateId = confirmedEstimationId;
 
             } catch (error) {

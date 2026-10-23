@@ -15,6 +15,8 @@ export class ShippingQuoteDto {
 export class ShippingQuoteResponse {
     valid: boolean;
     cost?: number;
+    /** Lo que se le paga al repartidor, aunque el cliente no pague despacho. */
+    courierFee?: number;
     deliveryTimeEstimate?: string;
     estimateId?: string;
     distanceKm?: number;

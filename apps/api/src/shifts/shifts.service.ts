@@ -85,16 +85,21 @@ export class ShiftsService {
         let tipsTotal = 0;
         let tipsCash = 0;
         let shippingTotal = 0;
+        let courierPay = 0;
+        let courierFree = 0;
         for (const sale of sales) {
             const ship = sale.shippingData && typeof sale.shippingData === 'object' ? sale.shippingData : {};
             const tip = Math.round(Number(ship?.tip?.amount || 0));
-            const shipping = Math.round(Number(ship?.cost || 0));
+            const charged = Math.round(Number(ship?.cost || 0));
+            const courier = Math.round(Number(ship?.courierFee ?? (charged > 0 ? charged : 0)));
             const method = sale.paymentMethod || 'OTHER';
             if (tip > 0) {
                 tipsTotal += tip;
                 if (method === 'CASH') tipsCash += tip;
             }
-            if (shipping > 0) shippingTotal += shipping;
+            if (charged > 0) shippingTotal += charged;
+            if (courier > 0) courierPay += courier;
+            if (courier > charged) courierFree += courier - charged;
         }
         for (const tx of txs) {
             const amount = Number(tx.amount);
@@ -124,6 +129,8 @@ export class ShiftsService {
             tipsTotal,
             tipsCash,
             shippingTotal,
+            courierPay,
+            courierFree,
         };
     }
 

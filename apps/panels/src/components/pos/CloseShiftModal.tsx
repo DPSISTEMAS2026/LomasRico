@@ -71,6 +71,8 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
             tipsTotal?: number;
             tipsCash?: number;
             shippingTotal?: number;
+            courierPay?: number;
+            courierFree?: number;
         }
         | undefined;
     const systemAmount = Number(summary?.expectedCash ?? shift?.startAmount ?? 0);
@@ -78,6 +80,8 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
     const tipsTotal = Math.round(Number(summary?.tipsTotal || 0));
     const tipsCash = Math.round(Number(summary?.tipsCash || 0));
     const shippingTotal = Math.round(Number(summary?.shippingTotal || 0));
+    const courierPay = Math.round(Number(summary?.courierPay || 0));
+    const courierFree = Math.round(Number(summary?.courierFree || 0));
 
     const countedAmount = parseFloat(endAmount) || 0;
     const diff = countedAmount - systemAmount;
@@ -157,7 +161,7 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                     </div>
                 </div>
 
-                {(methodRows.length > 0 || summary?.withdrawals || summary?.expenses || summary?.refunds || tipsTotal > 0 || shippingTotal > 0) ? (
+                {(methodRows.length > 0 || summary?.withdrawals || summary?.expenses || summary?.refunds || tipsTotal > 0 || shippingTotal > 0 || courierPay > 0) ? (
                     <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-1">
                         {methodRows.map(([method, total]) => (
                             <div key={method} className="flex justify-between text-xs font-black uppercase text-slate-900">
@@ -167,8 +171,20 @@ export function CloseShiftModal({ shift, onSuccess, onClose }: Props) {
                         ))}
                         {shippingTotal > 0 && (
                             <div className="flex justify-between text-xs font-black uppercase text-sky-700 pt-2 border-t border-slate-200 mt-2">
-                                <span>Reparto / envío</span>
+                                <span>Reparto cobrado</span>
                                 <span>${shippingTotal.toLocaleString('es-CL')}</span>
+                            </div>
+                        )}
+                        {courierPay > 0 && (
+                            <div className="flex justify-between text-xs font-black uppercase text-sky-700">
+                                <span>Pago repartidor</span>
+                                <span>${courierPay.toLocaleString('es-CL')}</span>
+                            </div>
+                        )}
+                        {courierFree > 0 && (
+                            <div className="flex justify-between text-xs font-bold uppercase text-sky-600">
+                                <span>Gratis al cliente</span>
+                                <span>${courierFree.toLocaleString('es-CL')}</span>
                             </div>
                         )}
                         {tipsTotal > 0 && (
