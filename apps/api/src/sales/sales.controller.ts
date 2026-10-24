@@ -85,6 +85,13 @@ export class SalesController {
         } as any);
     }
 
+    /** Lo usa la tienda al volver de Mercado Pago, si el navegador no abre la pantalla de éxito. */
+    @Public()
+    @Get('public/:id/payment')
+    publicPayment(@Param('id') id: string) {
+        return this.salesService.publicPayment(id);
+    }
+
     @Roles(...MANAGER_ROLES)
     @Get()
     findAll() {

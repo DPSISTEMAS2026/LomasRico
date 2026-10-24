@@ -337,6 +337,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
             const pref = await prefRes.json();
             const preferenceId = pref.preferenceId || pref.id;
             const initPoint = typeof pref.initPoint === 'string' ? pref.initPoint : '';
+            try { sessionStorage.setItem('lr_pending_web_order', sale.id); } catch { /* navegador privado */ }
             if (USES_MERCADO_PAGO && MP_PUBLIC_KEY && preferenceId) {
                 setPreferenceId(preferenceId);
             } else if (initPoint) {

@@ -686,6 +686,17 @@ export class SalesService {
         }, { maxWait: 10000, timeout: 30000 });
     }
 
+    /** Estado de pago para el regreso del checkout. Sin datos del cliente. */
+    async publicPayment(id: string) {
+        if (!/^[0-9a-f-]{36}$/i.test(String(id || ''))) throw new BadRequestException('Pedido no válido');
+        const sale = await (this.prisma as any).sale.findUnique({
+            where: { id },
+            select: { code: true, channel: true, status: true, paymentStatus: true },
+        });
+        if (!sale || sale.channel !== 'WEB') throw new NotFoundException('Pedido no encontrado');
+        return { code: sale.code, status: sale.status, paymentStatus: sale.paymentStatus };
+    }
+
     async findAll() {
         return (this.prisma as any).sale.findMany({
             include: {

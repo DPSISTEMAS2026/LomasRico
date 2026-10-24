@@ -29,6 +29,7 @@ function SuccessContent() {
             return;
         }
         localStorage.removeItem(CART_STORAGE);
+        try { sessionStorage.removeItem('lr_pending_web_order'); } catch { /* privado */ }
         clearCart();
 
         // TUU: reenviar campos firmados al API (el callback servidor a veces no llega).

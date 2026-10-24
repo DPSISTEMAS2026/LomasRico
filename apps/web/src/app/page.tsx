@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ProductGrid } from '../components/catalog/ProductGrid';
 import { BannerSection } from '../components/BannerSection';
 import { useCart } from '../context/CartContext';
+import { API_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTableSession } from '../context/TableSessionContext';
 import CheckoutModal from '../components/modals/CheckoutModal';
@@ -148,7 +149,7 @@ function HomeContent() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const { total } = useCart();
+  const { total, clearCart } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, ready, sessionEnd } = useTableSession();
@@ -169,6 +170,41 @@ function HomeContent() {
     if (session) {
     }
   }, [ready, mesa, session, router]);
+
+  useEffect(() => {
+    const key = 'lr_pending_web_order';
+    let stopped = false;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      const id = sessionStorage.getItem(key);
+      if (!id || stopped) return;
+      tries += 1;
+      try {
+        const res = await fetch(`${API_URL}/sales/public/${encodeURIComponent(id)}/payment`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const paid = data.paymentStatus === 'APPROVED' || ['CONFIRMED', 'PREPARING', 'COMPLETED'].includes(data.status);
+          if (paid) {
+            sessionStorage.removeItem(key);
+            clearCart();
+            window.location.replace(`/checkout/success?orderId=${encodeURIComponent(id)}&status=approved`);
+            return;
+          }
+          if (data.status === 'CANCELLED') sessionStorage.removeItem(key);
+        }
+      } catch { /* el aviso de Mercado Pago puede tardar unos segundos */ }
+      if (!stopped && tries < 8 && sessionStorage.getItem(key)) timer = setTimeout(tick, 2000);
+    };
+    const onShow = () => { tries = 0; void tick(); };
+    void tick();
+    window.addEventListener('pageshow', onShow);
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('pageshow', onShow);
+    };
+  }, [clearCart]);
 
   useEffect(() => {
     (window as any).openAuthModal = () => setIsAuthOpen(true);
