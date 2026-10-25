@@ -55,6 +55,7 @@ export const CevicheBuilderModal = ({
     const [step, setStep] = useState(0); // 0 = start, 1...n = modifiers, last = summary
     const [isAdding, setIsAdding] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [quantity, setQuantity] = useState(1);
 
     // Selections State (Map: groupId -> selected Option IDs)
     const [selections, setSelections] = useState<Record<string, string[]>>({});
@@ -72,6 +73,7 @@ export const CevicheBuilderModal = ({
             setStep(0);
             setSearchQuery('');
             setOriginalSizeId(null);
+            setQuantity(1);
             
             if (hasDynamicModifiers) {
                 const initial: Record<string, string[]> = {};
@@ -214,7 +216,7 @@ export const CevicheBuilderModal = ({
             variantId: 'custom',
             name: product.name,
             price: finalPrice,
-            quantity: 1,
+            quantity,
             modifiers: {
                 selectedProteins,
                 selectedProteinNames,
@@ -503,10 +505,34 @@ export const CevicheBuilderModal = ({
                                         );
                                     })}
                                     
-                                    <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
-                                        <span className="font-black italic uppercase text-xs text-slate-800 tracking-tighter">Total Personalizado</span>
+                                    <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex items-center justify-between gap-3">
+                                        <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Cantidad</span>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                                disabled={quantity <= 1}
+                                                className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition-all active:scale-90 ${
+                                                    quantity <= 1 ? 'border-slate-100 text-slate-200 cursor-not-allowed' : 'border-slate-200 text-slate-900 hover:border-orange-300 hover:text-orange-500'
+                                                }`}
+                                            >
+                                                <Minus size={16} strokeWidth={3} />
+                                            </button>
+                                            <span className="w-8 text-center text-xl font-black italic text-slate-900 tabular-nums">{quantity}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setQuantity((q) => Math.min(q + 1, product.maxQuantity ?? 99))}
+                                                disabled={product.maxQuantity != null && quantity >= product.maxQuantity}
+                                                className="w-10 h-10 rounded-xl border-2 border-slate-200 text-slate-900 flex items-center justify-center font-black transition-all active:scale-90 hover:border-orange-300 hover:text-orange-500 disabled:border-slate-100 disabled:text-slate-200"
+                                            >
+                                                <Plus size={16} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="pt-3 flex justify-between items-center">
+                                        <span className="font-black italic uppercase text-xs text-slate-800 tracking-tighter">Total</span>
                                         <span className="text-xl font-black italic text-slate-900 tracking-tighter">
-                                            ${finalPrice.toLocaleString('es-CL')}
+                                            ${(finalPrice * quantity).toLocaleString('es-CL')}
                                         </span>
                                     </div>
                                 </div>

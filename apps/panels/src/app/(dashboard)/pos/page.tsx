@@ -213,8 +213,27 @@ export default function POSPage() {
     };
 
     const addToCart = (itemData: any) => {
-        const tempId = Math.random().toString(36).substring(7);
-        setCart(prev => [...prev, { ...itemData, tempId }]);
+        const signature = (item: any) => {
+            const groups = (item.modifiers?.dynamicSelections || []).map((g: any) => {
+                const ids = (g.selectedOptions || []).map((o: any) => `${o.id || o.name}`).sort();
+                return `${g.groupId || g.groupName}:${ids.join(',')}`;
+            }).sort();
+            return `${item.productId}|${JSON.stringify(groups)}`;
+        };
+        setCart(prev => {
+            const key = signature(itemData);
+            const idx = prev.findIndex((item) => signature(item) === key);
+            const add = Math.max(1, Number(itemData.quantity) || 1);
+            if (idx >= 0) {
+                const next = [...prev];
+                const current = next[idx];
+                const maxQ = (current as any).maxQuantity || (itemData as any).maxQuantity || 999;
+                next[idx] = { ...current, quantity: Math.min(current.quantity + add, maxQ) };
+                return next;
+            }
+            const tempId = Math.random().toString(36).substring(7);
+            return [...prev, { ...itemData, quantity: add, tempId }];
+        });
     };
 
     const removeFromCart = (tempId: string) => setCart(prev => prev.filter(i => i.tempId !== tempId));

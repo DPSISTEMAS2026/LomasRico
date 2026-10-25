@@ -69,6 +69,7 @@ export default function KitchenPage() {
     const prevTicketIds = useRef<Set<string>>(new Set());
     const tabBarRef = useRef<HTMLDivElement>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
+    const keepAliveRef = useRef<OscillatorNode | null>(null);
     const [audioReady, setAudioReady] = useState(false);
 
     const ensureAudio = useCallback(async () => {
@@ -76,11 +77,24 @@ export default function KitchenPage() {
             const Ctx = window.AudioContext || (window as any).webkitAudioContext;
             if (!Ctx) return false;
             if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
-            if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
-            const ok = audioCtxRef.current.state === 'running';
+            const ctx = audioCtxRef.current;
+            if (ctx.state === 'suspended') await ctx.resume();
+            // Un tono mudo evita que el navegador duerma el audio y el tilín deje de sonar.
+            if (ctx.state === 'running' && !keepAliveRef.current) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                gain.gain.value = 0.00001;
+                osc.frequency.value = 1;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                keepAliveRef.current = osc;
+            }
+            const ok = ctx.state === 'running';
             setAudioReady(ok);
             return ok;
         } catch {
+            setAudioReady(false);
             return false;
         }
     }, []);
@@ -101,13 +115,14 @@ export default function KitchenPage() {
                     osc.type = 'sine';
                     osc.frequency.value = freq;
                     gain.gain.setValueAtTime(0.0001, t0 + start);
-                    gain.gain.exponentialRampToValueAtTime(0.35, t0 + start + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.55, t0 + start + 0.01);
                     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
                     osc.start(t0 + start);
                     osc.stop(t0 + start + dur + 0.02);
                 };
-                beep(1320, 0, 0.09);
-                beep(1760, 0.1, 0.08);
+                beep(880, 0, 0.18);
+                beep(880, 0.26, 0.18);
+                beep(1175, 0.52, 0.28);
             } catch {
                 /* Audio no disponible */
             }
