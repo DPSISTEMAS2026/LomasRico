@@ -31,6 +31,20 @@ Respuestas cortas en **español chileno**. Destrabar servicio sin romper producc
 | TUU web | Pasarela online; no confundir con máquina |
 | Comanda corta / no corta | POS-5890F 58mm, tear-bar, sin cutter auto |
 
+## Scripts ops (`scripts/ops/`)
+Pasan por la API (precios, promos, turno, auditoría). Requieren `OPS_PIN` (dueño/admin) en `scripts/ops/.env`. Sin `--apply` solo muestran.
+
+| Situación | Comando |
+|---|---|
+| Web pagada ¿llegó a cocina? | `node scripts/ops/web-check.mjs` (`--apply` manda las que falten) |
+| Voucher TUU impreso pero sistema dijo rechazado | `node scripts/ops/tuu-check.mjs` → huérfano: `--recover <key> --like <código> --apply` |
+| Buscar venta | `node scripts/ops/find-sale.mjs --amount 7000 --tol 1000` / `--text luis` / `--code 41` |
+| Reimprimir comanda o cuenta | `node scripts/ops/kitchen-print.mjs 41` (`--account`) — solo en el PC del local |
+| Turnos colgados / mesas ocupadas | `node scripts/ops/floor-check.mjs` |
+| Abrir/cerrar web, horario | `node scripts/ops/web-store.mjs --off --apply` / `--hours 12:30-22:00 --apply` |
+
+Promos tipo "2 x" son un modificador del plato (ej. Handroll + PROMO 2X = $7.000): para recuperar, copiar platos con `--like` de una venta igual.
+
 ## Prohibido sin confirmación explícita
 Force-push, borrar ventas, cerrar turnos, cambiar env de producción, migraciones destructivas.
 
