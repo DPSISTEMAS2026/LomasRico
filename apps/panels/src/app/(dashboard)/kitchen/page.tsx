@@ -70,7 +70,54 @@ export default function KitchenPage() {
     const tabBarRef = useRef<HTMLDivElement>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const keepAliveRef = useRef<OscillatorNode | null>(null);
-    const [audioReady, setAudioReady] = useState(false);
+    const alarmNodes = useRef<{ osc: OscillatorNode; gain: GainNode } | null>(null);
+    const alarmTimer = useRef<number | null>(null);
+    const alarmOnRef = useRef(false);
+    const [alarmOn, setAlarmOn] = useState(false);
+
+    const stopAlarm = useCallback(() => {
+        alarmOnRef.current = false;
+        setAlarmOn(false);
+        if (alarmTimer.current != null) {
+            window.clearTimeout(alarmTimer.current);
+            alarmTimer.current = null;
+        }
+        const nodes = alarmNodes.current;
+        alarmNodes.current = null;
+        if (!nodes) return;
+        try {
+            const t = audioCtxRef.current?.currentTime ?? 0;
+            nodes.gain.gain.cancelScheduledValues(t);
+            nodes.gain.gain.setValueAtTime(0.0001, t);
+            nodes.osc.stop(t + 0.05);
+        } catch {
+            /* ya estaba cortada */
+        }
+    }, []);
+
+    const armAlarm = useCallback(() => {
+        if (!alarmOnRef.current || alarmNodes.current) return;
+        const ctx = audioCtxRef.current;
+        if (!ctx || ctx.state !== 'running') return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.value = 0.9;
+        osc.frequency.setValueAtTime(420, ctx.currentTime);
+        osc.start();
+        alarmNodes.current = { osc, gain };
+        const sweep = () => {
+            if (!alarmOnRef.current || !alarmNodes.current) return;
+            const now = ctx.currentTime;
+            osc.frequency.cancelScheduledValues(now);
+            osc.frequency.setValueAtTime(420, now);
+            osc.frequency.linearRampToValueAtTime(1800, now + 10);
+            alarmTimer.current = window.setTimeout(sweep, 10_000);
+        };
+        sweep();
+    }, []);
 
     const ensureAudio = useCallback(async () => {
         try {
@@ -79,7 +126,6 @@ export default function KitchenPage() {
             if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
             const ctx = audioCtxRef.current;
             if (ctx.state === 'suspended') await ctx.resume();
-            // Un tono mudo evita que el navegador duerma el audio y el tilín deje de sonar.
             if (ctx.state === 'running' && !keepAliveRef.current) {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -91,43 +137,39 @@ export default function KitchenPage() {
                 keepAliveRef.current = osc;
             }
             const ok = ctx.state === 'running';
-            setAudioReady(ok);
+            if (ok) armAlarm();
             return ok;
         } catch {
-            setAudioReady(false);
             return false;
         }
-    }, []);
+    }, [armAlarm]);
 
-    // Tilín corto (~180ms) al entrar pedido a Entrantes
     const playNotificationSound = useCallback(() => {
-        void (async () => {
-            try {
-                await ensureAudio();
-                const ctx = audioCtxRef.current;
-                if (!ctx) return;
-                const t0 = ctx.currentTime;
-                const beep = (freq: number, start: number, dur: number) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.type = 'sine';
-                    osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0.0001, t0 + start);
-                    gain.gain.exponentialRampToValueAtTime(0.55, t0 + start + 0.01);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
-                    osc.start(t0 + start);
-                    osc.stop(t0 + start + dur + 0.02);
-                };
-                beep(880, 0, 0.18);
-                beep(880, 0.26, 0.18);
-                beep(1175, 0.52, 0.28);
-            } catch {
-                /* Audio no disponible */
-            }
-        })();
+        alarmOnRef.current = true;
+        setAlarmOn(true);
+        void ensureAudio();
     }, [ensureAudio]);
+
+    useEffect(() => {
+        void ensureAudio();
+        const unlock = (event: Event) => {
+            const target = event.target as HTMLElement | null;
+            if (target?.closest('[data-silence-alarm]')) return;
+            void ensureAudio();
+        };
+        window.addEventListener('pointerdown', unlock, true);
+        window.addEventListener('keydown', unlock, true);
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') void ensureAudio();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            window.removeEventListener('pointerdown', unlock, true);
+            window.removeEventListener('keydown', unlock, true);
+            document.removeEventListener('visibilitychange', onVisible);
+            stopAlarm();
+        };
+    }, [ensureAudio, stopAlarm]);
 
     const hasLoaded = useRef(false);
     const inFlight = useRef(false);
@@ -386,13 +428,14 @@ export default function KitchenPage() {
                     Sin conexión · reintentando
                 </div>
             )}
-            {!audioReady && (
+            {alarmOn && (
                 <button
                     type="button"
-                    onClick={() => { void ensureAudio().then((ok) => { if (ok) playNotificationSound(); }); }}
-                    className="shrink-0 bg-amber-500 text-white text-xs font-black uppercase tracking-wide text-center py-1.5 hover:bg-amber-600"
+                    data-silence-alarm
+                    onClick={stopAlarm}
+                    className="shrink-0 bg-red-600 text-white text-sm font-black uppercase tracking-wide text-center py-3 animate-pulse hover:bg-red-700"
                 >
-                    Tocar para activar tilín e impresión
+                    Tocar para silenciar la alarma
                 </button>
             )}
             {/* Header */}
