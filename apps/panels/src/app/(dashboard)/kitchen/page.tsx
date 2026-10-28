@@ -70,53 +70,60 @@ export default function KitchenPage() {
     const tabBarRef = useRef<HTMLDivElement>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const keepAliveRef = useRef<OscillatorNode | null>(null);
-    const alarmNodes = useRef<{ osc: OscillatorNode; gain: GainNode } | null>(null);
+    const alarmArmed = useRef(false);
+    const chimeNodes = useRef<OscillatorNode[]>([]);
     const alarmTimer = useRef<number | null>(null);
     const alarmOnRef = useRef(false);
     const [alarmOn, setAlarmOn] = useState(false);
 
     const stopAlarm = useCallback(() => {
         alarmOnRef.current = false;
+        alarmArmed.current = false;
         setAlarmOn(false);
         if (alarmTimer.current != null) {
             window.clearTimeout(alarmTimer.current);
             alarmTimer.current = null;
         }
-        const nodes = alarmNodes.current;
-        alarmNodes.current = null;
-        if (!nodes) return;
-        try {
-            const t = audioCtxRef.current?.currentTime ?? 0;
-            nodes.gain.gain.cancelScheduledValues(t);
-            nodes.gain.gain.setValueAtTime(0.0001, t);
-            nodes.osc.stop(t + 0.05);
-        } catch {
-            /* ya estaba cortada */
+        const live = chimeNodes.current;
+        chimeNodes.current = [];
+        for (const osc of live) {
+            try { osc.stop(); } catch { /* ya terminó */ }
         }
     }, []);
 
     const armAlarm = useCallback(() => {
-        if (!alarmOnRef.current || alarmNodes.current) return;
+        if (!alarmOnRef.current || alarmArmed.current) return;
         const ctx = audioCtxRef.current;
         if (!ctx || ctx.state !== 'running') return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'square';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        gain.gain.value = 0.9;
-        osc.frequency.setValueAtTime(420, ctx.currentTime);
-        osc.start();
-        alarmNodes.current = { osc, gain };
-        const sweep = () => {
-            if (!alarmOnRef.current || !alarmNodes.current) return;
-            const now = ctx.currentTime;
-            osc.frequency.cancelScheduledValues(now);
-            osc.frequency.setValueAtTime(420, now);
-            osc.frequency.linearRampToValueAtTime(1800, now + 10);
-            alarmTimer.current = window.setTimeout(sweep, 10_000);
+        alarmArmed.current = true;
+        let step = 0;
+        const notes = [784, 988, 1175];
+        const chime = () => {
+            if (!alarmOnRef.current) return;
+            const lift = Math.min(step, 8) * 28;
+            step += 1;
+            const t0 = ctx.currentTime + 0.02;
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq + lift;
+                const start = t0 + i * 0.14;
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.42, start + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 0.26);
+                chimeNodes.current.push(osc);
+                osc.onended = () => {
+                    chimeNodes.current = chimeNodes.current.filter((n) => n !== osc);
+                };
+            });
+            alarmTimer.current = window.setTimeout(chime, 1100);
         };
-        sweep();
+        chime();
     }, []);
 
     const ensureAudio = useCallback(async () => {
@@ -435,7 +442,7 @@ export default function KitchenPage() {
                     onClick={stopAlarm}
                     className="shrink-0 bg-red-600 text-white text-sm font-black uppercase tracking-wide text-center py-3 animate-pulse hover:bg-red-700"
                 >
-                    Tocar para silenciar la alarma
+                    Tocar para silenciar el tilín
                 </button>
             )}
             {/* Header */}
