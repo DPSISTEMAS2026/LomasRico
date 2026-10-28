@@ -23,6 +23,24 @@ function countOption(ids: string[], optionId: string) {
     return ids.reduce((n, id) => n + (id === optionId ? 1 : 0), 0);
 }
 
+/** "Unidad" a $0 es la cantidad del plato. Repetirla no puede quedar solo como texto. */
+function isPlainUnitOption(option?: { name?: string; priceAdjustment?: number }) {
+    return !!option && /^unidad$/i.test(option.name || '') && Number(option.priceAdjustment || 0) === 0;
+}
+
+function collapseSingleRepeat(groups: { selectedOptions: { id: string; name: string; price: number }[] }[]) {
+    let repeated = 1;
+    for (const group of groups) {
+        const opts = group.selectedOptions || [];
+        if (opts.length < 2) continue;
+        const id = opts[0].id;
+        if (!opts.every((o) => o.id === id)) continue;
+        repeated = Math.max(repeated, opts.length);
+        group.selectedOptions = [opts[0]];
+    }
+    return repeated;
+}
+
 function summarizeSelectedIds(ids: string[]) {
     const order: string[] = [];
     const counts = new Map<string, number>();
@@ -178,13 +196,21 @@ export const CevicheBuilderModal = ({
     };
 
     const setOptionQuantity = (groupId: string, optionId: string, nextQty: number, max: number) => {
+        const group = modifiers.find((m) => m.groupId === groupId);
+        const opt = group?.options.find((o) => o.id === optionId);
+        const plainUnit = isPlainUnitOption(opt);
+        const current = selections[groupId] || [];
+        const others = current.filter((id) => id !== optionId);
+        const capped = Math.max(0, Math.min(Math.floor(nextQty), max - others.length));
+        if (plainUnit) setQuantity(Math.max(1, capped || 1));
         setSelections((prev) => {
-            const current = prev[groupId] || [];
-            const others = current.filter((id) => id !== optionId);
-            const capped = Math.max(0, Math.min(Math.floor(nextQty), max - others.length));
-            const next = [...others, ...Array.from({ length: capped }, () => optionId)];
+            const prevOthers = (prev[groupId] || []).filter((id) => id !== optionId);
+            const nextCap = Math.max(0, Math.min(Math.floor(nextQty), max - prevOthers.length));
+            const next = plainUnit
+                ? (nextCap > 0 ? [...prevOthers, optionId] : prevOthers)
+                : [...prevOthers, ...Array.from({ length: nextCap }, () => optionId)];
             // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'pos-qty-multi',hypothesisId:'P1',location:'panels/CevicheBuilderModal.tsx:setOptionQuantity',message:'POS option qty change',data:{groupId,optionId,nextQty,capped,total:next.length,max,product:product.name},timestamp:Date.now()})}).catch(()=>{});
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'pos-qty-multi',hypothesisId:'P1',location:'panels/CevicheBuilderModal.tsx:setOptionQuantity',message:'POS option qty change',data:{groupId,optionId,nextQty,capped:nextCap,total:next.length,max,plainUnit,product:product.name},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
             return { ...prev, [groupId]: next };
         });
@@ -207,6 +233,10 @@ export const CevicheBuilderModal = ({
 
         // Backward compatibility for legacy system
         // We find the "proteinas" group if it exists and extract its names
+        const repeated = collapseSingleRepeat(dynamicSelections);
+        const unitExtras = dynamicSelections.reduce((sum, g) => sum + (g.selectedOptions || []).reduce((s, o) => s + Number(o.price || 0), 0), 0);
+        const unitPrice = repeated > 1 ? basePrice + unitExtras : finalPrice;
+        const lineQty = Math.max(quantity, repeated);
         const proteinGroup = dynamicSelections.find(g => g.groupName.toLowerCase().includes('proteina'));
         const selectedProteins = proteinGroup ? proteinGroup.selectedOptions.map(o => o.id) : [];
         const selectedProteinNames = proteinGroup ? proteinGroup.selectedOptions.map(o => o.name) : [];
@@ -215,8 +245,8 @@ export const CevicheBuilderModal = ({
             productId: product.id,
             variantId: 'custom',
             name: product.name,
-            price: finalPrice,
-            quantity,
+            price: unitPrice,
+            quantity: lineQty,
             modifiers: {
                 selectedProteins,
                 selectedProteinNames,
@@ -294,7 +324,12 @@ export const CevicheBuilderModal = ({
                                             {currentModifier.type === 'SINGLE_SELECT'
                                                 ? 'Elige 1 de la lista'
                                                 : allowsOptionQuantities(currentModifier)
-                                                    ? `Cupos ${(selections[currentModifier.groupId] || []).length}/${currentModifier.maxSelections}${currentModifier.minSelections > 0 ? ` · mínimo ${currentModifier.minSelections}` : ''} · puedes repetir`
+                                                    ? `Cupos ${(() => {
+                                                        const ids = selections[currentModifier.groupId] || [];
+                                                        const unit = currentModifier.options.find((o) => isPlainUnitOption(o) && ids.includes(o.id));
+                                                        if (!unit) return ids.length;
+                                                        return ids.filter((id) => id !== unit.id).length + quantity;
+                                                    })()}/${currentModifier.maxSelections}${currentModifier.minSelections > 0 ? ` · mínimo ${currentModifier.minSelections}` : ''} · puedes repetir`
                                                     : `Selecciona de ${currentModifier.minSelections} a ${currentModifier.maxSelections}`}
                                         </p>
                                     </div>
@@ -328,11 +363,16 @@ export const CevicheBuilderModal = ({
                                     {filteredOptions.length > 0 ? (
                                         filteredOptions.map((option) => {
                                             const selectedIds = selections[currentModifier.groupId] || [];
-                                            const qty = countOption(selectedIds, option.id);
+                                            const storedQty = countOption(selectedIds, option.id);
+                                            const plainUnit = isPlainUnitOption(option);
+                                            const qty = plainUnit && storedQty > 0 ? quantity : storedQty;
                                             const isSelected = qty > 0;
                                             const isUnavailable = option.available === false;
                                             const useQty = allowsOptionQuantities(currentModifier);
-                                            const canAdd = !isUnavailable && selectedIds.length < currentModifier.maxSelections;
+                                            const others = selectedIds.filter((id) => id !== option.id).length;
+                                            const canAdd = !isUnavailable && (plainUnit
+                                                ? qty < currentModifier.maxSelections - others
+                                                : selectedIds.length < currentModifier.maxSelections);
 
                                             if (useQty) {
                                                 return (

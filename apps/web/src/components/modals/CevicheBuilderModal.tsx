@@ -25,6 +25,23 @@ function countOption(ids: string[], optionId: string) {
     return ids.reduce((n, id) => n + (id === optionId ? 1 : 0), 0);
 }
 
+function isPlainUnitOption(option?: { name?: string; priceAdjustment?: number }) {
+    return !!option && /^unidad$/i.test(option.name || '') && Number(option.priceAdjustment || 0) === 0;
+}
+
+function collapseSingleRepeat(groups: { selectedOptions: { id: string; name: string; price: number }[] }[]) {
+    let repeated = 1;
+    for (const group of groups) {
+        const opts = group.selectedOptions || [];
+        if (opts.length < 2) continue;
+        const id = opts[0].id;
+        if (!opts.every((o) => o.id === id)) continue;
+        repeated = Math.max(repeated, opts.length);
+        group.selectedOptions = [opts[0]];
+    }
+    return repeated;
+}
+
 function summarizeSelectedIds(ids: string[]) {
     const order: string[] = [];
     const counts = new Map<string, number>();
@@ -204,13 +221,22 @@ export const CevicheBuilderModal = ({
 
     /** Cupos por opción (permite repetir el mismo roll/sabor/etc.). */
     const setOptionQuantity = (groupId: string, optionId: string, nextQty: number, max: number) => {
+        const group = product.modifiers?.find((m) => m.groupId === groupId);
+        const opt = group?.options.find((o) => o.id === optionId);
+        const plainUnit = isPlainUnitOption(opt);
+        const currentIds = selections[groupId] || [];
+        const otherIds = currentIds.filter((id) => id !== optionId);
+        const cappedNow = Math.max(0, Math.min(Math.floor(nextQty), max - otherIds.length));
+        if (plainUnit) setQuantity(Math.max(1, cappedNow || 1));
         setSelections((prev) => {
             const current = prev[groupId] || [];
             const others = current.filter((id) => id !== optionId);
             const capped = Math.max(0, Math.min(Math.floor(nextQty), max - others.length));
-            const next = [...others, ...Array.from({ length: capped }, () => optionId)];
+            const next = plainUnit
+                ? (capped > 0 ? [...others, optionId] : others)
+                : [...others, ...Array.from({ length: capped }, () => optionId)];
             // #region agent log
-            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qty-multi',hypothesisId:'Q1',location:'CevicheBuilderModal.tsx:setOptionQuantity',message:'option qty change',data:{groupId,optionId,nextQty,capped,total:next.length,max},timestamp:Date.now()})}).catch(()=>{});
+            fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'qty-multi',hypothesisId:'Q1',location:'CevicheBuilderModal.tsx:setOptionQuantity',message:'option qty change',data:{groupId,optionId,nextQty,capped,total:next.length,max,plainUnit},timestamp:Date.now()})}).catch(()=>{});
             // #endregion
             return { ...prev, [groupId]: next };
         });
@@ -264,12 +290,17 @@ export const CevicheBuilderModal = ({
             }))
             : [];
 
+        const repeated = collapseSingleRepeat(dynamicSelections);
+        const unitExtras = dynamicSelections.reduce((sum, g) => sum + (g.selectedOptions || []).reduce((s, o) => s + Number(o.price || 0), 0), 0);
+        const unitPrice = repeated > 1 ? basePrice + unitExtras : finalPrice;
+        const lineQty = Math.max(quantity, repeated);
+
         const itemData = {
             productId: product.id,
             variantId: 'default',
             name: product.name,
-            price: finalPrice,
-            quantity: quantity,
+            price: unitPrice,
+            quantity: lineQty,
             modifiers: {
                 selectedProteins: [],
                 selectedProteinNames: [],
@@ -421,11 +452,16 @@ export const CevicheBuilderModal = ({
                                         {filteredOptions.length > 0 ? (
                                             filteredOptions.map((option) => {
                                                 const selectedIds = selections[currentModifier.groupId] || [];
-                                                const qty = countOption(selectedIds, option.id);
+                                                const storedQty = countOption(selectedIds, option.id);
+                                                const plainUnit = isPlainUnitOption(option);
+                                                const qty = plainUnit && storedQty > 0 ? quantity : storedQty;
                                                 const isSelected = qty > 0;
                                                 const isUnavailable = option.available === false;
                                                 const useQty = allowsOptionQuantities(currentModifier);
-                                                const canAdd = !isUnavailable && selectedIds.length < currentModifier.maxSelections;
+                                                const others = selectedIds.filter((id) => id !== option.id).length;
+                                                const canAdd = !isUnavailable && (plainUnit
+                                                    ? qty < currentModifier.maxSelections - others
+                                                    : selectedIds.length < currentModifier.maxSelections);
 
                                                 if (useQty) {
                                                     return (
