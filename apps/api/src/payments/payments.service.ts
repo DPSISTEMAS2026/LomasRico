@@ -520,7 +520,7 @@ export class PaymentsService implements OnModuleInit, OnModuleDestroy {
             await this.brevo.sendTransactional(
                 contact.email,
                 contact.name || contact.email,
-                `Recibimos tu pedido ${sale.code}`,
+                `Tu pedido ${sale.code} está confirmado`,
                 orderConfirmationHtml(sale, contact.name),
             );
         } catch (err: any) {

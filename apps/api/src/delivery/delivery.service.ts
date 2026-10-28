@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { BrevoService } from '../mail/brevo.service';
+import { orderOnTheWayHtml } from '../mail/order-email';
 
 export type DriverDeliveryStatus = 'QUEUED' | 'PICKED' | 'OUT' | 'DONE';
 
@@ -57,9 +59,13 @@ const STATUS_ORDER: Record<DriverDeliveryStatus, number> = {
 
 @Injectable()
 export class DeliveryService {
+    private readonly logger = new Logger(DeliveryService.name);
     private cache: { at: number; key: string; data: any[] } | null = null;
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly brevo: BrevoService,
+    ) {}
 
     private bust() {
         this.cache = null;
@@ -202,6 +208,31 @@ export class DeliveryService {
         }
 
         this.bust();
+        if (next === 'OUT' && prev !== 'OUT') {
+            await this.notifyOnTheWay(sale.id);
+        }
         return mapSaleLite(updated);
+    }
+
+    /** Aviso al cliente. Si Brevo falla, el pedido igual queda en camino. */
+    private async notifyOnTheWay(saleId: string) {
+        try {
+            if (!this.brevo.isConfigured()) return;
+            const sale = await (this.prisma as any).sale.findUnique({
+                where: { id: saleId },
+                include: { items: { include: { sellingProduct: { select: { name: true } } } } },
+            });
+            const contact = asShip(sale?.shippingData).contact || {};
+            const email = String(contact.email || '').trim();
+            if (!sale || !email) return;
+            await this.brevo.sendTransactional(
+                email,
+                contact.name || email,
+                `Vamos en camino con tu pedido ${sale.code}`,
+                orderOnTheWayHtml(sale, contact.name),
+            );
+        } catch (err: any) {
+            this.logger.error(`No se pudo avisar en camino ${saleId}: ${err?.message}`);
+        }
     }
 }
