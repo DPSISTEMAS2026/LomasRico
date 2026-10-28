@@ -45,6 +45,8 @@ function mapSaleLite(sale: any) {
         customerPhone: String(contact.phone || '').replace(/[^\d+]/g, '').slice(0, 16),
         deliveryStatus: st,
         kitchenStatus,
+        outAt: ship.delivery?.outAt || null,
+        doneAt: ship.delivery?.doneAt || null,
         /** Listo para que el repartidor lo tome = cocina READY/DELIVERED. */
         readyForPickup: kitchenReady,
     };

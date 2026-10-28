@@ -27,6 +27,8 @@ interface DriverOrder {
     customerPhone: string;
     readyForPickup: boolean;
     deliveryStatus: DeliveryStatus;
+    outAt?: string | null;
+    doneAt?: string | null;
 }
 
 /** Poll lento: no saturar API/Supabase. Pausado con pestaña oculta. */
@@ -35,13 +37,13 @@ const POLL_MS = 45_000;
 const STATUS_LABEL: Record<DeliveryStatus, string> = {
     QUEUED: 'En cola',
     PICKED: 'Tomado',
-    OUT: 'En camino',
+    OUT: 'En reparto',
     DONE: 'Entregado',
 };
 
 const NEXT_ACTION: Partial<Record<DeliveryStatus, { next: DeliveryStatus; label: string }>> = {
     QUEUED: { next: 'PICKED', label: 'Tomar pedido' },
-    PICKED: { next: 'OUT', label: 'Salí a repartir' },
+    PICKED: { next: 'OUT', label: 'En reparto' },
     OUT: { next: 'DONE', label: 'Entregado' },
 };
 
@@ -54,6 +56,13 @@ function timeAgo(iso: string) {
     if (mins < 1) return 'ahora';
     if (mins < 60) return `${mins} min`;
     return `${Math.floor(mins / 60)} h`;
+}
+
+function clock(iso?: string | null) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' });
 }
 
 function mapsUrl(address: string) {
@@ -152,7 +161,7 @@ export default function DriverPage() {
                                 Reparto
                             </h1>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">
-                                {active.length} activos · {readyCount} listos · {outCount} en camino
+                                {active.length} activos · {readyCount} listos · {outCount} en reparto
                             </p>
                         </div>
                     </div>
@@ -231,6 +240,13 @@ export default function DriverPage() {
                                     <h2 className="text-lg font-black italic uppercase tracking-tight text-slate-900 leading-tight mt-0.5">
                                         {order.customerName}
                                     </h2>
+                                    {(order.outAt || order.doneAt) && (
+                                        <p className="text-[10px] font-bold text-slate-500 mt-1">
+                                            {order.outAt ? `En reparto ${clock(order.outAt)}` : ''}
+                                            {order.outAt && order.doneAt ? ' · ' : ''}
+                                            {order.doneAt ? `Entregado ${clock(order.doneAt)}` : ''}
+                                        </p>
+                                    )}
                                 </div>
                                 <span
                                     className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
