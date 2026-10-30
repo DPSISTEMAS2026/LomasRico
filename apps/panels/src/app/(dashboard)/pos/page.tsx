@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { PROTEINS, VEGGIES, filterModifiersForChannel } from '@lomasrico/shared-types';
+import { PROTEINS, VEGGIES, filterModifiersForChannel, packChoiceFromModifiers, saleLineTitle } from '@lomasrico/shared-types';
 import type { CashierShift, AppUser, ShiftTransaction } from '@lomasrico/shared-types';
 import { createSale, getShippingQuote, fetchCatalog, API_URL } from '../../../services/api';
 import { authFetch } from '../../../services/authFetch';
@@ -622,9 +622,11 @@ export default function POSPage() {
                             cart.map(item => (
                                 <div key={item.tempId} className="flex justify-between items-start gap-4 pb-4 border-b border-slate-50 animate-in fade-in slide-in-from-right-6 duration-300 group">
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-black text-slate-900 uppercase tracking-tighter text-sm md:text-base italic truncate group-hover:text-orange-500 transition-colors">{item.name}</div>
+                                        <div className="font-black text-slate-900 uppercase tracking-tighter text-sm md:text-base italic truncate group-hover:text-orange-500 transition-colors">
+                                            {packChoiceFromModifiers(item.modifiers) ? saleLineTitle(item.name, item.quantity, item.modifiers) : item.name}
+                                        </div>
                                         <div className="flex flex-wrap gap-1.5 mt-2">
-                                            {item.modifiers.dynamicSelections?.map((selection: any) => {
+                                            {item.modifiers.dynamicSelections?.filter((selection: any) => !selection.priceIsFinal).map((selection: any) => {
                                                 const counts = new Map<string, { name: string; qty: number }>();
                                                 for (const opt of selection.selectedOptions || []) {
                                                     const key = opt.id || opt.name;

@@ -20,6 +20,27 @@ const OrderStatus = {
     CANCELLED: 'CANCELLED'
 };
 
+function packSaleTitle(productName: string, quantity: number, raw: any) {
+    let mods: any = {};
+    try {
+        mods = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    } catch {
+        mods = {};
+    }
+    for (const group of mods.dynamicSelections || []) {
+        if (!group?.priceIsFinal) continue;
+        const option = String(group.selectedOptions?.[0]?.name || '').trim();
+        if (!option) continue;
+        const product = String(productName || '').trim();
+        const head = product && !option.toLowerCase().includes(product.toLowerCase())
+            ? `${option} ${product}`
+            : (option || product);
+        const qty = Math.max(1, Number(quantity) || 1);
+        return qty > 1 ? `${head} × ${qty}` : head;
+    }
+    return null;
+}
+
 @Injectable()
 export class KitchenService {
     constructor(private prisma: PrismaService, private audit: AuditService) { }
@@ -400,6 +421,7 @@ export class KitchenService {
             const lines: string[] = [];
             const byGroup = new Map<string, string[]>();
             for (const g of mods.dynamicSelections || []) {
+                if (g?.priceIsFinal) continue;
                 const label = cleanLabel(g.displayName || g.groupName) || 'Opción';
                 const names = (g.selectedOptions || []).map((o: any) => String(o?.name || '').trim()).filter(Boolean);
                 if (!names.length) continue;
@@ -431,16 +453,19 @@ export class KitchenService {
 
         const isAccount = kind === 'account';
         const itemsHtml = sale.items.map((item: any) => {
-            const name = escapeHtml(item.sellingProduct?.name || item.productName || 'Producto');
+            const rawName = item.sellingProduct?.name || item.productName || 'Producto';
+            const name = escapeHtml(rawName);
             const qty = item.quantity || 1;
             const unit = Number(item.priceUnit || 0);
             const lineTotal = unit * qty;
             const modsHtml = formatMods(item.modifiers);
             const notes = item.note ? `<div style="padding-left:2mm;font-size:11px;font-weight:bold;word-break:break-word;">NOTA: ${escapeHtml(item.note)}</div>` : '';
+            const packTitle = packSaleTitle(rawName, qty, item.modifiers);
+            const title = packTitle ? escapeHtml(packTitle) : `${qty}x ${name}`;
             return `
                 <div style="border-bottom:1px dashed #000;padding:5px 0;">
                     <div style="font-weight:900;font-size:14px;word-break:break-word;overflow-wrap:anywhere;">
-                        ${qty}x ${name}${isAccount ? ` · $${lineTotal.toLocaleString('es-CL')}` : ''}
+                        ${title}${isAccount ? ` · $${lineTotal.toLocaleString('es-CL')}` : ''}
                     </div>
                     ${modsHtml}
                     ${notes}

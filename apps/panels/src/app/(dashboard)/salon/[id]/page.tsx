@@ -17,7 +17,7 @@ import { useAuth } from '../../../../context/AuthContext';
 import { ApprovalModal, type Approval } from '../../../../components/common/ApprovalModal';
 import { isTerminalPayMethod, type PosPaymentMethod, type TerminalPayMethod } from '../../../../components/pos/PaymentMethodPicker';
 import { TerminalChargeModal } from '../../../../components/pos/TerminalChargeModal';
-import { filterModifiersForChannel, normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { filterModifiersForChannel, hidesListPrice, normalizeDrinkModifiers, saleLineTitle } from '@lomasrico/shared-types';
 
 const CATEGORY_META: Record<string, { name: string; Icon: typeof Fish }> = {
     PROMOS: { name: 'Promos', Icon: Gift },
@@ -691,7 +691,9 @@ export default function SalonTablePage() {
                         className="bg-white rounded-2xl p-3 text-left border border-slate-100 active:scale-95 disabled:opacity-50"
                     >
                         <p className="font-black uppercase italic text-xs truncate">{product.name}</p>
-                        <p className="text-orange-500 font-black text-sm">${Number(product.price).toLocaleString('es-CL')}</p>
+                        {!hidesListPrice(product.modifiers) && (
+                            <p className="text-orange-500 font-black text-sm">${Number(product.price).toLocaleString('es-CL')}</p>
+                        )}
                     </button>
                 ))}
             </div>
@@ -725,7 +727,7 @@ export default function SalonTablePage() {
                                 {accountItems.map((item) => (
                                     <div key={item.tempId} className="flex justify-between text-xs">
                                         <span className="font-black uppercase italic truncate pr-2">
-                                            {item.quantity}x {item.name}
+                                            {saleLineTitle(item.name, item.quantity, item.modifiers)}
                                             <span className="ml-2 text-orange-500">{(item as any).sentToKitchen ? 'Cocina' : 'Nuevo'}</span>
                                         </span>
                                         <span className="font-black shrink-0">${(item.price * item.quantity).toLocaleString('es-CL')}</span>
@@ -796,7 +798,7 @@ export default function SalonTablePage() {
                                 {g.items.map((item: any) => (
                                     <div key={item.id} className="flex items-center justify-between gap-2">
                                         <p className="text-xs font-bold text-slate-900">
-                                            {item.quantity}x {item.name} · ${(item.price * item.quantity).toLocaleString('es-CL')}
+                                            {saleLineTitle(item.name, item.quantity, item.modifiers)} · ${(item.price * item.quantity).toLocaleString('es-CL')}
                                         </p>
                                         {g.saleId && (
                                             <button

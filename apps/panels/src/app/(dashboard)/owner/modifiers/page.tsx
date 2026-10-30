@@ -328,6 +328,7 @@ function CreateWizard({
     const [showOnSalon, setShowOnSalon] = useState(true);
     const [minSel, setMinSel] = useState(1);
     const [maxSel, setMaxSel] = useState(1);
+    const [pricesAreFinal, setPricesAreFinal] = useState(false);
     const [saving, setSaving] = useState(false);
     const kind = CREATE_KINDS.find((k) => k.role === role);
 
@@ -339,8 +340,9 @@ function CreateWizard({
         if (!role || !displayName.trim() || selectedIds.length === 0) return;
         const cleanOpts = options.filter((o) => o.name.trim());
         if (cleanOpts.length === 0) return;
-        const maxSelections = Math.max(1, Math.min(maxSel, cleanOpts.length));
-        const minSelections = Math.min(minSel, maxSelections);
+        const closedPrice = role === 'PORTION' && pricesAreFinal;
+        const maxSelections = closedPrice ? 1 : Math.max(1, Math.min(maxSel, cleanOpts.length));
+        const minSelections = closedPrice ? 1 : Math.min(minSel, maxSelections);
         setSaving(true);
         try {
             const payload = {
@@ -352,6 +354,7 @@ function CreateWizard({
                 showOnWeb,
                 showOnPos,
                 showOnSalon,
+                priceIsFinal: closedPrice,
                 productIds: selectedIds,
                 options: cleanOpts.map((o) => ({ name: o.name.trim(), priceAdjustment: Number(o.price) || 0 })),
             };
@@ -463,7 +466,7 @@ function CreateWizard({
                                     className="flex-1 p-3 bg-slate-50 rounded-xl font-bold outline-none"
                                 />
                                 <div className="w-28 relative">
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-800">+$</span>
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-800">{role === 'PORTION' && pricesAreFinal ? '$' : '+$'}</span>
                                     <input
                                         type="number"
                                         value={opt.price}
@@ -477,6 +480,20 @@ function CreateWizard({
                             Agregar
                         </button>
                     </div>
+                    {role === 'PORTION' && (
+                        <button
+                            type="button"
+                            onClick={() => setPricesAreFinal((on) => {
+                                const next = !on;
+                                if (next) { setMinSel(1); setMaxSel(1); }
+                                return next;
+                            })}
+                            className={`w-full text-left rounded-2xl border-2 p-4 ${pricesAreFinal ? 'border-orange-400 bg-orange-50' : 'border-slate-100'}`}
+                        >
+                            <p className="font-black uppercase text-xs text-slate-900">El precio de la opción es el total</p>
+                            <p className="text-[10px] font-bold text-slate-800 mt-1">El plato queda en $0. Cada opción muestra y cobra ese número, sin recargo.</p>
+                        </button>
+                    )}
                     <ChoiceLimits
                         min={minSel}
                         max={maxSel}

@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { Product } from '../../types';
+import { hidesListPrice } from '@lomasrico/shared-types';
 import { Plus } from 'lucide-react';
 
 interface ProductCardProps {
@@ -19,6 +20,7 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
     const videoSrc = product.hoverVideoUrl || `/assets/videos/${product.name}.mp4`;
     
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hidePrice = hidesListPrice(product.modifiers);
 
     const handleMouseEnter = () => {
         if (hasVideo && videoRef.current) {
@@ -89,13 +91,15 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
                     </p>
                 </div>
 
-                <div className="flex items-center justify-between mt-auto">
+                <div className={`flex items-center mt-auto ${hidePrice ? 'justify-end' : 'justify-between'}`}>
+                    {!hidePrice && (
                     <div className="flex flex-col">
                         <span className="text-[9px] font-black uppercase tracking-widest text-[#f2642e] mb-0.5">Precio</span>
                         <span className="text-slate-900 font-black text-2xl tracking-tighter leading-none">
                             ${(product.price || 0).toLocaleString('es-CL')}
                         </span>
                     </div>
+                    )}
 
                     <button
                         onClick={(e) => {

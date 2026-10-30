@@ -161,9 +161,58 @@ export function cleanModifierLabel(label?: string | null): string {
         .trim();
 }
 
+export function hidesListPrice(modifiers?: { priceIsFinal?: boolean | null }[] | null) {
+    return (modifiers || []).some((group) => group?.priceIsFinal === true);
+}
+
+/** Precio que ve el cliente. En un pack es el total; en el resto sigue siendo el recargo. */
+export function formatOptionPrice(basePrice: number, adjustment: number, priceIsFinal?: boolean | null) {
+    const extra = Number(adjustment || 0);
+    if (priceIsFinal) {
+        return `$${(Number(basePrice || 0) + extra).toLocaleString('es-CL')}`;
+    }
+    if (!extra) return null;
+    const sign = extra > 0 ? '+' : '';
+    return `${sign}$${extra.toLocaleString('es-CL')}`;
+}
+
+export function packLineLabel(productName: string, optionName: string, quantity: number) {
+    const product = String(productName || '').trim();
+    const option = String(optionName || '').trim();
+    const head = product && option && !option.toLowerCase().includes(product.toLowerCase())
+        ? `${option} ${product}`
+        : (option || product);
+    const qty = Math.max(1, Number(quantity) || 1);
+    return qty > 1 ? `${head} × ${qty}` : head;
+}
+
+export function packChoiceFromModifiers(modifiers?: {
+    dynamicSelections?: { priceIsFinal?: boolean | null; selectedOptions?: { name?: string }[] }[];
+} | null) {
+    for (const group of modifiers?.dynamicSelections || []) {
+        if (!group?.priceIsFinal) continue;
+        const name = String(group.selectedOptions?.[0]?.name || '').trim();
+        if (name) return name;
+    }
+    return null;
+}
+
+export function saleLineTitle(
+    productName: string,
+    quantity: number,
+    modifiers?: {
+        dynamicSelections?: { priceIsFinal?: boolean | null; selectedOptions?: { name?: string }[] }[];
+    } | null,
+) {
+    const option = packChoiceFromModifiers(modifiers);
+    if (option) return packLineLabel(productName, option, quantity);
+    const qty = Math.max(1, Number(quantity) || 1);
+    return `${qty}x ${productName}`;
+}
+
 /** Agrupa opciones del mismo grupo: "Proteínas: Salmón, Camarón" (una línea). */
 export function formatModifierPrintLines(modifiers?: {
-    dynamicSelections?: { groupName?: string; displayName?: string; selectedOptions?: { name?: string }[] }[];
+    dynamicSelections?: { priceIsFinal?: boolean | null; groupName?: string; displayName?: string; selectedOptions?: { name?: string }[] }[];
     selectedProteinNames?: string[];
     selectedProteins?: string[];
     removedIngredients?: string[];
@@ -174,6 +223,7 @@ export function formatModifierPrintLines(modifiers?: {
     const byGroup = new Map<string, string[]>();
 
     for (const g of mods.dynamicSelections || []) {
+        if (g.priceIsFinal) continue;
         const label = cleanModifierLabel(g.displayName || g.groupName) || 'Opción';
         const names = (g.selectedOptions || []).map((o) => String(o?.name || '').trim()).filter(Boolean);
         if (!names.length) continue;

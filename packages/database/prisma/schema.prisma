@@ -152,6 +152,7 @@ model ModifierGroup {
   showOnWeb      Boolean          @default(true)
   showOnPos      Boolean          @default(true)
   showOnSalon    Boolean          @default(true)
+  priceIsFinal   Boolean          @default(false) // La opción muestra el total, no un recargo
   sortOrder      Int              @default(0) // Orden de aparición en UI de admin
   externalId     String?          // Para integraciones opcionales (ej: FDB ID)
 

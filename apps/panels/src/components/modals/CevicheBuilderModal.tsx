@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft, Loader2, Info, Search } from 'lucide-react';
 import { Product, ModifierGroup, ModifierOption } from '../../types';
-import { cleanModifierLabel, canEnlargeBySize, channelOffersSizeUpgrade, filterModifiersForChannel, findSizeModifierGroup, nextSizeUpgrade, normalizeDrinkModifiers, resolveModifierRole } from '@lomasrico/shared-types';
+import { cleanModifierLabel, canEnlargeBySize, channelOffersSizeUpgrade, filterModifiersForChannel, findSizeModifierGroup, formatOptionPrice, nextSizeUpgrade, normalizeDrinkModifiers, packLineLabel, resolveModifierRole } from '@lomasrico/shared-types';
 
 /** MULTI con cupo ≥2: se puede repetir. Proteínas reales no. */
 function allowsOptionQuantities(group: {
@@ -152,6 +152,12 @@ export const CevicheBuilderModal = ({
         : 0;
 
     const finalPrice = basePrice + modifiersTotal;
+    const packOption = modifiers.reduce<{ name: string } | null>((found, group) => {
+        if (found || !group.priceIsFinal) return found;
+        const id = (selections[group.groupId] || [])[0];
+        const opt = group.options.find((o) => o.id === id);
+        return opt ? { name: opt.name } : found;
+    }, null);
 
     // Navigation Logic
     const handleNext = () => {
@@ -227,7 +233,8 @@ export const CevicheBuilderModal = ({
                 selectedOptions: (selections[group.groupId] || []).map(optId => {
                     const opt = group.options.find(o => o.id === optId);
                     return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };
-                })
+                }),
+                priceIsFinal: group.priceIsFinal === true,
             }))
             : [];
 
@@ -395,13 +402,12 @@ export const CevicheBuilderModal = ({
                                                                     Sin stock
                                                                 </span>
                                                             )}
-                                                            {option.priceAdjustment !== 0 && (
+                                                            {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal) && (
                                                                 <span className={`text-[9px] font-black px-2 py-1 rounded-lg shrink-0 ${
                                                                     isUnavailable ? 'bg-slate-100 text-slate-300' :
                                                                     isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                                 }`}>
-                                                                    {option.priceAdjustment > 0 ? '+' : ''}
-                                                                    ${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                                    {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal)}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -479,13 +485,12 @@ export const CevicheBuilderModal = ({
                                                             </span>
                                                         )}
                                                     </div>
-                                                    {option.priceAdjustment !== 0 && (
+                                                    {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal) && (
                                                         <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
                                                             isUnavailable ? 'bg-slate-100 text-slate-300' :
                                                             isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                         }`}>
-                                                            {option.priceAdjustment > 0 ? '+' : ''}
-                                                            ${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                            {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal)}
                                                         </span>
                                                     )}
                                                 </button>
@@ -546,7 +551,9 @@ export const CevicheBuilderModal = ({
                                     })}
                                     
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200 flex items-center justify-between gap-3">
-                                        <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Cantidad</span>
+                                        <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter leading-tight">
+                                            {packOption ? packLineLabel(product.name, packOption.name, quantity) : 'Cantidad'}
+                                        </span>
                                         <div className="flex items-center gap-3">
                                             <button
                                                 type="button"

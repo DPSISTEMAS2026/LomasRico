@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { type CartItem } from '../../types';
-import { formatModifierPrintLines } from '@lomasrico/shared-types';
+import { formatModifierPrintLines, saleLineTitle } from '@lomasrico/shared-types';
 
 interface ComandaProps {
     saleCode: string;
@@ -76,7 +76,7 @@ export const ComandaPrinter = forwardRef<HTMLDivElement, ComandaProps>(({
                     return (
                         <div key={index} style={{ borderBottom: '1px dashed #000', padding: '5px 0' }}>
                             <div style={{ fontWeight: 900, fontSize: 14, wordBreak: 'break-word' }}>
-                                {item.quantity}x {item.name}
+                                {saleLineTitle(item.name, item.quantity, item.modifiers)}
                                 {isAccount ? ` · $${lineTotal.toLocaleString('es-CL')}` : ''}
                             </div>
                             {lines.map((line, i) => (

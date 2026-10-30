@@ -98,6 +98,7 @@ export class ModifiersService {
         showOnWeb?: boolean;
         showOnPos?: boolean;
         showOnSalon?: boolean;
+        priceIsFinal?: boolean;
         sortOrder?: number;
         options?: { name: string; priceAdjustment?: number; isDefault?: boolean; sortOrder?: number }[];
     }) {
@@ -113,6 +114,7 @@ export class ModifiersService {
                 showOnWeb: data.showOnWeb ?? true,
                 showOnPos: data.showOnPos ?? true,
                 showOnSalon: data.showOnSalon ?? role !== 'UPSELL',
+                priceIsFinal: data.priceIsFinal === true,
                 sortOrder: data.sortOrder ?? 0,
                 options: data.options
                     ? {
@@ -142,6 +144,7 @@ export class ModifiersService {
             showOnWeb?: boolean;
             showOnPos?: boolean;
             showOnSalon?: boolean;
+            priceIsFinal?: boolean;
             sortOrder?: number;
         },
     ) {
@@ -359,6 +362,7 @@ export class ModifiersService {
         showOnWeb?: boolean;
         showOnPos?: boolean;
         showOnSalon?: boolean;
+        priceIsFinal?: boolean;
         options?: { name: string; priceAdjustment?: number }[];
         productIds: string[];
     }) {
@@ -373,6 +377,7 @@ export class ModifiersService {
             showOnWeb: data.showOnWeb,
             showOnPos: data.showOnPos,
             showOnSalon: data.showOnSalon,
+            priceIsFinal: data.priceIsFinal === true,
             options: (data.options || []).map((o, i) => ({
                 name: o.name,
                 priceAdjustment: o.priceAdjustment ?? 0,

@@ -19,6 +19,7 @@ export interface ModifierGroup {
     minSelections: number;
     maxSelections: number;
     role?: 'SIZE' | 'PROTEIN' | 'SAUCE' | 'FLAVOR' | 'REMOVE' | 'PORTION' | 'UPSELL' | 'OTHER';
+    priceIsFinal?: boolean;
     showOnWeb?: boolean;
     showOnPos?: boolean;
     showOnSalon?: boolean;
@@ -54,6 +55,7 @@ export interface ProductVariant {
 export interface DynamicSelection {
     groupId: string;
     groupName: string;
+    priceIsFinal?: boolean;
     selectedOptions: {
         id: string;
         name: string;

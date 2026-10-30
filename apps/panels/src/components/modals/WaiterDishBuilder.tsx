@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, X, Search } from 'lucide-react';
 import { Product, ModifierGroup } from '../../types';
-import { channelOffersSizeUpgrade, cleanModifierLabel, drinkTicketName, filterModifiersForChannel, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
+import { channelOffersSizeUpgrade, cleanModifierLabel, drinkTicketName, filterModifiersForChannel, formatOptionPrice, isDishCoreModifier, normalizeDrinkModifiers } from '@lomasrico/shared-types';
 
 function isWaiterCoreGroup(group: ModifierGroup) {
     if (isDishCoreModifier(group.groupName, group.displayName)) return true;
@@ -73,6 +73,7 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
                 const opt = group.options.find((o) => o.id === optId);
                 return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };
             }),
+            priceIsFinal: group.priceIsFinal === true,
         }));
         const proteinGroup = dynamicSelections.find((g) => /protein/i.test(g.groupName || ''));
         const extraPrice = dynamicSelections.reduce(
@@ -155,9 +156,9 @@ export function WaiterDishBuilder({ isOpen, product, guestName, onClose, onConfi
                                                     {selected && <Check size={14} className="text-orange-400 shrink-0" />}
                                                     <span className="text-xs font-black uppercase italic leading-tight">{option.name}</span>
                                                 </span>
-                                                {!!option.priceAdjustment && (
+                                                {formatOptionPrice(Number(product.price), option.priceAdjustment, group.priceIsFinal) && (
                                                     <span className={`block text-[10px] font-bold mt-1 ${selected ? 'text-orange-300' : 'text-orange-500'}`}>
-                                                        {option.priceAdjustment > 0 ? '+' : ''}${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                        {formatOptionPrice(Number(product.price), option.priceAdjustment, group.priceIsFinal)}
                                                     </span>
                                                 )}
                                             </button>

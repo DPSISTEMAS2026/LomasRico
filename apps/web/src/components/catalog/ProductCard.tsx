@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Product } from '../../types';
-import { CLOUDINARY_CARD, cloudinaryTransform } from '@lomasrico/shared-types';
+import { CLOUDINARY_CARD, cloudinaryTransform, hidesListPrice } from '@lomasrico/shared-types';
 import { Plus, AlertTriangle } from 'lucide-react';
 
 interface ProductCardProps {
@@ -13,6 +13,7 @@ interface ProductCardProps {
 export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
     // We use the imageUrl from the catalog which now points to the real filename
     const displayImage = cloudinaryTransform(product.imageUrl || '/assets/Logo Restaurante.png', CLOUDINARY_CARD);
+    const hidePrice = hidesListPrice(product.modifiers);
     const isOutOfStock = product.available === false;
     const isLowStock = product.available !== false && product.maxQuantity != null && product.maxQuantity > 0 && product.maxQuantity <= 5;
 
@@ -146,6 +147,7 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
 
                 <div className="mt-auto pt-6 border-t border-slate-50">
                     <div className="flex flex-col gap-4 items-center">
+                        {!hidePrice && (
                         <div className="flex flex-col gap-0.5 items-center">
                             <span className="text-[8px] font-black uppercase tracking-widest text-[#f2642e]">Precio unitario</span>
                             <div className="flex items-baseline gap-0.5 justify-center">
@@ -155,6 +157,7 @@ export const ProductCard = ({ product, onAdd }: ProductCardProps) => {
                                 </span>
                             </div>
                         </div>
+                        )}
 
                         <button
                             onClick={(e) => {

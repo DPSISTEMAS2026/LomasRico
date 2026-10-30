@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { type CartItem } from '../../types';
-import { formatModifierPrintLines } from '@lomasrico/shared-types';
+import { formatModifierPrintLines, packChoiceFromModifiers, saleLineTitle } from '@lomasrico/shared-types';
 
 export type BoletaGuest = {
     name: string;
@@ -116,7 +116,7 @@ export const BoletaPrinter = forwardRef<HTMLDivElement, BoletaProps>(({
                         return (
                             <div key={ii} style={{ padding: '3px 0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 700 }}>
-                                    <span>{item.quantity} × {item.name}</span>
+                                    <span>{packChoiceFromModifiers(item.modifiers) ? saleLineTitle(item.name, item.quantity, item.modifiers) : `${item.quantity} × ${item.name}`}</span>
                                     <span style={{ whiteSpace: 'nowrap' }}>{clp(item.price * item.quantity)}</span>
                                 </div>
                                 {lines.map((line, li) => (

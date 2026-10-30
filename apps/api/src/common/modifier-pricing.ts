@@ -36,7 +36,7 @@ export async function modifierExtrasByItem(prisma: PrismaService, items: any[]):
         where: { id: { in: all } },
         select: {
             id: true, name: true, priceAdjustment: true, isActive: true, modifierGroupId: true,
-            modifierGroup: { select: { id: true, name: true, displayName: true, type: true, maxSelections: true } },
+            modifierGroup: { select: { id: true, name: true, displayName: true, type: true, maxSelections: true, priceIsFinal: true } },
         },
     });
     const optionById = new Map(options.map((o) => [o.id, o]));
@@ -92,6 +92,7 @@ export async function modifierExtrasByItem(prisma: PrismaService, items: any[]):
                     ...sel,
                     groupId: group.id,
                     groupName: cleanModifierLabel(group.displayName || group.name),
+                    priceIsFinal: group.priceIsFinal === true,
                     selectedOptions: real.map((o) => ({ id: o.id, name: o.name, price: Math.max(0, Number(o.priceAdjustment) || 0) })),
                 };
             });

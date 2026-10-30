@@ -4,7 +4,7 @@ import {
     ChefHat, ChevronRight, ChevronDown, MessageSquare, Timer,
     AlertCircle, XCircle, ArrowRight, CheckCircle2, Printer
 } from 'lucide-react';
-import { formatModifierPrintLines, type KitchenTicket, type SaleItem } from '@lomasrico/shared-types';
+import { formatModifierPrintLines, saleLineTitle, type KitchenTicket, type SaleItem } from '@lomasrico/shared-types';
 
 // ─── Tab config type ────────────────────────────────
 interface TabConfig {
@@ -198,16 +198,23 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
 
                     return (
                         <div key={idx} className="border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                            {(() => {
+                                const productName = item.sellingProduct?.name || item.productVariant?.name || 'Producto';
+                                const title = saleLineTitle(productName, item.quantity, item.modifiers as any);
+                                const packed = title !== `${item.quantity || 1}x ${productName}`;
+                                return (
                             <div className={`flex items-center justify-between ${hasRecipe ? 'cursor-pointer hover:bg-slate-50 rounded-xl px-1 py-0.5 -mx-1 transition-colors' : ''}`}
                                 onClick={() => hasRecipe && toggleRecipe(rKey)}>
                                 <div className="flex items-center gap-1.5 min-w-0">
                                     {hasRecipe && <ChevronDown size={14} className={`text-orange-500 shrink-0 transition-transform duration-200 ${isExp ? '' : '-rotate-90'}`} />}
                                     <p className="font-black text-slate-900 uppercase text-xs italic tracking-tight truncate">
-                                        {item.sellingProduct?.name || item.productVariant?.name || 'Producto'}
+                                        {packed ? title : productName}
                                     </p>
                                 </div>
-                                <span className="text-orange-500 font-black text-sm italic ml-2 shrink-0">x{item.quantity}</span>
+                                {!packed && <span className="text-orange-500 font-black text-sm italic ml-2 shrink-0">x{item.quantity}</span>}
                             </div>
+                                );
+                            })()}
 
                             {/* Modifier badges */}
                             <ModBadges item={item} />

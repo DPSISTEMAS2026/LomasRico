@@ -5,7 +5,7 @@ import { X, Check, ChefHat, Minus, ShoppingBag, Plus, ChevronRight, ChevronLeft,
 import { Product, ModifierGroup, ModifierOption } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useTableSession } from '../../context/TableSessionContext';
-import { canEnlargeBySize, channelOffersSizeUpgrade, cleanModifierLabel, filterModifiersForChannel, findSizeModifierGroup, isSuggestionRole, nextSizeUpgrade, normalizeDrinkModifiers, resolveModifierRole } from '@lomasrico/shared-types';
+import { canEnlargeBySize, channelOffersSizeUpgrade, cleanModifierLabel, filterModifiersForChannel, findSizeModifierGroup, formatOptionPrice, isSuggestionRole, nextSizeUpgrade, normalizeDrinkModifiers, packLineLabel, resolveModifierRole } from '@lomasrico/shared-types';
 
 /** MULTI con cupo ≥2: se puede repetir opción (+/−). Proteínas reales no: son sabores distintos. */
 function allowsOptionQuantities(group: {
@@ -195,6 +195,12 @@ export const CevicheBuilderModal = ({
         : 0;
 
     const finalPrice = basePrice + dynamicModifiersTotal;
+    const packOption = modifiers.reduce<{ name: string } | null>((found, group) => {
+        if (found || !group.priceIsFinal) return found;
+        const id = (selections[group.groupId] || [])[0];
+        const opt = group.options.find((o) => o.id === id);
+        return opt ? { name: opt.name } : found;
+    }, null);
 
     const toggleOption = (groupId: string, optionId: string, type: 'SINGLE_SELECT' | 'MULTI_SELECT', max: number) => {
         setSelections(prev => {
@@ -286,7 +292,8 @@ export const CevicheBuilderModal = ({
                 selectedOptions: (selections[group.groupId] || []).map(optId => {
                     const opt = group.options.find(o => o.id === optId);
                     return { id: optId, name: opt?.name || optId, price: Number(opt?.priceAdjustment || 0) };
-                })
+                }),
+                priceIsFinal: group.priceIsFinal === true,
             }))
             : [];
 
@@ -484,13 +491,12 @@ export const CevicheBuilderModal = ({
                                                                         Sin stock
                                                                     </span>
                                                                 )}
-                                                                {option.priceAdjustment !== 0 && (
+                                                                {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal) && (
                                                                     <span className={`text-[10px] font-black px-2 py-1 rounded-lg shrink-0 ${
                                                                         isUnavailable ? 'bg-slate-100 text-slate-300' :
                                                                         isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                                     }`}>
-                                                                        {option.priceAdjustment > 0 ? '+' : ''}
-                                                                        ${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                                        {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal)}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -568,13 +574,12 @@ export const CevicheBuilderModal = ({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        {option.priceAdjustment !== 0 && (
+                                                        {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal) && (
                                                             <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${
                                                                 isUnavailable ? 'bg-slate-100 text-slate-300' :
                                                                 isSelected ? 'bg-white/10 text-orange-400' : 'bg-orange-50 text-orange-500'
                                                             }`}>
-                                                                {option.priceAdjustment > 0 ? '+' : ''}
-                                                                ${Number(option.priceAdjustment).toLocaleString('es-CL')}
+                                                                {formatOptionPrice(basePrice, option.priceAdjustment, currentModifier.priceIsFinal)}
                                                             </span>
                                                         )}
                                                     </button>
@@ -628,9 +633,14 @@ export const CevicheBuilderModal = ({
                                                             return (
                                                                 <span key={optId} className="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-900 shadow-sm border border-slate-100">
                                                                     {opt?.name}{qty > 1 ? ` ×${qty}` : ''}
-                                                                    {opt && opt.priceAdjustment !== 0 && (
+                                                                    {opt && !group.priceIsFinal && opt.priceAdjustment !== 0 && (
                                                                         <span className="ml-1 text-orange-500 text-[10px]">
                                                                             +${Number(opt.priceAdjustment * qty).toLocaleString('es-CL')}
+                                                                        </span>
+                                                                    )}
+                                                                    {opt && group.priceIsFinal && (
+                                                                        <span className="ml-1 text-orange-500 text-[10px]">
+                                                                            {formatOptionPrice(basePrice, opt.priceAdjustment, true)}
                                                                         </span>
                                                                     )}
                                                                 </span>
@@ -714,9 +724,9 @@ export const CevicheBuilderModal = ({
                                                                     {group.displayName}
                                                                 </span>
                                                             </div>
-                                                            {opt.priceAdjustment !== 0 && (
+                                                            {formatOptionPrice(basePrice, opt.priceAdjustment, group.priceIsFinal) && (
                                                                 <span className="text-[10px] font-black text-orange-500">
-                                                                    +${Number(opt.priceAdjustment).toLocaleString('es-CL')}
+                                                                    {formatOptionPrice(basePrice, opt.priceAdjustment, group.priceIsFinal)}
                                                                 </span>
                                                             )}
                                                         </button>
@@ -730,7 +740,9 @@ export const CevicheBuilderModal = ({
                                     <div className="pt-4 mt-4 border-t-2 border-dashed border-slate-200">
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter">Cantidad</span>
+                                                <span className="font-black italic uppercase text-sm text-slate-900 tracking-tighter leading-tight">
+                                                    {packOption ? packLineLabel(product.name, packOption.name, quantity) : 'Cantidad'}
+                                                </span>
                                                 {product.maxQuantity != null && product.maxQuantity < 999 && (
                                                     <span className={`text-[9px] font-black uppercase tracking-wider mt-0.5 ${
                                                         product.maxQuantity <= 3 ? 'text-amber-500' : 'text-slate-300'

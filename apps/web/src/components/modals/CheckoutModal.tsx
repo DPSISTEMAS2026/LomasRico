@@ -9,7 +9,7 @@ import { useTableSession } from '../../context/TableSessionContext';
 import { CheckCircle2, MapPin, Plus, Loader2, ShoppingBag, X, Trash2, ArrowRight, Store, Truck, LogIn, ChevronLeft, ChevronRight as ChevronRightIcon, Instagram, Clock } from 'lucide-react';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
-import { cleanModifierLabel, CLOUDINARY_THUMB, cloudinaryTransform, LOCATION } from '@lomasrico/shared-types';
+import { cleanModifierLabel, CLOUDINARY_THUMB, cloudinaryTransform, LOCATION, packChoiceFromModifiers, saleLineTitle } from '@lomasrico/shared-types';
 import { quietError } from '../../lib/quietLog';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/cevichelomasrico/';
@@ -412,7 +412,9 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
-                                            <h4 className="font-black text-sm uppercase text-slate-900 leading-tight">{item.name}</h4>
+                                            <h4 className="font-black text-sm uppercase text-slate-900 leading-tight">
+                                                {packChoiceFromModifiers(item.modifiers) ? saleLineTitle(item.name, item.quantity, item.modifiers) : item.name}
+                                            </h4>
                                             <span className="font-black text-sm text-[#f2642e] ml-2">${(item.price * item.quantity).toLocaleString('es-CL')}</span>
                                         </div>
                                         {/* Legacy: protein names */}
@@ -425,7 +427,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                         {(item.modifiers?.dynamicSelections?.length ?? 0) > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {item.modifiers?.dynamicSelections
-                                                    ?.filter((ds: any) => ds.selectedOptions?.length > 0)
+                                                    ?.filter((ds: any) => !ds.priceIsFinal && ds.selectedOptions?.length > 0)
                                                     .map((ds: any) => {
                                                         const counts = new Map<string, number>();
                                                         for (const o of ds.selectedOptions || []) {
@@ -531,7 +533,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                                 <span>${Number(g.total).toLocaleString('es-CL')}</span>
                                             </div>
                                             {g.items?.map((item: any) => (
-                                                <p key={item.id} className="text-[10px] font-bold text-slate-900">{item.quantity}x {item.name}</p>
+                                                <p key={item.id} className="text-[10px] font-bold text-slate-900">{saleLineTitle(item.name, item.quantity, item.modifiers)}</p>
                                             ))}
                                         </div>
                                     ))}
@@ -908,10 +910,10 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     {items.map((item) => (
                         <div key={item.tempId} className="border-b border-slate-100 pb-3">
                             <div className="flex justify-between gap-2">
-                                <p className="text-sm font-black uppercase italic">{item.quantity}x {item.name}</p>
+                                <p className="text-sm font-black uppercase italic">{saleLineTitle(item.name, item.quantity, item.modifiers)}</p>
                                 <p className="text-sm font-black shrink-0">${(item.price * item.quantity).toLocaleString('es-CL')}</p>
                             </div>
-                            {item.modifiers?.dynamicSelections?.map((g: any) =>
+                            {item.modifiers?.dynamicSelections?.filter((g: any) => !g.priceIsFinal).map((g: any) =>
                                 g.selectedOptions?.map((o: any, i: number) => (
                                     <p key={`${g.groupId}-${i}`} className="text-xs font-bold text-slate-900">+ {cleanModifierLabel(g.displayName || g.groupName)}: {o.name}</p>
                                 ))

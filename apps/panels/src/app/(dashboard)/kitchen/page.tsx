@@ -10,6 +10,7 @@ import { authFetch } from '../../../services/authFetch';
 import { TicketCard } from '../../../components/kitchen/TicketCard';
 import { ApprovalModal, type Approval } from '../../../components/common/ApprovalModal';
 import type { KitchenTicket, KitchenStatus } from '@lomasrico/shared-types';
+import { saleLineTitle } from '@lomasrico/shared-types';
 
 // ─── Tab configuration ──────────────────────────────
 type WorkTab = 'WAITING' | 'PREPARING' | 'READY';
@@ -543,7 +544,7 @@ export default function KitchenPage() {
                                                     {sale.status === 'CANCELLED' && <span className="px-2 py-0.5 rounded-full bg-red-50 text-[9px] font-black uppercase text-red-500">Cancelado</span>}                                                </div>
                                                 <p className="text-[11px] font-bold text-slate-800 mt-1">{when} · {items.length} ítem{items.length === 1 ? '' : 's'}{sale.total != null ? ` · $${Number(sale.total).toLocaleString('es-CL')}` : ''}</p>
                                                 <p className="text-[11px] font-bold text-slate-800 truncate mt-1">
-                                                    {items.map((item: any) => `${item.quantity}x ${item.sellingProduct?.name || 'Producto'}`).join(' · ')}
+                                                    {items.map((item: any) => saleLineTitle(item.sellingProduct?.name || 'Producto', item.quantity, item.modifiers)).join(' · ')}
                                                 </p>
                                             </div>
                                             <div className="flex gap-2 shrink-0">
@@ -606,7 +607,7 @@ export default function KitchenPage() {
                         {(fixTicket.sale?.items || []).map((item: any) => (
                             <div key={item.id} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-black uppercase italic text-slate-900 truncate">{item.quantity}x {item.sellingProduct?.name || 'Producto'}</p>
+                                    <p className="text-sm font-black uppercase italic text-slate-900 truncate">{saleLineTitle(item.sellingProduct?.name || 'Producto', item.quantity, item.modifiers)}</p>
                                     <p className="text-xs font-bold text-slate-900">${(Number(item.priceUnit || 0) * item.quantity).toLocaleString('es-CL')}</p>
                                 </div>
                                 <button

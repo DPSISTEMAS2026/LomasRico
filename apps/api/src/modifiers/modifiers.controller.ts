@@ -35,6 +35,7 @@ export class ModifiersController {
             showOnWeb?: boolean;
             showOnPos?: boolean;
             showOnSalon?: boolean;
+            priceIsFinal?: boolean;
             sortOrder?: number;
             options?: { name: string; priceAdjustment?: number; isDefault?: boolean; sortOrder?: number }[];
         },
@@ -57,6 +58,7 @@ export class ModifiersController {
             showOnWeb?: boolean;
             showOnPos?: boolean;
             showOnSalon?: boolean;
+            priceIsFinal?: boolean;
             sortOrder?: number;
         },
     ) {
@@ -91,6 +93,7 @@ export class ModifiersController {
             showOnWeb?: boolean;
             showOnPos?: boolean;
             showOnSalon?: boolean;
+            priceIsFinal?: boolean;
             options?: { name: string; priceAdjustment?: number }[];
             productIds: string[];
         },
