@@ -72,15 +72,13 @@ export default function KitchenPage() {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const keepAliveRef = useRef<OscillatorNode | null>(null);
     const alarmArmed = useRef(false);
+    const alarmGen = useRef(0);
     const chimeNodes = useRef<OscillatorNode[]>([]);
     const alarmTimer = useRef<number | null>(null);
     const alarmOnRef = useRef(false);
     const [alarmOn, setAlarmOn] = useState(false);
 
-    const stopAlarm = useCallback(() => {
-        alarmOnRef.current = false;
-        alarmArmed.current = false;
-        setAlarmOn(false);
+    const haltNotes = useCallback(() => {
         if (alarmTimer.current != null) {
             window.clearTimeout(alarmTimer.current);
             alarmTimer.current = null;
@@ -92,42 +90,68 @@ export default function KitchenPage() {
         }
     }, []);
 
-    const armAlarm = useCallback(() => {
-        if (!alarmOnRef.current || alarmArmed.current) return;
+    const stopAlarm = useCallback(() => {
+        alarmOnRef.current = false;
+        alarmArmed.current = false;
+        alarmGen.current += 1;
+        setAlarmOn(false);
+        haltNotes();
+    }, [haltNotes]);
+
+    const armAlarm = useCallback((restart = false) => {
+        if (!alarmOnRef.current) return;
+        if (alarmArmed.current && !restart) return;
+        if (restart) {
+            alarmGen.current += 1;
+            alarmArmed.current = false;
+            haltNotes();
+        }
         const ctx = audioCtxRef.current;
         if (!ctx || ctx.state !== 'running') return;
         alarmArmed.current = true;
+        const gen = ++alarmGen.current;
         let step = 0;
         const notes = [784, 988, 1175];
         const chime = () => {
-            if (!alarmOnRef.current) return;
+            if (!alarmOnRef.current || gen !== alarmGen.current) return;
+            if (ctx.state !== 'running') {
+                alarmArmed.current = false;
+                return;
+            }
             const lift = Math.min(step, 8) * 28;
             step += 1;
-            const t0 = ctx.currentTime + 0.02;
-            notes.forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq + lift;
-                const start = t0 + i * 0.14;
-                gain.gain.setValueAtTime(0.0001, start);
-                gain.gain.exponentialRampToValueAtTime(0.42, start + 0.015);
-                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(start);
-                osc.stop(start + 0.26);
-                chimeNodes.current.push(osc);
-                osc.onended = () => {
-                    chimeNodes.current = chimeNodes.current.filter((n) => n !== osc);
-                };
-            });
+            try {
+                const t0 = ctx.currentTime + 0.02;
+                notes.forEach((freq, i) => {
+                    if (gen !== alarmGen.current) return;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq + lift;
+                    const start = t0 + i * 0.14;
+                    gain.gain.setValueAtTime(0.0001, start);
+                    gain.gain.exponentialRampToValueAtTime(0.42, start + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.26);
+                    chimeNodes.current.push(osc);
+                    osc.onended = () => {
+                        chimeNodes.current = chimeNodes.current.filter((n) => n !== osc);
+                    };
+                });
+            } catch {
+                if (gen === alarmGen.current) alarmArmed.current = false;
+                return;
+            }
+            if (!alarmOnRef.current || gen !== alarmGen.current) return;
             alarmTimer.current = window.setTimeout(chime, 1100);
         };
         chime();
-    }, []);
+    }, [haltNotes]);
 
-    const ensureAudio = useCallback(async () => {
+    const ensureAudio = useCallback(async (restart = false) => {
         try {
             const Ctx = window.AudioContext || (window as any).webkitAudioContext;
             if (!Ctx) return false;
@@ -145,7 +169,7 @@ export default function KitchenPage() {
                 keepAliveRef.current = osc;
             }
             const ok = ctx.state === 'running';
-            if (ok) armAlarm();
+            if (ok && alarmOnRef.current) armAlarm(restart);
             return ok;
         } catch {
             return false;
@@ -155,7 +179,7 @@ export default function KitchenPage() {
     const playNotificationSound = useCallback(() => {
         alarmOnRef.current = true;
         setAlarmOn(true);
-        void ensureAudio();
+        void ensureAudio(true);
     }, [ensureAudio]);
 
     useEffect(() => {
@@ -265,12 +289,11 @@ export default function KitchenPage() {
             const data = await res.json();
             const ids = new Set<string>(data.map((t: any) => t.id));
             if (hasLoaded.current) {
-                const fresh = data
-                    .filter((t: any) => !prevTicketIds.current.has(t.id) && t.status === 'WAITING')
-                    .map((t: any) => t.id as string);
-                if (fresh.length > 0) {
+                const fresh = data.filter((t: any) => !prevTicketIds.current.has(t.id));
+                const freshIds = fresh.map((t: any) => t.id as string);
+                if (freshIds.length > 0) {
                     playNotificationSound();
-                    enqueueAutoPrint(fresh);
+                    enqueueAutoPrint(fresh.filter((t: any) => t.status === 'WAITING').map((t: any) => t.id as string));
                 }
             }
             prevTicketIds.current = ids;
@@ -325,7 +348,11 @@ export default function KitchenPage() {
     useEffect(() => {
         loadIfChanged();
         // Poll cada 3s (version DB) + full cada 60s por si acaso
-        const check = setInterval(() => { if (!document.hidden) loadIfChanged(); }, 3000);
+        const check = setInterval(() => {
+            if (document.hidden) return;
+            if (alarmOnRef.current) void ensureAudio();
+            loadIfChanged();
+        }, 3000);
         const full = setInterval(() => { if (!document.hidden) loadTickets(); }, 60_000);
         const onVisible = () => { if (!document.hidden) loadIfChanged(); };
         document.addEventListener('visibilitychange', onVisible);
@@ -334,7 +361,7 @@ export default function KitchenPage() {
             clearInterval(full);
             document.removeEventListener('visibilitychange', onVisible);
         };
-    }, [loadIfChanged, loadTickets]);
+    }, [loadIfChanged, loadTickets, ensureAudio]);
 
     const updateStatus = async (id: string, status: string) => {
         try {
