@@ -23,7 +23,7 @@ export class StoreSettingsController {
   @Roles(...MANAGER_ROLES)
   @Patch('settings')
   update(
-    @Body() body: { webOrdersEnabled?: boolean; webHours?: string | null },
+    @Body() body: { webOrdersEnabled?: boolean; webDeliveryEnabled?: boolean; webHours?: string | null },
     @Req() req: any,
   ) {
     return this.store.update(body, req.user?.userId || req.user?.email || req.user?.name);

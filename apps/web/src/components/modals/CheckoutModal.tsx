@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getShippingQuote, getUserAddresses, addUserAddress, createPaymentPreference, API_URL, createSale, getStoreStatus, type StoreStatus } from '../../services/api';
+import { WEB_DELIVERY_PAUSED_MESSAGE } from '@lomasrico/shared-types';
 import { CHECKOUT_CONTACT } from './AuthModal';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -70,6 +71,12 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                 fetch('http://127.0.0.1:7828/ingest/0cf486ac-6acc-4365-b51d-aafc32d937ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88a466'},body:JSON.stringify({sessionId:'88a466',runId:'closed-popup',hypothesisId:'P1',location:'CheckoutModal.tsx:storeStatus',message:'store closed popup decision',data:{store:s,isClosed,showPopup:isClosed},timestamp:Date.now()})}).catch(()=>{});
                 // #endregion
                 setStore(s);
+                if (s.deliveryEnabled === false) {
+                    deliveryTypeRef.current = 'pickup';
+                    setDeliveryType('pickup');
+                    setShippingQuote(null);
+                    setShippingHint('');
+                }
                 if (isClosed) setShowClosedPopup(true);
             });
         }
@@ -268,6 +275,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
     const canPay = (deliveryType === 'pickup') || (status === 'ready');
 
     const handleDeliveryTypeChange = (type: 'delivery' | 'pickup') => {
+        if (type === 'delivery' && store?.deliveryEnabled === false) return;
         setDeliveryType(type);
         deliveryTypeRef.current = type;
         if (type === 'pickup') {
@@ -571,7 +579,13 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                     {/* Delivery Type Selector */}
                     <div className="space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">¿Cómo lo recibes?</p>
-                        <div className="grid grid-cols-2 gap-2">
+                        {store?.deliveryEnabled === false && (
+                            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                                <p className="text-sm font-bold text-slate-900 leading-snug">{WEB_DELIVERY_PAUSED_MESSAGE}</p>
+                            </div>
+                        )}
+                        <div className={`grid gap-2 ${store?.deliveryEnabled === false ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                            {store?.deliveryEnabled !== false && (
                             <button
                                 onClick={() => handleDeliveryTypeChange('delivery')}
                                 className={`p-3 rounded-2xl border-2 flex items-center gap-2 transition-all ${deliveryType === 'delivery'
@@ -582,6 +596,7 @@ export default function CheckoutModal({ isOpen, onClose, total }: Props) {
                                 <Truck size={16} className={deliveryType === 'delivery' ? 'text-[#f2642e]' : 'text-slate-900'} />
                                 <span className="font-black text-xs uppercase text-slate-800">Delivery</span>
                             </button>
+                            )}
                             <button
                                 onClick={() => handleDeliveryTypeChange('pickup')}
                                 className={`p-3 rounded-2xl border-2 flex items-center gap-2 transition-all ${deliveryType === 'pickup'

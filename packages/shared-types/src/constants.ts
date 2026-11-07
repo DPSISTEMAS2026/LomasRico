@@ -8,6 +8,10 @@
 
 // ─── Location ──────────────────────────────────────────────
 
+/** Aviso en la web cuando el local apaga el envío y deja solo retiro. */
+export const WEB_DELIVERY_PAUSED_MESSAGE =
+    'No tenemos reparto hasta dentro de unas horas. Puedes retirar en el local. Muchas gracias.';
+
 export const BUSINESS = {
     name: 'Lo Más Rico',
     tagline: 'Premium Cevichería',

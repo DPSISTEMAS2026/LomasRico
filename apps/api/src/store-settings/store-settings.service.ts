@@ -4,17 +4,21 @@ import { isWebOrdersEnabledFromEnv, storeStatus } from '../config/flags';
 
 const SETTINGS_ID = 'default';
 
+export const WEB_DELIVERY_PAUSED_MESSAGE =
+  'No tenemos reparto hasta dentro de unas horas. Puedes retirar en el local. Muchas gracias.';
+
 export type StoreSettingsDto = {
   webOrdersEnabled: boolean;
+  webDeliveryEnabled: boolean;
   webHours: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
-  status: ReturnType<typeof storeStatus> & { ordersEnabled: boolean; envKillSwitch: boolean };
+  status: ReturnType<typeof storeStatus> & { ordersEnabled: boolean; deliveryEnabled: boolean; envKillSwitch: boolean };
 };
 
 @Injectable()
 export class StoreSettingsService implements OnModuleInit {
-  private cache: { webOrdersEnabled: boolean; webHours: string | null } | null = null;
+  private cache: { webOrdersEnabled: boolean; webDeliveryEnabled: boolean; webHours: string | null } | null = null;
 
   constructor(private prisma: PrismaService) {}
 
@@ -26,7 +30,7 @@ export class StoreSettingsService implements OnModuleInit {
   private async ensureRow() {
     await (this.prisma as any).storeSettings.upsert({
       where: { id: SETTINGS_ID },
-      create: { id: SETTINGS_ID, webOrdersEnabled: true, webHours: null },
+      create: { id: SETTINGS_ID, webOrdersEnabled: true, webDeliveryEnabled: true, webHours: null },
       update: {},
     });
   }
@@ -35,6 +39,7 @@ export class StoreSettingsService implements OnModuleInit {
     const row = await (this.prisma as any).storeSettings.findUnique({ where: { id: SETTINGS_ID } });
     this.cache = {
       webOrdersEnabled: row?.webOrdersEnabled !== false,
+      webDeliveryEnabled: row?.webDeliveryEnabled !== false,
       webHours: row?.webHours ?? null,
     };
   }
@@ -51,11 +56,17 @@ export class StoreSettingsService implements OnModuleInit {
     return c.webOrdersEnabled;
   }
 
+  async isWebDeliveryEnabled(): Promise<boolean> {
+    const c = await this.cached();
+    return c.webDeliveryEnabled;
+  }
+
   async getStatus(now = new Date()) {
     const c = await this.cached();
     const hours = storeStatus(now, c.webHours);
     const ordersEnabled = await this.isWebOrdersEnabled();
-    return { ...hours, ordersEnabled, envKillSwitch: !isWebOrdersEnabledFromEnv() };
+    const deliveryEnabled = await this.isWebDeliveryEnabled();
+    return { ...hours, ordersEnabled, deliveryEnabled, envKillSwitch: !isWebOrdersEnabledFromEnv() };
   }
 
   async getAdmin(): Promise<StoreSettingsDto> {
@@ -64,6 +75,7 @@ export class StoreSettingsService implements OnModuleInit {
     const status = await this.getStatus();
     return {
       webOrdersEnabled: row?.webOrdersEnabled !== false,
+      webDeliveryEnabled: row?.webDeliveryEnabled !== false,
       webHours: row?.webHours ?? null,
       updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null,
       updatedBy: row?.updatedBy ?? null,
@@ -71,9 +83,10 @@ export class StoreSettingsService implements OnModuleInit {
     };
   }
 
-  async update(input: { webOrdersEnabled?: boolean; webHours?: string | null }, updatedBy?: string) {
+  async update(input: { webOrdersEnabled?: boolean; webDeliveryEnabled?: boolean; webHours?: string | null }, updatedBy?: string) {
     const data: Record<string, unknown> = {};
     if (typeof input.webOrdersEnabled === 'boolean') data.webOrdersEnabled = input.webOrdersEnabled;
+    if (typeof input.webDeliveryEnabled === 'boolean') data.webDeliveryEnabled = input.webDeliveryEnabled;
     if (input.webHours !== undefined) {
       const raw = input.webHours === null || input.webHours === '' ? null : String(input.webHours).trim();
       if (raw && !/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(raw)) {

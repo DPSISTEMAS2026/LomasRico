@@ -5,7 +5,7 @@ import { ValidateSaleItemDto } from './dto/validate-item.dto';
 import { CASH_ROLES, KITCHEN_ROLES, MANAGER_ROLES, Public } from '../auth/access';
 import { Roles } from '../auth/roles.decorator';
 import { AuditService } from '../audit/audit.service';
-import { StoreSettingsService } from '../store-settings/store-settings.service';
+import { StoreSettingsService, WEB_DELIVERY_PAUSED_MESSAGE } from '../store-settings/store-settings.service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -68,6 +68,9 @@ export class SalesController {
         const body = createSaleDto as any;
         const contact = webContact(body.contact);
         const address = String(body.shippingData?.address || '').trim().slice(0, 200);
+        if (address && !(await this.store.isWebDeliveryEnabled())) {
+            throw new ForbiddenException(WEB_DELIVERY_PAUSED_MESSAGE);
+        }
         const note = String(body.note || '').trim().slice(0, 200);
         return this.salesService.create({
             channel: 'WEB',

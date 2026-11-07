@@ -132,6 +132,7 @@ export type StoreStatus = {
     opensAt: string;
     closesAt: string;
     ordersEnabled: boolean;
+    deliveryEnabled?: boolean;
     schedule?: { label: string; opensAt: string; closesAt: string }[];
 };
 
