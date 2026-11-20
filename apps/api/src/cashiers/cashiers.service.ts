@@ -5,6 +5,8 @@ import { AuditService } from '../audit/audit.service';
 
 /** Roles que se pueden asignar desde el panel. OWNER nunca se crea ni se asigna por aquí. */
 const ASSIGNABLE_ROLES = ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER', 'DRIVER'];
+/** El repartidor no elige módulos: entra solo a reparto. */
+const DRIVER_MODULES = ['driver'];
 const DEFAULT_PIN = '2026';
 
 const SAFE_SELECT = {
@@ -29,6 +31,11 @@ export class CashiersService {
             actorId: actor.userId,
             details: { targetId: target.id, targetName: target.name || null, targetRole: target.role || null, ...change },
         });
+    }
+
+    private modulesFor(role: string, modules?: string[]) {
+        if (role === 'DRIVER') return DRIVER_MODULES;
+        return Array.isArray(modules) ? modules : [];
     }
 
     private checkRole(role: string, actor: Actor) {
@@ -78,7 +85,7 @@ export class CashiersService {
                 email,
                 pin: data.pin,
                 role: role as any,
-                modules: JSON.stringify(data.modules || []),
+                modules: JSON.stringify(this.modulesFor(role, data.modules)),
                 canDiscount: !!data.canDiscount,
                 isVerified: true,
             } as any,
@@ -110,10 +117,10 @@ export class CashiersService {
     }
 
     async updateModules(id: string, modules: string[], actor: Actor) {
-        await this.editable(id, actor);
+        const current = await this.editable(id, actor);
         const updated = await this.prisma.user.update({
             where: { id },
-            data: { modules: JSON.stringify(Array.isArray(modules) ? modules : []) } as any,
+            data: { modules: JSON.stringify(this.modulesFor(current.role, modules)) } as any,
             select: SAFE_SELECT,
         });
         await this.track('STAFF_UPDATE', actor, updated, { modules });
@@ -134,7 +141,14 @@ export class CashiersService {
     async updateRole(id: string, role: string, actor: Actor) {
         const before = await this.editable(id, actor);
         this.checkRole(role, actor);
-        const updated = await this.prisma.user.update({ where: { id }, data: { role: role as any }, select: SAFE_SELECT });
+        const updated = await this.prisma.user.update({
+            where: { id },
+            data: {
+                role: role as any,
+                ...(role === 'DRIVER' ? { modules: JSON.stringify(DRIVER_MODULES) } : {}),
+            },
+            select: SAFE_SELECT,
+        });
         await this.track('STAFF_UPDATE', actor, updated, { roleFrom: before.role, roleTo: role });
         return updated;
     }

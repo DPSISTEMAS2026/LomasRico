@@ -72,9 +72,9 @@ export default function DashboardLayout({
     // Solo íconos si el usuario aprieta colapsar (desktop). En drawer móvil siempre expandido.
     const showCollapsed = isCollapsed && !isSidebarOpen;
 
-    // Repartidor: solo cocina + reparto
+    // Repartidor: solo el módulo de reparto
     useEffect(() => {
-        if (user?.role === 'DRIVER' && pathname !== '/driver' && pathname !== '/kitchen') {
+        if (user?.role === 'DRIVER' && pathname !== '/driver') {
             router.replace('/driver');
         }
     }, [user?.role, pathname, router]);
@@ -82,10 +82,10 @@ export default function DashboardLayout({
     const menuItems = [
         { href: '/owner', icon: LayoutDashboard, label: 'Resumen', moduleId: 'dashboard', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/store', icon: Store, label: 'Tienda web', moduleId: 'store', roles: ['OWNER', 'ADMIN'] },
-        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER', 'DRIVER'] },
+        { href: '/kitchen', icon: ChefHat, label: 'Cocina', moduleId: 'kitchen', roles: ['OWNER', 'ADMIN', 'KITCHEN', 'CASHIER', 'WAITER'] },
         { href: '/salon', icon: Users, label: 'Salón', moduleId: 'salon', roles: ['OWNER', 'ADMIN', 'CASHIER', 'WAITER'] },
         { href: '/pos', icon: MonitorSmartphone, label: 'Caja / Retiro', moduleId: 'pos', roles: ['OWNER', 'ADMIN', 'CASHIER'] },
-        { href: '/driver', icon: Bike, label: 'Reparto', moduleId: 'driver', roles: ['OWNER', 'ADMIN', 'DRIVER'] },
+        { href: '/driver', icon: Bike, label: 'Reparto', moduleId: 'driver', roles: ['OWNER', 'ADMIN', 'CASHIER', 'DRIVER'] },
         { href: '/owner/catalog', icon: Package, label: 'Catálogo', moduleId: 'catalog', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/modifiers', icon: Layers, label: 'Modificadores', moduleId: 'modifiers', roles: ['OWNER', 'ADMIN'] },
         { href: '/owner/banners', icon: MonitorSmartphone, label: 'Marketing', moduleId: 'banners', roles: ['OWNER', 'ADMIN'] },
@@ -113,6 +113,7 @@ export default function DashboardLayout({
     // El rol fija el máximo; los módulos individuales solo restringen dentro de él.
     const canSee = (item: (typeof menuItems)[number]) => {
         if (isOwnerOrAdmin) return true;
+        if (user?.role === 'DRIVER') return item.moduleId === 'driver';
         if (!user?.role || !item.roles.includes(user.role)) return false;
         return userModules.length === 0 || userModules.includes(item.moduleId);
     };

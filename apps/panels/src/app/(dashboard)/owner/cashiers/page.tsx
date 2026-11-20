@@ -35,8 +35,8 @@ const ADMIN_ONLY = ['ADMIN'];
 const ALL_MODULES = [
     { id: 'salon', label: 'Salón (mesas)', desc: 'Atender mesas, comensales y cuentas aparte.', roles: ['ADMIN', 'CASHIER', 'WAITER'] },
     { id: 'pos', label: 'Caja / Retiro', desc: 'Cobrar pedidos para llevar en el mostrador.', roles: ['ADMIN', 'CASHIER'] },
-    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER', 'DRIVER'] },
-    { id: 'driver', label: 'Reparto', desc: 'Cola de despachos, Maps/Waze y estados de entrega.', roles: ['ADMIN', 'DRIVER'] },
+    { id: 'kitchen', label: 'Cocina (KDS)', desc: 'Ver y gestionar tickets en pantalla de cocina.', roles: ['ADMIN', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { id: 'driver', label: 'Reparto', desc: 'Cola de despachos, Maps/Waze y estados de entrega.', roles: ['ADMIN', 'CASHIER', 'DRIVER'] },
     { id: 'catalog', label: 'Catálogo', desc: 'Ver y editar el catálogo de productos.', roles: ADMIN_ONLY },
     { id: 'inventory', label: 'Inventario', desc: 'Ver y gestionar el stock de ingredientes.', roles: ADMIN_ONLY },
     { id: 'recipes', label: 'Recetas', desc: 'Crear y editar recetas de producción.', roles: ADMIN_ONLY },
@@ -93,7 +93,8 @@ function TeamMemberCard({
         if (pin && !/^\d{4}$/.test(pin)) return alert('El PIN debe ser numérico de 4 dígitos');
         setSaving(true);
         if (role !== member.role) await onSaveRole(member.id, role);
-        await onSaveModules(member.id, modules.filter(m => roleModules.some(rm => rm.id === m)));
+        const nextModules = role === 'DRIVER' ? ['driver'] : modules.filter(m => roleModules.some(rm => rm.id === m));
+        await onSaveModules(member.id, nextModules);
         if (pin && await onSavePin(member.id, pin)) setPin('');
         setSaving(false);
         setExpanded(false);
@@ -141,7 +142,7 @@ function TeamMemberCard({
                         <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] mb-3 ml-1">Rol base</p>
                         <div className="flex flex-wrap gap-2 md:gap-3">
                             {roleOptions.map(r => (
-                                <button key={r.value} onClick={() => setRole(r.value)} className={`flex-1 sm:flex-none px-4 md:px-5 py-2 rounded-full text-[10px] md:text-xs font-black uppercase italic transition-all border-2 ${role === r.value ? `${r.color} text-white border-transparent shadow-lg` : 'border-slate-200 text-slate-800 hover:border-slate-900 hover:text-slate-900'}`}>
+                                <button key={r.value} onClick={() => { setRole(r.value); if (r.value === 'DRIVER') setModules(['driver']); }} className={`flex-1 sm:flex-none px-4 md:px-5 py-2 rounded-full text-[10px] md:text-xs font-black uppercase italic transition-all border-2 ${role === r.value ? `${r.color} text-white border-transparent shadow-lg` : 'border-slate-200 text-slate-800 hover:border-slate-900 hover:text-slate-900'}`}>
                                     {r.label}
                                 </button>
                             ))}
@@ -151,17 +152,19 @@ function TeamMemberCard({
                     <div>
                         <div className="flex items-center justify-between mb-3 ml-1">
                             <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-800 tracking-[0.2em]">Acceso a módulos</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => setModules(roleModules.map(m => m.id))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-500 hover:text-orange-700">Todo</button>
-                                <span className="text-slate-300">·</span>
-                                <button onClick={() => setModules([])} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:text-slate-600">Ninguno</button>
-                            </div>
+                            {role !== 'DRIVER' && (
+                                <div className="flex gap-2">
+                                    <button onClick={() => setModules(roleModules.map(m => m.id))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-500 hover:text-orange-700">Todo</button>
+                                    <span className="text-slate-300">·</span>
+                                    <button onClick={() => setModules([])} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:text-slate-600">Ninguno</button>
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                             {roleModules.map(mod => {
-                                const checked = modules.includes(mod.id);
+                                const checked = role === 'DRIVER' || modules.includes(mod.id);
                                 return (
-                                    <button key={mod.id} onClick={() => toggleModule(mod.id)} className={`flex items-start gap-3 p-3 md:p-4 rounded-xl md:rounded-2xl text-left transition-all border-2 ${checked ? 'border-orange-300 bg-orange-50' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
+                                    <button key={mod.id} type="button" disabled={role === 'DRIVER'} onClick={() => toggleModule(mod.id)} className={`flex items-start gap-3 p-3 md:p-4 rounded-xl md:rounded-2xl text-left transition-all border-2 ${checked ? 'border-orange-300 bg-orange-50' : 'border-slate-100 bg-white hover:border-slate-300'} ${role === 'DRIVER' ? 'cursor-default' : ''}`}>
                                         <div className={`mt-0.5 shrink-0 transition-colors ${checked ? 'text-orange-500' : 'text-slate-300'}`}>
                                             {checked ? <CheckSquare size={18} /> : <Square size={18} />}
                                         </div>
@@ -180,7 +183,7 @@ function TeamMemberCard({
                         <input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} className="w-40 bg-white border-2 border-slate-200 rounded-2xl px-5 py-3 font-black text-lg outline-none focus:border-orange-500 tracking-[0.8em] text-center" placeholder="••••" />
                     </div>
 
-                    <div className="bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white">
+                    {role !== 'DRIVER' && <div className="bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-4">
                                 <div className={`p-3 rounded-2xl ${member.canDiscount ? 'bg-orange-500' : 'bg-slate-800'}`}>
@@ -205,7 +208,7 @@ function TeamMemberCard({
                                 <div className={`w-6 h-6 rounded-full bg-white transition-transform ${member.canDiscount ? 'translate-x-6' : 'translate-x-0'}`} />
                             </button>
                         </div>
-                    </div>
+                    </div>}
 
                     <div className="flex flex-col sm:flex-row justify-end gap-2 md:gap-3 pt-2">
                         <button onClick={() => setExpanded(false)} className="order-2 sm:order-1 px-6 py-3 rounded-xl md:rounded-2xl border border-slate-200 text-[10px] md:text-xs font-black uppercase italic text-slate-800 hover:text-slate-900 hover:border-slate-900">Cancelar</button>
@@ -457,7 +460,7 @@ export default function CashiersManagementPage() {
                                 <label className="block text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest mb-3 ml-1 italic">Asignar Perfil de Usuario</label>
                                 <div className="flex flex-wrap gap-2 md:gap-4">
                                     {roleOptions.map(r => (
-                                        <button key={r.value} onClick={() => setNewMember(p => ({ ...p, role: r.value, modules: p.modules.filter(m => modulesForRole(r.value).some(rm => rm.id === m)) }))} className={`px-6 py-3 md:py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase italic transition-all border-2 flex-1 md:flex-none ${newMember.role === r.value ? `${r.color} text-white border-transparent shadow-xl scale-105` : 'border-slate-100 bg-slate-50 text-slate-800 hover:border-slate-900 shadow-sm'}`}>{r.label}</button>
+                                        <button key={r.value} onClick={() => setNewMember(p => ({ ...p, role: r.value, modules: r.value === 'DRIVER' ? ['driver'] : p.modules.filter(m => modulesForRole(r.value).some(rm => rm.id === m)) }))} className={`px-6 py-3 md:py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase italic transition-all border-2 flex-1 md:flex-none ${newMember.role === r.value ? `${r.color} text-white border-transparent shadow-xl scale-105` : 'border-slate-100 bg-slate-50 text-slate-800 hover:border-slate-900 shadow-sm'}`}>{r.label}</button>
                                     ))}
                                 </div>
                             </div>
@@ -465,16 +468,19 @@ export default function CashiersManagementPage() {
                             <div className="relative z-10">
                                 <div className="flex items-center justify-between mb-4 ml-1">
                                     <label className="block text-[8px] md:text-[10px] font-black uppercase text-slate-800 tracking-widest italic">Privilegios de Sistema</label>
-                                    <div className="flex gap-4">
-                                        <button onClick={() => setNewMember(p => ({ ...p, modules: modulesForRole(p.role).map(m => m.id) }))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-600 hover:underline tracking-tighter">HABILITAR TODO</button>
-                                        <button onClick={() => setNewMember(p => ({ ...p, modules: [] }))} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:underline tracking-tighter">REINICIAR</button>
-                                    </div>
+                                    {newMember.role !== 'DRIVER' && (
+                                        <div className="flex gap-4">
+                                            <button onClick={() => setNewMember(p => ({ ...p, modules: modulesForRole(p.role).map(m => m.id) }))} className="text-[8px] md:text-[9px] font-black uppercase text-orange-600 hover:underline tracking-tighter">HABILITAR TODO</button>
+                                            <button onClick={() => setNewMember(p => ({ ...p, modules: [] }))} className="text-[8px] md:text-[9px] font-black uppercase text-slate-800 hover:underline tracking-tighter">REINICIAR</button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {modulesForRole(newMember.role).map(mod => {
-                                        const checked = newMember.modules.includes(mod.id);
+                                        const locked = newMember.role === 'DRIVER';
+                                        const checked = locked || newMember.modules.includes(mod.id);
                                         return (
-                                            <button key={mod.id} onClick={() => toggleNewModule(mod.id)} className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all text-left ${checked ? 'border-orange-400 bg-orange-50' : 'border-slate-50 bg-slate-50 hover:border-slate-200'}`}>
+                                            <button key={mod.id} type="button" disabled={locked} onClick={() => toggleNewModule(mod.id)} className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all text-left ${checked ? 'border-orange-400 bg-orange-50' : 'border-slate-50 bg-slate-50 hover:border-slate-200'} ${locked ? 'cursor-default' : ''}`}>
                                                 <div className={`mt-0.5 shrink-0 transition-colors ${checked ? 'text-orange-500' : 'text-slate-300'}`}>{checked ? <CheckSquare size={18} /> : <Square size={18} />}</div>
                                                 <span className={`text-[10px] md:text-xs font-black uppercase italic tracking-tighter leading-tight ${checked ? 'text-slate-900' : 'text-slate-800'}`}>{mod.label}</span>
                                             </button>
