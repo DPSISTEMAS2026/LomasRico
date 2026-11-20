@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Res, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, Query, UseGuards, Res, Req } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { KitchenService } from './kitchen.service';
 import { UpdateTicketStatusDto } from './dto/update-ticket.dto';
@@ -32,6 +32,11 @@ export class KitchenController {
     @Get('history')
     findHistory(@Query('q') q?: string) {
         return this.kitchenService.findHistory(q);
+    }
+
+    @Post(':id/pedidosya')
+    requestPedidosYa(@Param('id') id: string) {
+        return this.kitchenService.requestPedidosYa(id);
     }
 
     @Patch(':id/status')

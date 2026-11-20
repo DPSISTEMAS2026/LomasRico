@@ -29,6 +29,13 @@ interface DriverOrder {
     deliveryStatus: DeliveryStatus;
     outAt?: string | null;
     doneAt?: string | null;
+    pedidosYa?: {
+        shippingId: string;
+        status: string;
+        price: number | null;
+        shareLink: string | null;
+        requestedAt: string | null;
+    } | null;
 }
 
 /** Poll lento: no saturar API/Supabase. Pausado con pestaña oculta. */
@@ -56,6 +63,17 @@ function timeAgo(iso: string) {
     if (mins < 1) return 'ahora';
     if (mins < 60) return `${mins} min`;
     return `${Math.floor(mins / 60)} h`;
+}
+
+function pyStatus(status?: string | null) {
+    const key = String(status || '').toUpperCase();
+    if (key === 'CONFIRMED') return 'Moto pedida';
+    if (key === 'IN_PROGRESS' || key === 'NEAR_PICKUP') return 'Rider en camino al local';
+    if (key === 'PICKED_UP') return 'Rider retiró el pedido';
+    if (key === 'NEAR_DROPOFF') return 'Rider cerca del cliente';
+    if (key === 'COMPLETED') return 'Entregado por PedidosYa';
+    if (key === 'CANCELLED') return 'Envío cancelado';
+    return 'Moto pedida';
 }
 
 function clock(iso?: string | null) {
@@ -219,7 +237,8 @@ export default function DriverPage() {
                 )}
 
                 {orders.map((order) => {
-                    const action = NEXT_ACTION[order.deliveryStatus];
+                    const py = order.pedidosYa;
+                    const action = py ? null : NEXT_ACTION[order.deliveryStatus];
                     const busy = busyId === order.id;
                     return (
                         <article
@@ -250,7 +269,9 @@ export default function DriverPage() {
                                 </div>
                                 <span
                                     className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
-                                        order.deliveryStatus === 'OUT'
+                                        py
+                                            ? 'bg-[#fff0f3] text-[#fa0050]'
+                                            : order.deliveryStatus === 'OUT'
                                             ? 'bg-orange-50 text-orange-600'
                                             : order.deliveryStatus === 'DONE'
                                                 ? 'bg-slate-100 text-slate-600'
@@ -259,9 +280,44 @@ export default function DriverPage() {
                                                     : 'bg-slate-100 text-slate-700'
                                     }`}
                                 >
-                                    {STATUS_LABEL[order.deliveryStatus]}
+                                    {py ? 'PedidosYa' : STATUS_LABEL[order.deliveryStatus]}
                                 </span>
                             </div>
+
+                            {py && (
+                                <div className="mt-3 rounded-2xl border border-[#fa0050]/20 bg-[#fff5f7] p-3">
+                                    <div className="flex items-center gap-2">
+                                        <img src="/pedidosya-icon.png" alt="" className="h-8 w-8 rounded-lg" />
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-[#fa0050]">PedidosYa Envíos</p>
+                                            <p className="text-sm font-black text-slate-900">{pyStatus(py.status)}</p>
+                                        </div>
+                                    </div>
+                                    <p className="mt-2 text-[11px] font-bold text-slate-700">
+                                        Envío {py.shippingId}
+                                        {py.requestedAt ? ` · pedido ${clock(py.requestedAt)}` : ''}
+                                    </p>
+                                    <p className="text-[11px] font-bold text-slate-700 mt-1">
+                                        {order.readyForPickup ? 'Cocina lista para entregar al rider' : 'Cocina todavía preparando'}
+                                    </p>
+                                    {py.price != null && (
+                                        <p className="text-[11px] font-bold text-slate-700 mt-1">
+                                            PedidosYa cobra {money(py.price)}
+                                            {order.shippingCost > 0 ? ` · el cliente pagó ${money(order.shippingCost)}` : ' · despacho gratis para el cliente'}
+                                        </p>
+                                    )}
+                                    {py.shareLink && (
+                                        <a
+                                            href={py.shareLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-2 inline-flex text-[10px] font-black uppercase tracking-widest text-[#fa0050]"
+                                        >
+                                            Ver seguimiento
+                                        </a>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="mt-3 flex items-start gap-2 text-sm font-bold text-slate-800">
                                 <MapPin size={16} className="text-orange-500 shrink-0 mt-0.5" />
@@ -306,7 +362,7 @@ export default function DriverPage() {
                             <div className="mt-3">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Total</p>
                                 <p className="text-xl font-black italic text-slate-900 leading-none">{money(order.total)}</p>
-                                {order.courierPay > 0 && (
+                                {!py && order.courierPay > 0 && (
                                     <p className="text-[10px] font-bold text-slate-500 mt-1">
                                         Pago repartidor {money(order.courierPay)}
                                         {order.shippingCost <= 0 ? ' · gratis para el cliente' : ''}

@@ -49,6 +49,15 @@ function mapSaleLite(sale: any) {
         doneAt: ship.delivery?.doneAt || null,
         /** Listo para que el repartidor lo tome = cocina READY/DELIVERED. */
         readyForPickup: kitchenReady,
+        pedidosYa: ship.pedidosYa?.shippingId
+            ? {
+                shippingId: String(ship.pedidosYa.shippingId),
+                status: ship.pedidosYa.status || 'CONFIRMED',
+                price: Number(ship.pedidosYa.price || 0) || null,
+                shareLink: ship.pedidosYa.shareLink || null,
+                requestedAt: ship.pedidosYa.requestedAt || null,
+            }
+            : null,
     };
 }
 
@@ -109,6 +118,8 @@ export class DeliveryService {
             .filter((o: any) => {
                 if (!o.address) return false;
                 if (o.deliveryStatus === 'DONE') return !!opts?.includeDone;
+                // PedidosYa se ve desde que se pidió la moto, aunque cocina siga preparando.
+                if (o.pedidosYa) return true;
                 // En cola solo si cocina ya lo dejó listo; si el repartidor ya lo tomó, siempre visible.
                 if (o.deliveryStatus === 'PICKED' || o.deliveryStatus === 'OUT') return true;
                 return o.readyForPickup;
@@ -152,6 +163,9 @@ export class DeliveryService {
         }
 
         const ship = asShip(sale.shippingData);
+        if (ship.pedidosYa?.shippingId) {
+            throw new BadRequestException('Este despacho lo lleva PedidosYa');
+        }
         const prev = driverStatus(ship);
         const kitchenStatus = sale.kitchenTickets?.[0]?.status;
         const kitchenReady = KITCHEN_READY.includes(kitchenStatus as any);

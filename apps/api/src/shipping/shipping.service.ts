@@ -1,5 +1,6 @@
 
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
 import { ShippingQuoteDto, ShippingQuoteResponse } from './dto/shipping-quote.dto';
 
 /** Punto central = local (General Cruz 92, Concepción). */
@@ -91,6 +92,10 @@ export class ShippingService {
     private readonly PREPARATION_TIME_MINS = 20;
 
     private deliveryMode: 'EXTERNAL' | 'INTERNAL' = 'INTERNAL';
+    private readonly riderLocks = new Set<string>();
+    private readonly pickupPhone = '+56974342276';
+
+    constructor(private readonly prisma: PrismaService) {}
 
     setDeliveryMode(mode: 'EXTERNAL' | 'INTERNAL') {
         this.deliveryMode = mode;
@@ -218,6 +223,122 @@ export class ShippingService {
         return 6;
     }
 
+    /** Pide un rider real. No toca el total, el pago ni la caja. */
+    async requestRider(saleId: string) {
+        if (!this.PEDIDOSYA_TOKEN) throw new BadRequestException('Falta el token de PedidosYa Envíos en el servidor');
+        if (this.riderLocks.has(saleId)) throw new BadRequestException('Ya se está pidiendo el repartidor de este pedido');
+        this.riderLocks.add(saleId);
+        try {
+            const sale = await this.prisma.sale.findUnique({
+                where: { id: saleId },
+                include: { items: { include: { sellingProduct: { select: { name: true } } } } },
+            });
+            if (!sale) throw new NotFoundException('Pedido no encontrado');
+            if (sale.status === 'CANCELLED') throw new BadRequestException('El pedido está anulado');
+            const ship = (sale.shippingData && typeof sale.shippingData === 'object' ? sale.shippingData : {}) as Record<string, any>;
+            if (ship.pedidosYa?.shippingId) {
+                return { ok: true, already: true, ...ship.pedidosYa };
+            }
+            if (sale.fulfillmentType !== 'DELIVERY') {
+                throw new BadRequestException('Este pedido es retiro o mesa. PedidosYa necesita una dirección de entrega.');
+            }
+            const address = String(ship.address || '').trim();
+            const phone = toPyPhone(ship.contact?.phone);
+            if (!address) throw new BadRequestException('El pedido no tiene dirección de entrega');
+            if (!phone) throw new BadRequestException('El pedido no tiene teléfono del cliente');
+
+            const dropLat = Number(ship.coordinates?.lat);
+            const dropLng = Number(ship.coordinates?.lng);
+            const items = (sale.items || []).slice(0, 8).map((item) => ({
+                type: 'STANDARD',
+                description: String(item.sellingProduct?.name || 'Pedido').slice(0, 80),
+                quantity: Math.max(1, Number(item.quantity) || 1),
+                value: Math.max(1, Math.round(Number(item.priceUnit) * Number(item.quantity || 1))),
+                volume: 1,
+                weight: 1,
+            }));
+            if (!items.length) items.push({ type: 'STANDARD', description: 'Pedido', quantity: 1, value: 1000, volume: 1, weight: 1 });
+
+            const shippingBody = {
+                referenceId: String(sale.code || sale.id),
+                isTest: false,
+                deliveryTime: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+                items,
+                waypoints: [
+                    // Primero el local. La moto retira ahí y después va al domicilio.
+                    {
+                        type: 'PICK_UP',
+                        addressStreet: 'General Cruz 92',
+                        city: 'Concepción',
+                        latitude: LOCATION.lat,
+                        longitude: LOCATION.lng,
+                        phone: this.pickupPhone,
+                        name: 'Lo Más Rico',
+                        instructions: `Pedido ${sale.code || ''}`.trim(),
+                    },
+                    {
+                        type: 'DROP_OFF',
+                        addressStreet: address.slice(0, 140),
+                        city: 'Concepción',
+                        ...(Number.isFinite(dropLat) && Number.isFinite(dropLng) ? { latitude: dropLat, longitude: dropLng } : {}),
+                        phone,
+                        name: String(ship.contact?.name || 'Cliente').slice(0, 60),
+                    },
+                ],
+            };
+            const estimate = await this.pya('/v3/shippings/estimates', shippingBody);
+            const offers = Array.isArray(estimate.deliveryOffers) ? estimate.deliveryOffers : [];
+            const offer = offers.find((row: any) => /express/i.test(String(row.deliveryMode || ''))) || offers[0];
+            const deliveryOfferId = offer?.deliveryOfferId;
+            if (!deliveryOfferId) {
+                throw new BadRequestException(estimate.message || 'PedidosYa no tiene un repartidor disponible para esa dirección');
+            }
+
+            const confirmed = await this.pya('/v3/shippings', { ...shippingBody, deliveryOfferId });
+            const shippingId = confirmed.shippingId || confirmed.id;
+            if (!shippingId) throw new BadRequestException(confirmed.message || 'PedidosYa no confirmó el envío');
+            const record = {
+                requestedAt: new Date().toISOString(),
+                estimateId: estimate.estimateId || null,
+                deliveryOfferId,
+                shippingId: String(shippingId),
+                status: confirmed.status || 'CONFIRMED',
+                price: Number(confirmed.pricing?.total ?? offer?.pricing?.total ?? 0) || null,
+                shareLink: confirmed.shareLocationUrl || confirmed.route?.shareUrl || confirmed.shareUrl || null,
+                mode: offer?.deliveryMode || 'EXPRESS',
+            };
+            await this.prisma.sale.update({
+                where: { id: sale.id },
+                data: { shippingData: { ...ship, pedidosYa: record } as any },
+            });
+            this.logger.log(`[SHIPPING] Rider PedidosYa pedido para ${sale.code}: ${record.shippingId}`);
+            return { ok: true, already: false, ...record };
+        } finally {
+            this.riderLocks.delete(saleId);
+        }
+    }
+
+    private async pya(path: string, body: unknown) {
+        const res = await fetch(`https://courier-api.pedidosya.com${path}`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.PEDIDOSYA_TOKEN}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+        const text = await res.text();
+        let json: any = {};
+        try { json = text ? JSON.parse(text) : {}; } catch { json = { message: text.slice(0, 180) }; }
+        if (!res.ok) {
+            const message = json.message || json.code || `PedidosYa respondió ${res.status}`;
+            this.logger.error(`[SHIPPING] ${path} ${res.status} ${message}`);
+            throw new BadRequestException(String(message));
+        }
+        return json;
+    }
+
     async confirmDelivery(estimateId: string) {
         if (estimateId.startsWith('internal-') || estimateId.startsWith('mock-') || estimateId.startsWith('zone-') || estimateId.startsWith('band-')) {
             this.logger.log(`[SHIPPING] Confirmando despacho Local/Zona: ${estimateId}`);
@@ -245,4 +366,12 @@ export class ShippingService {
         this.logger.warn(`[SHIPPING] No PEDIDOSYA_TOKEN configured. Cannot confirm delivery for ${estimateId}`);
         return { success: false, trackingId: null, reason: 'No delivery provider configured' };
     }
+}
+
+function toPyPhone(raw: unknown) {
+    let digits = String(raw || '').replace(/\D/g, '');
+    if (digits.startsWith('56')) digits = digits.slice(2);
+    if (digits.length === 8) digits = `9${digits}`;
+    if (digits.length !== 9) return '';
+    return `+56${digits}`;
 }

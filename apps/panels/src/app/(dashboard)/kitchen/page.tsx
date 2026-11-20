@@ -67,6 +67,7 @@ export default function KitchenPage() {
         | null
     >(null);
     const [fixTicket, setFixTicket] = useState<any | null>(null);
+    const [pedidosYaBusy, setPedidosYaBusy] = useState<string | null>(null);
     const prevTicketIds = useRef<Set<string>>(new Set());
     const tabBarRef = useRef<HTMLDivElement>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
@@ -370,6 +371,30 @@ export default function KitchenPage() {
         } catch { alert('Error al actualizar'); }
     };
 
+    const requestPedidosYa = async (ticket: any) => {
+        const sale = ticket.sale || {};
+        if (sale.courier?.requested || pedidosYaBusy) return;
+        if (sale.channel !== 'WEB' || sale.fulfillmentType !== 'DELIVERY') return;
+        const go = window.confirm(`Pedir un repartidor de PedidosYa para ${sale.code || 'este pedido'}? El cobro lo hace PedidosYa a la tarjeta de la cuenta. No pasa por caja.`);
+        if (!go) return;
+        setPedidosYaBusy(ticket.id);
+        try {
+            const res = await authFetch(`${API_URL}/kitchen/${ticket.id}/pedidosya`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const message = Array.isArray(data.message) ? data.message.join(' ') : data.message;
+                throw new Error(message || 'No se pudo pedir el repartidor');
+            }
+            setTickets((prev) => prev.map((row) => row.id === ticket.id
+                ? { ...row, status: 'PREPARING', sale: { ...row.sale, courier: { requested: true, status: data.status || 'CONFIRMED' } } }
+                : row));
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'No se pudo pedir el repartidor');
+        } finally {
+            setPedidosYaBusy(null);
+        }
+    };
+
     const cancelTicket = (ticket: any) => {
         const sale = ticket.sale || {};
         setApproval({
@@ -615,7 +640,9 @@ export default function KitchenPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 auto-rows-min">
                         {current.map(ticket => (
                             <TicketCard key={ticket.id} ticket={ticket} cfg={cfg!} expandedRecipes={expandedRecipes} toggleRecipe={toggleRecipe}
-                                onAction={() => updateStatus(ticket.id, cfg!.nextStatus)} onCancel={() => cancelTicket(ticket)} onPrint={() => printTicket(ticket.id)} />
+                                onAction={() => updateStatus(ticket.id, cfg!.nextStatus)} onCancel={() => cancelTicket(ticket)} onPrint={() => printTicket(ticket.id)}
+                                pedidosYaBusy={pedidosYaBusy === ticket.id}
+                                onPedidosYa={activeTab === 'WAITING' ? () => requestPedidosYa(ticket) : undefined} />
                         ))}
                     </div>
                 )}

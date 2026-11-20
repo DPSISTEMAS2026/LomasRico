@@ -56,6 +56,7 @@ export interface KitchenSale {
     createdAt?: string;
     fulfillmentType?: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     table?: { id: string; number: number; name: string };
+    courier?: { requested: boolean; status?: string | null } | null;
 }
 
 /** A kitchen ticket representing an order in the KDS */

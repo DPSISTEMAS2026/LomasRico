@@ -100,6 +100,8 @@ interface TicketCardProps {
     onAction: () => void;
     onCancel: () => void;
     onPrint: () => void;
+    onPedidosYa?: () => void;
+    pedidosYaBusy?: boolean;
 }
 
 // ─── Format Time Helper ─────────────────────────────
@@ -116,7 +118,7 @@ function formatElapsedTime(minutes: number): string {
 }
 
 // ─── Ticket Card Component ──────────────────────────
-export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onAction, onCancel, onPrint }: TicketCardProps) {
+export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onAction, onCancel, onPrint, onPedidosYa, pedidosYaBusy }: TicketCardProps) {
     const sale = ticket.sale;
     const minutesAgo = Math.floor((Date.now() - new Date(ticket.createdAt).getTime()) / 60000);
     const isUber = sale.channel === 'UBER_EATS';
@@ -126,6 +128,8 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
     const customer = (sale as any).customer as { name: string; phone: string } | null | undefined;
     const isTable = !!(sale.table?.number || ticket.label?.startsWith('MESA'));
     const noteLines = (sale.note || '').split('\n').filter((line: string) => line && !(customer && line.startsWith('Cliente:')));
+    const showPedidosYa = ticket.status === 'WAITING' && sale.channel === 'WEB' && sale.fulfillmentType === 'DELIVERY' && !!onPedidosYa;
+    const courierAsked = !!(sale as { courier?: { requested?: boolean } }).courier?.requested;
     const platformLabel = ticket.label
         || (sale.table?.number ? `MESA ${sale.table.number}` : null)
         || (sale.fulfillmentType === 'TAKEAWAY' ? 'RETIRO' : null)
@@ -257,6 +261,17 @@ export function TicketCard({ ticket, cfg, expandedRecipes, toggleRecipe, onActio
                 <button onClick={onPrint} className="h-12 px-4 rounded-2xl font-black uppercase italic tracking-tighter text-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-[10px] shrink-0" title="Imprimir Comanda">
                     <Printer size={16} /><span className="hidden sm:inline">Imprimir</span>
                 </button>
+                {showPedidosYa && (
+                    <button
+                        type="button"
+                        disabled={pedidosYaBusy || courierAsked}
+                        onClick={onPedidosYa}
+                        title={courierAsked ? 'Repartidor de PedidosYa pedido' : 'Pedir repartidor PedidosYa'}
+                        className="h-12 w-12 rounded-2xl overflow-hidden shrink-0 disabled:opacity-50 disabled:cursor-default active:scale-95 transition-all"
+                    >
+                        <img src="/pedidosya-icon.png" alt="PedidosYa" className="h-full w-full object-cover" />
+                    </button>
+                )}
                 <button onClick={onAction} className={`flex-1 h-12 rounded-2xl font-black uppercase italic tracking-tighter text-white transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg text-xs ${cfg.btnColor}`}>
                     {ticket.status === 'READY' ? <CheckCircle2 size={16} /> : <ArrowRight size={16} />} {cfg.action}
                 </button>

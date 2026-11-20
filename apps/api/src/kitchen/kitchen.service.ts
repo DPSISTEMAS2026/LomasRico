@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Approver, AuditService } from '../audit/audit.service';
+import { ShippingService } from '../shipping/shipping.service';
 
 export type VoidApproval = { actorId?: string; approver: Approver; reason: string };
 
@@ -43,7 +44,11 @@ function packSaleTitle(productName: string, quantity: number, raw: any) {
 
 @Injectable()
 export class KitchenService {
-    constructor(private prisma: PrismaService, private audit: AuditService) { }
+    constructor(
+        private prisma: PrismaService,
+        private audit: AuditService,
+        private shipping: ShippingService,
+    ) { }
 
     /**
      * Versión de cocina basada en DB (sirve con varias instancias de API).
@@ -194,11 +199,33 @@ export class KitchenService {
         const customer = contact?.name || contact?.phone
             ? { name: String(contact.name || ''), phone: String(contact.phone || '') }
             : null;
+        const pedidosYa = shippingData?.pedidosYa;
+        const courier = pedidosYa?.shippingId
+            ? { requested: true, status: pedidosYa.status || null }
+            : null;
         return {
             ...ticket,
             label: this.kitchenLabel(ticket),
-            sale: { ...sale, items, customer },
+            sale: { ...sale, items, customer, courier },
         };
+    }
+
+    async requestPedidosYa(ticketId: string) {
+        const ticket = await (this.prisma as any).kitchenTicket.findUnique({
+            where: { id: ticketId },
+            include: { sale: { select: { id: true, status: true, channel: true, fulfillmentType: true } } },
+        });
+        if (!ticket) throw new NotFoundException('Comanda no encontrada');
+        if (!ticket.sale || ticket.sale.status === 'CANCELLED' || ticket.status === 'CANCELLED') {
+            throw new BadRequestException('El pedido está anulado');
+        }
+        if (ticket.sale.channel !== 'WEB' || ticket.sale.fulfillmentType !== 'DELIVERY') {
+            throw new BadRequestException('PedidosYa solo se pide en pedidos web con despacho');
+        }
+        if (ticket.status === 'DELIVERED') throw new BadRequestException('Este pedido ya salió de cocina');
+        const rider = await this.shipping.requestRider(ticket.sale.id);
+        await this.updateStatus(ticketId, TicketStatus.PREPARING);
+        return rider;
     }
 
     async updateStatus(id: string, status: string, approval?: VoidApproval) {
