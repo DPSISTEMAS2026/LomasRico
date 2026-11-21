@@ -26,6 +26,13 @@ function driverStatus(ship: Record<string, any>): DriverDeliveryStatus {
     return 'QUEUED';
 }
 
+/** El viaje de PedidosYa ya no tiene nada que hacer en la cola activa. */
+function courierFinished(order: { pedidosYa?: { status?: string | null } | null; saleStatus?: string | null }) {
+    const st = String(order.pedidosYa?.status || '').toUpperCase();
+    if (st === 'COMPLETED') return true;
+    return st === 'CANCELLED' && order.saleStatus === 'COMPLETED';
+}
+
 function mapSaleLite(sale: any) {
     const ship = asShip(sale.shippingData);
     const contact = ship.contact || {};
@@ -49,6 +56,7 @@ function mapSaleLite(sale: any) {
         doneAt: ship.delivery?.doneAt || null,
         /** Listo para que el repartidor lo tome = cocina READY/DELIVERED. */
         readyForPickup: kitchenReady,
+        saleStatus: sale.status || null,
         pedidosYa: ship.pedidosYa?.shippingId
             ? {
                 shippingId: String(ship.pedidosYa.shippingId),
@@ -82,6 +90,46 @@ export class DeliveryService {
         this.cache = null;
     }
 
+    /** Lee el estado del envío. No guarda ubicación ni llama si el viaje ya cerró. */
+    private async refreshPedidosYa(sales: any[]) {
+        const token = process.env.PEDIDOSYA_TOKEN;
+        if (!token) return;
+        const open = sales.filter((sale) => {
+            const py = asShip(sale.shippingData).pedidosYa;
+            if (!py?.shippingId) return false;
+            const st = String(py.status || '').toUpperCase();
+            return st !== 'COMPLETED' && st !== 'CANCELLED';
+        });
+        await Promise.all(open.map(async (sale) => {
+            const ship = asShip(sale.shippingData);
+            const shippingId = String(ship.pedidosYa.shippingId);
+            try {
+                const res = await fetch(`https://courier-api.pedidosya.com/v3/shippings/${shippingId}`, {
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                });
+                if (!res.ok) return;
+                const json = await res.json();
+                const status = String(json.status || '').toUpperCase();
+                if (!status || status === String(ship.pedidosYa.status || '').toUpperCase()) return;
+                const next = {
+                    ...ship,
+                    pedidosYa: {
+                        ...ship.pedidosYa,
+                        status,
+                        shareLink: json.shareLocationUrl || ship.pedidosYa.shareLink || null,
+                    },
+                };
+                sale.shippingData = next;
+                await this.prisma.sale.update({
+                    where: { id: sale.id },
+                    data: { shippingData: next },
+                });
+            } catch (err) {
+                this.logger.warn(`No se pudo leer el envío PedidosYa de ${sale.code || sale.id}`);
+            }
+        }));
+    }
+
     async listForDriver(opts?: { includeDone?: boolean }) {
         const key = opts?.includeDone ? 'all' : 'active';
         if (this.cache && this.cache.key === key && Date.now() - this.cache.at < CACHE_MS) {
@@ -113,11 +161,13 @@ export class DeliveryService {
             },
         });
 
+        await this.refreshPedidosYa(sales);
+
         const mapped = sales
             .map(mapSaleLite)
             .filter((o: any) => {
                 if (!o.address) return false;
-                if (o.deliveryStatus === 'DONE') return !!opts?.includeDone;
+                if (o.deliveryStatus === 'DONE' || courierFinished(o)) return !!opts?.includeDone;
                 // PedidosYa se ve desde que se pidió la moto, aunque cocina siga preparando.
                 if (o.pedidosYa) return true;
                 // En cola solo si cocina ya lo dejó listo; si el repartidor ya lo tomó, siempre visible.
